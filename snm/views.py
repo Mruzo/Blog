@@ -1,6 +1,7 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .forms import ContactModelForm
 from snmov.models import Article, Comment, ReachOut
+from django.contrib import messages
 
 
 def home_page(request):
@@ -20,7 +21,10 @@ def contact_page(request):
     if request.method == "POST":
         form = ContactModelForm(request.POST)
         if form.is_valid():
+            messages.success(request, f"Thanks for reaching out")
             obj = form.save()
+            return redirect(contact_page)
+
     return render(request,
                   template_name="form.html",
                   context={"title": "Contact me", "form": form})
