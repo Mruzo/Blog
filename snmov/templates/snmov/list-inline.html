@@ -15,11 +15,6 @@
 
                 {% endif %}
             </div>
-<!--            <div>-->
-<!--                <h5 class="card-title">{{ article.title }}</h5>-->
-<!--                <small class="text-muted">{{ article.publish_date }} by <a href="/about" style="color: purple;">Christopher Uzoewulu</a></small>-->
-<!--            </div> -->
-
             {% if article.image %}
                 <a href="{{ article.get_absolute_url }}">
                 <img
@@ -46,7 +41,7 @@
                         <small>
                             <li class="list-inline-item">Two cents: {{ article.comments.count }}</li>
                             <li class="list-inline-item">Likes: {{article.likes}}</li>
-                            <li class="list-inline-item">Lost: {{article.dislikes}}</li>
+                            <li class="list-inline-item">Loathes: {{article.dislikes}}</li>
                         </small>
                     </div>
                     <a href="{{ article.get_absolute_url }}">View</a>
@@ -60,7 +55,7 @@
                                 <a class="btn btn-primary btn-small btn-block rounded-0" href="/article/{{article.slug}}/addc/"><small> Add your 2&#162</small></a>
                             </div>
                             <div class="col align-self-center">
-                                <a href="#" onclick="document.getElementById('dislikebutton').submit()">Lost </a>{{article.dislikes}}
+                                <a href="#" onclick="document.getElementById('dislikebutton').submit()">Loathe </a>{{article.dislikes}}
                             </div>
                         </div>
 

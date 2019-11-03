@@ -57,6 +57,7 @@ def add_comment_to_article(request, slug):
             comment.user_name = request.user
             comment.comment_post = post
             comment.save()
+            messages.success(request, "Donation accepted!")
             return redirect(article_detail_view, slug=post.slug)
     else:
         form = CommentForm()
