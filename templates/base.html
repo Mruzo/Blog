@@ -8,15 +8,18 @@
     <link href="https://fonts.googleapis.com/css?family=Marmelad&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" >
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Cabin|Marmelad&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
     <title>Sneaky Motivator</title>
 </head>
-<body class="bg-light">
+<body class="bg-light" style="font-family: 'Cabin', sans-serif;">
 
     <div id="contain">
         <div class="main">
             {% include 'navbar.html' %}
-            {% include 'toasts.html' %}
+            <div class="d-flex justify-content-center align-items-center position-relative">
+                {% include 'toasts.html' %}
+            </div>
 
             {% block content %}
 
@@ -38,14 +41,14 @@
         </div>
     </footer>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="{% static 'snmov/js/sm.js' %}"></script>
     <script>
         $(document).ready(function(){
            $('.toast').toast('show');
            });
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" "></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-    <script src="{% static 'snmov/js/sm.js' %}"></script>
 </body>

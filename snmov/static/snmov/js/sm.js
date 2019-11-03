@@ -4,4 +4,3 @@ $('div#navbarSupportedContent li.nav-item').on('click', function(ev) {
     $(this).addClass('active');
 
     });
-

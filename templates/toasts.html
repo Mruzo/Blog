@@ -1,26 +1,26 @@
 {% if messages %}
     {% for message in messages %}
         {% if message.tags == 'success'%}
-            <div class="toast" data-delay="2000">
-              <div class="toast-body badge-success">
+            <div class="toast rounded-0 text-white" data-delay="2000">
+              <div class="toast-body bg-success">
                 {{message}}
               </div>
             </div>
         {% elif message.tags == 'info'%}
-            <div class="toast" data-delay="2000">
-              <div class="toast-body badge-info">
+            <div class="toast rounded-0 text-white" data-delay="2000">
+              <div class="toast-body bg-info">
                 {{message}}
               </div>
             </div>
         {% elif message.tags == 'warning'%}
-            <div class="toast" data-delay="2000">
-              <div class="toast-body badge-warning">
+            <div class="toast rounded-0 text-white" data-delay="2000">
+              <div class="toast-body bg-warning">
                 {{message}}
               </div>
             </div>
         {% elif message.tags == 'error'%}
-            <div class="toast" data-delay="2000">
-              <div class="toast-body badge-danger">
+            <div class="toast rounded-0 text-white" data-delay="2000">
+              <div class="toast-body bg-danger">
                 {{message}}
               </div>
             </div>
