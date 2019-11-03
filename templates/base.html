@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="shortcut icon" type="image/png" href="{% static 'snmov/img/wbicon.png' %}"/>
+    <link href="https://fonts.googleapis.com/css?family=Marmelad&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" >
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
+    <title>Sneaky Motivator</title>
+</head>
+<body class="bg-light">
+
+    <div id="contain">
+        <div class="main">
+            {% include 'navbar.html' %}
+            {% include 'toasts.html' %}
+
+            {% block content %}
+
+            {% endblock %}
+        </div>
+
+    </div>
+    <footer class="jumbotron jumbotron-fluid card-footer rounded-0 text-center text-white py-0 mb-0">
+        <div class="card mw-100">
+            <img class="card-img-bottom img-fluid" src="{% static 'snmov/img/footer.png' %}" alt="footer image">
+            <div class="card-img-overlay d-flex flex-column justify-content-center position-absolute mw-100">
+                <small id="foot-text" class="color-white">
+                    <a class="badge badge-light" href="/about">About</a>
+                    <span>•</span>
+                    <a class="badge badge-light" href="/contact">Contact</a>
+                    <p >&copy 2019 Christopher Uzoewulu</p>
+                </small>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        $(document).ready(function(){
+           $('.toast').toast('show');
+           });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" "></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="{% static 'snmov/js/sm.js' %}"></script>
+</body>

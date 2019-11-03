@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+    {% for object in object_list %}
+        {% include 'snmov/list-inline.html' with article=object truncate=True detail=False %}
+    {% endfor %}
+
+{% endblock %}

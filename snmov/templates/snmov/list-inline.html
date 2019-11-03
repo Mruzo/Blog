@@ -1,0 +1,75 @@
+
+<div class="col-12 col-md-10 mb-3 mx-auto px-0">
+    <div class="card rounded-0 border-primary border-left-0 border-right-0 mx-0 {% if not article.publish_date %} border border-warning text-dark {% endif %}">
+        <div class="card-body">
+            {% if article.image %}
+                <a href="{{ article.get_absolute_url }}">
+                <img
+                        src="{{ article.image.url }}"
+                        class="{% if not detail %} w-25 h-25 float-right align-middle
+                        {% else %}
+                            card-img-top
+                        {% endif %}" style="display: block;max-width: 700px;margin: auto;">
+                </a>
+            {% endif %}
+            <h5 class="card-title">{{ article.title }}</h5>
+            <p class="card-text">
+                <small class="text-muted">{{ article.publish_date }}</small>
+                {% if truncate %}
+                    {{ article.content| linebreaks| truncatewords:30 }}
+                {% else %}
+                    {{ article.content| linebreaks }}
+                {% endif %}
+            </p>
+
+            {% if not detail %}
+                {% if not article.publish_date %} Draft {% endif %}
+                    <div class="list-inline text-center">
+                        <small>
+                            <li class="list-inline-item">Two cents: {{ article.comments.count }}</li>
+                            <li class="list-inline-item">Likes: {{article.likes}}</li>
+                            <li class="list-inline-item">Lost: {{article.dislikes}}</li>
+                        </small>
+                    </div>
+                    <a href="{{ article.get_absolute_url }}">View</a>
+            {% else %}
+                    <div class="container">
+                        <div class="row justify-content-around">
+                            <div class="col align-self-center">
+                                <a href="#" onclick="document.getElementById('likebutton').submit()">Like </a>{{article.likes}}
+                            </div>
+                            <div class="col-6 my-1">
+                                <a class="btn btn-primary btn-small btn-block rounded-0" href="/article/{{article.slug}}/addc/"><small> Add your 2&#162</small></a>
+                            </div>
+                            <div class="col align-self-center">
+                                <a href="#" onclick="document.getElementById('dislikebutton').submit()">Lost </a>{{article.dislikes}}
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                <form id="likebutton" method="POST" action="/article/{{article.slug}}/userpreference/1/">
+                    {% csrf_token %}
+                    <input type="hidden">
+                </form>
+
+                <form id="dislikebutton" method="POST" action="/article/{{article.slug}}/userpreference/2/">
+                    {% csrf_token %}
+                    <input type="hidden">
+                </form>
+
+                {% for c in article.comments.all %}
+                   <div class="list-group-item border-primary border-left-0 border-right-0 border-bottom-0">
+                       <strong>{{ c.user_name }}</strong>
+                       <small class="date text-muted">{{ c.comment_date }}</small>
+                       <p>{{ c.comment_cont|linebreaks }}</p>
+                   </div>
+                {% empty %}
+                    <p>No comments here yet :(</p>
+                {% endfor %}
+
+            {% endif %}
+        </div>
+    </div>
+</div>

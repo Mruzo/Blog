@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+
+
+    <h1 class="text-center">{{ title }}</h1>
+    {% for a in article_list %}
+        {% if a.publish_date %}
+
+            {% include 'snmov/list-inline.html' with article=a truncate=True detail=False %}
+
+        {% endif %}
+
+
+    {% endfor %}
+<!--    {% for prod in products %}-->
+<!--    <div class="col-sm-8">-->
+<!--        <div class="card card-body col border-primary mt-3">-->
+<!--            <div class="row">-->
+<!--           -->
+<!--                <div class="col">-->
+<!--                    <div id="posts">-->
+<!--                        <h2 class="title">{{ prod.title }}</h2>-->
+<!--                        <div class="list-group">-->
+<!--                            <div class="list-group">-->
+<!--                                <p>{{ prod.content }}</p>-->
+<!--                            </div>-->
+<!--                            <form id="addForm" class="form-group">-->
+<!--                                <input textarea type="text" class="form-control" id="item" placeholder="Comment...">-->
+
+<!--                                <div class="mt-1">-->
+<!--                                    <input class="btn btn-outline-success" type="submit" value="Post Solution">-->
+<!--                                    <input class="btn btn-outline-danger" type="submit" value="Not a Problem">-->
+<!--                                </div>  -->
+<!--                            </form>-->
+<!--                            <ul id="items" class="list-group">-->
+<!--                                &lt;!&ndash; there should be another for loop for the comments I guess &ndash;&gt;-->
+<!--                                <li class="list-group-item px-2 py-1">{{ prod.comment }}</li>-->
+<!--                            </ul>-->
+<!--                            <p><h6><a href="#" class="badge badge-primary">more comments</a></h6></p>-->
+
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div> -->
+<!--    {% endfor %} -->
+    
+
+
+
+{% endblock %}

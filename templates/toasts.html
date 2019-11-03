@@ -1,0 +1,29 @@
+{% if messages %}
+    {% for message in messages %}
+        {% if message.tags == 'success'%}
+            <div class="toast" data-delay="2000">
+              <div class="toast-body badge-success">
+                {{message}}
+              </div>
+            </div>
+        {% elif message.tags == 'info'%}
+            <div class="toast" data-delay="2000">
+              <div class="toast-body badge-info">
+                {{message}}
+              </div>
+            </div>
+        {% elif message.tags == 'warning'%}
+            <div class="toast" data-delay="2000">
+              <div class="toast-body badge-warning">
+                {{message}}
+              </div>
+            </div>
+        {% elif message.tags == 'error'%}
+            <div class="toast" data-delay="2000">
+              <div class="toast-body badge-danger">
+                {{message}}
+              </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
