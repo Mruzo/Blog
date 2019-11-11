@@ -2,22 +2,15 @@
 
 {% block content %}
 
+    <h1 class="text-center">{{ title }}</h1>
+    {% for a in article_list %}
+        {% if a.publish_date %}
+
+            {% include 'snmov/list-inline.html' with article=a truncate=True detail=False %}
+
+        {% endif %}
 
 
-          One of three columns
-
-            <h1 class="text-center">{{ title }}</h1>
-            {% for a in article_list %}
-                {% if a.publish_date %}
-
-                    {% include 'snmov/list-inline.html' with article=a truncate=True detail=False %}
-
-                {% endif %}
-
-
-            {% endfor %}
-
-
-
+    {% endfor %}
 
 {% endblock %}
