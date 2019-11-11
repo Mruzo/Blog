@@ -7,7 +7,7 @@
   </button>
 
   <div class="collapse navbar-collapse text-dark" id="navbarSupportedContent">
-    <ul class="navbar-nav m-auto w-100 justify-content-end text-center">
+    <ul class="navbar-nav m-auto w-100 justify-content-end text-center font-weight-bold text-uppercase">
       <li class="nav-item">
         <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
       </li>
@@ -19,7 +19,7 @@
       </li>
       {% if user.is_authenticated %}
         <li class="nav-item">
-          <a class="nav-link" href="/logout">Logout {{user.username|title}}</a>
+          <a class="nav-link" href="/logout">Logout <span class="text-capitalize" style="color: #7440bd;">{{user.first_name|title}}</span></a>
         </li>
       {% else %}
         <li class="nav-item">
