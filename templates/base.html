@@ -16,10 +16,11 @@
 <body class="bg-light" style="font-family: 'Cabin', sans-serif;">
 
     <div id="contain">
-        <div class="main">
+
+        <div class="main" style="background: linear-gradient(to bottom, #1b1464, #fff);">
             {% include 'navbar.html' %}
             <div id="progressbar"></div>
-            <div class="d-flex justify-content-center align-items-center position-relative">
+            <div class="d-flex justify-content-center align-items-center position-relative" style="z-index: 1;">
                 {% include 'toasts.html' %}
             </div>
 
@@ -49,8 +50,6 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
     <script src="{% static 'snmov/js/sm.js' %}"></script>
     <script>
-        $(document).ready(function(){
-           $('.toast').toast('show');
-           });
+
     </script>
 </body>

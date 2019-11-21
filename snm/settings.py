@@ -26,7 +26,7 @@ SECRET_KEY = os.environ.get('SNM_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['sneakymotivator.herokuapp.com']
+ALLOWED_HOSTS = ['sneakymotivator.herokuapp.com','sneakymotivator.com']
 
 LOGIN_URL = '/login'
 
