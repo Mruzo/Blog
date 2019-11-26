@@ -15,6 +15,11 @@ def about_page(request):
                   template_name="about.html",
                   context={"title": "About"})
 
+def privacy_page(request):
+    return render(request,
+                  template_name="privacy.html",
+                  context={"title": "Privacy Policy"})
+
 
 def contact_page(request):
     form = ContactModelForm(request.POST or None)

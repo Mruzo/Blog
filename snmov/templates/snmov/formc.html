@@ -10,12 +10,10 @@
     <div class="col-sm-6 mx-auto">
         <small>
             <div class="card rounded-0" style="width-max: 25rem">
-                <div class="card-header rounded-0 text-center">
-
+                <div class="card-header rounded-0 text-center bg-primary">
                     {% if title %}
-                        <h4>{{ title }}</h4>
+                        <h4 class="text-light">{{ title }}</h4>
                     {% endif %}
-
                 </div>
                 <form method='POST' action='.' enctype="multipart/form-data">
                     {% csrf_token %}

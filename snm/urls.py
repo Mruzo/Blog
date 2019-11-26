@@ -11,6 +11,7 @@ from .views import(
     home_page,
     about_page,
     contact_page,
+    privacy_page,
 )
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path('new-article/', article_create_view),
     path('article/', include('snmov.urls')),
     path('about/', about_page),
+    path('privacy/', privacy_page),
     path('contact/', contact_page),
     path('logout/', logout_request),
     path('login/', login_request),

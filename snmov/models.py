@@ -76,6 +76,10 @@ class Article(models.Model):
     def approved_comments(self):
         return self.comments.filter(approved_comment=True)
 
+    @property
+    def comments_count_multiplied(self):
+        return 2 * self.comments.count()
+
 
 class Preference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -109,8 +113,8 @@ class Comment(models.Model):
     def get_addc_url(self):
         return f"{self.get_absolute_url()}/addc"
 
-    def get_deletec_url(self):
-        return f"{self.get_absolute_url()}/deletec"
+    # def get_deletec_url(self):
+    #     return f"{self.get_absolute_url()}/deletec"
 
     def approve(self):
         self.approved_comment = True

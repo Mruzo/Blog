@@ -27,7 +27,7 @@ class ArticleModelForm(forms.ModelForm):
 
 
 class CommentForm(forms.ModelForm):
-
+    comment_cont = forms.CharField(widget=forms.Textarea, label="")
     class Meta:
         model = Comment
         fields = ['comment_cont']

@@ -1,3 +1,4 @@
+{% load static %}
 
 <div class="col-12 col-md-6 mb-3 mx-auto px-0">
     <div class="card rounded-0 border-dark border-left-0 border-right-0 mx-0 {% if not article.publish_date %} border border-warning text-dark {% endif %}">
@@ -6,12 +7,12 @@
                 {% if not detail %}
 
                     <h5 class="text-center">{{ article.title }}</h5>
-                    <small class="text-muted">{{ article.publish_date }}</a></small>
+                    <small class="text-muted">{{ article.publish_date | date:"D M d Y"}}</a></small>
 
                 {% else %}
 
                     <h5 class="text-center">{{ article.title }}</h5>
-                    <small class="text-muted">{{ article.publish_date }} by <a href="/about" style="color: purple;">Christopher Uzoewulu</a></small>
+                    <small class="text-muted">{{ article.publish_date | date:"D M d Y"}} by <a href="/about" style="color: purple;">Christopher Uzoewulu</a></small>
 
                 {% endif %}
             </div>
@@ -40,23 +41,40 @@
                     {% if not article.publish_date %} Draft {% endif %}
                         <div class="list-inline text-center">
                             <small>
-                                <li class="list-inline-item">Two cents: {{ article.comments.count }}</li>
-                                <li class="list-inline-item">Likes: {{article.likes}}</li>
-                                <li class="list-inline-item">Loathes: {{article.dislikes}}</li>
+                                <li class="list-inline-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg"  height="18" viewBox="0 0 24 24"><path d="M20 21.113l-.494-3.024c-4.894 1.342-9.591-.872-9.677-6.075-.085-5.204 4.479-7.7 9.5-6.314l.671-3.047c-1.635-.464-3.356-.633-5-.525v-2.128h-2v2.411c-4.458.978-8.05 4.246-8 9.889.052 5.608 3.64 8.548 8 9.311v2.389h2v-2.185c1.662.042 3.379-.195 5-.702z"/></svg>: {{ article.comments_count_multiplied }}
+                                </li>
+                                <li class="list-inline-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg> : {{article.likes}}</li>
+                                <li class="list-inline-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg> : {{article.dislikes}}</li>
+
                             </small>
                         </div>
             <a href="{{ article.get_absolute_url }}"><span class="badge badge-success badge-pill">View</span></a>
                 {% else %}
                         <div class="container">
-                            <div class="row justify-content-around">
-                                <div class="col align-self-center">
-                                    <a href="#" onclick="document.getElementById('likebutton').submit()">Like </a>{{article.likes}}
+                            <div class="row">
+                                <div class="col align-self-center d-flex justify-content-around">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-0">
+                                        <div class="d-flex justify-content-center">
+                                            <a href="#" onclick="document.getElementById('likebutton').submit()">
+                                                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg>
+                                            </a>&nbsp{{article.likes}}
+                                        </div>
+                                    </button>
                                 </div>
                                 <div class="col-6 my-1">
                                     <a class="btn btn-primary btn-small btn-block rounded-0" href="/article/{{article.slug}}/addc/"><small> Add your 2&#162</small></a>
                                 </div>
-                                <div class="col align-self-center">
-                                    <a href="#" onclick="document.getElementById('dislikebutton').submit()">Loathe </a>{{article.dislikes}}
+                                <div class="col align-self-center d-flex justify-content-around">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-0">
+                                        <div class="d-flex justify-content-center">
+                                            <a href="#" onclick="document.getElementById('dislikebutton').submit()">
+                                                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg>
+                                            </a>&nbsp{{article.dislikes}}
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
 
@@ -76,8 +94,11 @@
                     {% for c in article.comments.all %}
                        <div class="list-group-item border-primary border-left-0 border-right-0 border-bottom-0">
                            <strong>{{ c.user_name }}</strong>
-                           <small class="date text-muted">{{ c.comment_date }}</small>
+                           <small class="date text-muted">{{ c.comment_date | date:"D M d Y" }}</small>
                            <p>{{ c.comment_cont|linebreaks }}</p>
+<!--                           {% if user == c.user_name %}-->
+<!--                            <a href="{{ comment.get_absolute_url }}"><small>Delete</small></a>-->
+<!--                           {% endif %}-->
                        </div>
                     {% empty %}
                         <p></p>

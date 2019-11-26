@@ -6,6 +6,8 @@ from .forms import ArticleModelForm, CommentForm, RegisterForm
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
+from django.urls import reverse_lazy
+from django.views.generic.edit import DeleteView
 
 
 # Create your views here.
@@ -171,16 +173,16 @@ def article_delete_view(request, slug):
                   )
 
 
-# @login_required()
 # def comment_delete_view(request, pk):
-#
 #     obj = get_object_or_404(Comment, pk=pk)
-#     template_name = 'snmov/delete.html'
+#     # if obj.user_name == request.user:
+#     template_name = 'snmov/deletec.html'
 #     if request.method == "POST":
 #         obj.delete()
-#         return redirect("/article")
+#         return redirect(article_detail_view)
 #     context = {"object": obj}
 #     return render(request, template_name, context)
+
 
 def logout_request(request):
     logout(request)
@@ -207,7 +209,7 @@ def login_request(request):
     form = AuthenticationForm()
     return render(request,
                   template_name="snmov/login.html",
-                  context={"title": "Log In", "form": form},
+                  context={"title": "Log In", "form": form}
                   )
 
 

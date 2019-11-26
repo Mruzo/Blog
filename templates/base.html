@@ -17,7 +17,7 @@
 
     <div id="contain">
 
-        <div class="main" style="background: linear-gradient(to bottom, #1b1464, #fff);">
+        <div class="main" style="background: linear-gradient(to bottom, #CC3008, #FFF);">
             {% include 'navbar.html' %}
             <div id="progressbar"></div>
             <div class="d-flex justify-content-center align-items-center position-relative" style="z-index: 1;">
@@ -30,14 +30,17 @@
         </div>
 
     </div>
-    <footer class="jumbotron jumbotron-fluid card-footer rounded-0 text-center text-white py-0 mb-0">
+    <footer class="jumbotron jumbotron-fluid card-footer rounded-0 text-center text-white py-0 mb-0" style="bottom: 0;">
+
         <div class="card mw-100">
-            <img class="card-img-bottom img-fluid" src="{% static 'snmov/img/footer.png' %}" alt="footer image">
+            <img class="card-img-bottom img-fluid" src="{% static 'snmov/img/footer.png' %}" alt="">
             <div class="card-img-overlay d-flex flex-column justify-content-center position-absolute mw-100">
                 <small id="foot-text" class="color-white">
                     <a class="badge badge-light" href="/about">About</a>
                     <span>•</span>
                     <a class="badge badge-light" href="/contact">Contact</a>
+                    <span>•</span>
+                    <a class="badge badge-light" href="/privacy">Privacy Policy</a>
                     <p >&copy 2019 Christopher Uzoewulu</p>
                 </small>
             </div>

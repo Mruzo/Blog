@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+    <h1>Are you sure you want to delete the following:</h1>
+    <p> {{ object.comment_cont }}</p>
+
+    <form method="POST" >
+        {% csrf_token %}
+        <button class='btn btn-danger'> Yes, delete</button>
+    </form>
+
+    <button class='btn btn-primary'><a href="#"> Yes, delete</a></button>
+
+{% endblock %}
