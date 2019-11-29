@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get('SNM_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['sneakymotivator.com']
+ALLOWED_HOSTS = ['*']
 
 LOGIN_URL = '/login'
 
