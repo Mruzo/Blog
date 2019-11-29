@@ -1,30 +1,43 @@
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
 from snmov.views import (
     article_create_view,
     logout_request,
     login_request,
     register_view,
+    article_detail_view,
 )
+from snmov.sitemaps import StaticViewSitemap, ArticleSitemap, CommentSitemap
+sitemaps = {
+    'static': StaticViewSitemap,
+    'article': ArticleSitemap,
+    'comment': CommentSitemap,
+}
 from .views import(
     home_page,
     about_page,
     contact_page,
     privacy_page,
+    terms_page,
+    cookie_page,
 )
 
 urlpatterns = [
     path('', home_page),
-    path('new-article/', article_create_view),
+    path('new-article/', article_create_view, name='article_create'),
     path('article/', include('snmov.urls')),
-    path('about/', about_page),
-    path('privacy/', privacy_page),
-    path('contact/', contact_page),
-    path('logout/', logout_request),
-    path('login/', login_request),
-    path('register/', register_view),
+    path('about/', about_page, name='about'),
+    path('privacy/', privacy_page, name='privacy'),
+    path('terms/', terms_page, name='terms'),
+    path('cookies/', cookie_page, name='cookie'),
+    path('contact/', contact_page, name='contact'),
+    path('logout/', logout_request, name='logout_req'),
+    path('login/', login_request, name='login_req'),
+    path('register/', register_view, name='register'),
     path('admin/', admin.site.urls),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
 ]
 
 if settings.DEBUG:

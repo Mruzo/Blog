@@ -6,7 +6,7 @@ from .views import (
     article_delete_view,
     add_comment_to_article,
     article_preference,
-    # comment_delete_view,
+    comment_delete_view,
 )
 
 
@@ -17,5 +17,5 @@ urlpatterns = [
     path('<str:slug>/userpreference/<int:value>/', article_preference, name='artclepreference'),
     path('<str:slug>/edit/', article_update_view),
     path('<str:slug>/delete/', article_delete_view),
-    # path('<str:slug>/deletec/', comment_delete_view),
+    path('<str:slug>/comment/deletec/', comment_delete_view),
 ]

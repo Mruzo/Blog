@@ -173,15 +173,15 @@ def article_delete_view(request, slug):
                   )
 
 
-# def comment_delete_view(request, pk):
-#     obj = get_object_or_404(Comment, pk=pk)
-#     # if obj.user_name == request.user:
-#     template_name = 'snmov/deletec.html'
-#     if request.method == "POST":
-#         obj.delete()
-#         return redirect(article_detail_view)
-#     context = {"object": obj}
-#     return render(request, template_name, context)
+def comment_delete_view(request, pk):
+    obj = get_object_or_404(Comment, pk=pk)
+    # if obj.user_name == request.user:
+    template_name = 'snmov/deletec.html'
+    if request.method == "POST":
+        obj.delete()
+        return redirect(article_detail_view)
+    context = {"object": obj}
+    return render(request, template_name, context)
 
 
 def logout_request(request):

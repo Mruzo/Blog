@@ -13,3 +13,18 @@ class ContactModelForm(forms.ModelForm):
         if not email.endswith(".com"):
             raise forms.ValidationError("Please use an email that ends with .com")
         return email
+
+class ContactForm(forms.Form):
+    # full_name = forms.CharField(required=True)
+    from_email = forms.EmailField(required=True)
+    subject = forms.CharField(required=True)
+    message = forms.CharField(widget=forms.Textarea, required=True)
+
+    # class Meta:
+    #     fields = ['full_name', 'email', 'subject', 'content']
+
+    def clean_email(self, *args, **kwargs):
+        from_email = self.cleaned_data.get('email')
+        if not from_email.endswith(".com"):
+            raise forms.ValidationError("Please use an email that ends with .com")
+        return from_email

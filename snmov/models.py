@@ -108,13 +108,16 @@ class Comment(models.Model):
         return self.comment_cont
 
     def get_absolute_url(self):
-        return f"{Article.get_absolute_url()}"
+        return f"/article/{self.pk}"
+
+    # def get_absolute_url(self):
+    #     return f"{Article.get_absolute_url()}"
 
     def get_addc_url(self):
         return f"{self.get_absolute_url()}/addc"
 
-    # def get_deletec_url(self):
-    #     return f"{self.get_absolute_url()}/deletec"
+    def get_deletec_url(self):
+        return f"{self.get_absolute_url()}/deletec"
 
     def approve(self):
         self.approved_comment = True
