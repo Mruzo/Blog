@@ -2,9 +2,9 @@ from django.shortcuts import render, redirect
 from .forms import ContactModelForm, ContactForm
 from snmov.models import Article, Comment, ReachOut
 from django.contrib import messages
-from django.core.mail import send_mail, BadHeaderError
-from django.http import HttpResponse, HttpResponseRedirect
-from .settings import EMAIL_HOST_USER
+# from django.core.mail import send_mail, BadHeaderError
+# from django.http import HttpResponse, HttpResponseRedirect
+# from .settings import EMAIL_HOST_USER
 
 
 def home_page(request):
