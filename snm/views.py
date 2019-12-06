@@ -2,9 +2,9 @@ from django.shortcuts import render, redirect
 from .forms import ContactModelForm, ContactForm
 from snmov.models import Article, Comment, ReachOut
 from django.contrib import messages
-# from django.core.mail import send_mail, BadHeaderError
-# from django.http import HttpResponse, HttpResponseRedirect
-# from .settings import EMAIL_HOST_USER
+from django.core.mail import send_mail, BadHeaderError
+from django.http import HttpResponse, HttpResponseRedirect
+from .settings import EMAIL_HOST_USER
 
 
 def home_page(request):
@@ -49,19 +49,19 @@ def contact_page(request):
                   context={"title": "Say Hello!", "form": form})
 
 
-# def contact_page_m(request):
-#     form = ContactForm(request.POST or None)
-#     if request.method == 'POST':
-#         form = ContactForm(request.POST)
-#         if form.is_valid():
-#             # full_name = form.cleaned_data['full_name']
-#             subject = form.cleaned_data['subject']
-#             from_email = form.cleaned_data['from_email']
-#             message = form.cleaned_data['message']
-#             try:
-#                 send_mail(subject, message, from_email, ['sneakymotivator.com'], fail_silently=True)
-#                 messages.success(request, f"Thanks for reaching out")
-#             except BadHeaderError:
-#                 return HttpResponse('Invalid header found.')
-#             return redirect(contact_page)
-#     return render(request, "form.html", {"title": "Say Hello!", "form": form})
+def contact_page_m(request):
+    form = ContactForm(request.POST or None)
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            # full_name = form.cleaned_data['full_name']
+            subject = form.cleaned_data['subject']
+            from_email = form.cleaned_data['from_email']
+            message = form.cleaned_data['message']
+            try:
+                send_mail(subject, message, from_email, ['sneakymotivator@gmail.com'], fail_silently=True)
+                messages.success(request, f"Thanks for reaching out")
+            except BadHeaderError:
+                return HttpResponse('Invalid header found.')
+            return redirect('/contact')
+    return render(request, "form.html", {"title": "Say Hello!", "form": form})

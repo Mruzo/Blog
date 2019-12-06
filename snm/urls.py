@@ -18,7 +18,7 @@ sitemaps = {
 from .views import(
     home_page,
     about_page,
-    contact_page,
+    contact_page_m,
     privacy_page,
     terms_page,
     cookie_page,
@@ -32,7 +32,7 @@ urlpatterns = [
     path('privacy/', privacy_page, name='privacy'),
     path('terms/', terms_page, name='terms'),
     path('cookies/', cookie_page, name='cookie'),
-    path('contact/', contact_page, name='contact'),
+    path('contact/', contact_page_m, name='contact'),
     path('logout/', logout_request, name='logout_req'),
     path('login/', login_request, name='login_req'),
     path('register/', register_view, name='register'),

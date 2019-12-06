@@ -17,6 +17,7 @@
                 </div>
                 <form method="POST">
                     {% csrf_token %}
+
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item">{{ form|crispy }}</li>
                     </ul>

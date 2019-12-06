@@ -15,13 +15,9 @@ class ContactModelForm(forms.ModelForm):
         return email
 
 class ContactForm(forms.Form):
-    # full_name = forms.CharField(required=True)
-    from_email = forms.EmailField(required=True)
+    from_email = forms.EmailField(required=True, label="Email")
     subject = forms.CharField(required=True)
     message = forms.CharField(widget=forms.Textarea, required=True)
-
-    # class Meta:
-    #     fields = ['full_name', 'email', 'subject', 'content']
 
     def clean_email(self, *args, **kwargs):
         from_email = self.cleaned_data.get('email')
