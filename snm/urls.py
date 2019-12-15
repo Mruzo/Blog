@@ -36,8 +36,9 @@ urlpatterns = [
     path('logout/', logout_request, name='logout_req'),
     path('login/', login_request, name='login_req'),
     path('register/', register_view, name='register'),
-    path('admin/', admin.site.urls),
+    path('uno/', admin.site.urls),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
+    path('tinymce/', include('tinymce.urls')),
 ]
 
 if settings.DEBUG:
