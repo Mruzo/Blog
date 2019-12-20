@@ -1,28 +1,30 @@
 {% load static %}
 
-<div class="col-12 col-md-6 mb-3 mx-auto px-0">
+<div class="col-12 col-md-6 mb-4 mx-auto px-0">
     <div class="card rounded-0 border-dark border-left-0 border-right-0 mx-0 {% if not article.publish_date %} border border-warning text-dark {% endif %}">
-        <div class="card-body pb-0">
-            <div class="card-title border-bottom border-dark ">
+        <div class="card-body" {% if not detail %} style="background:linear-gradient(rgba(3, 16, 110, 0.8),rgba(3, 16, 110, 0.8)),url({% static 'snmov/img/kribgc.svg' %}); height:100%;width:100%;object-fit:cover;"{% endif %}>
+            <div class="card-title p-1 border-bottom border-dark " {% if not detail %} style="padding:20px;color:#000;margin:0;background-color: rgba(255, 255, 255, 0.8);"{% endif %}>
 
-                <div class=""; style="position:relative;top:0%;left:50%;transform: translate(-50%, 0%);z-index:1;">
+                <div class="" style="position:relative;top:0%;left:50%;transform: translate(-50%, 0%);z-index:1;">
 
 
                     {% if not detail %}
 
                         <h5 class="text-center">{{ article.title }}</h5>
-                        <small class="text-muted">{{ article.publish_date | date:"D M d Y"}}</a></small>
+                        <small class="">{{ article.publish_date | date:"D M d Y"}}</a></small>
 
                     {% else %}
 
                         <h5 class="text-center">{{ article.title }}</h5>
                         <small class="text-muted">{{ article.publish_date | date:"D M d Y"}} by <a href="/about" style="color: purple;">Christopher Uzoewulu</a></small>
-                        <div class="float-right"> <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false">Tweet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></div>
 
                     {% endif %}
 
                 </div>
+
             </div>
+
+            <div style="padding:20px;color:#000;margin:0;background-color: rgba(255, 255, 255, 0.8);">
 
                 {% if article.image %}
                     <a href="{{ article.get_absolute_url }}">
@@ -35,91 +37,91 @@
                     </a>
                 {% endif %}
 
-                <p class="card-text">
+            </div>
 
-                    {% if truncate %}
-                        {{ article.content| linebreaks| truncatewords:30 }}
-                    {% else %}
-                        {{ article.content| linebreaks }}
-                    {% endif %}
-                </p>
+            <div style="padding:20px;color:#000;margin:0;background-color: rgba(255, 255, 255, 0.8);">
+            {% if truncate %}
+                {{ article.content| linebreaks| truncatewords:30 }}
+            {% else %}
+                {{ article.content| linebreaks }}
+            {% endif %}
+            </div>
 
-                {% if not detail %}
-                    {% if not article.publish_date %} Draft {% endif %}
-                        <div class="list-inline text-center">
-                            <small>
-                                <li class="list-inline-item">
-                                    <svg xmlns="http://www.w3.org/2000/svg"  height="18" viewBox="0 0 24 24"><path d="M20 21.113l-.494-3.024c-4.894 1.342-9.591-.872-9.677-6.075-.085-5.204 4.479-7.7 9.5-6.314l.671-3.047c-1.635-.464-3.356-.633-5-.525v-2.128h-2v2.411c-4.458.978-8.05 4.246-8 9.889.052 5.608 3.64 8.548 8 9.311v2.389h2v-2.185c1.662.042 3.379-.195 5-.702z"/></svg>: {{ article.comments_count_multiplied }}
-                                </li>
-                                <li class="list-inline-item">
-                                    <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg> : {{article.likes}}</li>
-                                <li class="list-inline-item">
-                                    <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg> : {{article.dislikes}}</li>
+            {% if not detail %}
+                {% if not article.publish_date %} Draft {% endif %}
+                    <div class="list-inline text-center" style="padding:0px 20px 20px;color:#000;margin:0;background-color: rgba(255, 255, 255, 0.8);">
+                        <small>
+                            <li class="list-inline-item">
+                                <svg xmlns="http://www.w3.org/2000/svg"  height="18" viewBox="0 0 24 24"><path d="M20 21.113l-.494-3.024c-4.894 1.342-9.591-.872-9.677-6.075-.085-5.204 4.479-7.7 9.5-6.314l.671-3.047c-1.635-.464-3.356-.633-5-.525v-2.128h-2v2.411c-4.458.978-8.05 4.246-8 9.889.052 5.608 3.64 8.548 8 9.311v2.389h2v-2.185c1.662.042 3.379-.195 5-.702z"/></svg>: {{ article.comments_count_multiplied }}
+                            </li>
+                            <li class="list-inline-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg> : {{article.likes}}</li>
+                            <li class="list-inline-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg> : {{article.dislikes}}</li>
 
-                            </small>&nbsp;
-                            <a href="{{ article.get_absolute_url }}"><span class="badge badge-success badge-pill">View</span></a>
-                        </div>
-            &nbsp;
+                        </small>&nbsp;
+                        <a href="{{ article.get_absolute_url }}"><span class="badge badge-success badge-pill">View</span></a>
+                    </div>
 
-
-<!--            <img src="{% static 'snmov/img/kriheader.svg' %}" style="opacity:0.5;height:30px;width:100%;object-fit:cover;">-->
-
-                {% else %}
-                        <div class="container">
-                            <div class="row">
-                                <div class="col align-self-center d-flex justify-content-around">
-                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-0">
-                                        <div class="d-flex justify-content-center">
-                                            <a href="#" onclick="document.getElementById('likebutton').submit()">
-                                                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg>
-                                            </a>&nbsp{{article.likes}}
-                                        </div>
-                                    </button>
+            {% else %}
+                    <div class="container">
+                        <div class="row">
+                            <div class="col align-self-center d-flex justify-content-center">
+                                <div class="col-3 my-1">
+                                    <a class="btn btn-primary btn-block rounded-0 text-wrap"  href="/article/{{article.slug}}/addc/"><small><svg xmlns="http://www.w3.org/2000/svg" class="cls-1" height="12" viewBox="0 2 24 24"><style>.cls-1{fill:#fff;}</style> <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg> 2&#162</small></a>
                                 </div>
-                                <div class="col-6 my-1">
-                                    <a class="btn btn-primary btn-small btn-block rounded-0" href="/article/{{article.slug}}/addc/"><small> Add your 2&#162</small></a>
-                                </div>
-                                <div class="col align-self-center d-flex justify-content-around">
-                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-0">
-                                        <div class="d-flex justify-content-center">
-                                            <a href="#" onclick="document.getElementById('dislikebutton').submit()">
-                                                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg>
-                                            </a>&nbsp{{article.dislikes}}
-                                        </div>
-                                    </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-0 m-1">
+                                    <div class="d-flex justify-content-center">
+                                        <a href="#" onclick="document.getElementById('likebutton').submit()">
+                                            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg>
+                                        </a>&nbsp{{article.likes}}
+                                    </div>
+                                </button>
+
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-0 m-1">
+                                    <div class="d-flex justify-content-center">
+                                        <a href="#" onclick="document.getElementById('dislikebutton').submit()">
+                                            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg>
+                                        </a>&nbsp{{article.dislikes}}
+                                    </div>
+                                </button>
+                                <div class="col-3 my-1">
+                                    <a class="btn btn-primary btn-small btn-block rounded-0" href="https://twitter.com/share?ref_src=twsrc%5Etfw" data-show-count="false"><small> <svg xmlns="http://www.w3.org/2000/svg" class="cls-1"  height="18" viewBox="0 0 24 24"><style>.cls-1{fill:#fff;}</style><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg> 2&#162</small></a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
                                 </div>
                             </div>
-
                         </div>
 
+                    </div>
 
-                    <form id="likebutton" method="POST" action="/article/{{article.slug}}/userpreference/1/">
-                        {% csrf_token %}
-                        <input type="hidden">
-                    </form>
 
-                    <form id="dislikebutton" method="POST" action="/article/{{article.slug}}/userpreference/2/">
-                        {% csrf_token %}
-                        <input type="hidden">
-                    </form>
+                <form id="likebutton" method="POST" action="/article/{{article.slug}}/userpreference/1/">
+                    {% csrf_token %}
+                    <input type="hidden">
+                </form>
 
-                    {% for c in article.comments.all %}
-                       <div class="list-group-item border-0"  style="background:linear-gradient(rgba(0, 123, 255, 0.8),      rgba(0, 123, 255, 0.8)),url({% static 'snmov/img/kriheader.svg' %}); height:100%;width:100%;object-fit:cover;">
-                           <div style="padding:20px;color:#fff;margin:0;background-color: rgba(0, 0, 0, 0.8);">
-                               <strong>{{ c.user_name }}</strong>
-                               <small class="date">{{ c.comment_date | date:"D M d Y" }}</small>
-                               <p>{{ c.comment_cont|linebreaks }}</p>
-    <!--                           {% if user == c.user_name %}-->
-    <!--                            <a href="{{ comment.get_absolute_url }}"><small>Delete</small></a>-->
-    <!--                           {% endif %}-->
-                               </div>
+                <form id="dislikebutton" method="POST" action="/article/{{article.slug}}/userpreference/2/">
+                    {% csrf_token %}
+                    <input type="hidden">
+                </form>
+
+                {% for c in article.comments.all %}
+                   <div class="list-group-item border-0" style="background:linear-gradient(rgba(0, 123, 255, 0.8),      rgba(0, 123, 255, 0.8)),url({% static 'snmov/img/kriheader.svg' %}); height:100%;width:100%;object-fit:cover;">
+                       <div style="padding:20px;color:#fff;margin:0;background-color: rgba(0, 0, 0, 0.8);">
+                           <strong>{{ c.user_name }}</strong>
+                           <small class="date">{{ c.comment_date | date:"D M d Y" }}</small>
+                           <p>{{ c.comment_cont|linebreaks }}</p>
+<!--                           {% if user == c.user_name %}-->
+<!--                            <a href="{{ comment.get_absolute_url }}"><small>Delete</small></a>-->
+<!--                           {% endif %}-->
                            </div>
-                    {% empty %}
-                        <p></p>
-                        <p class="text-center">No 2&#162 here yet &#129335</p>
-                    {% endfor %}
+                       </div>
+                {% empty %}
+                    <p></p>
+                    <p class="text-center">Be the first to add your 2&#162</p>
+                {% endfor %}
 
-                {% endif %}
+            {% endif %}
 
         </div>
     </div>

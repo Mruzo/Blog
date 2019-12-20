@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
 
@@ -8,11 +9,12 @@
 <div class="container my-5 position-relative rounded-0">
     <div class="col-sm-6 mx-auto">
         <small>
-            <div class="card rounded-0" style="width-max: 25rem;">
-                <div class="card-header text-center" style="background: #f24b2a;">
+            <div class="card rounded-0">
+                <div class="card-header text-center"  style="width-max: 25rem; background:linear-gradient(rgba(0, 0, 0, 0.8),rgba(0, 0, 0, 0.8)),url({% static 'snmov/img/htheader.svg' %}); padding:10px; height:100%;width:100%;object-fit:cover;">
 
                     {% if title %}
-                        <h4>{{ title }}</h4>
+                        <h4 style="padding:10px;color:#000;margin:0;background-color: rgba(255, 255, 255, 0.8);">
+                            {{ title }}</h4>
                     {% endif %}
 
                 </div>
@@ -22,7 +24,7 @@
                         <li class="list-group-item">{{ form|crispy }}</li>
                     </ul>
                     <ul class="list-group list-group-flush text-center border-0">
-                        <li class="list-group-item"><button class="btn btn-primary" type="submit">Send</button></li>
+                        <li class="list-group-item"><button class="btn btn-primary" type="submit" style="width-max: 25rem; background:linear-gradient(rgba(0, 0, 0, 0.8),rgba(0, 0, 0, 0.8)),url({% static 'snmov/img/htheader.svg' %}); padding:10px; height:100%;width:100%;object-fit:cover;">Send</button></li>
                     </ul>
                 </form>
 
