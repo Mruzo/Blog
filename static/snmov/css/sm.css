@@ -30,6 +30,7 @@ body {
 #contain {
     min-height: 100vh;
     box-sizing: border-box;
+    z-index: 2;
 }
 
 .main {
@@ -37,6 +38,7 @@ body {
     padding-bottom: 10px;
     height: 100vh;
     background: #FFF;
+    z-index: 2;
 }
 
 footer {
@@ -46,7 +48,7 @@ footer {
     position: -webkit-sticky;
     position: sticky;
     bottom: 0;
-    z-index: -1;
+    z-index: 1;
 
 }
 
@@ -60,8 +62,6 @@ footer {
     padding: 20px;
 
 }
-
-
 
 .card-img-bottom {
     width: 100%
