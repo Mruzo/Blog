@@ -24,3 +24,7 @@ class ContactForm(forms.Form):
         if not from_email.endswith(".com"):
             raise forms.ValidationError("Please use an email that ends with .com")
         return from_email
+
+# class FeedbackForm(forms.Form):
+#     from_email = forms.EmailField(required=True, label="Email")
+#     message = forms.CharField(widget=forms.Textarea, required=True)

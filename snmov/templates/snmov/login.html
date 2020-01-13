@@ -4,35 +4,33 @@
 
 {% load crispy_forms_tags %}
 
-<div class="container my-5 position-relative">
-    <div class="col-sm-6 mx-auto">
-        <small>
-            <div class="card rounded-0" style="width-max: 25rem">
-                <div class="card-header rounded-0 text-center" style="background: #f24b2a;">
+
+        <div class="row">
+            <div class="col s12 m8 l6 card right" style="width-max: 25em;margin-top:10%;">
+                <div class="center" style="font-weight:bold;">
 
                     {% if title %}
                         <h4>{{ title }}</h4>
                     {% endif %}
 
                 </div>
-                <form method="POST">
+                <form class="left-align" style="margin:0 2%;" method="POST">
                     {% csrf_token %}
 
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">{{ form|crispy }}</li>
+                    <ul class="">
+                        <li class="">{{ form|crispy }}</li>
                     </ul>
-                    <ul class="list-group list-group-flush text-center">
-                        <li class="list-group-item"><button class="btn btn-success" type="submit">Sign In</button></li>
+                    <ul class="center row">
+                        <li class=""><button class="btn  green darken-2" type="submit">Sign In</button></li>
                     </ul>
                 </form>
-                <p class="text-center">
+                <p class="center">
                 Don't have an account? <a href="/register"><strong>Register here</strong></a>.
                 </p>
 
             </div>
-        </small>
-    </div>
-</div>
+        </div>
+
 
 
 

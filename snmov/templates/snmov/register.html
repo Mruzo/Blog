@@ -5,35 +5,34 @@
 {% load crispy_forms_tags %}
 
 
-<div class="container my-5 position-relative">
-    <div class="col-sm-6 mx-auto">
-        <small>
-            <div class="card rounded-0" style="width-max: 25rem">
-                <div class="card-header rounded-0 text-center" style="background: #f24b2a;">
+
+
+        <div class="row">
+            <div class="col s12 m8 l6 card right" style="width-max: 25rem">
+                <div class="center" style="font-weight:bold;">
 
                     {% if title %}
                         <h4>{{ title }}</h4>
                     {% endif %}
 
                 </div>
-                <form method="POST">
+                <form class="left-align black-text" style="margin:0 2%;" method="POST">
                     {% csrf_token %}
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">{{ form1|crispy }}</li>
+                    <ul class="row">
+                        <li class="">{{ form1|crispy }}</li>
                     </ul>
-                    <ul class="list-group list-group-flush text-center">
-                        <li class="list-group-item"><button class="btn btn-success" type="submit">Sign Up</button></li>
+                    <ul class="row center">
+                        <li class="list-group-item"><button class="btn " type="submit">Sign Up</button></li>
                     </ul>
                 </form>
-                <p class="text-center">
+                <p class="center row">
                 Have an account? <a href="/login"><strong>Login</strong></a> instead
                 </p>
-                <a href="/terms" class="text-center">Terms of Use</a>
+                <div class="center">
+                    <a href="/terms">Terms of Use</a>
+                </div>
 
             </div>
-        </small>
-    </div>
-</div>
-
+        </div>
 
 {% endblock %}

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+{% load crispy_forms_tags %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,47 +13,70 @@
     <title>Sneaky Motivator | My self motivating articles. </title>
     <meta name="description" content="Articles on motivation to learn, improve and live better. Come get the motivation you didn't know you needed.">
     <link rel="shortcut icon" type="image/png" href="{% static 'snmov/img/wbicon.png' %}"/>
+    <link rel="stylesheet" href="{% static 'tinymce/css/prism.css' %}">
     <link href="https://fonts.googleapis.com/css?family=Marmelad&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" >
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css?family=Cabin|Marmelad&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 </head>
-<body class="bg-light" style="font-family: 'Cabin', sans-serif;">
+<body class="container black" style="font-family: 'Cabin', sans-serif;">
 
-    <div id="contain">
+    <header id="">
 
-        <div class="main">
+        <div class="">
             {% include 'navbar.html' %}
-            <div id="progressbar"></div>
-            <div class="d-flex justify-content-center align-items-center position-relative" style="z-index: 1;">
-                {% include 'toasts.html' %}
-            </div>
-
-
-            {% block content %}
-
-            {% endblock %}
         </div>
 
+    </header>
+    <div class="center-align" style="position:relative;width:20%;z-index:4;">
+        {% include 'toasts.html' %}
     </div>
-    <footer class="jumbotron jumbotron-fluid card-footer rounded-0 text-center text-white py-0 mb-0" style="bottom: 0;">
+    <main class="" style="background-image:url({% static 'snmov/img/homebghex.png' %});background-attachment:fixed;height:100%;width:100%;">
 
-        <div class="card mw-100">
-            <img class="card-img-bottom img-fluid" src="{% static 'snmov/img/footer.png' %}" alt="">
-            <div class="card-img-overlay d-flex flex-column justify-content-center position-absolute mw-100">
-                <small id="foot-text" class="color-white">
-                    <a class="badge badge-light" href="/about">About</a>
-                    <span>•</span>
-                    <a class="badge badge-light" href="/contact">Contact</a>
-                    <span>•</span>
-                    <a class="badge badge-light" href="/privacy">Privacy Policy</a>
-                    <span>•</span>
-                    <a class="badge badge-light" href="/cookies">Cookies Policy</a>
-                    <span>•</span>
-                    <a class="badge badge-light" href="/terms">Terms of Use</a>
-                    <p >&copy 2019 Christopher Uzoewulu</p>
-                </small>
+
+        <div class="container">
+        {% block content %}
+
+        {% endblock %}
+        </div>
+
+    </main>
+
+    <footer class="page-footer black">
+
+        <div class="container center">
+            <div class="row">
+<!--                <img class="card-img-bottom img-fluid" src="{% static 'snmov/img/footer.png' %}" alt="">-->
+                <div class="">
+<!--                    <div class="col l6 s12">-->
+<!--                        <h5 class="white-text">{{feedback}}</h5>-->
+
+<!--                        <form style="margin:0 3%;" method='POST' action='.' enctype="multipart/form-data">-->
+<!--                            {% csrf_token %}-->
+<!--                            {{ form|crispy }}-->
+<!--                            <ul class="center">-->
+<!--                                <li class=""><button class="btn row center deep-orange darken-3" type="submit" style="">Send</button></li>-->
+<!--                            </ul>-->
+<!--                        </form>-->
+
+<!--                    </div>-->
+                    <div class="col l4 offset-12 s12">
+                        <h5 class="white-text">Other Links</h5>
+                        <ul>
+                            <li><a class="grey-text text-lighten-3" href="/about">About</a></li>
+                            <li><a class="grey-text text-lighten-3" href="/contact">Contact</a></li>
+                            <li><a class="grey-text text-lighten-3" href="/privacy">Privacy Policy</a></li>
+                            <li><a class="grey-text text-lighten-3" href="/cookies">Cookies Policy</a></li>
+                            <li><a class="grey-text text-lighten-3" href="/terms">Terms of Use</a></li>
+
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-copyright center" style="margin:0 auto;width:200px;">
+                &copy 2020 Christopher Uzoewulu
             </div>
         </div>
     </footer>
@@ -62,7 +86,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
     <script src="{% static 'snmov/js/sm.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="{% static 'tinymce/js/prism.js' %}"></script>
     <script>
-
+        $(document).ready(function(){
+            $('.sidenav').sidenav();
+          });
     </script>
 </body>
