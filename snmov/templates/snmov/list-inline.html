@@ -5,7 +5,7 @@
 {% if not detail %}
 
      <div id="posts" class="card sticky-action show-on-scroll">
-        <div class="card-image waves-effect waves-block waves-light">
+        <div class="card-image waves-effect waves-block">
         {% if article.image %}
             <a href="{{ article.get_absolute_url }}">
             <img
@@ -76,7 +76,7 @@
     <div class="row">
     <div class="card col s12 l8">
         <div class="card-title" style="position:relative;top:0px;">
-            <h2 class="text-center" style="font-weight:bold;">{{ article.title }}</h2>
+            <h4 class="text-center" style="font-weight:bold;">{{ article.title }}</h4>
             <h6 class="text-muted">{{ article.publish_date | date:"D M d Y"}} by <a href="/about" style="color: purple;">Christopher Uzoewulu</a></h6>
         </div>
 

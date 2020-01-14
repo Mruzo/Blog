@@ -123,34 +123,34 @@
     <a class="row" href="#"><i class="small material-icons black-text right"></i></a>
     <li class=" valign-wrapper deep-orange lighten-5" style="margin:5px 5px;">
       <a class ="black-text" href="/">
-        <h5>HOME</h5>
+        <h6>HOME</h6>
       </a>
     </li>
     <li class=" valign-wrapper deep-orange lighten-5" style="margin:5px 5px;">
       <a class ="black-text" href="/about">
-        <h5>ABOUT</h5>
+        <h6>ABOUT</h6>
       </a>
     </li>
     <li class=" valign-wrapper deep-orange lighten-5" style="margin:5px 5px;">
       <a class ="black-text" href="/article">
-        <h5>ARTICLES</h5>
+        <h6>ARTICLES</h6>
       </a>
     </li>
     <li class=" valign-wrapper deep-orange lighten-5" style="margin:5px 5px;">
       <a class ="black-text" href="/contact">
-        <h5 class="center-align">CONTACT</h5>
+        <h6 class="center-align">CONTACT</h6>
       </a>
     </li>
     {% if user.is_authenticated %}
       <li class=" valign-wrapper deep-orange lighten-3" style="margin:5px 5px;">
         <a class ="valign-wrapper" href="/logout">
-          <h5>LOGOUT</h5>
+          <h6>LOGOUT</h6>
           <span class="text-capitalize" style="color: #7440bd;">{{user.first_name|title}}</span></a>
       </li>
     {% else %}
       <li class ="valign-wrapper deep-orange lighten-3" style="margin:5px 5px;">
         <a href="/login?next={{request.path}}">
-          <h5>LOGIN/REGISTER</h5>
+          <h6>LOGIN/REGISTER</h6>
         </a>
       </li>
     {% endif %}
