@@ -4,74 +4,67 @@
 
 {% if not detail %}
 
-     <div id="posts" class="card sticky-action show-on-scroll">
-        <div class="card-image waves-effect waves-block">
-        {% if article.image %}
-            <a href="{{ article.get_absolute_url }}">
-            <img
+    <div id="posts" class="row show-on-scroll">
+        <div class="col s12 m6">
+          <div class="card">
+            <div class="card-image">
+              <img
                     src="{{ article.image.url }}"
-                    class="activator" style="display: block; max-width:700px; margin:auto;">
-            </a>
-        {% endif %}
+                    class="activator" style="display: block; max-width:700px; margin:auto;"
+                    alt="{{title}}">
 
-        </div>
-        <div class="card-content">
-          <span class="card-title activator grey-text text-darken-4">{{ article.title }}<i class="material-icons right">more_vert</i></span>
-<!--          <p><a href="#">This is a link</a></p>-->
-        </div>
-        <div class="card-action center valign-wrapper">
-
-            <div class="row valign-wrapper" style="margin:0px auto;">
-
-                 <div class="col s4 valign-wrapper">
-                     <div class="row" style="margin:0px auto;">
-                         <div class="col s6 m6 l6">
-                             <svg xmlns="http://www.w3.org/2000/svg"  height="18" viewBox="0 0 24 24"><path d="M20 21.113l-.494-3.024c-4.894 1.342-9.591-.872-9.677-6.075-.085-5.204 4.479-7.7 9.5-6.314l.671-3.047c-1.635-.464-3.356-.633-5-.525v-2.128h-2v2.411c-4.458.978-8.05 4.246-8 9.889.052 5.608 3.64 8.548 8 9.311v2.389h2v-2.185c1.662.042 3.379-.195 5-.702z"/></svg>
-                         </div>
-                         <div class="col s6 m6 l6">
-                             &nbsp;{{ article.comments_count_multiplied }}
-                         </div>
-                     </div>
-                 </div>
-
-                 <div class="col s4 valign-wrapper">
-                     <div  class="row" style="margin:0px auto;">
-
-                         <div class="col s6 m6 l6">
-                             <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg>
-                         </div>
-                         <div class="col s6 m6 l6"style="padding-right: 0px;">
-                             &nbsp;{{article.likes}}
-                         </div>
-                     </div>
-                 </div>
-
-                <div class="col s4 valign-wrapper">
-                     <div  class="row" style="margin:0px auto;">
-
-                         <div class="col s6 m6 l6"style="
-    padding-right: 0px;">
-                             <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg>
-                         </div>
-                         <div class="col s6 m6 l6" style="
-    padding-right: 0px;">
-                             &nbsp;{{article.dislikes}}
-                         </div>
-                     </div>
-                 </div>
-
-             </div>
-
+              <a class="btn-floating halfway-fab waves-effect waves-dark deep-orange darken-1 center" href="{{ article.get_absolute_url }}">Read</a>
             </div>
-            <div class="card-reveal">
-              <span class="card-title grey-text text-darken-4">{{ article.title }}<i class="material-icons right">close</i></span>
-              <p>{{ article.content | safe | linebreaks | truncatewords:30}}</p>
-              <div class="center valign-wrapper mb-0 " style="width:40px;margin:20% auto;">
-                  <a class="btn-floating pulse center deep-orange darken-1" href="{{ article.get_absolute_url }}">Read</a>
-              </div>
+            <div class="card-content">
+                <span class="card-title">{{ article.title }}</span>
+                <p>{{ article.content | safe | linebreaks | truncatewords:30}}</p>
             </div>
+
+            <div class="card-action center valign-wrapper">
+
+                <div class="row valign-wrapper" style="margin:0px auto;">
+
+                     <div class="col s4 valign-wrapper">
+                         <div class="row" style="margin:0px auto;">
+                             <div class="col s6 m6 l6">
+                                 <svg xmlns="http://www.w3.org/2000/svg"  height="18" viewBox="0 0 24 24"><path d="M20 21.113l-.494-3.024c-4.894 1.342-9.591-.872-9.677-6.075-.085-5.204 4.479-7.7 9.5-6.314l.671-3.047c-1.635-.464-3.356-.633-5-.525v-2.128h-2v2.411c-4.458.978-8.05 4.246-8 9.889.052 5.608 3.64 8.548 8 9.311v2.389h2v-2.185c1.662.042 3.379-.195 5-.702z"/></svg>
+                             </div>
+                             <div class="col s6 m6 l6">
+                                 &nbsp;{{ article.comments_count_multiplied }}
+                             </div>
+                         </div>
+                     </div>
+
+                     <div class="col s4 valign-wrapper">
+                         <div  class="row" style="margin:0px auto;">
+
+                             <div class="col s6 m6 l6">
+                                 <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg>
+                             </div>
+                             <div class="col s6 m6 l6"style="padding-right: 0px;">
+                                 &nbsp;{{article.likes}}
+                             </div>
+                         </div>
+                     </div>
+
+                    <div class="col s4 valign-wrapper">
+                         <div  class="row" style="margin:0px auto;">
+
+                             <div class="col s6 m6 l6"style="
+        padding-right: 0px;">
+                                 <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg>
+                             </div>
+                             <div class="col s6 m6 l6" style="
+        padding-right: 0px;">
+                                 &nbsp;{{article.dislikes}}
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+                </div>
           </div>
-
+        </div>
+      </div>
 {% else %}
     <div class="row">
     <div class="card col s12 l8">
@@ -148,7 +141,7 @@
 
 
     </div>
-         <a class="btn-floating btn-small waves-effect waves-light blue right" href="#totop"><i class="material-icons" >expand_less</i></a>&nbsp;
+         <a class="btn-floating btn-small blue right" href="#totop"><i class="material-icons" >expand_less</i></a>&nbsp;
     </div>
 
 {% endif %}

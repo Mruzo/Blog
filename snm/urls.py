@@ -8,6 +8,7 @@ from snmov.views import (
     login_request,
     register_view,
     article_detail_view,
+    validate_username,
 )
 from snmov.sitemaps import StaticViewSitemap, ArticleSitemap, CommentSitemap
 sitemaps = {
@@ -39,6 +40,7 @@ urlpatterns = [
     path('uno/', admin.site.urls),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     path('tinymce/', include('tinymce.urls')),
+    path('ajax/validate_username', validate_username, name='validate_username')
 ]
 
 if settings.DEBUG:

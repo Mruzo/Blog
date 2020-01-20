@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Article, Comment, Preference
+from .models import Article, Comment, Preference, User
 from .forms import ArticleModelForm, CommentForm, RegisterForm
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
+from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.generic.edit import DeleteView
 
@@ -230,3 +231,12 @@ def register_view(request):
                   template_name = "snmov/register.html",
                   context={"title": "Register", "form1": form1}
                   )
+
+def validate_username(request):
+    username = request.GET.get('username', None)
+    data = {
+        'is_taken': User.objects.filter(username__iexact=username).exists()
+    }
+    if data['is_taken']:
+        data['error_message'] = 'A user with this username already exists.'
+    return JsonResponse(data)
