@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'storages',
     'django.contrib.sitemaps',
     'tinymce',
-    'meta',
 ]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
