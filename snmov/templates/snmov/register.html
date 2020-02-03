@@ -2,21 +2,21 @@
 
 {% block javascript %}
 
-<!--    <script>-->
-<!--        $("#div_id_username").change(function () {-->
-<!--            var form = $(this).closest("form");-->
-<!--            $.ajax({-->
-<!--                url: form.attr("data-validate-username-url"),-->
-<!--                data: form.serialize(),-->
-<!--                dataType: 'json',-->
-<!--                success: function (data) {-->
-<!--                    if (data.is_taken) {-->
-<!--                        alert(data.error_message);-->
-<!--                    }-->
-<!--                }-->
-<!--            });-->
-<!--        });-->
-<!--    </script>-->
+    <script>
+        $("#div_id_username").change(function () {
+            var form = $(this).closest("form");
+            $.ajax({
+                url: form.attr("data-validate-username-url"),
+                data: form.serialize(),
+                dataType: 'json',
+                success: function (data) {
+                    if (data.is_taken) {
+                        alert(data.error_message);
+                    }
+                }
+            });
+        });
+    </script>
 
 {% endblock %}
 
@@ -37,7 +37,7 @@
                     {% endif %}
 
                 </div>
-                <form class="left-align black-text" style="margin:0 2%;" method="POST">
+                <form class="left-align black-text" style="margin:0 2%;" method="POST" data-validate-username-url="{% url 'validate_username' %}">
                     {% csrf_token %}
                     <ul class="row">
                         <li class="">{{ form1|crispy }}</li>

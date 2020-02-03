@@ -26,7 +26,7 @@ from .views import(
 )
 
 urlpatterns = [
-    path('', home_page),
+    path('', home_page, name="homepage"),
     path('new-article/', article_create_view, name='article_create'),
     path('article/', include('snmov.urls')),
     path('about/', about_page, name='about'),
@@ -40,7 +40,7 @@ urlpatterns = [
     path('uno/', admin.site.urls),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     path('tinymce/', include('tinymce.urls')),
-    path('ajax/validate_username', validate_username, name='validate_username')
+    path('ajax/validate_username/', validate_username, name='validate_username')
 ]
 
 if settings.DEBUG:

@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
+from meta.models import ModelMeta
 
 
 # Create your models here.
@@ -44,11 +45,12 @@ class ArticleManager(models.Manager):
         return self.get_queryset().published().search(query)
 
 
-class Article(models.Model):
+class Article(ModelMeta, models.Model):
     user = models.ForeignKey(User, default=1, null=True, on_delete=models.SET_NULL)
     image = models.ImageField(upload_to='image/', blank=True, null=True)
     title = models.CharField(max_length=120)
     slug = models.SlugField(unique=True)
+    description = models.CharField(max_length=160, null=True)
     content = models.TextField(null=True, blank=True)
     publish_date = models.DateTimeField(auto_now=False, auto_now_add=False, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -57,6 +59,16 @@ class Article(models.Model):
     updated = models.DateTimeField(auto_now=True)
 
     objects = ArticleManager()
+
+    _metadata = {
+        'title': 'title',
+        'description': 'description',
+        'image': 'get_meta_image',
+    }
+
+    def get_meta_image(self):
+        if self.image:
+            return self.image.url
 
     class Meta:
         ordering = ['-publish_date', '-updated', '-timestamp']
@@ -88,7 +100,7 @@ class Preference(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.user.username} : \'{self.blog.slug}\''
+        return f'{self.user.username} : \'{self.post.slug}\''
 
     class Meta:
         unique_together = ('user', 'post', 'value')

@@ -2,9 +2,25 @@
 
 
 {% block content %}
-
+        <ul class="collection with-header">
+            <li class="collection-header center"><h4><u>Articles</u></h4></li>
     {% for object in object_list %}
-        {% include 'snmov/list-inline.html' with article=object truncate=True detail=False %}
+            <li class="collection-item">
+                <div class="row">
+                    <div class="col s9">
+                        {{ object.title }}
+                    </div>
+                    <div class="col s2">
+                        <a class="btn-small waves-effect waves-dark deep-orange darken-1 center valign-wrapper" href="{{ object.get_absolute_url }}">Read</a>
+                    </div>
+                </div>
+            </li>
+
+
+
+
     {% endfor %}
+        </ul>
+{{object_list}}
 
 {% endblock %}

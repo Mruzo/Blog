@@ -128,20 +128,30 @@
        <div style="padding:20px;color:#fff;margin:0;background-color: rgba(0, 0, 0, 0.8);">
            <p style="font-weight:bold;">{{ c.user_name }}&nbsp;<small style="font-weight: lighter;" class="date">{{ c.comment_date | date:"D M d Y" }}</small></p>
 
-           <p>{{ c.comment_cont|linebreaks }}</p>
-<!--                           {% if user == c.user_name %}-->
-<!--                            <a href="{{ comment.get_absolute_url }}"><small>Delete</small></a>-->
-<!--                           {% endif %}-->
+<!--delete comment button-->
+
+
        </div>
    </div>
            &nbsp;
 {% empty %}
-    <p class="text-center">Be the first to add your 2&#162</p>
+
+        <div class="row">
+            <div class="col s12 m5">
+              <div class="card-panel grey darken-4">
+                <span class="white-text center"><i class="material-icons left">comment</i>Be the first to add your 2&#162
+                </span>
+              </div>
+            </div>
+          </div>
 {% endfor %}
 
 
     </div>
-         <a class="btn-floating btn-small blue right" href="#totop"><i class="material-icons" >expand_less</i></a>&nbsp;
+        <a class="btn left deep-orange darken-1" href="{% url 'article' %}">more articles</a>
+         <a class="btn-floating btn-small blue right hide-on-med-and-up" href="#totop"><i class="material-icons" >expand_less</i></a>&nbsp;
     </div>
+
+
 
 {% endif %}

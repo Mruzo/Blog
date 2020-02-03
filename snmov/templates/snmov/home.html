@@ -1,6 +1,31 @@
 {% extends 'base.html' %}
 
+{% block meta_extend %}
+    {% url 'homepage' as home %}
+    {% if request.get_full_path == home %}
+
+    {% else %}
+        <meta name="description" content="{{ meta.description }}">
+        <meta name="title" content="{{ meta.title }}">
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:site" content="@sneakymotivator" />
+        <meta name="twitter:title" content="{{ meta.title }}" />
+        <meta name="twitter:description" content="{{ meta.description }}" />
+        <meta name="twitter:image" content="{{ meta.image }}" />
+    {% endif %}
+{% endblock %}
+
+
+{% block javascript %}
+
+
+
+{% endblock %}
+
+
 {% block content %}
+
+
 
     <div class="row">
     {% include 'snmov/list-inline.html' with article=object detail=True %}

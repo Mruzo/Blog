@@ -1,12 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Article, Comment, Preference, User
+from .models import Article, Comment, Preference
 from .forms import ArticleModelForm, CommentForm, RegisterForm
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views.generic.edit import DeleteView
 
@@ -43,11 +45,11 @@ def article_create_view(request):
 
 def article_detail_view(request, slug):
     obj = get_object_or_404(Article, slug=slug)
-
-    return render(request,
-                  template_name='snmov/home.html',
-                  context={'object': obj}
-                  )
+    template_name = ['snmov/home.html']
+    context = {}
+    context['object'] = obj
+    context['meta'] = obj.as_meta()
+    return render(request, template_name, context)
 
 
 @login_required
@@ -174,15 +176,22 @@ def article_delete_view(request, slug):
                   )
 
 
-def comment_delete_view(request, pk):
-    obj = get_object_or_404(Comment, pk=pk)
-    # if obj.user_name == request.user:
-    template_name = 'snmov/deletec.html'
-    if request.method == "POST":
-        obj.delete()
-        return redirect(article_detail_view)
-    context = {"object": obj}
-    return render(request, template_name, context)
+# def comment_delete_view(request, pk, user):
+#     obj = get_object_or_404(Comment, pk=pk, user=user)
+#     # if obj.user_name == request.user:
+#     # template_name = 'snmov/deletec.html'
+#     data = dict()
+#     if request.method == "POST":
+#         obj.delete()
+#         data['form_is_valid'] = True
+#         objs = Comment.objects.all()
+#         data['comment_list'] = render_to_string('snmov/home.html', {'objs': objs})
+#     else:
+#         context = {'obj': obj}
+#         data['deletec_html'] = render_to_string('snmov/deletec.html',
+#                                                 context,
+#                                                 request=request,)
+#     return JsonResponse(data)
 
 
 def logout_request(request):
