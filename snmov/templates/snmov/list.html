@@ -3,12 +3,12 @@
 
 {% block content %}
         <ul class="collection with-header">
-            <li class="collection-header center"><h4><u>Articles</u></h4></li>
+            <li class="collection-header center"><h3 style="font-weight:bold;"><u>Articles</u></h3></li>
     {% for object in object_list %}
             <li class="collection-item">
                 <div class="row">
                     <div class="col s9">
-                        {{ object.title }}
+                        <h5  style="font-weight:bold;">{{ object.title }}</h5>
                     </div>
                     <div class="col s2">
                         <a class="btn-small waves-effect waves-dark deep-orange darken-1 center valign-wrapper" href="{{ object.get_absolute_url }}">Read</a>
