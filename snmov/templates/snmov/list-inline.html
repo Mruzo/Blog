@@ -72,16 +72,18 @@
             <h4 class="text-center" style="font-weight:bold;">{{ article.title }}</h4>
             <h6 class="text-muted">{{ article.publish_date | date:"D M d Y"}} by <a href="/about" style="color: purple;">Christopher Uzoewulu</a></h6>
         </div>
-
+        <div class="col s3 m3 l3" style="padding-left: 0px;">
+            <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-size="large" data-via="sneakymotivator" data-hashtags="motivation" data-show-count="false">Tweet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+        </div>
         <div>
 
             <img src="{{ article.image.url }}" class="materialboxed"
                  style="margin:auto;object-fit:cover;max-width:100%;">
             <div class="row" style="margin-right:1%;"><small class="right"><a class="black white-text new badge" href="https://theikjn.com/graphic-design/" target="_blank">THEIKJN</a></small></div>
         </div>
-        <div class="row" style="margin:5%;list-style-type: initial;">
+        <div class="row" style="margin:5%;">
 
-                  {{ article.content | safe | linebreaks}}
+                  {{ article.content | safe | linebreaks }}
 
         </div>
 
@@ -104,9 +106,7 @@
             </a>
 
         </div>
-<!--        <div class="col-3 my-auto pt-2 px-2">-->
-<!--            <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-size="large" data-via="sneakymotivator" data-hashtags="motivation" data-show-count="false">Tweet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>-->
-<!--        </div>-->
+
 
     </div>
 
