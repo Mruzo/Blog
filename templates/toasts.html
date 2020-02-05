@@ -1,43 +1,14 @@
-<!--{% if messages %}-->
-<!--    {% for message in messages %}-->
-<!--        {% if message.tags == 'success'%}-->
-<!--            <div class="toast" data-delay="2000">-->
-<!--              <div class="col s2 m2 l2 card" >-->
-<!--                {{message}}-->
-<!--              </div>-->
-<!--            </div>-->
-<!--        {% elif message.tags == 'info'%}-->
-<!--            <div class="toast" data-delay="2000">-->
-<!--              <div class="toast-body bg-info">-->
-<!--                {{message}}-->
-<!--              </div>-->
-<!--            </div>-->
-<!--        {% elif message.tags == 'warning'%}-->
-<!--            <div class="toast" data-delay="4000">-->
-<!--              <div class="toast-body bg-warning">-->
-<!--                {{message}}-->
-<!--              </div>-->
-<!--            </div>-->
-<!--        {% elif message.tags == 'error'%}-->
-<!--            <div class="toast" data-delay="4000">-->
-<!--              <div class="toast-body bg-danger">-->
-<!--                {{message}}-->
-<!--              </div>-->
-<!--            </div>-->
-<!--        {% endif %}-->
-<!--    {% endfor %}-->
-<!--{% endif %}-->
 
 {% if messages %}
     {% for message in messages %}
         {% if message.tags == 'success'%}
-            <script>M.toast({html: "{{message}}", classes: 'green rounded center-align', displayLength:2000});</script>
+            <script>M.toast({html: "{{message}}", classes: 'green rounded center-align', displayLength:3000});</script>
         {% elif message.tags == 'info'%}
-            <script>M.toast({html: "{{message}}", classes: 'blue rounded', displayLength:2000});</script>
+            <script>M.toast({html: "{{message}}", classes: 'blue rounded', displayLength:4000});</script>
         {% elif message.tags == 'warning'%}
-            <script>M.toast({html: "{{message}}", classes: 'orange rounded', displayLength:10000});</script>
+            <script>M.toast({html: "{{message}}", classes: 'orange rounded', displayLength:3000});</script>
         {% elif message.tags == 'error'%}
-            <script>M.toast({html: "{{message}}", classes: 'red rounded', displayLength:10000});</script>
+            <script>M.toast({html: "{{message}}", classes: 'red rounded', displayLength:4000});</script>
         {% endif %}
     {% endfor %}
 {% endif %}
