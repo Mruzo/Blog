@@ -127,6 +127,7 @@
    <div style="background:linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),url({% static 'snmov/img/cbg.png' %}); height:100%;width:100%;object-fit:cover;">
        <div style="padding:20px;color:#fff;margin:0;background-color: rgba(0, 0, 0, 0.8);">
            <p style="font-weight:bold;">{{ c.user_name }}&nbsp;<small style="font-weight: lighter;" class="date">{{ c.comment_date | date:"D M d Y" }}</small></p>
+           <p>{{c.comment_cont | linebreaks }}</p>
 
 <!--delete comment button-->
 
