@@ -23,38 +23,42 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
     <style>
-<!--        .feature {-->
-<!--            width: 90%;-->
-<!--            margin: 0 auto;-->
-<!--        }-->
+        .feature {
+            width: 90%;
+            margin: 0 auto;
+            height: 40vh;
+            margin-bottom: 1em;
 
-<!--        .parent {-->
-<!--            position: relative;-->
-<!--            font-size: x-large;-->
-<!--            margin: 0, auto;-->
+        }
 
-<!--        }-->
+        #quote {
+            background: rgba(0, 0, 0, 0.8);
+        }
 
-<!--        .child1, .child2, .child3 {-->
-<!--            position: absolute;-->
-<!--            margin:auto auto;-->
-<!--        }-->
+        .parent {
+            position: relative;
+            font-size: xx-large;
+            margin: 0, auto;
+            padding-top: 10vh;
+            padding-left: 12vw;
 
-<!--        .feature {-->
-<!--            height: 30vh;-->
-<!--            margin-bottom: 1em;-->
-<!--        }-->
+        }
 
-<!--        .feature h1 {-->
-<!--            text-transform: uppercase;-->
-<!--            text-align: right;-->
-<!--            margin: 0px;-->
-<!--            letter_spacing: 5px;-->
-<!--        }-->
+        .child1, .child2, .child3 {
+            position: absolute;
+            margin:auto auto;
+        }
 
-<!--        .l3, .l4 {-->
-<!--            color: #fbe9e7;-->
-<!--        }-->
+        .feature h1 {
+            text-transform: uppercase;
+            text-align: right;
+            margin: 0px;
+            letter_spacing: 5px;
+        }
+
+        .l33, .l44 {
+            color: #fbe9e7;
+        }
 
         .tabs .indicator {
             background-color: #000;
@@ -86,41 +90,46 @@
     height:100%;
     overflow:hidden;">
 
+        {% url 'homepage' as my_view %}
+        {% if request.path == my_view %}
+            <div class=" container">
+                <div id="quote" class="row">
+                    <div class="col s12 m12 l12">
+                      <div class="card-panel transparent">
+                        <span class="white-text center">
 
-<!--        <div class=" container row">-->
-<!--            <div class="col s12 m5">-->
-<!--              <div class="card-panel transparent">-->
-<!--                <span class="white-text center">-->
+                            <div class="feature">
+                                <div class="parent">
+                                    <div class="child1">
+                                        <h1 class="land"><span>Articles</span></h1>
+                                        <h1 class="l22"><span>to</span></h1>
+                                        <h1 class="land"><span>Live by</span></h1>
+                                    </div>
+                                    <div class="child2">
+                                        <h1 class="l33"><span>Articles</span></h1>
+                                        <h1 class="l22"><span>to</span></h1>
+                                        <h1 class="l33"><span>Live by</span></h1>
+                                    </div>
+                                    <div class="child3">
+                                        <h1 class="l44"><span>Articles</span></h1>
+                                        <h1 class="l22"><span>to</span></h1>
+                                        <h1 class="l44"><span>Live by</span></h1>
+                                    </div>
+                                </div>
+                            </div>
 
-<!--                    <div class="feature">-->
-<!--                        <div class="parent">-->
-<!--                            <div class="child1">-->
-<!--                                <h1 class="land"><span>Articles</span></h1>-->
-<!--                                <h1 class="l2"><span>to</span></h1>-->
-<!--                                <h1 class="land"><span>Live by</span></h1>-->
-<!--                            </div>-->
-<!--                            <div class="child2">-->
-<!--                                <h1 class="l3"><span>Articles</span></h1>-->
-<!--                                <h1 class="l2"><span>to</span></h1>-->
-<!--                                <h1 class="l3"><span>Live by</span></h1>-->
-<!--                            </div>-->
-<!--                            <div class="child3">-->
-<!--                                <h1 class="l4"><span>Articles</span></h1>-->
-<!--                                <h1 class="l2"><span>to</span></h1>-->
-<!--                                <h1 class="l4"><span>Live by</span></h1>-->
-<!--                            </div>-->
-<!--                        </div>-->
-<!--                    </div>-->
-
-<!--                </span>-->
-<!--              </div>-->
-<!--            </div>-->
-<!--          </div>-->
+                        </span>
+                      </div>
+                    </div>
+                </div>
+              </div>
+        {% endif %}
 
         <div class="container" style="padding-bottom: 48px;">
         {% block content %}
 
         {% endblock %}
+
         </div>
 
     </main>
@@ -215,7 +224,7 @@
     </footer>
     <script data-ad-client="ca-pub-2701198258292083" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.4.1.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.1.1/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
@@ -228,6 +237,28 @@
           });
 
 
+        var tl = gsap.timeline({
+            repeat: -1,
+            yoyo: true,
+        });
+
+        tl.fromTo(".l44",
+            {opacity: 0.5, duration: 1, ease: "back.out",},
+            {opacity: 1, duration: 1, ease: "back.out",})
+          .fromTo(".l22",
+            {textShadow: "3px 0px #dc2229ff", opacity: 0.5, duration: 0.5, ease: "power4.out",},
+            { opacity: 1, duration: 1,  ease: "power4.in",}, "-=0.5")
+          .fromTo(".l33",
+            {textShadow: "-4px 0px #feb900ff", duration: 1.5, ease:"bounce.out", webkitClipPath: 'inset(40% 0% 40%)',},
+            {duration: 1.5,  ease:"bounce.in", scale: "1", webkitClipPath: 'inset(20% 0% 20%)',}, "-=1")
+          .fromTo(".land",
+            {textShadow: "3px 0px #dc2229ff", duration: 1.5, scale: "1", webkitClipPath: 'inset(25% 0% 25%)',},
+            {duration: 1.5, ease:"bounce.out", scale: "1", webkitClipPath: 'inset(70% 0% 30%)',}, "-=1")
+            .fromTo(".l33, .land",
+                {opacity:0.4,duration: 0.5, ease: "power4.out",},
+                {opacity:1,duration: 0.5, ease: "power4.in",},"0");
+
+
     </script>
-    {% block javascript %}{% endblock %}
+
 </body>

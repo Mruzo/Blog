@@ -5,12 +5,21 @@ from django.contrib import messages
 from django.core.mail import send_mail, BadHeaderError
 from django.http import HttpResponse, HttpResponseRedirect
 from .settings import EMAIL_HOST_USER
+from random import sample
 
+
+# def home_page(request):
+#     qs = Article.objects.all()[:5]
+#     context = {'article_list': qs}
+#     return render(request, "home.html", context)
 
 def home_page(request):
-    qs = Article.objects.all()[:5]
+    id_list = Article.objects.all().values_list('id', flat=True)
+    random_profiles_id_list = sample(list(id_list), 3)
+    qs = Article.objects.filter(id__in=random_profiles_id_list)
     context = {'article_list': qs}
     return render(request, "home.html", context)
+
 
 
 def about_page(request):

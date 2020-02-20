@@ -5,7 +5,7 @@
 {% if not detail %}
 
     <div id="posts" class="row show-on-scroll">
-        <div class="col s12 m6">
+        <div class="col s12 m6 l6">
           <div class="card">
             <div class="card-image">
               <img
@@ -90,7 +90,7 @@
 
     <div class="row center valign-wrapper">
         <div class="col s4 m4 l4 right-align">
-            <a class="btn deep-orange darken-1"  href="/article/{{article.slug}}/addc/"><svg xmlns="http://www.w3.org/2000/svg" class="cls-1" height="12" viewBox="0 2 24 24"><style>.cls-1{fill:#fff;}</style> <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg> 2&#162</a>
+            <a class="btn deep-orange darken-1" href="/article/{{article.slug}}/addc/"><svg xmlns="http://www.w3.org/2000/svg" class="cls-1" height="12" viewBox="0 2 24 24"><style>.cls-1{fill:#fff;}</style> <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg> 2&#162</a>
         </div>
         <div class="col s4 m4 l4">
 
@@ -110,9 +110,6 @@
 
     </div>
 
-
-
-
     <form id="likebutton" method="POST" action="/article/{{article.slug}}/userpreference/1/">
         {% csrf_token %}
         <input type="hidden">
@@ -122,6 +119,7 @@
         {% csrf_token %}
         <input type="hidden">
     </form>
+
 
 {% for c in article.comments.all %}
    <div style="background:linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),url({% static 'snmov/img/cbg.png' %}); height:100%;width:100%;object-fit:cover;">
@@ -152,7 +150,6 @@
         <a class="btn left deep-orange darken-1" href="{% url 'article' %}">more articles</a>
          <a class="btn-floating btn-small blue right hide-on-med-and-up" href="#totop"><i class="material-icons" >expand_less</i></a>&nbsp;
     </div>
-
 
 
 {% endif %}

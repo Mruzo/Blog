@@ -72,6 +72,35 @@ def add_comment_to_article(request, slug):
                   context={"title": f"Two Cents on {post.title}", "form": form}
                   )
 
+# def add_comment_to_article(request, slug):
+#     post = get_object_or_404(Article, slug=slug)
+#     data = dict()
+#
+#     if request.method == 'POST':
+#         form = CommentForm(request.POST)
+#         if form.is_valid():
+#             comment = form.save(commit=False)
+#             comment.user_name = request.user
+#             comment.comment_post = post
+#             comment.save()
+#             data['form_is_valid'] = True
+#         else:
+#             data['form_is_valid'] = False
+#
+#     else:
+#         form = CommentForm()
+#
+#     context = {"title": f"Two Cents on {post.title}", 'form': form}
+#     data['html_form'] = render_to_string('snmov/formc.html',
+#                                          context,
+#                                          request=request)
+    # post = get_object_or_404(Article, slug=slug)
+    # form = CommentForm()
+    # context = {"title": f"Two Cents on {post.title}", 'form': form}
+    # html_form = render_to_string('snmov/formc.html', context, request=request,)
+    #
+    # return JsonResponse({'html_form': html_form})
+
 
 @login_required
 def article_preference(request, slug, value):
