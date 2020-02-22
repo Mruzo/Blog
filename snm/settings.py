@@ -65,7 +65,7 @@ TINYMCE_DEFAULT_CONFIG = {
             anchor pagebreak
             ''',
     'toolbar1': '''
-            fullscreen preview bold italic underline | fontselect,
+            fullscreen preview bold italic underline |
             fontsizeselect  | forecolor backcolor | alignleft alignright |
             aligncenter alignjustify | indent outdent | bullist numlist table |
             | link image media | codesample |

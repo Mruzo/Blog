@@ -13,7 +13,7 @@ body {
     min-width: 100%;
     display: flex;
     flex-direction: column;
-    font-family: 'Marmelad', sans-serif;
+    font-family: 'Cabin', sans-serif !important;
 }
 
 ::-webkit-scrollbar {
@@ -85,3 +85,49 @@ nav ul li .nav-item .active{
     background-color: #929292;
 }
 
+.feature {
+    width: 90%;
+    margin: 0 auto;
+    height: 40vh;
+    margin-bottom: 1em;
+
+}
+
+#quote {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.parent {
+    position: relative;
+    font-size: xx-large;
+    margin: 0, auto;
+    padding-top: 10vh;
+    padding-left: 12vw;
+
+}
+
+.child1, .child2, .child3 {
+    position: absolute;
+    margin:auto auto;
+}
+
+.feature h1 {
+    text-transform: uppercase;
+    text-align: right;
+    margin: 0px;
+    letter_spacing: 5px;
+}
+
+.l33, .l44 {
+    color: #fbe9e7;
+}
+
+.tabs .indicator {
+    background-color: #000;
+}
+.tabs .tab. a.active {
+    z-index: 10;
+}
+.secondary-content {
+    bottom: 5px;
+}

@@ -2,6 +2,41 @@
 
 {% block content %}
 
+<!--    {% url 'homepage' as my_view %}-->
+<!--    {% if request.path == my_view %}-->
+        <div class=" container">
+            <div id="quote" class="row">
+                <div class="col s12 m12 l12">
+                  <div class="card-panel transparent valign-wrapper">
+                    <span class="white-text center">
+
+                        <div class="feature">
+                            <div class="parent">
+                                <div class="child1">
+                                    <h1 class="land"><span>Articles</span></h1>
+                                    <h1 class="l22"><span>to</span></h1>
+                                    <h1 class="land"><span>Live by</span></h1>
+                                </div>
+                                <div class="child2">
+                                    <h1 class="l33"><span>Articles</span></h1>
+                                    <h1 class="l22"><span>to</span></h1>
+                                    <h1 class="l33"><span>Live by</span></h1>
+                                </div>
+                                <div class="child3">
+                                    <h1 class="l44"><span>Articles</span></h1>
+                                    <h1 class="l22"><span>to</span></h1>
+                                    <h1 class="l44"><span>Live by</span></h1>
+                                </div>
+                            </div>
+                        </div>
+
+                    </span>
+                  </div>
+                </div>
+            </div>
+          </div>
+<!--    {% endif %}-->
+
     <h1 class="text-center">{{ title }}</h1>
     {% for a in article_list %}
         {% if a.publish_date %}
