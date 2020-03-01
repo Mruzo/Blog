@@ -8,6 +8,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse
+from django.views import generic
+from django.core.paginator import Paginator, EmptyPage,PageNotAnInteger
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views.generic.edit import DeleteView
@@ -15,17 +17,23 @@ from django.views.generic.edit import DeleteView
 
 # Create your views here.
 
-def article_list_view(request):
-    #list of articles
-    qs = Article.objects.all().published()
-    if request.user.is_authenticated:
-        my_qs = Article.objects.filter(user=request.user)
-        qs = (qs | my_qs).distinct()
+class article_list_view(generic.ListView):
+    model = Article
+    template_name = 'snmov/list.html'
+    context_object_name = 'object_list'
+    paginate_by = 4
 
-    return render(request,
-                  template_name = 'snmov/list.html',
-                  context = {'object_list': qs}
-                  )
+# def article_list_view(request):
+#     #list of articles
+#     qs = Article.objects.all().published()
+#     # if request.user.is_authenticated:
+#     #     my_qs = Article.objects.filter(user=request.user)
+#     #     qs = (qs | my_qs).distinct()
+#
+#     return render(request,
+#                   template_name='snmov/list.html',
+#                   context={'object_list': qs}
+#                   )
 
 
 @staff_member_required

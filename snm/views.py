@@ -8,10 +8,6 @@ from .settings import EMAIL_HOST_USER
 from random import sample
 
 
-# def home_page(request):
-#     qs = Article.objects.all()[:5]
-#     context = {'article_list': qs}
-#     return render(request, "home.html", context)
 
 def home_page(request):
     id_list = Article.objects.all().values_list('id', flat=True)
@@ -69,7 +65,7 @@ def contact_page_m(request):
             from_email = form.cleaned_data['from_email']
             message = form.cleaned_data['message']
             try:
-                send_mail(subject, message, from_email, ['sneakymotivator@gmail.com'], fail_silently=True)
+                send_mail(subject, message, from_email, ['admin@sneakymotivator.com'], fail_silently=True)
                 messages.success(request, f"Thanks for reaching out")
             except BadHeaderError:
                 return HttpResponse('Invalid header found.')

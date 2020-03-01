@@ -19,6 +19,7 @@ body {
 ::-webkit-scrollbar {
     width: 0;
 }
+
 #progressbar {
     position: fixed;
     top: 0;
@@ -94,15 +95,14 @@ nav ul li .nav-item .active{
 }
 
 #quote {
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.6);
 }
 
 .parent {
     position: relative;
-    font-size: xx-large;
     margin: 0, auto;
     padding-top: 10vh;
-    padding-left: 12vw;
+
 
 }
 
@@ -119,7 +119,7 @@ nav ul li .nav-item .active{
 }
 
 .l33, .l44 {
-    color: #fbe9e7;
+    color: #fff;
 }
 
 .tabs .indicator {
@@ -130,4 +130,11 @@ nav ul li .nav-item .active{
 }
 .secondary-content {
     bottom: 5px;
+}
+
+@media screen and (min-width: 768px){
+    .parent {
+        padding-top: 10vh;
+        padding-left: 12vh;
+    }
 }

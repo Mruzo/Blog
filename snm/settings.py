@@ -56,19 +56,21 @@ TINYMCE_DEFAULT_CONFIG = {
     'cleanup_on_startup': True,
     'custom_undo_redo_levels': 20,
     'selector': 'textarea',
+    # 'content_css': '../static-root/snmov/css/sm.css',
+    'contents_style': 'body {font-family: Cabin; }',
     'theme': 'modern',
     'plugins': '''
             textcolor save link image media preview codesample contextmenu
             table code lists fullscreen  insertdatetime  nonbreaking
             contextmenu directionality searchreplace wordcount visualblocks
             visualchars code fullscreen autolink lists  charmap print  hr
-            anchor pagebreak
+            anchor pagebreak emoticons
             ''',
     'toolbar1': '''
-            fullscreen preview bold italic underline |
+            fullscreen preview bold italic underline | fontselect,
             fontsizeselect  | forecolor backcolor | alignleft alignright |
             aligncenter alignjustify | indent outdent | bullist numlist table |
-            | link image media | codesample |
+            | link image media | codesample | emoticons |
             ''',
     'toolbar2': '''
             visualblocks visualchars |
@@ -92,7 +94,7 @@ MIDDLEWARE = [
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT =True
 
 ROOT_URLCONF = 'snm.urls'
 

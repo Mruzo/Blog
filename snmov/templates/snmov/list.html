@@ -15,11 +15,36 @@
                     </div>
                 </div>
             </li>
-
-
-
-
     {% endfor %}
         </ul>
+    <div class="container">
+        <div class="row">
+            <div class="col s8 offset-s2 card deep-orange lighten-4">
+                {% if is_paginated %}
 
+                <ul class="pagination center-align">
+                    {% if page_obj.has_previous %}
+                        <li><a class=" black-text" href="?page={{ page_obj.previous_page_number }}"><i class="material-icons">chevron_left</i></a></li>
+                    {% else %}
+                        <li class="disabled"><i class="material-icons">chevron_left</i></li>
+                    {% endif %}
+                    {% for i in paginator.page_range %}
+                        {% if page_obj.number == i %}
+                            <li ><a class="active disabled deep-orange darken-1">{{ i }}</a></li>
+                        {% else %}
+                            <li><a class=" black-text" href="?page={{ i }}">{{ i }}</a> </li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <li><a class=" black-text" href="?page={{ page_obj.next_page_number }}"><i class="material-icons">chevron_right</i></a> </li>
+                    {% else %}
+                    <li class="disabled"><i class="material-icons">chevron_right</i></li>
+                    {% endif %}
+                </ul>
+
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
 {% endblock %}
