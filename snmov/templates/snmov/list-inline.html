@@ -10,10 +10,10 @@
              offset-l2">
               <div class="card">
                 <div class="card-image">
-                  <img
+                  <a href="{{ article.get_absolute_url }}"> <img
                         src="{{ article.image.url }}"
                         class="activator" style="display: block; max-width:700px; margin:auto;"
-                        alt="{{title}}">
+                        alt="{{title}}"></a>
 
                   <a class="btn-floating halfway-fab waves-effect waves-dark deep-orange darken-1 center" href="{{ article.get_absolute_url }}">Read</a>
                 </div>
