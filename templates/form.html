@@ -6,30 +6,32 @@
 {% load crispy_forms_tags %}
 
 
+<div class="row">
+    <div class="col s12 l8 offset-l2">
+        <div class=" card">
 
-    <div class=" card">
+                    <div class="center"  style="width-max: 25rem; background:white;height:100%;width:100%;">
+                        {% if title %}
+                            <h3 style="padding:10px;color:#000;margin:0;background-color: rgba(255, 255, 255, 0.8);font-weight:bold;">
+                                {{ title }}</h3>
+                        {% endif %}
 
-                <div class="center"  style="width-max: 25rem; background:white;height:100%;width:100%;">
-                    {% if title %}
-                        <h3 style="padding:10px;color:#000;margin:0;background-color: rgba(255, 255, 255, 0.8);font-weight:bold;">
-                            {{ title }}</h3>
-                    {% endif %}
+                    </div>
+                <ul style="margin:5%;">
 
-                </div>
-            <ul style="margin:5%;">
+                    <form class="row" method='POST' action='.' enctype="multipart/form-data">
+                        <li class="collection-item row">
+                            {% csrf_token %}
+                            {{ form|crispy }}
+                        </li>
 
-                <form class="row" method='POST' action='.' enctype="multipart/form-data">
-                    <li class="collection-item row">
-                        {% csrf_token %}
-                        {{ form|crispy }}
+                    <li class="collection-item row center">
+                        <button type="submit" class="btn deep-orange darken-3">Send</button>
                     </li>
-
-                <li class="collection-item row center">
-                    <button type="submit" class="btn deep-orange darken-3">Send</button>
-                </li>
-                </form>
-             </ul>
+                    </form>
+                 </ul>
+        </div>
     </div>
-
+</div>
 
 {% endblock %}
