@@ -11,7 +11,7 @@ from random import sample
 
 def home_page(request):
     id_list = Article.objects.all().values_list('id', flat=True)
-    random_profiles_id_list = sample(list(id_list), 5
+    random_profiles_id_list = sample(list(id_list), 3
                                      )
     qs = Article.objects.filter(id__in=random_profiles_id_list)
     context = {'article_list': qs}

@@ -36,9 +36,9 @@
 
 
 {% else %}
-<div class="col-lg-8 mx-auto" >
+<div class="col-lg-8 mx-auto mt-4" >
 <div>
-    <h1 class="mt-2 card-title">{{ article.title }}</h1>
+    <h1 class="mt-2 card-title font-weight-bolder">{{ article.title }}</h1>
     <small>By <a class="text-info" href="{% url 'about' %}">Christopher Uzoewulu</a> {{ article.publish_date | date:"D M d Y" }}</small>
 </div>
 
@@ -52,7 +52,7 @@
     </small>
 </div>
 
-    <article>{{ article.content | safe | linebreaks }}</article>
+    <article style="font-family:Georgia;">{{ article.content | safe | linebreaks }}</article>
 
     <div class="row text-center w-100 m-0 border-top border-bottom">
         <div class="col border-right align-middle">
