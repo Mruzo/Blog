@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% load static %}
+
+<!--{% load static %}-->
 
 {% block content %}
 
@@ -8,22 +9,43 @@
 
 <div class="row">
 
-        <div class="col s12 m8 l6 card right" style="width-max: 25em;margin-top:20%;">
+        <div class="col-md-8 mx-auto mt-5">
             <div class="center" style="">
                 {% if title %}
-                    <h5 style="">{{ title }}</h5>
+                    <h5 class="text-center">{{ title }}</h5>
                 {% endif %}
             </div>
             <form style="margin:0 3%;" method='POST' action='.' enctype="multipart/form-data">
+                <ul class="list-group">
                 {% csrf_token %}
-                {{ form|crispy }}
-                <ul class="center">
-                    <li class=""><button class="btn row center deep-orange darken-3" type="submit" style="">My 2&#162</button></li>
+                  <li class="list-group-item border-0" >{{ form|crispy }}</li>
+
+                    <li class="list-group-item border-0"><button class="btn neww-success" type="submit">My 2 cents</button></li>
                 </ul>
             </form>
 
         </div>
 </div>
+
+
+
+
+<!--<form method="post">-->
+<!--    {% csrf_token %}-->
+<!--    &lt;!&ndash; Modal Structure &ndash;&gt;-->
+<!--      <div id="modal1" class="modal">-->
+<!--        <div class="modal-content">-->
+<!--          <h4>{{title}}</h4>-->
+<!--          <p>{{ form|crispy }}</p>-->
+<!--        </div>-->
+<!--        <div class="modal-footer">-->
+<!--          <a href="#!" class="modal-close waves-effect waves-green btn-flat">Agree</a>-->
+<!--        </div>-->
+<!--      </div>-->
+
+<!--</form>-->
+
+
 
 
 {% endblock %}

@@ -1,3 +1,10 @@
+{% load static %}
+
+@font-face {
+    font-family: 'kurale';
+    src: local('Kurale'), url('kurale.ttf') format("truetype");
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -11,39 +18,18 @@ html {
 body {
     min-height: 100vh;
     min-width: 100%;
+    position: relative;
     display: flex;
     flex-direction: column;
     font-family: 'Marmelad', sans-serif;
 }
 
-#toast-container {
-    top: auto  !important;
-    right: auto !important;
-
-}
-::-webkit-scrollbar {
-    width: 0;
-}
-#progressbar {
-    position: fixed;
-    right: 0;
-    width: 1%;
-    border-radius: 10px;
-    background-color: linear-gradient(to top, #f64011, #929292, #5a32a8);
-}
-
-#contain {
-    min-height: 100vh;
-    box-sizing: border-box;
-    z-index: 2;
+footer {
+    position: absolute;
+    bottom: 0;
 }
 
 .main {
-    /*overflow: auto;
-    padding-bottom: 10px;
-    height: 100vh;
-    background: #FFF;
-    z-index: 2;*/
     flex: 1 0 auto;
 }
 
@@ -59,49 +45,99 @@ body {
     transform: scale(1);
 }
 
-footer {
-    margin-top: auto;
-    /*position: relative;
-    clear: both;
-    position: -webkit-sticky;
-    position: sticky;*/
-    bottom: 0;
-    z-index: 1;
+.neww-success:hover {
+    color: #fff;
+    background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 95%, #FFBC00 95%);
+    background-repeat: no-repeat;
 
 }
 
-.card-img-overlay{
-    position: absolute;
-    bottom: 0;
-    background: rgb(0,0,0);
-    background: rgba(0,0,0,0.5);
-    color: #f1f1f1;
-    width: 100%;
-    padding: 20px;
+.neww-success {
+    color: #fff;
+    background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 95%, #FFBC00 95%);
+    background-repeat: no-repeat;
 
 }
 
-.card-img-bottom {
-    width: 100%
-    max-width: 1263px;
-    height: 20vw;
-    object-fit: cover;
+.neww-danger {
+    color: #fff;
+    /*background: linear-gradient(110deg, #000 33%, rgba(0, 0, 0, 0) 33%), linear-gradient(110deg, #dd0000 66%, #ffc608 66%);*/
+    background: linear-gradient(135deg, #DC2229 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #FFBC00 90%, #64ad60 90%);
+    background-repeat: no-repeat;
+    border-color: #000;
 }
 
-nav ul li .nav-item .active{
-    background: blue;
+.neww-warning {
+    color: #000;
+    /*background: linear-gradient(110deg, #000 33%, rgba(0, 0, 0, 0) 33%), linear-gradient(110deg, #dd0000 66%, #ffc608 66%);*/
+    background: linear-gradient(135deg, #FFBC00 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #64ad60 90%, #DC2229 90%);
+    background-repeat: no-repeat;
+    border-color: #000;
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+  color: #fff;
+  background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 93%, #FFBC00 95%);
+  background-repeat: no-repeat;
 }
 
 .active {
-    background-color: #f64011;
+    color: #fff;
+    background: linear-gradient(45deg, #64ad60 5%, #DC2229 10% 15%, #FFBC00 15% 20%, rgba(0,0,0,0) 50% );
+    border-radius: 2px;
 }
 
+.navbar .navbar-nav li .nav-link {
+    color: black;
+    text-align: center;
+}
 
 .navbar .navbar-nav li a:hover {
-    background-color: #f64011;
+    background: linear-gradient(45deg, #64ad60 5%, #DC2229 10% 15%, #FFBC00 15% 20%, rgba(0,0,0,0) 50% );
+    border-radius: 2px;
 }
 
 .card-header {
     background-color: #929292;
 }
 
+.stackon {
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+#quote, #quote2 {
+    font-family: 'kurale', 'Georgia', serif;
+    text-transform: uppercase;
+}
+
+#quote h1 {
+    font-size: 4.5rem;
+    letter-spacing: 1px;
+}
+
+section {
+    display: block;
+}
+
+#home-animation-wrapper {
+    width: 100%;
+    height: 30vh;
+    position: relative;
+    float: left;
+    cursor: pointer;
+}
+#home-animation-wrapper svg {
+    width: 100%;
+    max-height: 90%;
+    height: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+}
+#home-animation-wrapper svg #bubbles path {
+    // background-blend-mode: multiply;
+}

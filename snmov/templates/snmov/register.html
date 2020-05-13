@@ -1,27 +1,28 @@
 {% extends 'base.html' %}
 
-{% block javascript %}
-
-    <script>
-        $("#div_id_username").change(function () {
-            var form = $(this).closest("form");
-            $.ajax({
-                url: form.attr("data-validate-username-url"),
-                data: form.serialize(),
-                dataType: 'json',
-                success: function (data) {
-                    if (data.is_taken) {
-                        alert(data.error_message);
-                    }
-                }
-            });
-        });
-    </script>
-
-{% endblock %}
 
 
 {% block content %}
+
+{% block javascript %}
+
+<script>
+$("#div_id_username").change(function () {
+    var form = $(this).closest("form");
+    $.ajax({
+        url: form.attr("data-validate-username-url"),
+        data: form.serialize(),
+        dataType: 'json',
+        success: function (data) {
+            if (data.is_taken) {
+                alert(data.error_message);
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}
 
 {% load crispy_forms_tags %}
 
@@ -29,27 +30,25 @@
 
 
         <div class="row">
-            <div class="col s12 m8 l6 card right" style="width-max: 25rem">
-                <div class="center" style="font-weight:bold;">
+            <div class="col-lg-4 col-md-6 mx-auto mt-5 float-right">
+                <div class="text-center">
 
                     {% if title %}
-                        <h4>{{ title }}</h4>
+                    <h4><u>{{ title }}</u></h4>
                     {% endif %}
 
                 </div>
                 <form class="left-align black-text" style="margin:0 2%;" method="POST" data-validate-username-url="{% url 'validate_username' %}">
                     {% csrf_token %}
-                    <ul class="row">
-                        <li class="">{{ form1|crispy }}</li>
-                    </ul>
-                    <ul class="row center">
-                        <li class="list-group-item"><button class="btn " type="submit">Sign Up</button></li>
+                    <ul class="list-group">
+                        <li class="list-group-item">{{ form1|crispy }}</li>
+
+                        <li class="list-group-item text-center"><button class="btn btn-primary" type="submit">Sign Up</button></li>
                     </ul>
                 </form>
-                <p class="center row">
-                Have an account? <a href="/login"><strong>Login</strong></a> instead
+                <p class="text-center">Already have an account? <a href="/login"><strong>Login</strong></a> instead
                 </p>
-                <div class="center">
+                <div class="text-center">
                     <a href="/terms">Terms of Use</a>
                 </div>
 
@@ -57,3 +56,4 @@
         </div>
 
 {% endblock %}
+

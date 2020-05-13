@@ -7,30 +7,30 @@
 
 
 <div class="row">
-    <div class="col s12 l8 offset-l2">
-        <div class=" card">
+    <div class="col-l8 mx-auto">
 
-                    <div class="center"  style="width-max: 25rem; background:white;height:100%;width:100%;">
-                        {% if title %}
-                            <h3 style="padding:10px;color:#000;margin:0;background-color: rgba(255, 255, 255, 0.8);font-weight:bold;">
-                                {{ title }}</h3>
-                        {% endif %}
+        <div class="text-center">
+            {% if title %}
+                <h3 >
+                    <u>{{ title }}</u>
+                </h3>
+            {% endif %}
 
-                    </div>
-                <ul style="margin:5%;">
-
-                    <form class="row" method='POST' action='.' enctype="multipart/form-data">
-                        <li class="collection-item row">
-                            {% csrf_token %}
-                            {{ form|crispy }}
-                        </li>
-
-                    <li class="collection-item row center">
-                        <button type="submit" class="btn deep-orange darken-3">Send</button>
-                    </li>
-                    </form>
-                 </ul>
         </div>
+        <ul>
+
+            <form class="col mx-auto" method='POST' action='.' enctype="multipart/form-data">
+                <li class="list-group row">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                </li>
+
+                <li class="list-group row text-center">
+                    <button type="submit" class=" btn neww-success">Send</button>
+                </li>
+            </form>
+         </ul>
+
     </div>
 </div>
 

@@ -25,9 +25,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ.get('SNM_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['sneakymotivator.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'sneakymotivator.com']
+
+META_SITE_PROTOCOL = 'http', 'https'
+META_SITE_DOMAIN = '127.0.0.1', 'sneakymotivator.com'
 
 LOGIN_URL = '/login'
 
@@ -81,7 +84,7 @@ TINYMCE_DEFAULT_CONFIG = {
     'statusbar': True,
     }
 
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -94,7 +97,7 @@ MIDDLEWARE = [
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
 
 ROOT_URLCONF = 'snm.urls'
 
@@ -163,15 +166,7 @@ USE_TZ = True
 mimetypes.add_type("image/svg+xml", ".svg", True)
 mimetypes.add_type("image/svg+sml", ".svgz", True)
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.2/howto/static-files/
 
-# STATIC_URL = '/static/'
-# STATIC_ROOT = os.path.join(BASE_DIR, 'live-static', 'static-root') #live cdn AWS S3
-
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-# MEDIA_ROOT = os.path.join(BASE_DIR,'live-static','media-root')
-# MEDIA_URL = '/media/'
 
 
 db_from_env = dj_database_url.config(conn_max_age=500)
@@ -185,25 +180,38 @@ EMAIL_HOST_USER = os.environ.get('MG_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('MG_PASS')
 EMAIL_USE_TLS = True
 
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/2.2/howto/static-files/
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'live-static', 'static-root') #live cdn AWS S3
+
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
 AWS_ACCESS_KEY_ID = os.environ.get('S3_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('S3_SCRT_KEY')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=86400',
-}
 
-AWS_LOCATION = 'static'
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+
+# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+# AWS_LOCATION = 'static'
+# STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+
+# AWS_S3_OBJECT_PARAMETERS = {
+#     'CacheControl': 'max-age=86400',
+# }
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
 
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None
+# STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-DEFAULT_FILE_STORAGE = 'snm.storage_backends.MediaStorage'
 

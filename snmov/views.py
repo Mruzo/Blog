@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from .models import Article, Comment, Preference
@@ -70,44 +70,25 @@ def add_comment_to_article(request, slug):
             comment.user_name = request.user
             comment.comment_post = post
             comment.save()
-            messages.success(request, "Donation accepted!")
+            messages.success(request, 'Thank You!')
             return redirect(article_detail_view, slug=post.slug)
     else:
         form = CommentForm()
 
     return render(request,
                   template_name='snmov/formc.html',
-                  context={"title": f"Two Cents on {post.title}", "form": form}
+                  context={"title": f"Comment on {post.title}", "form": form}
                   )
 
 # def add_comment_to_article(request, slug):
 #     post = get_object_or_404(Article, slug=slug)
-#     data = dict()
-#
-#     if request.method == 'POST':
-#         form = CommentForm(request.POST)
-#         if form.is_valid():
-#             comment = form.save(commit=False)
-#             comment.user_name = request.user
-#             comment.comment_post = post
-#             comment.save()
-#             data['form_is_valid'] = True
-#         else:
-#             data['form_is_valid'] = False
-#
-#     else:
-#         form = CommentForm()
-#
-#     context = {"title": f"Two Cents on {post.title}", 'form': form}
-#     data['html_form'] = render_to_string('snmov/formc.html',
-#                                          context,
-#                                          request=request)
-    # post = get_object_or_404(Article, slug=slug)
-    # form = CommentForm()
-    # context = {"title": f"Two Cents on {post.title}", 'form': form}
-    # html_form = render_to_string('snmov/formc.html', context, request=request,)
-    #
-    # return JsonResponse({'html_form': html_form})
+#     formc = CommentForm()
+#     context = {'form': formc, "title": {post.title}}
+#     html_form = render_to_string('snmov/formc.html',
+#                                  context,
+#                                  request=request,
+#                                  )
+#     return JsonResponse({'html_form': html_form})
 
 
 @login_required
@@ -231,6 +212,17 @@ def article_delete_view(request, slug):
 #     return JsonResponse(data)
 
 
+def comment_delete_view(request, slug, pk):
+    obj = get_object_or_404(Comment, comment_post__slug=slug, pk=pk)
+    template_name = 'snmov/deletec.html'
+    if request.method == 'POST':
+        obj.user = request.user
+        obj.delete()
+        messages.info(request, 'Comment deleted')
+        return redirect('article_detail', obj.comment_post.slug)
+    return render(request, template_name, {'obj': obj})
+
+
 def logout_request(request):
     logout(request)
     messages.info(request, "Logged out successfully!")
@@ -252,7 +244,6 @@ def login_request(request):
                 messages.error(request, "Invalid username or password")
         else:
             messages.error(request, "Invalid username or password")
-
     form = AuthenticationForm()
     return render(request,
                   template_name="snmov/login.html",
@@ -270,7 +261,7 @@ def register_view(request):
             return redirect("/article")
         else:
             for msg in form.error_messages:
-                print(form.error_messages[msg])
+                form.error_messages[msg]
 
     form1 = RegisterForm
     return render(request,

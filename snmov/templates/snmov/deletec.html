@@ -3,35 +3,45 @@
 
 {% block content %}
 
+    <div class="card col-md-6 mx-auto mt-5 text-center p-2">
+        <div class="row">
+            <div class="col">
+                <p><strong>Are you sure you want to delete:</strong> </p>
+                <p> {{ obj.comment_cont }}</p>
+            </div>
+        </div>
 
-    <h1>Are you sure you want to delete the following:</h1>
-    <p> {{ object.comment_cont }}</p>
-
-    <form method="POST" >
-        {% csrf_token %}
-        <button class='btn btn-danger'> Yes, delete</button>
-    </form>
-
-    <button class='btn btn-primary'><a href="#"> Yes, delete</a></button>
+        <div class="row">
+            <div class="col-6">
+                <form method="POST" >
+                    {% csrf_token %}
+                    <button class='btn btn-sm btn-danger'> Yes, delete</button>
+                </form>
+            </div>
+            <div class="col-6">
+                <a class="btn btn-sm btn-dark" href="{{ obj.comment_post.get_absolute_url }}"> Cancel </a>
+            </div>
+        </div>
+    </div>
 
 {% endblock %}
 
 
-<div id="modal1" class="modal">
-    <form method="POST" >
-        {% csrf_token %}
-        <div class="modal-content">
+<!--<div id="modal1" class="modal">-->
+<!--    <form method="POST" >-->
+<!--        {% csrf_token %}-->
+<!--        <div class="modal-content">-->
 
 
-            <h4>Delete Comment</h4>
+<!--            <h4>Delete Comment</h4>-->
 
-            <p>Are you sure you want to delete this comment?</p>
-        </div>
-        <div class="modal-footer">
-            <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-            <button type="submit" class="btn-small waves-effect waves-green red">Delete book</button>
-        </div>
+<!--            <p>Are you sure you want to delete {{obj}}?</p>-->
+<!--        </div>-->
+<!--        <div class="modal-footer">-->
+<!--            <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancel</a>-->
+<!--            <button type="submit" class="btn-small waves-effect waves-green red">Delete book</button>-->
+<!--        </div>-->
 
 
-    </form>
-  </div>
+<!--    </form>-->
+<!--  </div>-->

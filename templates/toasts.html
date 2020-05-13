@@ -1,15 +1,7 @@
-
-{% if messages %}
-    {% for message in messages %}
-        {% if message.tags == 'success'%}
-            <script>M.toast({html: "{{message}}", classes: 'green rounded center-align', displayLength:3000});</script>
-        {% elif message.tags == 'info'%}
-            <script>M.toast({html: "{{message}}", classes: 'blue rounded', displayLength:4000});</script>
-        {% elif message.tags == 'warning'%}
-            <script>M.toast({html: "{{message}}", classes: 'orange rounded', displayLength:3000});</script>
-        {% elif message.tags == 'error'%}
-            <script>M.toast({html: "{{message}}", classes: 'red rounded', displayLength:4000});</script>
-        {% endif %}
-    {% endfor %}
-{% endif %}
-
+{% for message in messages %}
+  <div class="toast notification bg-{% if message.tags == 'error' %}danger{% else %}success{% endif %}" role="alert" aria-live="assertive" aria-atomic="true" data-delay="4000">
+    <div class="toast-body">
+      {{message|safe}}
+    </div>
+  </div>
+{% endfor %}

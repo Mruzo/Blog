@@ -4,115 +4,76 @@
 
 {% if not detail %}
 
-    <div id="posts" class="container show-on-scroll">
-        <div class="row">
-            <div class="col s12 m12 l8 offset-l2">
-              <div class="card">
-                <div class="card-image">
-                  <a href="{{ article.get_absolute_url }}"> <img
-                        src="{{ article.image.url }}"
-                        class="activator" style="display: block; max-width:700px; margin:auto;"
-                        alt="{{title}}"></a>
+<div class="card mb-2">
+    <img
+        class="card-img-top"
+        src="{{ article.image.url }}"
+        alt="image of {{ article.title }}"
+        width="270px">
+    <h5 class="card-title">{{ article.title }}</h5>
+    <p class="card-text ">{{ article.content | safe | linebreaks | truncatewords:23 }}</p>
+    <div class="row text-center w-100 m-0 border-top">
+        <div class="col border-right">
+            <small>
 
-                  <a class="btn-floating halfway-fab waves-effect waves-dark deep-orange darken-1 center" href="{{ article.get_absolute_url }}">Read</a>
-                </div>
-                <div class="card-content">
-                    <span class="card-title">{{ article.title }}</span>
-                    <p>{{ article.content | safe | linebreaks | truncatewords:30}}</p>
-                </div>
-
-                <div class="card-action center valign-wrapper">
-
-                    <div class="row valign-wrapper" style="margin:0px auto;">
-
-                         <div class="col s4 valign-wrapper">
-                             <div class="row" style="margin:0px auto;">
-                                 <div class="col s6 m6 l6">
-                                     <svg xmlns="http://www.w3.org/2000/svg"  height="18" viewBox="0 0 24 24"><path d="M20 21.113l-.494-3.024c-4.894 1.342-9.591-.872-9.677-6.075-.085-5.204 4.479-7.7 9.5-6.314l.671-3.047c-1.635-.464-3.356-.633-5-.525v-2.128h-2v2.411c-4.458.978-8.05 4.246-8 9.889.052 5.608 3.64 8.548 8 9.311v2.389h2v-2.185c1.662.042 3.379-.195 5-.702z"/></svg>
-                                 </div>
-                                 <div class="col s6 m6 l6">
-                                     &nbsp;{{ article.comments_count_multiplied }}
-                                 </div>
-                             </div>
-                         </div>
-
-                         <div class="col s4 valign-wrapper">
-                             <div  class="row" style="margin:0px auto;">
-
-                                 <div class="col s6 m6 l6">
-                                     <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg>
-                                 </div>
-                                 <div class="col s6 m6 l6"style="padding-right: 0px;">
-                                     &nbsp;{{article.likes}}
-                                 </div>
-                             </div>
-                         </div>
-
-                        <div class="col s4 valign-wrapper">
-                             <div  class="row" style="margin:0px auto;">
-
-                                 <div class="col s6 m6 l6"style="
-            padding-right: 0px;">
-                                     <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg>
-                                 </div>
-                                 <div class="col s6 m6 l6" style="
-            padding-right: 0px;">
-                                     &nbsp;{{article.dislikes}}
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                    </div>
-              </div>
-            </div>
+                <svg xmlns="http://www.w3.org/2000/svg" height=24 data-name="Layer 1" viewBox="0 0 512 640" x="0px" y="0px"><title>Untitled-2</title><path d="M96.21,363.1c-9.6-6.69-19.34-12.92-28.46-20C44,324.84,24.29,303,12.2,275.23c-19.62-45-15.2-88.45,10.53-129.74C49.4,102.66,89,75.86,135.39,58.79c76.87-28.3,154.66-29.7,232.4-3.65,45.48,15.24,85.13,39.7,114.5,78.73,42.11,56,39.18,127.61-7.1,180.67-37.5,43-86,66.37-140.39,79.22-38,9-76.5,10.47-115.32,7.08-3.3-.29-7.53,1.78-10.23,4-41.4,34.85-88.9,56.88-141.67,68-4.81,1-9.71,1.63-14.58,2.34-6.17.9-11.21-.79-14.36-6.56s-2-11,1.91-15.77c4.55-5.51,9.19-11,14.18-16.07A161.74,161.74,0,0,0,96.21,363.1Z"/></svg>
+                  {{ article.comments_count_multiplied }}</small>
         </div>
-      </div>
+        <div class="col border-right">
+            <small>
+                <svg xmlns="http://www.w3.org/2000/svg" height=24 viewBox="0 0 13 18.75" x="0px" y="0px"><path fill-rule="evenodd" d="M225.7237,18.1321555 C223.445082,17.9286539 221.389184,15.615621 222.167984,12.5082871 C223.162048,9.32396029 226.388091,9.78792641 227.625348,4 C230.174515,6.31064362 231.198896,8.79235326 230.698491,11.4451289 C232.101851,11.7907384 233.068385,11.2383376 233.598092,9.78792641 C236.062199,11.9635432 235.274115,17.9563237 231.264322,19 C228.56438,18.3042158 227.094805,16.4236556 226.855596,13.3583193 C225.598407,14.4326908 225.221108,16.0239696 225.7237,18.1321555 Z" transform="translate(-222 -4)"/></svg>
+                {{ article.likes }}
+            </small>
+        </div>
+        <div class="col">
+            <small>
+                <svg xmlns="http://www.w3.org/2000/svg" height=25 version="1.1" x="0px" y="0px" viewBox="1 -1 100 125" style="enable-background:new 1 -1 100 100;" xml:space="preserve"><path d="M88.6,15.3c-5-5.1-11.7-7.9-19-7.9c-7,0-13.8,2.7-18.6,7.4C46,10,39.4,7.4,32.4,7.4c-7.2,0-13.9,2.8-18.9,7.8  c-5.1,5.1-7.8,11.8-7.8,19c0,7.2,2.8,13.9,7.8,19l37.1,37.2l0.4,0.4l37.6-37.6c5-5,7.8-11.7,7.8-18.9S93.6,20.3,88.6,15.3z"/></svg>
+                {{ article.dislikes }}</small>
+        </div>
+    </div>
+<a class="btn neww-success" href="{{ article.get_absolute_url }}">Learn more...</a>
+</div>
+
+
 {% else %}
-    <div class="row">
-    <div class="card col s12 l8 offset-l2">
-        <div class="card-title" style="position:relative;top:0px;">
-            <h4 class="text-center" style="font-weight:bold;">{{ article.title }}</h4>
-            <h6 class="text-muted">{{ article.publish_date | date:"D M d Y"}} by <a href="/about" style="color: purple;">Christopher Uzoewulu</a></h6>
-        </div>
-        <div class="col s3 m3 l3" style="padding-left: 0px;">
-            <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-size="large" data-via="sneakymotivator" data-hashtags="motivation" data-show-count="false">Tweet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-        </div>
-        <div>
+<div class="col-lg-8 mx-auto" >
+<div>
+    <h1 class="mt-2 card-title">{{ article.title }}</h1>
+    <small>By <a class="text-info" href="{% url 'about' %}">Christopher Uzoewulu</a> {{ article.publish_date | date:"D M d Y" }}</small>
+</div>
 
-            <img src="{{ article.image.url }}" class="materialboxed"
-                 style="margin:auto;object-fit:cover;max-width:100%;">
-            <div class="row" style="margin-right:1%;"><small class="right"><a class="black white-text new badge" href="https://theikjn.com/graphic-design/" target="_blank">THEIKJN</a></small></div>
-        </div>
-        <div class="row" style="margin:5%;">
-            <div class="center-align">
-                <a class="hide-on-med-and-up" target="_blank" href="https://shareasale.com/r.cfm?b=214271&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/01_234x60a_v1.gif" border="0" alt="CanvasPop- Turn any photo into art." /></a>
-            </div>
+<img class="img-fluid mx-auto d-block" src="{{ article.image.url }}"
+     alt="image of {{article.title}}">
+<div class="row w-100 m-0 mb-2 d-flex justify-content-end">
+    <small class="ml-auto">
+        <a class="bg-dark white-text " href="https://theikjn.com/graphic-design/" target="_blank">
+            THEIKJN
+        </a>
+    </small>
+</div>
 
-                  {{ article.content | safe | linebreaks }}
+    <article>{{ article.content | safe | linebreaks }}</article>
 
-        </div>
+    <div class="row text-center w-100 m-0 border-top border-bottom">
+        <div class="col border-right align-middle">
+            <a class="btn" href="/article/{{article.slug}}/addc/">
 
-
-    <div class="row center valign-wrapper">
-        <div class="col s4 m4 l4 right-align">
-            <a class="btn deep-orange darken-1" href="/article/{{article.slug}}/addc/"><svg xmlns="http://www.w3.org/2000/svg" class="cls-1" height="12" viewBox="0 2 24 24"><style>.cls-1{fill:#fff;}</style> <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg> 2&#162</a>
-        </div>
-        <div class="col s4 m4 l4">
-
-            <a class="deep-orange darken-1 btn valign-wrapper" href="#" onclick="document.getElementById('likebutton').submit()">
-                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.653 19.415c-1.162 1.141-2.389 2.331-3.653 3.585-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.269-.424 2.546-1.154 3.861l-1.483-1.484c.403-.836.637-1.631.637-2.377 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.239-2.191 1.414 1.414zm7.347-5.415h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg>&nbsp{{article.likes}}
+                <svg xmlns="http://www.w3.org/2000/svg" height=24 data-name="Layer 1" viewBox="0 0 512 640" x="0px" y="0px"><title>Untitled-2</title><path d="M96.21,363.1c-9.6-6.69-19.34-12.92-28.46-20C44,324.84,24.29,303,12.2,275.23c-19.62-45-15.2-88.45,10.53-129.74C49.4,102.66,89,75.86,135.39,58.79c76.87-28.3,154.66-29.7,232.4-3.65,45.48,15.24,85.13,39.7,114.5,78.73,42.11,56,39.18,127.61-7.1,180.67-37.5,43-86,66.37-140.39,79.22-38,9-76.5,10.47-115.32,7.08-3.3-.29-7.53,1.78-10.23,4-41.4,34.85-88.9,56.88-141.67,68-4.81,1-9.71,1.63-14.58,2.34-6.17.9-11.21-.79-14.36-6.56s-2-11,1.91-15.77c4.55-5.51,9.19-11,14.18-16.07A161.74,161.74,0,0,0,96.21,363.1Z"/></svg>
+                {{ article.comments.count }}
             </a>
-
         </div>
-        <div class="col s4 m4 l4 left-align">
-
-            <a class="deep-orange darken-1 btn valign-wrapper" href="#" onclick="document.getElementById('dislikebutton').submit()">
-                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24"><path d="M15.582 19.485c-1.141 1.119-2.345 2.287-3.582 3.515-6.43-6.381-12-11.147-12-15.808 0-4.005 3.098-6.192 6.281-6.192 2.197 0 4.434 1.042 5.719 3.248 1.279-2.195 3.521-3.238 5.726-3.238 3.177 0 6.274 2.171 6.274 6.182 0 1.577-.649 3.168-1.742 4.828l-1.447-1.447c.75-1.211 1.189-2.341 1.189-3.381 0-2.873-2.216-4.182-4.274-4.182-3.257 0-4.976 3.475-5.726 5.021-.747-1.54-2.484-5.03-5.72-5.031-2.315-.001-4.28 1.516-4.28 4.192 0 3.442 4.742 7.85 10 13l2.168-2.121 1.414 1.414zm7.418-5.485h-8v2h8v-2z"/></svg>&nbsp{{article.dislikes}}
+        <div class="col border-right align-middle">
+            <a class="btn" href=#" onclick="document.getElementById('likebutton').submit()">
+                <svg xmlns="http://www.w3.org/2000/svg" height=24 viewBox="0 0 13 18.75" x="0px" y="0px"><path fill-rule="evenodd" d="M225.7237,18.1321555 C223.445082,17.9286539 221.389184,15.615621 222.167984,12.5082871 C223.162048,9.32396029 226.388091,9.78792641 227.625348,4 C230.174515,6.31064362 231.198896,8.79235326 230.698491,11.4451289 C232.101851,11.7907384 233.068385,11.2383376 233.598092,9.78792641 C236.062199,11.9635432 235.274115,17.9563237 231.264322,19 C228.56438,18.3042158 227.094805,16.4236556 226.855596,13.3583193 C225.598407,14.4326908 225.221108,16.0239696 225.7237,18.1321555 Z" transform="translate(-222 -4)"/></svg>
+                {{ article.likes }}
             </a>
-
         </div>
-
-
+        <div class="col align-middle">
+            <a class="btn" href=#" onclick="document.getElementById('dislikebutton').submit()">
+                <svg xmlns="http://www.w3.org/2000/svg" height=25 version="1.1" x="0px" y="0px" viewBox="1 -1 100 125" style="enable-background:new 1 -1 100 100;" xml:space="preserve"><path d="M88.6,15.3c-5-5.1-11.7-7.9-19-7.9c-7,0-13.8,2.7-18.6,7.4C46,10,39.4,7.4,32.4,7.4c-7.2,0-13.9,2.8-18.9,7.8  c-5.1,5.1-7.8,11.8-7.8,19c0,7.2,2.8,13.9,7.8,19l37.1,37.2l0.4,0.4l37.6-37.6c5-5,7.8-11.7,7.8-18.9S93.6,20.3,88.6,15.3z"/></svg>
+                {{ article.dislikes }}
+            </a>
+        </div>
     </div>
 
     <form id="likebutton" method="POST" action="/article/{{article.slug}}/userpreference/1/">
@@ -125,40 +86,50 @@
         <input type="hidden">
     </form>
 
-
-{% for c in article.comments.all %}
-   <div style="background:linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),url({% static 'snmov/img/cbg.png' %}); height:100%;width:100%;object-fit:cover;">
-       <div style="padding:20px;color:#fff;margin:0;background-color: rgba(0, 0, 0, 0.8);">
-           <p style="font-weight:bold;">{{ c.user_name }}&nbsp;<small style="font-weight: lighter;" class="date">{{ c.comment_date | date:"D M d Y" }}</small></p>
-           <p>{{c.comment_cont | linebreaks }}</p>
-
-<!--delete comment button-->
-
-
-       </div>
-   </div>
-           &nbsp;
-{% empty %}
-
-        <div class="row">
-            <div class="col s12">
-              <div class="card-panel grey darken-4">
-                <span class="white-text center"><i class="material-icons left">comment</i>Be the first to add your 2&#162
-                </span>
-              </div>
-            </div>
-          </div>
-{% endfor %}
-
-
+    <div class="d-flex justify-content-center d-none d-sm-block d-md-none mt-4">
+        <a class="" target="_blank" href="https://shareasale.com/r.cfm?b=214271&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/01_234x60a_v1.gif" border="0" alt="CanvasPop- Turn any photo into art." /></a>
+    <!--                    <a class="hide-on-small-only" target="_blank" href="https://shareasale.com/r.cfm?b=372840&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/728x90_00.gif" border="0" /></a>-->
     </div>
-        <div class="row">
-            <div class="col s12 l8 offset-l2">
-                <a class="btn left deep-orange darken-1 left" href="{% url 'article' %}">more articles</a>
-                <a class="btn-floating btn-small blue right hide-on-med-and-up" href="#totop"><i class="material-icons" >expand_less</i></a>&nbsp;
+
+    <div class="d-none d-md-block d-lg-block mt-4">
+        <a class="d-flex justify-content-center" target="_blank" href="https://shareasale.com/r.cfm?b=372839&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/468x60_00.gif" border="0" /></a>
+    </div>
+
+    {% for c in article.comments.all %}
+    <div class="col">
+        <div class="row rounded-0 bg-light border-bottom border-warning p-1">
+            <div class="col-10">
+                <strong>{{ c.user_name }}</strong>
+                {{ c.comment_cont | linebreaks }}
             </div>
+            {% if request.user.is_authenticated %}
+            {% if request.user == c.user_name %}
+            <div class="col-2 align-self-end">
+                <a href="{% url 'delete_comment' article.slug c.pk %}">Delete</a>
+            </div>
+            {% endif %}
+            {% endif %}
         </div>
     </div>
 
+    {% empty %}
 
+    <div class="col">
+        <div class="rounded-0 bg-light border-bottom border-warning pt-2 text-center">
+            <strong><p>Be the first to add a comment</p></strong>
+        </div>
+    </div>
+
+    {% endfor %}
+    <div class="row w-100 m-2 d-flex justify-content-between">
+
+            <a class="btn neww-success" href="{% url 'article' %}">more articles</a>
+
+            <a class="btn neww-success" href="#totop">to top</a>
+
+    </div>
+</div>
 {% endif %}
+
+
+
