@@ -6,12 +6,12 @@
 
 <div class="card mb-2">
     <img
-        class="card-img-top"
+        class="card-img-top mb-2"
         src="{{ article.image.url }}"
         alt="image of {{ article.title }}"
         width="270px">
-    <h5 class="card-title font-weight-bolder px-2">{{ article.title }}</h5>
-    <p class="card-text">{{ article.content | safe | linebreaks | truncatewords:23 }}</p>
+    <h5 class="card-title font-weight-bolder px-2 m-0">{{ article.title }}</h5>
+    <article class="card-subtitle px-2">{{ article.content | safe | linebreaks | truncatewords:23 }}</article>
     <div class="row text-center w-100 m-0 ">
         <div class="col ">
             <small>
