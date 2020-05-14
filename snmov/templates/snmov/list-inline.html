@@ -10,16 +10,16 @@
         src="{{ article.image.url }}"
         alt="image of {{ article.title }}"
         width="270px">
-    <h5 class="card-title">{{ article.title }}</h5>
-    <p class="card-text ">{{ article.content | safe | linebreaks | truncatewords:23 }}</p>
-    <div class="row text-center w-100 m-0 border-top">
-        <div class="col border-right">
+    <h5 class="card-title font-weight-bolder px-2">{{ article.title }}</h5>
+    <p class="card-text">{{ article.content | safe | linebreaks | truncatewords:23 }}</p>
+    <div class="row text-center w-100 m-0 ">
+        <div class="col ">
             <small>
 
                 <svg xmlns="http://www.w3.org/2000/svg" height=24 data-name="Layer 1" viewBox="0 0 512 640" x="0px" y="0px"><title>Untitled-2</title><path d="M96.21,363.1c-9.6-6.69-19.34-12.92-28.46-20C44,324.84,24.29,303,12.2,275.23c-19.62-45-15.2-88.45,10.53-129.74C49.4,102.66,89,75.86,135.39,58.79c76.87-28.3,154.66-29.7,232.4-3.65,45.48,15.24,85.13,39.7,114.5,78.73,42.11,56,39.18,127.61-7.1,180.67-37.5,43-86,66.37-140.39,79.22-38,9-76.5,10.47-115.32,7.08-3.3-.29-7.53,1.78-10.23,4-41.4,34.85-88.9,56.88-141.67,68-4.81,1-9.71,1.63-14.58,2.34-6.17.9-11.21-.79-14.36-6.56s-2-11,1.91-15.77c4.55-5.51,9.19-11,14.18-16.07A161.74,161.74,0,0,0,96.21,363.1Z"/></svg>
                   {{ article.comments_count_multiplied }}</small>
         </div>
-        <div class="col border-right">
+        <div class="col ">
             <small>
                 <svg xmlns="http://www.w3.org/2000/svg" height=24 viewBox="0 0 13 18.75" x="0px" y="0px"><path fill-rule="evenodd" d="M225.7237,18.1321555 C223.445082,17.9286539 221.389184,15.615621 222.167984,12.5082871 C223.162048,9.32396029 226.388091,9.78792641 227.625348,4 C230.174515,6.31064362 231.198896,8.79235326 230.698491,11.4451289 C232.101851,11.7907384 233.068385,11.2383376 233.598092,9.78792641 C236.062199,11.9635432 235.274115,17.9563237 231.264322,19 C228.56438,18.3042158 227.094805,16.4236556 226.855596,13.3583193 C225.598407,14.4326908 225.221108,16.0239696 225.7237,18.1321555 Z" transform="translate(-222 -4)"/></svg>
                 {{ article.likes }}
@@ -39,7 +39,7 @@
 <div class="col-lg-8 mx-auto mt-4" >
 <div>
     <h1 class="mt-2 card-title font-weight-bolder">{{ article.title }}</h1>
-    <small>By <a class="text-info" href="{% url 'about' %}">Christopher Uzoewulu</a> {{ article.publish_date | date:"D M d Y" }}</small>
+    <p>By <a class="text-info" href="{% url 'about' %}">Christopher Uzoewulu</a> {{ article.publish_date | date:"D M d Y" }}</p>
 </div>
 
 <img class="img-fluid mx-auto d-block" src="{{ article.image.url }}"
@@ -52,7 +52,7 @@
     </small>
 </div>
 
-    <article style="font-family:Georgia;">{{ article.content | safe | linebreaks }}</article>
+    <article class="px-1">{{ article.content | safe | linebreaks }}</article>
 
     <div class="row text-center w-100 m-0 border-top border-bottom">
         <div class="col border-right align-middle">
@@ -121,7 +121,7 @@
     </div>
 
     {% endfor %}
-    <div class="row w-100 m-2 d-flex justify-content-between">
+    <div class="row w-90 m-2 d-flex justify-content-between">
 
             <a class="btn neww-success" href="{% url 'article' %}">more articles</a>
 
