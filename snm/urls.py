@@ -2,10 +2,10 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
+from django.contrib.auth import views as auth_views
 from snmov.views import (
     article_create_view,
     logout_request,
-    login_request,
     register_view,
     article_detail_view,
     validate_username,
@@ -35,7 +35,7 @@ urlpatterns = [
     path('cookies/', cookie_page, name='cookie'),
     path('contact/', contact_page_m, name='contact'),
     path('logout/', logout_request, name='logout_req'),
-    path('login/', login_request, name='login_req'),
+    path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'), name='login_req'),
     path('register/', register_view, name='register'),
     path('uno/', admin.site.urls),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),

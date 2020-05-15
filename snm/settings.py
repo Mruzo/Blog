@@ -32,7 +32,9 @@ ALLOWED_HOSTS = ['sneakymotivator.com']
 META_SITE_PROTOCOL = 'http', 'https'
 META_SITE_DOMAIN = 'sneakymotivator.com'
 
-LOGIN_URL = '/login'
+LOGIN_REDIRECT_URL = 'homepage'
+
+LOGIN_URL = 'login_req'
 
 # Application definition
 
