@@ -176,6 +176,8 @@ DATABASES['default'].update(db_from_env)
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
+DEFAULT_FROM_EMAIL = 'admin@sneakymotivator'
+
 EMAIL_HOST = 'smtp.mailgun.org'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = os.environ.get('MG_USER')
