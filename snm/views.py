@@ -4,16 +4,19 @@ from snmov.models import Article, Comment, ReachOut
 from django.contrib import messages
 from django.core.mail import send_mail, BadHeaderError
 from django.http import HttpResponse, HttpResponseRedirect
-from .settings import EMAIL_HOST_USER
+from .settings.pro import EMAIL_HOST_USER
 from random import sample
 
 
 
 def home_page(request):
     id_list = Article.objects.all().values_list('id', flat=True)
-    random_profiles_id_list = sample(list(id_list), 3
-                                     )
-    qs = Article.objects.filter(id__in=random_profiles_id_list)
+    if id_list.count() > 2:
+        random_profiles_id_list = sample(list(id_list), 3
+                                        )
+        qs = Article.objects.filter(id__in=random_profiles_id_list)
+    else:
+        qs = id_list
     context = {'article_list': qs}
     return render(request, "home.html", context)
 

@@ -7,10 +7,12 @@ __pycache__/
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
-
+*env
+.env
 # Distribution / packaging
 .Python
 build/
@@ -30,6 +32,7 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.whl
 MANIFEST
 
 # PyInstaller
