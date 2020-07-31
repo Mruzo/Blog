@@ -8,7 +8,6 @@ from .settings.pro import EMAIL_HOST_USER
 from random import sample
 
 
-
 def home_page(request):
     id_list = Article.objects.all().values_list('id', flat=True)
     if id_list.count() > 2:
