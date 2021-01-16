@@ -1,3 +1,4 @@
+from configparser import RawConfigParser
 from .base import *
 
 DEBUG = False
@@ -6,26 +7,29 @@ DEBUG = False
 #     ('Chris U', 'chrisuzoewulu@gmail.com'),
 # )
 
-ALLOWED_HOSTS = ['www.sneakymotivator.com', 'sneakymotivator.com']
+ALLOWED_HOSTS = ['68.183.196.123','www.sneakymotivator.com', 'sneakymotivator.com', 'localhost']
 
 CSRF_COOKIE_SECURE = True
 
 SECURE_SSL_REDIRECT = True
 
+config = RawConfigParser()
+config.read('/etc/snmov/settings.ini')
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.backends.postgresql_psycopg2',
-        'NAME': os.environ.get('SM_DB_NAME'),
-        'USER': os.environ.get('SM_DB_USER'),
-        'PASSWORD': os.environ.get('SM_DB_PASS'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': config.get('section', 'SM_DB_NAME'),
+        'USER': config.get('section', 'SM_DB_USER'),
+        'PASSWORD': config.get('section', 'SM_DB_PASS'),
         'HOST': 'localhost',
         'PORT': '',
     }
 }
 
-AWS_ACCESS_KEY_ID = os.environ.get('S3_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('S3_SCRT_KEY')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
+AWS_ACCESS_KEY_ID = config.get('section','S3_KEY_ID')
+AWS_SECRET_ACCESS_KEY = config.get('section', 'S3_SCRT_KEY')
+AWS_STORAGE_BUCKET_NAME = config.get('section', 'S3_BUCKET_NAME')
 
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None

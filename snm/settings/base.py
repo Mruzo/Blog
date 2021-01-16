@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 import dj_database_url
 import mimetypes
+from configparser import RawConfigParser
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
@@ -22,7 +23,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SNM_KEY')
+config = RawConfigParser()
+config.read('/etc/snmov/settings.ini')
+#SECRET_KEY = os.environ.get('SNM_KEY')
+SECRET_KEY = config.get('section', 'SNM_KEY')
+
 
 META_SITE_PROTOCOL = 'http', 'https'
 META_SITE_DOMAIN = 'sneakymotivator.com'
@@ -163,8 +168,8 @@ DEFAULT_FROM_EMAIL = 'admin@sneakymotivator'
 
 EMAIL_HOST = 'smtp.mailgun.org'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = os.environ.get('MG_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('MG_PASS')
+EMAIL_HOST_USER = config.get('section','MG_USER')
+EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
 EMAIL_USE_TLS = True
 
 # Static files (CSS, JavaScript, Images)
