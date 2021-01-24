@@ -47,21 +47,20 @@ footer {
 
 .neww-success:hover {
     color: #fff;
-    background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 95%, #FFBC00 95%);
+    background: linear-gradient(180deg, #000 80%, #64ad60 95%);
     background-repeat: no-repeat;
 
 }
 
 .neww-success {
     color: #fff;
-    background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 95%, #FFBC00 95%);
+    background: linear-gradient(180deg, #000 80%, #64ad60 95%);
     background-repeat: no-repeat;
 
 }
 
 .neww-danger {
     color: #fff;
-    /*background: linear-gradient(110deg, #000 33%, rgba(0, 0, 0, 0) 33%), linear-gradient(110deg, #dd0000 66%, #ffc608 66%);*/
     background: linear-gradient(135deg, #DC2229 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #FFBC00 90%, #64ad60 90%);
     background-repeat: no-repeat;
     border-color: #000;
@@ -69,7 +68,6 @@ footer {
 
 .neww-warning {
     color: #000;
-    /*background: linear-gradient(110deg, #000 33%, rgba(0, 0, 0, 0) 33%), linear-gradient(110deg, #dd0000 66%, #ffc608 66%);*/
     background: linear-gradient(135deg, #FFBC00 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #64ad60 90%, #DC2229 90%);
     background-repeat: no-repeat;
     border-color: #000;
@@ -78,13 +76,13 @@ footer {
 .nav-pills .nav-link.active,
 .nav-pills .show > .nav-link {
   color: #fff;
-  background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 93%, #FFBC00 95%);
+  background: linear-gradient(180deg, #000 80%, #64ad60 95%);
   background-repeat: no-repeat;
 }
 
 .active {
     color: #fff;
-    background: linear-gradient(45deg, #64ad60 5%, #DC2229 10% 15%, #FFBC00 15% 20%, rgba(0,0,0,0) 50% );
+    background: linear-gradient(0deg, #f9a602 1% 5%, rgba(0,0,0,0) 10% );
     border-radius: 2px;
 }
 
@@ -94,7 +92,7 @@ footer {
 }
 
 .navbar .navbar-nav li a:hover {
-    background: linear-gradient(45deg, #64ad60 5%, #DC2229 10% 15%, #FFBC00 15% 20%, rgba(0,0,0,0) 50% );
+    background: linear-gradient(0deg, #f9a602 1% 5%, rgba(0,0,0,0) 10% );
     border-radius: 2px;
 }
 
@@ -106,6 +104,7 @@ footer {
     text-transform: uppercase;
     font-weight: bold;
     font-size: 1.2em;
+    line-height: 80%;
 }
 
 #quote, #quote2 {
