@@ -68,7 +68,7 @@ footer {
 
 .neww-warning {
     color: #000;
-    background: linear-gradient(135deg, #FFBC00 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #64ad60 90%, #DC2229 90%);
+    background: linear-gradient(135deg, #f9a602 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #64ad60 90%, #DC2229 90%);
     background-repeat: no-repeat;
     border-color: #000;
 }
@@ -81,7 +81,7 @@ footer {
 }
 
 .active {
-    color: #fff;
+    color: #f9a602;
     background: linear-gradient(0deg, #f9a602 1% 5%, rgba(0,0,0,0) 10% );
     border-radius: 2px;
 }

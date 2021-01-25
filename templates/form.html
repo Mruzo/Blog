@@ -7,18 +7,17 @@
 
 
 <div class="row">
-    <div class="col-l8 mx-auto">
+    <div class="col-l8 mx-auto px-2 text-light">
 
         <div class="text-center mt-5">
             {% if title %}
                 <h3 >
-                    <u>{{ title }}</u>
+                    <p>{{ title }}</p>
                 </h3>
             {% endif %}
-
         </div>
-        <ul>
 
+        <ul>
             <form class="col mx-auto" method='POST' action='.' enctype="multipart/form-data">
                 <li class="list-group row">
                     {% csrf_token %}

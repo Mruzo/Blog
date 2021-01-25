@@ -30,7 +30,7 @@ SECRET_KEY = config.get('section', 'SNM_KEY')
 
 
 META_SITE_PROTOCOL = 'http', 'https'
-META_SITE_DOMAIN = 'sneakymotivator.com'
+META_SITE_DOMAIN = 'misteruzo.com'
 
 LOGIN_REDIRECT_URL = 'homepage'
 
@@ -164,7 +164,7 @@ db_from_env = dj_database_url.config(conn_max_age=500)
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-DEFAULT_FROM_EMAIL = 'admin@sneakymotivator'
+DEFAULT_FROM_EMAIL = 'admin@misteruzo.com'
 
 EMAIL_HOST = 'smtp.mailgun.org'
 EMAIL_PORT = 587

@@ -67,12 +67,12 @@ def contact_page_m(request):
             from_email = form.cleaned_data['from_email']
             message = form.cleaned_data['message']
             try:
-                send_mail(subject, message, from_email, ['admin@sneakymotivator.com'], fail_silently=True)
+                send_mail(subject, message, from_email, ['chris@misteruzo.com'], fail_silently=True)
                 messages.success(request, f"Thanks for reaching out")
             except BadHeaderError:
                 return HttpResponse('Invalid header found.')
             return redirect('/contact')
-    return render(request, "form.html", {"title": "Hello!", "form": form})
+    return render(request, "contact.html", {"title": "", "form": form})
 
 
 
