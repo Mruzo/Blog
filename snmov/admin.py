@@ -5,7 +5,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 
-#unregiser provided model admin
+# unregiser provided model admin
 admin.site.unregister(User)
 
 
@@ -21,13 +21,14 @@ admin.site.register(Comment)
 admin.site.register(Preference)
 admin.site.register(ReachOut)
 
+
 @admin.register(User)
 class CustomAdmin(UserAdmin):
     readonly_fields = [
         'date_joined',
     ]
 
-    #custom action to mark multiple user as active
+    # custom action to mark multiple user as active
     actions = [
         'activate_users',
     ]
@@ -37,7 +38,7 @@ class CustomAdmin(UserAdmin):
         self.message_user(request, 'Activated {} user.'.format(cnt))
     activate_users.short_description = 'Activate Users'
 
-    #To hide custom action from users without change permission
+    # To hide custom action from users without change permission
     def get_actions(self, request):
         actions = super().get_actions(request)
         if not request.user.has_perm('auth.change_user'):
@@ -49,10 +50,10 @@ class CustomAdmin(UserAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        is_superuser = request.user.is_super
+        is_superuser = request.user.is_superuser
         disabled_fields = set()
 
-        #Prevent superusers from granting superuser rights
+        # Prevent superusers from granting superuser rights
         if not is_superuser:
             disabled_fields |= {
                 'username',
@@ -60,7 +61,7 @@ class CustomAdmin(UserAdmin):
                 'user_permissions',
             }
 
-        #Prevent non-superusers from editing their own permissions
+        # Prevent non-superusers from editing their own permissions
         if (
             not is_superuser
             and obj is not None
