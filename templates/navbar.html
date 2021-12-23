@@ -1,6 +1,6 @@
 {% load static %}
 
-  <nav class="navbar navbar-expand-lg navbar-dark bg-secondary d-flex bd-highlight py-0">
+  <nav class="navbar navbar-expand-lg neww-nav navbar-dark d-flex bd-highlight py-0 border-bottom border-dark">
 <!--      <a href=" /"><img style="margin:15px 10px;" src="{% static 'snmov/img/head1.png' %}" width="281" height="31.6">-->
 <!--      </a>-->
       <a class="navbar-brand mb-0 mx-left bd-highlight" href="/">
@@ -30,7 +30,7 @@
         </div>
 
       </a>
-    <button class="navbar-toggler p-0 border-0 " type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler p-0 border-0 burger" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse mx-auto bd-highlight" id="navbarSupportedContent">
@@ -75,7 +75,7 @@
         {% else %}
           <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'login_req' or request.resolver_match.url_name == 'register' %}active{% endif %}">
             <a class ="nav-link" href="/login?next={{request.path}}">
-              <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px" height="20" viewBox="0 0 70 70" style="enable-background:new 0 0 70 70;" xml:space="preserve"><g><path fill="currentColor" d="M35,2C16.8037109,2,2,16.8037109,2,35c0,8.3754883,3.1494141,16.3735352,8.8696289,22.5234375   c6.1982422,6.6217041,14.9325562,10.4316406,23.9829712,10.4727173C34.9017334,67.9963989,34.9505615,68,34.9997559,68   c0.000061,0,0.000061,0,0.0001221,0S34.999939,68,35,68c9.1030273,0,17.8979492-3.8188477,24.1323242-10.4790039   C64.8505859,51.3725586,68,43.3745117,68,35C68,16.8037109,53.1962891,2,35,2z M35,4c17.0932617,0,31,13.9067383,31,31   c0,7.3186646-2.5633545,14.3295288-7.2440796,19.9205933c-2.8128052-6.9619751-8.4752808-12.2094727-15.3721313-14.5877686   C40.9924927,41.963562,38.1064453,42.9199219,35,42.9199219c-3.1065063,0-5.9926147-0.9564209-8.3839722-2.5872192   c-6.8968506,2.3782349-12.5593262,7.6256714-15.3722534,14.5876465C6.5627441,49.3284912,4,42.3186035,4,35   C4,17.9067383,17.9067383,4,35,4z"/><circle cx="34.9997559" cy="27.9999847" r="12.9200058"/></g></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px" height="20" viewBox="0 0 70 70" style="enable-background:new 0 0 70 70;" xml:space="preserve"><g><path fill="currentColor" d="M35,2C16.8037109,2,2,16.8037109,2,35c0,8.3754883,3.1494141,16.3735352,8.8696289,22.5234375   c6.1982422,6.6217041,14.9325562,10.4316406,23.9829712,10.4727173C34.9017334,67.9963989,34.9505615,68,34.9997559,68   c0.000061,0,0.000061,0,0.0001221,0S34.999939,68,35,68c9.1030273,0,17.8979492-3.8188477,24.1323242-10.4790039   C64.8505859,51.3725586,68,43.3745117,68,35C68,16.8037109,53.1962891,2,35,2z M35,4c17.0932617,0,31,13.9067383,31,31   c0,7.3186646-2.5633545,14.3295288-7.2440796,19.9205933c-2.8128052-6.9619751-8.4752808-12.2094727-15.3721313-14.5877686   C40.9924927,41.963562,38.1064453,42.9199219,35,42.9199219c-3.1065063,0-5.9926147-0.9564209-8.3839722-2.5872192   c-6.8968506,2.3782349-12.5593262,7.6256714-15.3722534,14.5876465C6.5627441,49.3284912,4,42.3186035,4,35   C4,17.9067383,17.9067383,4,35,4z"/><circle fill="currentColor" cx="34.9997559" cy="27.9999847" r="12.9200058"/></g></svg>
               <br>
               <small class="font-weight-bold">Login/Register</small>
             </a>

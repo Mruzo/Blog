@@ -24,6 +24,13 @@ body {
     font-family: 'Marmelad', sans-serif;
 }
 
+.vertical-center {
+    min-height: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+}
+
 footer {
     position: absolute;
     bottom: 0;
@@ -47,16 +54,16 @@ footer {
 
 .neww-success:hover {
     color: #fff;
-    background: linear-gradient(180deg, #000 80%, #64ad60 95%);
+    background: linear-gradient(180deg, #000 80%, #fff 95%);
     background-repeat: no-repeat;
 
 }
 
 .neww-success {
     color: #fff;
-    background: linear-gradient(180deg, #000 80%, #64ad60 95%);
+    background: linear-gradient(180deg, #000 80%, #f9a602 95%);
     background-repeat: no-repeat;
-
+    border-radius: 7px;
 }
 
 .neww-danger {
@@ -73,26 +80,47 @@ footer {
     border-color: #000;
 }
 
+.neww-footer {
+    color: black;
+    background: linear-gradient(135deg, #4d4d4d 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #f9a602 90%, #000 90%);
+    background-repeat: no-repeat;
+    border-color: #000;
+
+}
+
+.neww-nav {
+    background: black;
+}
 .nav-pills .nav-link.active,
 .nav-pills .show > .nav-link {
-  color: #fff;
+  color: #f9a602;
   background: linear-gradient(180deg, #000 80%, #64ad60 95%);
   background-repeat: no-repeat;
 }
+.burger {
+    background: #000;
+}
+.tsprnt {
+    background: transparent;
+}
 
+.b-text {
+    color: whitesmoke;
+}
 .active {
-    color: #f9a602;
-    background: linear-gradient(0deg, #f9a602 1% 5%, rgba(0,0,0,0) 10% );
+    color: #0255f9;
+    background: linear-gradient(0deg, #4d4d4d 1% 5%, rgba(0,0,0,0) 10% );
     border-radius: 2px;
+    font-size: larger;
 }
 
 .navbar .navbar-nav li .nav-link {
-    color: black;
+    color: #f9a602;
     text-align: center;
 }
 
 .navbar .navbar-nav li a:hover {
-    background: linear-gradient(0deg, #f9a602 1% 5%, rgba(0,0,0,0) 10% );
+    background: linear-gradient(0deg, #4d4d4d 1% 5%, #fff 100% 5% );
     border-radius: 2px;
 }
 

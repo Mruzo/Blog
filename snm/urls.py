@@ -1,3 +1,11 @@
+from .views import(
+    home_page,
+    about_page,
+    contact_page_m,
+    privacy_page,
+    terms_page,
+    cookie_page,
+)
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
@@ -16,14 +24,6 @@ sitemaps = {
     'article': ArticleSitemap,
     'comment': CommentSitemap,
 }
-from .views import(
-    home_page,
-    about_page,
-    contact_page_m,
-    privacy_page,
-    terms_page,
-    cookie_page,
-)
 
 urlpatterns = [
     path('', home_page, name="homepage"),
@@ -35,27 +35,34 @@ urlpatterns = [
     path('cookies/', cookie_page, name='cookie'),
     path('contact/', contact_page_m, name='contact'),
     path('logout/', logout_request, name='logout_req'),
-    path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'), name='login_req'),
+    path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'),
+         name='login_req'),
     path('register/', register_view, name='register'),
     path('uno/', admin.site.urls),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     path('tinymce/', include('tinymce.urls')),
     path('ajax/validate_username/', validate_username, name='validate_username'),
     path('password-reset/',
-         auth_views.PasswordResetView.as_view(template_name='snmov/password_reset.html'),
+         auth_views.PasswordResetView.as_view(
+             template_name='snmov/password_reset.html'),
          name='password_reset'),
     path('password-reset/done/',
-         auth_views.PasswordResetDoneView.as_view(template_name='snmov/password_reset_done.html'),
+         auth_views.PasswordResetDoneView.as_view(
+             template_name='snmov/password_reset_done.html'),
          name='password_reset_done'),
     path('password-reset-confirm/<uidb64>/<token>/',
-         auth_views.PasswordResetConfirmView.as_view(template_name='snmov/password_reset_confirm.html'),
+         auth_views.PasswordResetConfirmView.as_view(
+             template_name='snmov/password_reset_confirm.html'),
          name='password_reset_confirm'),
     path('password-reset-complete/',
-         auth_views.PasswordResetCompleteView.as_view(template_name='snmov/password_reset_complete.html'),
+         auth_views.PasswordResetCompleteView.as_view(
+             template_name='snmov/password_reset_complete.html'),
          name='password_reset_complete'),
 ]
 
 if settings.DEBUG:
     from django.conf.urls.static import static
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL,
+                          document_root=settings.STATICFILES_DIRS)
+    urlpatterns += static(settings.MEDIA_URL,
+                          document_root=settings.MEDIA_ROOT)

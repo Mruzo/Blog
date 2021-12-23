@@ -128,9 +128,9 @@ TextSlider.prototype = {
     this.content.text3 = this.container.find('.slide[count="'+this.currentSlide+'"]').attr('data-3');
 
     // UpperCase Texts
-    this.content.text1 = this.content.text1.toUpperCase();
-    this.content.text2 = this.content.text2.toUpperCase();
-    this.content.text3 = this.content.text3.toUpperCase();
+    this.content.text1 = this.content.text1.toLowerCase();
+    this.content.text2 = this.content.text2.toLowerCase();
+    this.content.text3 = this.content.text3.toLowerCase();
 
     // Append Texts
     texts.find('text:nth-child(1)').html(this.content.text1);
@@ -143,7 +143,8 @@ TextSlider.prototype = {
 
     var bubblesGroup = this.container.find('#bubbles'),
         // colors = ['#03ee93','#ff0700','#ffe700','#5306de'];
-        colors = ['#64AD60','#FFBC00','#DC2229','#000', '#OOO']
+        // colors = ['#64AD60','#FFBC00','#DC2229','#000', '#OOO']
+        colors = ['#000', '#000','#4d4d4d', '#f9a602', '#000', '#000']
 
     bubblesGroup.find('path').each(function(){
       var rand = getRand(0,colors.length);

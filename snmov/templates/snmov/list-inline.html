@@ -36,7 +36,7 @@
 
 
 {% else %}
-<div class="col-lg-8 mx-auto mt-4" >
+<div class="col-lg-8 mx-auto mt-4 bg-white" >
 <div>
     <h1 class="mt-2 card-title font-weight-bolder">{{ article.title }}</h1>
     <p>By <a class="text-info" href="{% url 'about' %}">Christopher Uzoewulu</a> {{ article.publish_date | date:"D M d Y" }}</p>
@@ -91,9 +91,9 @@
     <!--                    <a class="hide-on-small-only" target="_blank" href="https://shareasale.com/r.cfm?b=372840&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/728x90_00.gif" border="0" /></a>-->
     </div>
 
-    <div class="d-none d-md-block d-lg-block mt-4">
+    <!-- <div class="d-none d-md-block d-lg-block mt-4">
         <a class="d-flex justify-content-center" target="_blank" href="https://shareasale.com/r.cfm?b=372839&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/468x60_00.gif" border="0" /></a>
-    </div>
+    </div> -->
 
     {% for c in article.comments.all %}
     <div class="col">
@@ -114,16 +114,16 @@
 
     {% empty %}
 
-    <div class="col">
-        <div class="rounded-0 bg-light border-bottom border-warning pt-2 text-center">
-            <strong><p>Be the first to add a comment</p></strong>
+    <div class="col mt-2">
+        <div class="text-center font-weight-bold">
+            <p>Be the first to comment</p>
         </div>
     </div>
 
     {% endfor %}
     <div class="row w-90 m-2 d-flex justify-content-between">
 
-            <a class="btn neww-success" href="{% url 'article' %}">more articles</a>
+            <a class="btn neww-success" href="{% url 'article' %}">more reflections</a>
 
             <a class="btn neww-success" href="#totop">to top</a>
 

@@ -84,7 +84,7 @@ footer {
 
 .active {
     color: #fff;
-    background: linear-gradient(0deg, #f9a602 1% 5%, rgba(0,0,0,0) 10% )
+    background: linear-gradient(0deg, #0255f9 1% 5%, rgba(0,0,0,0) 10% );
     border-radius: 2px;
 }
 
