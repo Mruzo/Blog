@@ -39,7 +39,7 @@
 <div class="col-lg-8 mx-auto mt-4 bg-white" >
 <div>
     <h1 class="mt-2 card-title font-weight-bolder">{{ article.title }}</h1>
-    <p>By <a class="text-info" href="{% url 'about' %}">Christopher Uzoewulu</a> {{ article.publish_date | date:"D M d Y" }}</p>
+    <p>By <a class="text-info" href="{% url 'about' %}">Chris Uzo</a> {{ article.publish_date | date:"D M d Y" }}</p>
 </div>
 
 <img class="img-fluid mx-auto d-block" src="{{ article.image.url }}"
@@ -86,10 +86,10 @@
         <input type="hidden">
     </form>
 
-    <div class="d-flex justify-content-center d-none d-sm-block d-md-none mt-4">
+    <!-- <div class="d-flex justify-content-center d-none d-sm-block d-md-none mt-4">
         <a class="" target="_blank" href="https://shareasale.com/r.cfm?b=214271&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/01_234x60a_v1.gif" border="0" alt="CanvasPop- Turn any photo into art." /></a>
-    <!--                    <a class="hide-on-small-only" target="_blank" href="https://shareasale.com/r.cfm?b=372840&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/728x90_00.gif" border="0" /></a>-->
-    </div>
+                       <a class="hide-on-small-only" target="_blank" href="https://shareasale.com/r.cfm?b=372840&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/728x90_00.gif" border="0" /></a>
+    </div> -->
 
     <!-- <div class="d-none d-md-block d-lg-block mt-4">
         <a class="d-flex justify-content-center" target="_blank" href="https://shareasale.com/r.cfm?b=372839&amp;u=2313501&amp;m=25092&amp;urllink=&amp;afftrack="><img src="https://static.shareasale.com/image/25092/468x60_00.gif" border="0" /></a>
@@ -123,7 +123,7 @@
     {% endfor %}
     <div class="row w-90 m-2 d-flex justify-content-between">
 
-            <a class="btn neww-success" href="{% url 'article' %}">more reflections</a>
+            <a class="btn neww-success" href="{% url 'article' %}">more articles</a>
 
             <a class="btn neww-success" href="#totop">to top</a>
 
