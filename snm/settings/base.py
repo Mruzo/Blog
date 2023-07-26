@@ -16,7 +16,8 @@ import mimetypes
 from configparser import RawConfigParser
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+BASE_DIR = os.path.dirname(os.path.dirname(
+    os.path.abspath(os.path.join(__file__, os.pardir))))
 
 
 # Quick-start development settings - unsuitable for production
@@ -84,7 +85,7 @@ TINYMCE_DEFAULT_CONFIG = {
     'contextmenu': 'formats | link image',
     'menubar': True,
     'statusbar': True,
-    }
+}
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -157,10 +158,8 @@ mimetypes.add_type("image/svg+xml", ".svg", True)
 mimetypes.add_type("image/svg+sml", ".svgz", True)
 
 
-
-
 db_from_env = dj_database_url.config(conn_max_age=500)
-#DATABASES['default'].update(db_from_env)
+# DATABASES['default'].update(db_from_env)
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
@@ -168,7 +167,7 @@ DEFAULT_FROM_EMAIL = 'admin@sneakymotivator'
 
 EMAIL_HOST = 'smtp.mailgun.org'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = config.get('section','MG_USER')
+EMAIL_HOST_USER = config.get('section', 'MG_USER')
 EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
 EMAIL_USE_TLS = True
 
@@ -176,7 +175,8 @@ EMAIL_USE_TLS = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'live-static', 'static-root') #live cdn AWS S3
+STATIC_ROOT = os.path.join(BASE_DIR, 'live-static',
+                           'static-root')  # live cdn AWS S3
 
 # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -186,8 +186,3 @@ MEDIA_URL = '/media/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
-
-
-
-
-
