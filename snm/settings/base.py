@@ -50,14 +50,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'snmov',
     'crispy_forms',
-    'crispy_bootstrap4',
+    'crispy_bootstrap5',
     'storages',
     'django.contrib.sitemaps',
     'tinymce',
     'meta',
 ]
 
-CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 

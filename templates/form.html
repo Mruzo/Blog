@@ -22,7 +22,7 @@
             <form class="col mx-auto" method='POST' action='.' enctype="multipart/form-data">
                 <li class="list-group row">
                     {% csrf_token %}
-                    {{ form|crispy }}
+                    {{{ form|crispy }}}
                 </li>
 
                 <li class="list-group row text-center">
