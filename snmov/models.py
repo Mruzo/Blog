@@ -73,6 +73,7 @@ class Product(ModelMeta, models.Model):
 
     class Meta:
         ordering = ['-publish_date', '-updated', '-timestamp']
+        app_label = 'snmov'
 
     def __str__(self):
         return self.title

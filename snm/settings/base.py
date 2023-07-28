@@ -33,6 +33,8 @@ SECRET_KEY = config.get('section', 'VYBZ_KEY')
 META_SITE_PROTOCOL = 'http', 'https'
 META_SITE_DOMAIN = 'justvyz.com'
 
+ROOT_URLCONF = 'snm.urls'
+
 LOGIN_REDIRECT_URL = 'homepage'
 
 LOGIN_URL = 'login_req'
@@ -46,15 +48,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'snmov.apps.SnmovConfig',
+    'snmov',
     'crispy_forms',
+    'crispy_bootstrap4',
     'storages',
     'django.contrib.sitemaps',
     'tinymce',
     'meta',
 ]
 
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
+
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 TINYMCE_DEFAULT_CONFIG = {
     'height': 360,
@@ -99,9 +106,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-
-ROOT_URLCONF = 'snm.urls'
 
 TEMPLATES = [
     {

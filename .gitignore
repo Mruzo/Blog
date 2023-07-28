@@ -9,6 +9,12 @@ __pycache__/
 *$py.class
 *.pyc
 
+.vscode/
+.idea/
+*submlime-workspace
+/media/
+snm/settings/local.py
+
 # C extensions
 *.so
 *env
