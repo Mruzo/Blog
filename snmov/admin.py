@@ -1,25 +1,28 @@
 from django.contrib import admin
-from .models import Article, Comment, Preference, ReachOut
+from .models import Product, Comment, Preference, ReachOut, About, SiteImage
 from tinymce.widgets import TinyMCE
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 
-#unregiser provided model admin
+# unregiser provided model admin
 admin.site.unregister(User)
 
 
-class ArticleUno(admin.ModelAdmin):
+class ProductUno(admin.ModelAdmin):
     formfield_overrides = {
         models.TextField: {'widget': TinyMCE()},
     }
 
 
 # Register your models here.
-admin.site.register(Article, ArticleUno)
+admin.site.register(Product, ProductUno)
 admin.site.register(Comment)
 admin.site.register(Preference)
 admin.site.register(ReachOut)
+admin.site.register(About)
+admin.site.register(SiteImage)
+
 
 @admin.register(User)
 class CustomAdmin(UserAdmin):
@@ -27,7 +30,7 @@ class CustomAdmin(UserAdmin):
         'date_joined',
     ]
 
-    #custom action to mark multiple user as active
+    # custom action to mark multiple user as active
     actions = [
         'activate_users',
     ]
@@ -37,7 +40,7 @@ class CustomAdmin(UserAdmin):
         self.message_user(request, 'Activated {} user.'.format(cnt))
     activate_users.short_description = 'Activate Users'
 
-    #To hide custom action from users without change permission
+    # To hide custom action from users without change permission
     def get_actions(self, request):
         actions = super().get_actions(request)
         if not request.user.has_perm('auth.change_user'):
@@ -52,7 +55,7 @@ class CustomAdmin(UserAdmin):
         is_superuser = request.user.is_super
         disabled_fields = set()
 
-        #Prevent superusers from granting superuser rights
+        # Prevent superusers from granting superuser rights
         if not is_superuser:
             disabled_fields |= {
                 'username',
@@ -60,7 +63,7 @@ class CustomAdmin(UserAdmin):
                 'user_permissions',
             }
 
-        #Prevent non-superusers from editing their own permissions
+        # Prevent non-superusers from editing their own permissions
         if (
             not is_superuser
             and obj is not None

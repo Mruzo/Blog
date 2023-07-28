@@ -25,13 +25,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(
 
 # SECURITY WARNING: keep the secret key used in production secret!
 config = RawConfigParser()
-config.read('/etc/snmov/settings.ini')
+config.read('/etc/vybz/settings.ini')
 #SECRET_KEY = os.environ.get('SNM_KEY')
-SECRET_KEY = config.get('section', 'SNM_KEY')
+SECRET_KEY = config.get('section', 'VYBZ_KEY')
 
 
 META_SITE_PROTOCOL = 'http', 'https'
-META_SITE_DOMAIN = 'sneakymotivator.com'
+META_SITE_DOMAIN = 'justvyz.com'
 
 LOGIN_REDIRECT_URL = 'homepage'
 
@@ -163,13 +163,13 @@ db_from_env = dj_database_url.config(conn_max_age=500)
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-DEFAULT_FROM_EMAIL = 'admin@sneakymotivator'
+# DEFAULT_FROM_EMAIL = 'admin@sneakymotivator'
 
-EMAIL_HOST = 'smtp.mailgun.org'
-EMAIL_PORT = 587
-EMAIL_HOST_USER = config.get('section', 'MG_USER')
-EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
-EMAIL_USE_TLS = True
+# EMAIL_HOST = 'smtp.mailgun.org'
+# EMAIL_PORT = 587
+# EMAIL_HOST_USER = config.get('section', 'MG_USER')
+# EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
+# EMAIL_USE_TLS = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/

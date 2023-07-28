@@ -10,31 +10,31 @@ from meta.models import ModelMeta
 User = settings.AUTH_USER_MODEL
 
 
-class ArticleQuerySet(models.QuerySet):
+class ProductQuerySet(models.QuerySet):
     def published(self):
         now = timezone.now()
         return self.filter(publish_date__lte=now)
 
     def search(self, query):
         lookup = (
-                    Q(title__icontains=query) |
-                    Q(content__icontains=query) |
-                    Q(slug__icontains=query)
-                    # user search
-                    # Q(user__first_name__icontains=query) |
-                    # Q(user__last_name__icontains=query) |
-                    # Q(user__username__icontains=query)
-                  )
+            Q(title__icontains=query) |
+            Q(content__icontains=query) |
+            Q(slug__icontains=query)
+            # user search
+            # Q(user__first_name__icontains=query) |
+            # Q(user__last_name__icontains=query) |
+            # Q(user__username__icontains=query)
+        )
         return self.filter(lookup)
 
 
-class ArticleManager(models.Manager):
+class ProductManager(models.Manager):
 
     class Meta:
         ordering = ['-publish_date', '-updated', '-timestamp']
 
     def get_queryset(self):
-        return ArticleQuerySet(self.model, using=self._db)
+        return ProductQuerySet(self.model, using=self._db)
 
     def published(self):
         return self.get_queryset().published()
@@ -45,20 +45,21 @@ class ArticleManager(models.Manager):
         return self.get_queryset().published().search(query)
 
 
-class Article(ModelMeta, models.Model):
-    user = models.ForeignKey(User, default=1, null=True, on_delete=models.SET_NULL)
-    image = models.ImageField(upload_to='image/', blank=True, null=True)
+class Product(ModelMeta, models.Model):
+    user = models.ForeignKey(User, default=1, null=True,
+                             on_delete=models.SET_NULL)
     title = models.CharField(max_length=120)
     slug = models.SlugField(unique=True)
     description = models.CharField(max_length=160, null=True)
     content = models.TextField(null=True, blank=True)
-    publish_date = models.DateTimeField(auto_now=False, auto_now_add=False, null=True, blank=True)
+    publish_date = models.DateTimeField(
+        auto_now=False, auto_now_add=False, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     likes = models.IntegerField(default=0)
     dislikes = models.IntegerField(default=0)
     updated = models.DateTimeField(auto_now=True)
 
-    objects = ArticleManager()
+    objects = ProductManager()
 
     _metadata = {
         'title': 'title',
@@ -93,9 +94,37 @@ class Article(ModelMeta, models.Model):
         return 2 * self.comments.count()
 
 
+class ReachOut(models.Model):
+    full_name = models.CharField(max_length=30)
+    email = models.EmailField(max_length=40)
+    subject = models.CharField(max_length=50, null=True)
+    content = models.TextField(max_length=250)
+
+    def __str__(self):
+        return self.subject
+
+
+class About(models.Model):
+    body = models.TextField(null=True, blank=True)
+
+
+class SiteImage(models.Model):
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name='product_image')
+    about = models.ForeignKey(
+        About, on_delete=models.CASCADE, related_name='about_image')
+    image = models.ImageField(upload_to='image/', blank=True, null=True)
+    caption = models.CharField(max_length=50, blank=True)
+
+    metadata = {
+        'image': 'get_meta_image',
+    }
+
+
 class Preference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    post = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='preferences')
+    post = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name='preferences')
     value = models.IntegerField()
     created = models.DateTimeField(auto_now_add=True)
 
@@ -108,8 +137,10 @@ class Preference(models.Model):
 
 class Comment(models.Model):
     comment_cont = models.TextField(max_length=200, verbose_name='Comment')
-    user_name = models.ForeignKey(User, default=1, null=True, on_delete=models.SET_NULL)
-    comment_post = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='comments')
+    user_name = models.ForeignKey(
+        User, default=1, null=True, on_delete=models.SET_NULL)
+    comment_post = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name='comments')
     comment_date = models.DateTimeField(default=timezone.now)
     approved_comment = models.BooleanField(default=False)
 
@@ -134,13 +165,3 @@ class Comment(models.Model):
     def approve(self):
         self.approved_comment = True
         self.save()
-
-
-class ReachOut(models.Model):
-    full_name = models.CharField(max_length=30)
-    email = models.EmailField(max_length=40)
-    subject = models.CharField(max_length=50, null=True)
-    content = models.TextField(max_length=250)
-
-    def __str__(self):
-        return self.subject

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Article, Comment, Preference
+from .models import Product, Comment, Preference
 from .forms import ArticleModelForm, CommentForm, RegisterForm
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate
@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views import generic
-from django.core.paginator import Paginator, EmptyPage,PageNotAnInteger
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views.generic.edit import DeleteView
@@ -18,22 +18,10 @@ from django.views.generic.edit import DeleteView
 # Create your views here.
 
 class article_list_view(generic.ListView):
-    model = Article
+    model = Product
     template_name = 'snmov/list.html'
     context_object_name = 'object_list'
     paginate_by = 4
-
-# def article_list_view(request):
-#     #list of articles
-#     qs = Article.objects.all().published()
-#     # if request.user.is_authenticated:
-#     #     my_qs = Article.objects.filter(user=request.user)
-#     #     qs = (qs | my_qs).distinct()
-#
-#     return render(request,
-#                   template_name='snmov/list.html',
-#                   context={'object_list': qs}
-#                   )
 
 
 @staff_member_required
@@ -46,7 +34,7 @@ def article_create_view(request):
         form = ArticleModelForm()
 
     return render(request,
-                  template_name = 'form.html',
+                  template_name='form.html',
                   context={'form': form}
                   )
 
@@ -100,13 +88,13 @@ def article_preference(request, slug, value):
 
         try:
             obj = Preference.objects.get(user=request.user, post=object)
-            valueobj = obj.value #value of userpreference
+            valueobj = obj.value  # value of userpreference
             value = int(value)
 
             if valueobj != value:
                 obj.delete()
                 upref = Preference()
-                upref.user = request.user #current logged in user
+                upref.user = request.user  # current logged in user
                 upref.post = object
                 upref.value = value
 
@@ -154,7 +142,7 @@ def article_preference(request, slug, value):
 
             return render(request,
                           template_name='snmov/home.html',
-                          context = {'object': object, 'slug': slug})
+                          context={'object': object, 'slug': slug})
 
     else:
         objects = get_object_or_404(Article, slug=slug)
@@ -174,8 +162,8 @@ def article_update_view(request, slug):
         form.save()
 
     return render(request,
-                  template_name = 'form.html',
-                  context = {'title': f"Update {obj.title}", "form": form}
+                  template_name='form.html',
+                  context={'title': f"Update {obj.title}", "form": form}
                   )
 
 
@@ -243,9 +231,10 @@ def register_view(request):
 
     form1 = RegisterForm
     return render(request,
-                  template_name = "snmov/register.html",
+                  template_name="snmov/register.html",
                   context={"title": "Register", "form1": form1}
                   )
+
 
 def validate_username(request):
     username = request.GET.get('username', None)
