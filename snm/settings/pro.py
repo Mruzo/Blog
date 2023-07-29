@@ -7,7 +7,7 @@ DEBUG = False
 #     ('Chris U', 'chrisuzoewulu@gmail.com'),
 # )
 
-ALLOWED_HOSTS = ['www.justvybz.com', 'vybz.com', 'localhost']
+ALLOWED_HOSTS = ['www.justvybz.com', 'justvybz.com']
 
 CSRF_COOKIE_SECURE = True
 
