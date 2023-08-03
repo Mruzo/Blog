@@ -2,7 +2,8 @@
 
 @font-face {
     font-family: 'kurale';
-    src: local('Kurale'), url('kurale.ttf') format("truetype");
+    /* src: local('Kurale'), url('kurale.ttf') format("truetype"); */
+    src: local('SofiaSans'), url('SofiaSans-VariableFont_wght.ttf') format("truetype");
 }
 
 * {
@@ -27,6 +28,9 @@ body {
 footer {
     position: absolute;
     bottom: 0;
+    background-repeat: no-repeat;
+    border-style: solid;
+    border-color: #414042;
 }
 
 .main {
@@ -78,25 +82,36 @@ footer {
 .nav-pills .nav-link.active,
 .nav-pills .show > .nav-link {
   color: #fff;
-  background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 93%, #FFBC00 95%);
   background-repeat: no-repeat;
+  border-style: solid;
+  border-color: #414042;
 }
 
 .active {
     color: #fff;
-    background: linear-gradient(45deg, #64ad60 5%, #DC2229 10% 15%, #FFBC00 15% 20%, rgba(0,0,0,0) 50% );
-    border-radius: 2px;
+    /* background: #414042; */
+    border-radius: 0px;
+    border-style: solid none solid none;
+    border-color: #414042;
+    border-width: 5px;
+    background: linear-gradient(0deg, #414042, rgba(0,0,0,0) 0% );
 }
 
 .navbar .navbar-nav li .nav-link {
     color: black;
     text-align: center;
+    
+    border-color: #414042;
+    border-width: 15px;
 }
 
 .navbar .navbar-nav li a:hover {
-    background: linear-gradient(45deg, #64ad60 5%, #DC2229 10% 15%, #FFBC00 15% 20%, rgba(0,0,0,0) 50% );
-    border-radius: 2px;
-}
+ 
+    border-style: solid none none none;
+    border-color: #414042;
+    border-width: 5px;
+    z-index: auto;
+} 
 
 .card-header {
     background-color: #929292;
@@ -109,7 +124,7 @@ footer {
 }
 
 #quote, #quote2 {
-    font-family: 'kurale', 'Georgia', serif;
+    font-family: 'SofiaSans', serif;
     text-transform: uppercase;
 }
 
