@@ -1,5 +1,5 @@
 {% for message in messages %}
-  <div class="toast notification bg-{% if message.tags == 'error' %}danger{% else %}success{% endif %}" role="alert" aria-live="assertive" aria-atomic="true" data-delay="4000">
+  <div class="toast notification border-0 bg-{% if message.tags == 'error' %}danger{% else %}success{% endif %}" role="alert" aria-live="assertive" aria-atomic="true" data-delay="4000">
     <div class="toast-body">
       {{message|safe}}
     </div>

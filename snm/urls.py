@@ -15,7 +15,6 @@ from snmov.views import (
     article_create_view,
     logout_request,
     register_view,
-    article_detail_view,
     validate_username,
 )
 from snmov.sitemaps import StaticViewSitemap, ProductSitemap, CommentSitemap
@@ -28,7 +27,7 @@ sitemaps = {
 urlpatterns = [
     path('', home_page, name="homepage"),
     path('new-article/', article_create_view, name='article_create'),
-    path('article/', include('snmov.urls')),
+    path('product/', include('snmov.urls')),
     path('about/', about_page, name='about'),
     path('privacy/', privacy_page, name='privacy'),
     path('terms/', terms_page, name='terms'),

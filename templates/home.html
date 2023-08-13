@@ -5,14 +5,20 @@
 <!--    {% url 'homepage' as my_view %}-->
 <!--    {% if request.path == my_view %}-->
 
-<section class="row my-5 position-relative">
-    <div class="col card mx-auto position-relative border border-dark">
+<section class="row my-5 position-relative" style="background-color: #F2f2f2;">
+    <div class="col card mx-auto position-relative rounded-0 border-0">
+
+        <!-- <div class="element">
+            Hover over me!
+        </div> -->
 
 
-        
 
+        <div class="text-center" id="home-animation-wrapper" style="opacity: 1">
 
-        <div  id="home-animation-wrapper" style="opacity: 0">
+            <p class="landtext display-4 align-middle font-weight-bold">
+                soft & vibrant comfort for your work/play space
+            </p>
 
           <!-- <div class="slides">
             <div class="slide" count="0" data-1="ARTICLES" data-2="TO GROW" data-3="BY"></div>
@@ -29,20 +35,40 @@
 
 <!--    {% endif %}-->
 
-
-<div class="row position-relative">
-{% for article in article_list %}
-    <div class="col-lg-4 col-md-6">
-        {% include 'snmov/list-inline.html' with article=article detail=False %}
+<div id="pictureCarousel" class="carousel slide border border-dark" data-ride="carousel">
+    <div class="carousel-inner">
+        {% for picture in pictures %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <img src="{{ picture.image.url }}" class="d-block w-100 border-2" alt="{{ picture.caption }}">
+                <div class="carousel-caption d-none d-md-block">
+                    <h5>{{ picture.product.title }}</h5>
+                    <p> {{ picture.caption }} </p>
+                </div>
+            </div>
+        {% endfor %}
     </div>
-
-
-{% endfor %}
+    <a class="carousel-control-prev" href="#pictureCarousel" role="button" data-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="sr-only">Previous</span>
+    </a>
+    <a class="carousel-control-next" href="#pictureCarousel" role="button" data-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="sr-only">Next</span>
+    </a>
 </div>
 
-
-<div class="card mt-4 col-md-8 mx-auto" style="background: #FFBC00;">
-    <a class="d-flex justify-content-center font-weight-bolder text-dark" href="/article"><h3>view more articles...</h3></a>
+<div class="card mt-2  col-md-6 mx-auto rounded-0" >
+    <a class="btn justify-content-center font-weight-bolder text-dark rounded-0 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="https://www.amazon.ca/dp/B0C6HH585D?ref=myi_title_dp"  target="_blank">
+        <strong>ORDER YOURS NOW! </strong>
+        
+    </a>
 </div>
+
+<!-- <div class="card my-5  col-md-6 mx-auto rounded-0" >
+    <a class="btn justify-content-center font-weight-bolder text-dark rounded-0 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="/">
+        <strong>other products coming soon...</strong>
+        
+    </a>
+</div> -->
 
 {% endblock %}

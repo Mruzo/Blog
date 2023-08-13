@@ -13,14 +13,15 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views.generic.edit import DeleteView
+from django.views import View
 
 
 # Create your views here.
 
-class article_list_view(generic.ListView):
+class Product_list_view(generic.ListView):
     model = Product
     template_name = 'snmov/list.html'
-    context_object_name = 'object_list'
+    context_object_name = 'product_list'
     paginate_by = 4
 
 
@@ -39,13 +40,16 @@ def article_create_view(request):
                   )
 
 
-def article_detail_view(request, slug):
-    obj = get_object_or_404(Article, slug=slug)
-    template_name = ['snmov/home.html']
-    context = {}
-    context['object'] = obj
-    context['meta'] = obj.as_meta()
-    return render(request, template_name, context)
+class ProductDetailView(View):
+    template_name = "snmov/home.html"
+
+    def get(self, request, slug):
+        obj = get_object_or_404(Product, slug=slug)
+        context = {
+            'object': obj,
+            'meta': obj.as_meta(),
+        }
+        return render(request, self.template_name, context)
 
 
 @login_required

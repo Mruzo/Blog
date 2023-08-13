@@ -79,7 +79,7 @@ class Product(ModelMeta, models.Model):
         return self.title
 
     def get_absolute_url(self):
-        return f"/article/{self.slug}"
+        return f"/product/{self.slug}"
 
     def get_edit_url(self):
         return f"{self.get_absolute_url()}/edit"
@@ -111,15 +111,22 @@ class About(models.Model):
 
 class SiteImage(models.Model):
     product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='product_image')
+        Product, on_delete=models.CASCADE, null=True, blank=True, related_name='product_images')
     about = models.ForeignKey(
-        About, on_delete=models.CASCADE, related_name='about_image')
+        About, on_delete=models.CASCADE, null=True, blank=True, related_name='about_image')
     image = models.ImageField(upload_to='image/', blank=True, null=True)
     caption = models.CharField(max_length=50, blank=True)
 
-    metadata = {
-        'image': 'get_meta_image',
-    }
+    # metadata = {
+    #     'image': 'get_meta_image',
+    # }
+
+    def __str__(self):
+        return str(self.id)
+
+    def get_meta_image(self):
+        if self.image:
+            return self.image.url
 
 
 class Preference(models.Model):

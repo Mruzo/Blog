@@ -1,15 +1,8 @@
 $(document).ready(function(){
    $('.toast').toast('show');
+   $('#pictureCarousel').carousel();
    });
 
-//scroll animation
-$(window).scroll(function(){
-    var scroll = $(window).scrollTop(),
-    dh = $(document).height(),
-    wh = $(window).height();
-    scrollPercent = (scroll / (dh-wh)) * 100;
-    $('#progressbar').css('height', scrollPercent + '%');
-});
 
 var scroll = window.requestAnimationFrame ||
             function(callback){ window.setTimeout(callback, 1000/60)};
@@ -199,7 +192,16 @@ TextSlider.prototype = {
         if(!$(this).attr('data-rand')){ return; };
 
         var rand = $(this).attr('data-rand'),
-            cy = e.pageY,
+            cy = e.pageY,window.addEventListener("scroll", function() {
+              var hamburgerButton = document.getElementById("hamburger-button");
+              if (window.scrollY > 0) {
+                hamburgerButton.style.position = "fixed";
+                hamburgerButton.style.top = "0";
+              } else {
+                hamburgerButton.style.position = "absolute";
+                hamburgerButton.style.top = "initial";
+              }
+            });
             cx = e.pageX,
             py = Math.round($(this).offset().top),
             px = Math.round($(this).offset().left),
@@ -222,3 +224,14 @@ window.LLOS = window.LLOS || {};
 if($('#home-animation-wrapper').length){
   window.LLOS.TextSlider = new TextSlider();
 }
+
+window.addEventListener("scroll", function() {
+  var hamburgerButton = document.getElementById("hamburger-button");
+  if (window.scrollY > 0) {
+    hamburgerButton.style.position = "fixed";
+    hamburgerButton.style.top = "0";
+  } else {
+    hamburgerButton.style.position = "fixed";
+    hamburgerButton.style.top = "0";
+  }
+});

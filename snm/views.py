@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from .forms import ContactModelForm, ContactForm
-from snmov.models import Product, Comment, ReachOut
+from snmov.models import Product, Comment, ReachOut, SiteImage
 from django.contrib import messages
 from django.core.mail import send_mail, BadHeaderError
 from django.http import HttpResponse, HttpResponseRedirect
@@ -9,14 +9,12 @@ from random import sample
 
 
 def home_page(request):
-    id_list = Product.objects.all().values_list('id', flat=True)
-    if id_list.count() > 2:
-        random_profiles_id_list = sample(list(id_list), 3)
-        qs = Product.objects.filter(id__in=random_profiles_id_list)
-    else:
-        qs = id_list
-    context = {'article_list': qs}
-    return render(request, "home.html", context)
+    pictures = SiteImage.objects.filter(product__isnull=False)
+
+    context = {
+        'pictures': pictures,
+    }
+    return render(request, 'home.html', context)
 
 
 def about_page(request):
