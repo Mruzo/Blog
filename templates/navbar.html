@@ -2,87 +2,25 @@
 
   <nav class="navbar navbar-expand-lg navbar-light bg-light d-flex bd-highlight border-bottom">
 
-      <div class="sticky-wrapper" style="opacity: 0;">
-        <button id="hamburger-button" class="navbar-toggler p-0 border-0 rounded-0" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-      </div>
-
-
       <a class="navbar-brand mb-0 mx-auto pb-2 bd-highlight " href="/">
-        <div class="row col-sm-12 mx-auto">
-        <div class="row col mx-auto">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 77.54 77.54" height="80"><defs><style>.cls-1{opacity:0.96;isolation:isolate;}.cls-2{fill:#dc2229;}.cls-3{fill:#414042;}.cls-4{fill:#ffbc00;}</style></defs><title>Asset 1</title><g id="Layer_2" data-name="Layer 2"><g id="Layer_1-2" data-name="Layer 1"><g id="Layer_1-2-2" data-name="Layer 1-2"><rect class="cls-1" x="4.47" y="4.47" width="68.6" height="68.6"/><polygon class="cls-2" points="26.05 55.13 22.8 51.88 19.83 54.85 23.08 58.1 32.54 67.56 35.52 64.6 26.05 55.13"/><polygon class="cls-3" points="46.62 12.38 46.62 23.48 46.62 34.57 46.62 37.82 46.62 41.07 46.62 43.76 47.96 42.41 49.59 40.79 51.21 39.17 51.21 23.48 51.21 7.79 46.62 12.38"/><polygon class="cls-4" points="49.59 40.79 47.96 42.41 46.62 43.76 46.34 44.04 44.71 45.66 43.37 47.01 35.52 54.85 38.77 58.1 46.62 50.26 49.59 47.29 51.21 45.66 51.21 42.41 51.21 39.17 49.59 40.79"/><polygon class="cls-3" points="30.93 50.26 27.68 47.01 26.33 45.66 24.43 45.66 24.43 44.32 23.08 45.66 21.46 47.29 24.43 50.26 27.68 53.51 35.52 61.35 38.77 58.1 30.93 50.26"/><polyline class="cls-3" points="35.52 70.54 51.21 54.85 51.06 49.06 32.54 67.56"/><path class="cls-3" d="M73.07,4.47v68.6H4.47V4.47h68.6M77.54,0H0V77.54H77.54Z"/></g></g></g></svg>
-
-        <h2 class="" >
-          
-          Justvybz
-        </h2>
-
-          
+        <div class="row col-sm-12 mx-auto text-center">
+          <div class="row col mx-auto">
+              <img class="" src="{% static 'snmov/img/v2.2.svg' %}" alt="" width="100" height="100">
+          </div>
         </div>
-
-        </div>
-
       </a>
-    <div class="sticky-wrapper" style="opacity: 0">
-      <button id="hamburger-button" class="navbar-toggler p-0 border-0 rounded-0" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-    </div>
-  
-    <div class="collapse navbar-collapse mx-auto bd-highlight" id="navbarSupportedContent">
-      <ul class="navbar-nav mx-auto">
-        <!-- <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}">
-          <a class ="nav-link" href="/">
 
-            <br>
-            <p class="font-weight-bold">Home</p><span class="sr-only">(current)</span>
-          </a>
-        </li> -->
-        <!-- <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
-          <a class ="nav-link " href="/about">
-
-            <br>
-            <p class="font-weight-bold">Our Story</p>
-          </a>
-        </li> -->
-        <!-- <li class="nav-item mx-3 {% if 'article' in request.resolver_match.url_name %}active{% endif %}">
-          <a class ="nav-link" href="/product">
-
-            <br>
-            <p class="font-weight-bold">Products</p>
-          </a>
-        </li> -->
-        <!-- <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'contact' %}active{% endif %}">
-          <a class ="nav-link" href="/contact">
-
-            <br>
-            <p class="font-weight-bold">Contact</p>
-          </a>
-        </li> -->
-        {% comment %}
-        {% if user.is_authenticated %}
-          <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'logout_req' %}active{% endif %}">
-            <a class ="nav-link" href="/logout">
-
-              <br>
-              <p class="font-weight-bold">Logout</p>
-              <span class="text-capitalize" style="color: #7440bd;">{{user.first_name|title}}</span></a>
-          </li>
-        {% else %}
-          <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'login_req' or request.resolver_match.url_name == 'register' %}active{% endif %}">
-            <a class ="nav-link" href="/login?next={{request.path}}">
-
-              <br>
-              <p class="font-weight-bold">Login/Register</p>
-            </a>
-          </li>
-        {% endif %}
-        {% endcomment %}
-
-      </ul>
-    </div>
   </nav>
+  <div>
+    <nav class="nav navbar-expand-lg nav-pills nav-fill ml-0 border-bottom full-width-nav">
+      <div class="container-fluid">
+        <div class="row w-100 mx-0">
+          <a class="nav-item nav-link col-4 rounded-0 nav-font font-weight-bold align-middle" style="background-color: #E4B4F9;" href="/about">My Story</a>
+          <a class="nav-item nav-link col-4 border-0 rounded-0 nav-font font-weight-bold align-middle" style="background-color: #97E595;" href="#">Fashion</a>
+          <a class="nav-item nav-link col-4 border-0 rounded-0 nav-font font-weight-bold" style="background-color: #FD96CF;" href="#">Wellness</a>
+        </div>
+      </div>
+    </nav>
+  </div>
 
 

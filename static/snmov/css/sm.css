@@ -1,8 +1,8 @@
 {% load static %}
 
 @font-face {
-    font-family: 'varela';
-    src: local('Varela-Regular'), url('Varela-Regular.ttf') format("truetype");
+    font-family: 'arima';
+    src: local('Arima-VariableFont_wght'), url('Arima-VariableFont_wght.ttf') format("truetype");
 }
 
 @font-face {
@@ -30,12 +30,6 @@ html {
     height: 100%;
 }
   
-@include media-breakpoint-up(sm) {
-    html {
-        font-size: 1.2rem;
-    }
-}
-
 body {
     min-height: 100vh;
     min-width: 100%;
@@ -43,6 +37,27 @@ body {
     display: flex;
     flex-direction: column;
     font-family: 'varela', sans-serif;
+}
+
+.full-width-nav {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+}
+
+.full-width-nav .nav-item.nav-link.active {
+    border: 5px solid #000;
+    color: #000;
+}
+
+.nav-item.nav-link {
+    font-size: 22px;
+    vertical-align: middle;
+} 
+
+.nav-font {
+    font-family: 'arima', sans-serif;
+    color: #000;
 }
 
 h2 {
@@ -130,18 +145,16 @@ footer {
     z-index: 3;
   } */
 
-.nav-pills .nav-link.active,
-.nav-pills .show > .nav-link {
-  color: #f2f2f2;
-  background-repeat: no-repeat;
-  outline: 2px #414042;
-}
+  /* .nav-pills .nav-link.active,
+  .nav-pills .show > .nav-link {
+    color: #000;
+    background-repeat: no-repeat;
+    outline: 5px solid #000; /* Updated: added 'solid' to create a solid outline */
+  } */
 
 .active {
-    color: #414042;
-    background: linear-gradient(0deg, #414042, rgba(0,0,0,0) 10% );
-    transition: opacity 0.3s ease;
-    
+    background: #000;
+    outline: #000;
 }
 
 .navbar .navbar-nav li a {
