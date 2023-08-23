@@ -4,10 +4,10 @@
 
 {% if not detail %}
 
-<div class="card mb-2">
+<div class="card m-2">
     {% for image in product.product_images.all %}
     <img
-        class="card-img-top mb-2"
+        class="card-img-top mt-5"
         src="{{ image.image.url }}"
         alt="image of {{ image.caption }}"
         width="270px">

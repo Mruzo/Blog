@@ -174,56 +174,56 @@ TextSlider.prototype = {
     }
   },
 
-  // non used function (performance) (remove the 'return' to enable)
-  bubblesMovement: function(){
+//   // non used function (performance) (remove the 'return' to enable)
+//   bubblesMovement: function(){
 
-    return; // Yup, this one
+//     return; // Yup, this one
 
-    var bubbles = this.container.find('#bubbles path'),
-        count = 500;
+//     var bubbles = this.container.find('#bubbles path'),
+//         count = 500;
 
-    bubbles.each(function(index){
-      if(index > count ) { return; }
-      $(this).attr('data-rand', getRand(15, 55))
-    });
+//     bubbles.each(function(index){
+//       if(index > count ) { return; }
+//       $(this).attr('data-rand', getRand(15, 55))
+//     });
 
-    this.container.on('mousemove', function(e){
-      bubbles.each(function(){
-        if(!$(this).attr('data-rand')){ return; };
+//     this.container.on('mousemove', function(e){
+//       bubbles.each(function(){
+//         if(!$(this).attr('data-rand')){ return; };
 
-        var rand = $(this).attr('data-rand'),
-            cy = e.pageY,window.addEventListener("scroll", function() {
-              var hamburgerButton = document.getElementById("hamburger-button");
-              if (window.scrollY > 0) {
-                hamburgerButton.style.position = "fixed";
-                hamburgerButton.style.top = "0";
-              } else {
-                hamburgerButton.style.position = "absolute";
-                hamburgerButton.style.top = "initial";
-              }
-            });
-            cx = e.pageX,
-            py = Math.round($(this).offset().top),
-            px = Math.round($(this).offset().left),
-            x = Math.round(-(cx + px) / rand),
-            y = Math.round(-(cy + py) / rand);
+//         var rand = $(this).attr('data-rand'),
+//             cy = e.pageY,window.addEventListener("scroll", function() {
+//               var hamburgerButton = document.getElementById("hamburger-button");
+//               if (window.scrollY > 0) {
+//                 hamburgerButton.style.position = "fixed";
+//                 hamburgerButton.style.top = "0";
+//               } else {
+//                 hamburgerButton.style.position = "absolute";
+//                 hamburgerButton.style.top = "initial";
+//               }
+//             });
+//             cx = e.pageX,
+//             py = Math.round($(this).offset().top),
+//             px = Math.round($(this).offset().left),
+//             x = Math.round(-(cx + px) / rand),
+//             y = Math.round(-(cy + py) / rand);
 
-        TweenMax.to($(this), 0.2, { x: x, y: y, transformOrigin: 'center' });
-      });
-    })
-  }
-}
+//         TweenMax.to($(this), 0.2, { x: x, y: y, transformOrigin: 'center' });
+//       });
+//     })
+//   }
+// }
 
-function getRand(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min)) + min;
-}
+// function getRand(min, max) {
+//   min = Math.ceil(min);
+//   max = Math.floor(max);
+//   return Math.floor(Math.random() * (max - min)) + min;
+// }
 
-window.LLOS = window.LLOS || {};
-if($('#home-animation-wrapper').length){
-  window.LLOS.TextSlider = new TextSlider();
-}
+// window.LLOS = window.LLOS || {};
+// if($('#home-animation-wrapper').length){
+//   window.LLOS.TextSlider = new TextSlider();
+// }
 
 window.addEventListener("scroll", function() {
   var hamburgerButton = document.getElementById("hamburger-button");

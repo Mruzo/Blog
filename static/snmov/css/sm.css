@@ -145,17 +145,7 @@ footer {
     z-index: 3;
   } */
 
-  /* .nav-pills .nav-link.active,
-  .nav-pills .show > .nav-link {
-    color: #000;
-    background-repeat: no-repeat;
-    outline: 5px solid #000; /* Updated: added 'solid' to create a solid outline */
-  } */
 
-.active {
-    background: #000;
-    outline: #000;
-}
 
 .navbar .navbar-nav li a {
     position: relative;
@@ -194,13 +184,6 @@ footer {
     width: 100%;
 }
 
-
-/* .navbar .navbar-nav li a:hover {
-
-    outline: 5px solid #414042;
-    background: linear-gradient(180deg, #414042, rgba(0,0,0,0) 20% );
-    z-index: auto;
-}  */
 
 .card-header {
     background-color: #929292;
