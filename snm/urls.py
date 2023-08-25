@@ -29,34 +29,34 @@ urlpatterns = [
     path('new-article/', article_create_view, name='article_create'),
     path('product/', include('snmov.urls')),
     path('about/', about_page, name='about'),
-    path('privacy/', privacy_page, name='privacy'),
-    path('terms/', terms_page, name='terms'),
-    path('cookies/', cookie_page, name='cookie'),
-    path('contact/', contact_page_m, name='contact'),
-    path('logout/', logout_request, name='logout_req'),
-    path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'),
-         name='login_req'),
-    path('register/', register_view, name='register'),
-    path('uno/', admin.site.urls),
-    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
-    path('tinymce/', include('tinymce.urls')),
-    path('ajax/validate_username/', validate_username, name='validate_username'),
-    path('password-reset/',
-         auth_views.PasswordResetView.as_view(
-             template_name='snmov/password_reset.html'),
-         name='password_reset'),
-    path('password-reset/done/',
-         auth_views.PasswordResetDoneView.as_view(
-             template_name='snmov/password_reset_done.html'),
-         name='password_reset_done'),
-    path('password-reset-confirm/<uidb64>/<token>/',
-         auth_views.PasswordResetConfirmView.as_view(
-             template_name='snmov/password_reset_confirm.html'),
-         name='password_reset_confirm'),
-    path('password-reset-complete/',
-         auth_views.PasswordResetCompleteView.as_view(
-             template_name='snmov/password_reset_complete.html'),
-         name='password_reset_complete'),
+    # path('privacy/', privacy_page, name='privacy'),
+    # path('terms/', terms_page, name='terms'),
+    # path('cookies/', cookie_page, name='cookie'),
+    # path('contact/', contact_page_m, name='contact'),
+    # path('logout/', logout_request, name='logout_req'),
+    # path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'),
+    #      name='login_req'),
+    # path('register/', register_view, name='register'),
+    # path('uno/', admin.site.urls),
+    # path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
+    # path('tinymce/', include('tinymce.urls')),
+    # path('ajax/validate_username/', validate_username, name='validate_username'),
+    # path('password-reset/',
+    #      auth_views.PasswordResetView.as_view(
+    #          template_name='snmov/password_reset.html'),
+    #      name='password_reset'),
+    # path('password-reset/done/',
+    #      auth_views.PasswordResetDoneView.as_view(
+    #          template_name='snmov/password_reset_done.html'),
+    #      name='password_reset_done'),
+    # path('password-reset-confirm/<uidb64>/<token>/',
+    #      auth_views.PasswordResetConfirmView.as_view(
+    #          template_name='snmov/password_reset_confirm.html'),
+    #      name='password_reset_confirm'),
+    # path('password-reset-complete/',
+    #      auth_views.PasswordResetCompleteView.as_view(
+    #          template_name='snmov/password_reset_complete.html'),
+    #      name='password_reset_complete'),
 ]
 
 if settings.DEBUG:

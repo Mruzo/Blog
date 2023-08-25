@@ -27,11 +27,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(
 config = RawConfigParser()
 config.read('/etc/vybz/settings.ini')
 #SECRET_KEY = os.environ.get('SNM_KEY')
-SECRET_KEY = config.get('section', 'VYBZ_KEY')
+SECRET_KEY = config.get('section', 'ADA_KEY')
 
 
 META_SITE_PROTOCOL = 'http', 'https'
-META_SITE_DOMAIN = 'justvyz.com'
+META_SITE_DOMAIN = 'adamaduka.com'
 
 ROOT_URLCONF = 'snm.urls'
 

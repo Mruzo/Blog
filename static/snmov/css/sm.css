@@ -45,9 +45,9 @@ body {
     margin-right: calc(-50vw + 50%);
 }
 
-.full-width-nav .nav-item.nav-link.active {
-    border: 5px solid #000;
-    color: #000;
+.full-width-nav .nav-item.active {
+    outline: 5px solid #000 !important;
+    color: #000 !important;
 }
 
 .nav-item.nav-link {
