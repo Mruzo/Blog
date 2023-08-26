@@ -14,7 +14,7 @@ CSRF_COOKIE_SECURE = True
 SECURE_SSL_REDIRECT = True
 
 config = RawConfigParser()
-config.read('/etc/vybz/settings.ini')
+config.read('/etc/ada/settings.ini')
 
 DATABASES = {
     'default': {
