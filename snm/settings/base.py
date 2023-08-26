@@ -25,7 +25,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(
 
 # SECURITY WARNING: keep the secret key used in production secret!
 config = RawConfigParser()
-config.read('/etc/vybz/settings.ini')
+config.read('/etc/ada/settings.ini')
 #SECRET_KEY = os.environ.get('SNM_KEY')
 SECRET_KEY = config.get('section', 'ADA_KEY')
 
