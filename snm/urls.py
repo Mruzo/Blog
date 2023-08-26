@@ -37,7 +37,7 @@ urlpatterns = [
     # path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'),
     #      name='login_req'),
     # path('register/', register_view, name='register'),
-    # path('uno/', admin.site.urls),
+    path('uno/', admin.site.urls),
     # path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     # path('tinymce/', include('tinymce.urls')),
     # path('ajax/validate_username/', validate_username, name='validate_username'),
