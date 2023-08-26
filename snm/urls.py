@@ -39,7 +39,7 @@ urlpatterns = [
     # path('register/', register_view, name='register'),
     path('uno/', admin.site.urls),
     # path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
-    # path('tinymce/', include('tinymce.urls')),
+    path('tinymce/', include('tinymce.urls')),
     # path('ajax/validate_username/', validate_username, name='validate_username'),
     # path('password-reset/',
     #      auth_views.PasswordResetView.as_view(
