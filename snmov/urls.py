@@ -7,11 +7,13 @@ from .views import (
     add_comment_to_article,
     article_preference,
     comment_delete_view,
+    categories
 )
 
 
 urlpatterns = [
     # path('', article_list_view, name='article'),
+    path('categories/', categories, name='categories'),
     path('', Product_list_view.as_view(), name='product'),
     path('<str:slug>/', ProductDetailView.as_view(), name='product_detail'),
     # path('<str:slug>/addc/', add_comment_to_article, name='add_comment'),

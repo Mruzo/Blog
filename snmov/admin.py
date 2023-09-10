@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, Comment, Preference, ReachOut, About, SiteImage
+from .models import Category, Product, Comment, Preference, ReachOut, About, SiteImage
 from tinymce.widgets import TinyMCE
 from django.db import models
 from django.contrib.auth.models import User
@@ -16,6 +16,7 @@ class ProductUno(admin.ModelAdmin):
 
 
 # Register your models here.
+admin.site.register(Category)
 admin.site.register(Product, ProductUno)
 admin.site.register(Comment)
 admin.site.register(Preference)

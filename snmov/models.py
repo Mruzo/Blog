@@ -45,10 +45,25 @@ class ProductManager(models.Manager):
         return self.get_queryset().published().search(query)
 
 
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
+
+
+def default_category():
+    return Category.objects.get(name='Default Category')
+
+
 class Product(ModelMeta, models.Model):
     user = models.ForeignKey(User, default=1, null=True,
                              on_delete=models.SET_NULL)
     title = models.CharField(max_length=120)
+    category = models.ForeignKey(
+        Category, default=default_category, on_delete=models.CASCADE)
     slug = models.SlugField(unique=True)
     description = models.CharField(max_length=160, null=True)
     content = models.TextField(null=True, blank=True)

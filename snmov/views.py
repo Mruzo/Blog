@@ -1,7 +1,8 @@
+from typing import Any, Dict
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Product, Comment, Preference
+from .models import Product, Comment, Preference, Category
 from .forms import ArticleModelForm, CommentForm, RegisterForm
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate
@@ -22,7 +23,23 @@ class Product_list_view(generic.ListView):
     model = Product
     template_name = 'snmov/list.html'
     context_object_name = 'product_list'
-    paginate_by = 4
+    paginate_by = 2
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        categories = Category.objects.all()
+        context['categories'] = categories
+
+        product_list = Product.objects.all()
+        context['product_list'] = product_list
+
+        return context
+
+
+def categories(request):
+    categories = Category.objects.all()
+    return render(request, 'snmov/list.html', {'categories': categories})
 
 
 @staff_member_required
