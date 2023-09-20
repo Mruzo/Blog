@@ -37,6 +37,9 @@ body {
     display: flex;
     flex-direction: column;
     font-family: 'varela', sans-serif;
+    background-image: url('v2.2.svg');
+    background-size: cover;
+    background-attachment: fixed;
 }
 
 .full-width-nav {
@@ -48,6 +51,7 @@ body {
 .full-width-nav .nav-item.active {
     outline: 5px solid #000 !important;
     color: #000 !important;
+    z-index: 1;
 }
 
 .nav-item.nav-link {
