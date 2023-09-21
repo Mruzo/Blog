@@ -31,7 +31,7 @@ SECRET_KEY = config.get('section', 'VYBZ_KEY')
 
 
 META_SITE_PROTOCOL = 'http', 'https'
-META_SITE_DOMAIN = 'justvyz.com'
+META_SITE_DOMAIN = 'adamaduka.com'
 
 ROOT_URLCONF = 'snm.urls'
 
@@ -50,16 +50,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'snmov',
     'crispy_forms',
-    'crispy_bootstrap5',
+    'crispy_bootstrap4',
     'storages',
     'django.contrib.sitemaps',
     'tinymce',
     'meta',
 ]
 
-CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
 
-CRISPY_TEMPLATE_PACK = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
