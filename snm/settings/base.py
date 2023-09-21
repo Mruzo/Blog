@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'snmov',
     'crispy_forms',
-    'crispy_bootstrap4',
     'storages',
     'django.contrib.sitemaps',
     'tinymce',
