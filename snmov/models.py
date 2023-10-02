@@ -55,7 +55,10 @@ class Category(models.Model):
 
 
 def default_category():
-    return Category.objects.get(name='Default Category')
+    try:
+        return Category.objects.get(name='Default Category')
+    except Category.DoesNotExist:
+        return None
 
 
 class Product(ModelMeta, models.Model):
