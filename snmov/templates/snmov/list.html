@@ -3,10 +3,21 @@
 
 {% block content %}
 
-<div class="col p-1 mt-5">
-    <h4 class="text-center text-light" style="font-weight:bold;">
-        <p>... wey suppose make sense</p>
-    </h4>
+<div class="col p-1 mt-5 text-center">
+    <div class="row">
+        <div class="col">
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary btn-sm dropdown-toggle rounded-0" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Sort By
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item {% if request.GET.sort == 'earliest' %}active{% endif %}" href="?sort=earliest">Earliest</a>
+                    <a class="dropdown-item {% if request.GET.sort == 'latest' %}active{% endif %}" href="?sort=latest">Latest</a>
+                    <a class="dropdown-item {% if request.GET.sort == 'title' %}active{% endif %}" href="?sort=title">Title</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% for object in object_list %}

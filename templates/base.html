@@ -7,10 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title> MisterUzo | Live Love Learn, and Laugh a Lot </title>
+    {% comment %}
     {% block meta_extend %}
     <meta name="robots" content="index, follow">
     <meta name="googlebot" content="index, follow">
-    <meta name="description" content="Love, learn, and live better, everyday.">
+    <meta name="description" content="Learn Live Love">
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@misteruzo" />
     <meta name="twitter:title" content="Live Laugh Learn" />
@@ -18,6 +19,7 @@
     <meta name="twitter:image" content="https://sneakymotivator.s3.amazonaws.com/static/snmov/img/logo.png" />
 
     {% endblock %}
+    {% endcomment %}
     <link rel="shortcut icon" type="image/png" href="{% static 'snmov/img/wbicon.png' %}"/>
     <link rel="stylesheet" href="{% static 'tinymce/css/prism.css' %}">
     <link href="https://fonts.googleapis.com/css?family=Marmelad&display=swap" rel="stylesheet">
@@ -52,18 +54,7 @@
     <footer class="page-footer neww-footer col">
         <div class="row">
             <div class=" mx-auto">
-<!--                    <div class="col l6 s12">-->
-<!--                        <h5 class="white-text">{{feedback}}</h5>-->
 
-<!--                        <form style="margin:0 3%;" method='POST' action='.' enctype="multipart/form-data">-->
-<!--                            {% csrf_token %}-->
-<!--                            {{ form|crispy }}-->
-<!--                            <ul class="center">-->
-<!--                                <li class=""><button class="btn row center deep-orange darken-3" type="submit" style="">Send</button></li>-->
-<!--                            </ul>-->
-<!--                        </form>-->
-
-<!--                    </div>-->
                 <div class="col mt-5">
                     <ul class="list-group mx-auto text-center" style="list-style-type: none;">
                         <li>

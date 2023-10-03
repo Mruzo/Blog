@@ -54,15 +54,15 @@
         <li class="nav-item mx-3 {% if 'article' in request.resolver_match.url_name %}active{% endif %}">
           <a class ="nav-link" href="/article">
             <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M7 16h13v1h-13v-1zm13-3h-13v1h13v-1zm0-6h-5v1h5v-1zm0 3h-5v1h5v-1zm-17-8v17.199c0 .771-1 .771-1 0v-15.199h-2v15.98c0 1.115.905 2.02 2.02 2.02h19.958c1.117 0 2.022-.904 2.022-2.02v-17.98h-21zm19 17h-17v-15h17v15zm-9-12h-6v4h6v-4z"/></svg><br>
-            <small class="font-weight-bold">Articles</small>
+            <small class="font-weight-bold">Journal</small>
           </a>
         </li>
-        <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'contact' %}active{% endif %}">
+        <!-- <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'contact' %}active{% endif %}">
           <a class ="nav-link" href="/contact">
             <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M13.718 10.528c0 .792-.268 1.829-.684 2.642-1.009 1.98-3.063 1.967-3.063-.14 0-.786.27-1.799.687-2.58 1.021-1.925 3.06-1.624 3.06.078zm10.282 1.472c0 6.627-5.373 12-12 12s-12-5.373-12-12 5.373-12 12-12 12 5.373 12 12zm-5-1.194c0-3.246-2.631-5.601-6.256-5.601-4.967 0-7.744 3.149-7.744 7.073 0 3.672 2.467 6.517 7.024 6.517 2.52 0 4.124-.726 5.122-1.288l-.687-.991c-1.022.593-2.251 1.136-4.256 1.136-3.429 0-5.733-2.199-5.733-5.473 0-5.714 6.401-6.758 9.214-5.071 2.624 1.642 2.524 5.578.582 7.083-1.034.826-2.199.799-1.821-.756 0 0 1.212-4.489 1.354-4.975h-1.364l-.271.952c-.278-.785-.943-1.295-1.911-1.295-2.018 0-3.722 2.19-3.722 4.783 0 1.73.913 2.804 2.38 2.804 1.283 0 1.95-.726 2.364-1.373-.3 2.898 5.725 1.557 5.725-3.525z"/></svg><br>
             <small class="font-weight-bold">Contact</small>
           </a>
-        </li>
+        </li> -->
         {% if user.is_authenticated %}
           <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'logout_req' %}active{% endif %}">
             <a class ="nav-link" href="/logout">

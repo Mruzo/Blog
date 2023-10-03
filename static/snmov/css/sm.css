@@ -1,8 +1,8 @@
 {% load static %}
 
 @font-face {
-    font-family: 'kurale';
-    src: local('Kurale'), url('kurale.ttf') format("truetype");
+    font-family: 'averiaSerif';
+    src: local('AveriaSerifBold'), url('AveriaSerifBold.ttf') format("truetype");
 }
 
 * {
@@ -136,12 +136,12 @@ footer {
 }
 
 #quote, #quote2 {
-    font-family: 'kurale', 'Georgia', serif;
+    font-family: 'averiaSerif', 'Georgia', serif;
     text-transform: uppercase;
 }
 
 #quote h1 {
-    font-size: 4.5rem;
+    font-size: 4.3rem;
     letter-spacing: 1px;
 }
 

@@ -128,9 +128,9 @@ TextSlider.prototype = {
     this.content.text3 = this.container.find('.slide[count="'+this.currentSlide+'"]').attr('data-3');
 
     // UpperCase Texts
-    this.content.text1 = this.content.text1;
-    this.content.text2 = this.content.text2.toLowerCase();
-    this.content.text3 = this.content.text3.toLowerCase();
+    this.content.text1 = this.content.text1.toUpperCase();
+    this.content.text2 = this.content.text2.toUpperCase();
+    this.content.text3 = this.content.text3.toUpperCase();
 
     // Append Texts
     texts.find('text:nth-child(1)').html(this.content.text1);
