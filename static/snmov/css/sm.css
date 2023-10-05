@@ -31,6 +31,12 @@ body {
     align-items: center;
 }
 
+.centered-image {
+    display: block;
+    margin: 0 auto;
+    max-width: 50%; /* Set to 40% for mobile */
+}
+
 footer {
     position: absolute;
     bottom: 0;
@@ -166,5 +172,11 @@ section {
     transform: translate(-50%,-50%);
 }
 #home-animation-wrapper svg #bubbles path {
-    // background-blend-mode: multiply;
+    background-blend-mode: multiply;
+}
+
+@media (min-width: 768px) {
+    .centered-image {
+        max-width: 20%; /* Set to 20% for laptops */
+    }
 }

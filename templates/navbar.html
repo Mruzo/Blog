@@ -63,6 +63,7 @@
             <small class="font-weight-bold">Contact</small>
           </a>
         </li> -->
+        {% comment %}
         {% if user.is_authenticated %}
           <li class="nav-item mx-3 {% if request.resolver_match.url_name == 'logout_req' %}active{% endif %}">
             <a class ="nav-link" href="/logout">
@@ -81,6 +82,7 @@
             </a>
           </li>
         {% endif %}
+        {% endcomment %}
 
       </ul>
     </div>
