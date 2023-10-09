@@ -54,6 +54,12 @@ body {
     z-index: 1;
 }
 
+.navbar navbar-brand.active {
+    outline: 5px solid #000 !important;
+    color: #000 !important;
+    z-index: 1;
+}
+
 .nav-item.nav-link {
     font-size: 22px;
     vertical-align: middle;
