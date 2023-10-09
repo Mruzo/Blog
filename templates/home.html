@@ -5,28 +5,14 @@
 <!--    {% url 'homepage' as my_view %}-->
 <!--    {% if request.path == my_view %}-->
 
-<section class="row my-5 position-relative" style="background-color: #F2f2f2;">
-    <div class="col card mx-auto position-relative rounded-0 border-0">
+<section class="row my-5 position-relative" style="background-color: inherit; display: flex; justify-content: center; align-items: center; min-height: 30vh;">
+    <div class="col card mx-auto position-relative rounded-0 border-0 d-flex justify-content-center align-items-center" style="background-color:inherit;">
 
-        <!-- <div class="element">
-            Hover over me!
-        </div> -->
+        <div class="text-center with-border" id="" style="opacity: 1">
 
-
-
-        <div class="text-center" id="home-animation-wrapper" style="opacity: 1">
-
-            <p class="landtext display-4 align-middle font-weight-bold">
-                soft & vibrant comfort for your work/play space
+            <p class="landtext display-4 font-weight-bold">
+                Vibrant comfort for your work or play space
             </p>
-
-          <!-- <div class="slides">
-            <div class="slide" count="0" data-1="ARTICLES" data-2="TO GROW" data-3="BY"></div>
-            <div class="slide" count="1" data-1="ARTICLES" data-2="TO LOVE" data-3="BY"></div>
-            <div class="slide" count="2" data-1="ARTICLES" data-2="TO LIVE" data-3="BY"></div>
-          </div> -->
-
-          
 
         </div>
     </div>
@@ -35,7 +21,7 @@
 
 <!--    {% endif %}-->
 
-<div id="pictureCarousel" class="carousel slide border border-dark" data-ride="carousel">
+<div id="pictureCarousel" class="carousel slide border border-dark" style="background-color: white;" data-ride="carousel">
     <div class="carousel-inner">
         {% for picture in pictures %}
             <div class="carousel-item {% if forloop.first %}active{% endif %}">
@@ -47,11 +33,11 @@
             </div>
         {% endfor %}
     </div>
-    <a class="carousel-control-prev" href="#pictureCarousel" role="button" data-slide="prev">
+    <a class="carousel-control-prev" href="#pictureCarousel" role="button" data-slide="next">
         <span class="carousel-control-prev-icon" aria-hidden="true"></span>
         <span class="sr-only">Previous</span>
     </a>
-    <a class="carousel-control-next" href="#pictureCarousel" role="button" data-slide="next">
+    <a class="carousel-control-next" href="#pictureCarousel" role="button" data-slide="prev">
         <span class="carousel-control-next-icon" aria-hidden="true"></span>
         <span class="sr-only">Next</span>
     </a>
