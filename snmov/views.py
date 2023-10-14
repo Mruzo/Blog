@@ -45,6 +45,7 @@ class ProductDetailView(View):
 
     def get(self, request, slug):
         obj = get_object_or_404(Product, slug=slug)
+
         context = {
             'object': obj,
             'meta': obj.as_meta(),

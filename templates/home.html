@@ -5,14 +5,14 @@
 <!--    {% url 'homepage' as my_view %}-->
 <!--    {% if request.path == my_view %}-->
 
-<section class="row my-5 position-relative" style="background-color: inherit; display: flex; justify-content: center; align-items: center; min-height: 30vh;">
+<section class="row my-2 position-relative" style="background-color: inherit; display: flex; justify-content: center; align-items: center; min-height: 22vh;">
     <div class="col card mx-auto position-relative rounded-0 border-0 d-flex justify-content-center align-items-center" style="background-color:inherit;">
 
-        <div class="text-center with-border" id="" style="opacity: 1">
+        <div class="text-center land-border" id="" style="opacity: 1">
 
-            <p class="landtext display-4 font-weight-bold">
+            <h2 class="landtext">
                 Vibrant comfort for your work or play space
-            </p>
+            </h2>
 
         </div>
     </div>
@@ -43,18 +43,44 @@
     </a>
 </div>
 
-<div class="card mt-2  col-md-6 mx-auto rounded-0" >
-    <a class="btn justify-content-center font-weight-bolder text-dark rounded-0 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="https://www.amazon.ca/dp/B0C6HH585D?ref=myi_title_dp"  target="_blank">
-        <strong>ORDER YOURS NOW! </strong>
-        
+<div class="card mt-2  col-6 mx-auto bg-light border-0" >
+    <a class="btn justify-content-center font-weight-bolder text-dark rounded-5 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="https://www.amazon.ca/dp/B0C6HH585D?ref=myi_title_dp"  target="_blank">
+        <strong> Order Now </strong>
     </a>
 </div>
 
-<!-- <div class="card my-5  col-md-6 mx-auto rounded-0" >
-    <a class="btn justify-content-center font-weight-bolder text-dark rounded-0 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="/">
-        <strong>other products coming soon...</strong>
-        
-    </a>
-</div> -->
+<div class="row border-top bd-light my-5 mx-auto">
+
+    <div class="container text-center test-border mt-5 mx-auto" id="" style="opacity: 1">
+
+        <h5 class="subtext my-2">
+            Testimonials
+        </h5>
+    </div>
+    
+    <div class="container text-center my-3 mx-auto" id="" style="opacity: 1">
+
+        <div class="card-deck">
+            {% for testimonial in testimonials %}
+            <div class="card">
+                <img src="{{ testimonial.image.url }}" class="card-img-top" alt="{{ testimonial.caption }}">
+                <!-- <div class="card-body">
+                    <h5 class="card-title">{{ testimonial.caption }}</h5>
+                    
+                </div> -->
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+    
+    <!-- <div class="card my-3 col-md-6 mx-auto rounded-0" >
+        <a class="btn justify-content-center font-weight-bolder text-dark rounded-0 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="/">
+            <strong>other products coming soon...</strong>
+            
+        </a>
+    </div> -->
+
+</div>
 
 {% endblock %}

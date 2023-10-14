@@ -129,6 +129,18 @@ class SiteImage(models.Model):
             return self.image.url
 
 
+class Testimonials(models.Model):
+    caption = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='image/', blank=True, null=True)
+
+    def __str__(self):
+        return f'{self.caption}'
+
+    def get_meta_image(self):
+        if self.image:
+            return self.image.url
+
+
 class Preference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(

@@ -56,20 +56,52 @@ h2 {
     
 }
 
+.cookies-notification {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #333;
+    color: #fff;
+    padding: 10px;
+    text-align: center;
+}
+
+#accept-cookies {
+    margin-left: 10px;
+}
+
 .landtext {
     font-family: 'quicksand', sans-serif;
+    font-size: 46px;
+    font-weight: 400;;
+}
+
+.subtext {
+    font-family: 'quicksand', sans-serif;
+    font-size: 36px;
+    font-weight: 600;
 }
 
 .landborder{
     background-color: inherit;
 }
 
-.with-border {
+.land-border {
     background-image: linear-gradient(to left, #ffbc00 50%, #dc2229 50%);
     background-size: 100% 3%;
     background-position: 0 100%;
     background-repeat: no-repeat;
-    padding-bottom: 5px; /* Adjust the distance of the border from the text */
+    padding-bottom: 15px; /* Adjust the distance of the border from the text */
+    border-radius: 50px;
+}
+
+.test-border {
+    background-image: linear-gradient(to left, #ffbc00 50%, #dc2229 50%);
+    background-size: 30% 3%;
+    background-position: 50% 100%;
+    background-repeat: no-repeat;
+    padding-bottom: 2px; /* Adjust the distance of the border from the text */
     border-radius: 50px;
 }
 

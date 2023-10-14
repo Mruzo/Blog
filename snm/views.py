@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from .forms import ContactModelForm, ContactForm
-from snmov.models import Product, Comment, ReachOut, SiteImage
+from snmov.models import Product, Comment, ReachOut, SiteImage, Testimonials
 from django.contrib import messages
 from django.core.mail import send_mail, BadHeaderError
 from django.http import HttpResponse, HttpResponseRedirect
@@ -10,9 +10,10 @@ from random import sample
 
 def home_page(request):
     pictures = SiteImage.objects.filter(product__isnull=False)
-
+    testimonials = Testimonials.objects.all()
     context = {
         'pictures': pictures,
+        'testimonials': testimonials,
     }
     return render(request, 'home.html', context)
 

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, Comment, Preference, ReachOut, About, SiteImage
+from .models import Product, Comment, Preference, ReachOut, About, SiteImage, Testimonials
 from tinymce.widgets import TinyMCE
 from django.db import models
 from django.contrib.auth.models import User
@@ -22,6 +22,7 @@ admin.site.register(Preference)
 admin.site.register(ReachOut)
 admin.site.register(About)
 admin.site.register(SiteImage)
+admin.site.register(Testimonials)
 
 
 @admin.register(User)
