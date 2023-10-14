@@ -25,6 +25,12 @@ class Product_list_view(generic.ListView):
     paginate_by = 4
 
 
+def home(request):
+    if not request.session.get('cookie_notification_shown', False):
+        request.session['cookie_notification_shown'] = True
+    return render(request, 'your_template.html')
+
+
 @staff_member_required
 def article_create_view(request):
     form = ArticleModelForm(request.POST or None, request.FILES or None)

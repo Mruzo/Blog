@@ -42,19 +42,19 @@ function isElementInViewport(el) {
     );
 }
 
-const cookiesAccepted = localStorage.getItem('cookies-accepted');
+// Check if the "cookie_accepted" cookie exists
+const cookieAccepted = document.cookie.includes("cookie_accepted");
 
-// If not accepted, show the notification
-if (!cookiesAccepted) {
-    const notification = document.getElementById('cookies-notification');
-    notification.style.display = 'block';
-
-    // Add event listener for the "Accept" button
-    const acceptButton = document.getElementById('accept-cookies');
-    acceptButton.addEventListener('click', () => {
-        notification.style.display = 'none';
-
-        // Set a flag in local storage to remember the user's choice
-        localStorage.setItem('cookies-accepted', 'true');
-    });
+// If the cookie doesn't exist, show the notification
+if (!cookieAccepted) {
+    document.getElementById("cookie-notification").style.display = "block";
 }
+
+// Handle the "Accept" button click event
+document.getElementById("accept-cookie").addEventListener("click", function () {
+    // Set the "cookie_accepted" cookie to indicate acceptance
+    document.cookie = "cookie_accepted=true; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/";
+
+    // Hide the notification
+    document.getElementById("cookie-notification").style.display = "none";
+});
