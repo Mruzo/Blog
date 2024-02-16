@@ -15,6 +15,9 @@ __pycache__/
 /snmov/migrations/*.pyc
 /snmov/migrations/__pycache__/
 
+/snmov/__pycache__/
+/snm/__pycache__/
+
 .vscode/
 .idea/
 *submlime-workspace
