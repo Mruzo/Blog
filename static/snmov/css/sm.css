@@ -56,6 +56,13 @@ h2 {
     
 }
 
+.toast {
+    position: fixed; /* Position the pop-up element relative to the viewport */
+    top: 20px; /* Adjust the distance from the top of the viewport */
+    right: 20px; /* Adjust the distance from the right edge of the viewport */
+    z-index: 1000; /* Ensure that the pop-up appears above other elements */
+}
+
 .cookies-notification {
     position: fixed;
     bottom: 0;
@@ -73,14 +80,46 @@ h2 {
 
 .landtext {
     font-family: 'quicksand', sans-serif;
-    font-size: 46px;
-    font-weight: 400;;
+    font-size: 2rem;
+    font-weight: 960;
+}
+
+
+.custom-placeholder::placeholder {
+    font-family: 'quicksand', sans-serif; /* Specify your desired font */
+    font-size: 1.1rem; /* Adjust font size as needed */
+    font-style: italic; /* Adjust font style as needed */
+    color: #242424; /* Adjust placeholder text color as needed */
 }
 
 .subtext {
     font-family: 'quicksand', sans-serif;
-    font-size: 36px;
+    font-size: 2rem;
     font-weight: 600;
+}
+
+.subtext-28 {
+    font-family: 'quicksand', sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.subtext-btn {
+    font-family: 'quicksand', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.subtext-btn-sm {
+    font-family: 'quicksand', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.subtext-sm {
+    font-family: 'quicksand', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 400;
 }
 
 .landborder{
@@ -105,22 +144,50 @@ h2 {
     border-radius: 50px;
 }
 
-#pictureCarousel .carousel-inner {
+#availablePictureCarousel .carousel-inner {
     transition-timing-function: ease-in-out; /* Add smooth easing */
 }
 
-#pictureCarousel .carousel-inner .carousel-item {
+#availablePictureCarousel .carousel-inner .carousel-item {
     transition: transform 0.5s ease-in-out; /* Adjust the duration as needed */
 }
 
-#pictureCarousel .carousel-inner .carousel-item.active {
+#availablePictureCarousel .carousel-inner .carousel-item.active {
     transform: translateX(0); /* Keep the current slide centered */
 }
 
-#pictureCarousel .carousel-inner .carousel-item.next,
-#pictureCarousel .carousel-inner .carousel-item.prev,
-#pictureCarousel .carousel-inner .carousel-item.active {
+#availablePictureCarousel .carousel-inner .carousel-item.next,
+#availablePictureCarousel .carousel-inner .carousel-item.prev,
+#availablePictureCarousel .carousel-inner .carousel-item.active {
     transform: translateX(0); /* Ensure smooth transition */
+}
+
+#notAvailablePictureCarousel .carousel-inner {
+    transition-timing-function: ease-in-out; /* Add smooth easing */
+}
+
+#notAvailablePictureCarousel .carousel-inner .carousel-item {
+    transition: transform 0.5s ease-in-out; /* Adjust the duration as needed */
+}
+
+#notAvailablePictureCarousel .carousel-inner .carousel-item.active {
+    transform: translateX(0); /* Keep the current slide centered */
+}
+
+#notAvailablePictureCarousel .carousel-inner .carousel-item.next,
+#notAvailablePictureCarousel .carousel-inner .carousel-item.prev,
+#notAvailablePictureCarousel .carousel-inner .carousel-item.active {
+    transform: translateX(0); /* Ensure smooth transition */
+}
+
+.custom-checkbox .form-check {
+    width: 1rem;
+    height: 1rem;
+}
+
+.form-check-input:checked {
+    background-color: #ffbc00; /* Specify your desired color */
+    border-color: #f2f2f2; /* Specify your desired color */
 }
 
 footer {

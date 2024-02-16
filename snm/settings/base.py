@@ -106,6 +106,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -155,24 +157,19 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
-
-mimetypes.add_type("image/svg+xml", ".svg", True)
-mimetypes.add_type("image/svg+sml", ".svgz", True)
-
 
 db_from_env = dj_database_url.config(conn_max_age=500)
 # DATABASES['default'].update(db_from_env)
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-# DEFAULT_FROM_EMAIL = 'admin@sneakymotivator'
+DEFAULT_FROM_EMAIL = 'uzo@justvybz.com'
 
-# EMAIL_HOST = 'smtp.mailgun.org'
-# EMAIL_PORT = 587
-# EMAIL_HOST_USER = config.get('section', 'MG_USER')
-# EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
-# EMAIL_USE_TLS = True
+EMAIL_HOST = 'mail.papamail.net'
+EMAIL_PORT = 993
+EMAIL_HOST_USER = config.get('section', 'VYBZ_MG_USER')
+EMAIL_HOST_PASSWORD = config.get('section', 'VYBZ_MG_PASS')
+EMAIL_USE_TLS = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/

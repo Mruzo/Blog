@@ -1,5 +1,5 @@
 from django import forms
-from .models import Product, Comment
+from .models import Product, Comment, ReachOut
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 
@@ -25,6 +25,12 @@ class ArticleModelForm(forms.ModelForm):
                 raise forms.ValidationError(
                     "This tile has already been useed. Pleaser try another")
             return title
+
+
+class ReachOutForm(forms.ModelForm):
+    class Meta:
+        model = ReachOut
+        fields = ['full_name', 'email', 'subject', 'content']
 
 
 class CommentForm(forms.ModelForm):

@@ -44,12 +44,14 @@
     height:100%;
     overflow:hidden;">
 
-        <div class="container" style="padding-bottom: 48px;">
+        <div class="container">
         {% block content %}
 
         {% endblock %}
         </div>
+        <div>
         {% include 'cookies_policy.html' %}
+        </div>
 
     </main>
     <footer class="page-footer col border border-dark">
@@ -64,7 +66,7 @@
                     </a>
                 </ul>
                 <div class="footer-copyright mx-auto">
-                    <p> &copy 2023 Justvybz</p>
+                    <p> &copy 2024 Justvybz</p>
                 </div>
             </div>
         </div>
@@ -87,6 +89,25 @@
           {% endfor %}
       </script>
     {% endif %}
+
+    <!-- <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.querySelector('#stock_notification');
+    
+            form.addEventListener('submit', function(event) {
+                var checkboxes = form.querySelectorAll('[data-required]');
+                var checked = Array.prototype.slice.call(checkboxes).some(function(checkbox) {
+                    return checkbox.checked;
+                });
+    
+                if (!checked) {
+                    alert('Please select at least one checkbox.');
+                    event.preventDefault();
+                }
+            });
+        });
+    </script> -->
+
     {% block javascript %}
 
     {% endblock %}

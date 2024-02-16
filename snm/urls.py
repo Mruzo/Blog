@@ -1,7 +1,7 @@
 from .views import(
     home_page,
     about_page,
-    contact_page_m,
+    contact_page,
     privacy_page,
     terms_page,
     cookie_page,
@@ -32,7 +32,7 @@ urlpatterns = [
     path('privacy/', privacy_page, name='privacy'),
     path('terms/', terms_page, name='terms'),
     path('cookies/', cookie_page, name='cookie'),
-    path('contact/', contact_page_m, name='contact'),
+    path('contact/', contact_page, name='contact'),
     path('logout/', logout_request, name='logout_req'),
     path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'),
          name='login_req'),

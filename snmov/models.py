@@ -3,6 +3,8 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
 from meta.models import ModelMeta
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 
 # Create your models here.
@@ -49,7 +51,7 @@ class Product(ModelMeta, models.Model):
     user = models.ForeignKey(User, default=1, null=True,
                              on_delete=models.SET_NULL)
     title = models.CharField(max_length=120)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(unique=True, null=True, blank=True)
     description = models.CharField(max_length=160, null=True)
     content = models.TextField(null=True, blank=True)
     publish_date = models.DateTimeField(
@@ -58,6 +60,7 @@ class Product(ModelMeta, models.Model):
     likes = models.IntegerField(default=0)
     dislikes = models.IntegerField(default=0)
     updated = models.DateTimeField(auto_now=True)
+    available = models.BooleanField(default=True)
 
     objects = ProductManager()
 
@@ -94,6 +97,16 @@ class Product(ModelMeta, models.Model):
     def comments_count_multiplied(self):
         return 2 * self.comments.count()
 
+class ProductNotification(models.Model):
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=30)
+    email = models.EmailField()
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} - {self.product.title} Notification"
 
 class ReachOut(models.Model):
     full_name = models.CharField(max_length=30)
@@ -110,16 +123,11 @@ class About(models.Model):
 
 
 class SiteImage(models.Model):
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, null=True, blank=True, related_name='product_images')
-    about = models.ForeignKey(
-        About, on_delete=models.CASCADE, null=True, blank=True, related_name='about_image')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True)
+    object_id = models.PositiveIntegerField(null=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
     image = models.ImageField(upload_to='image/', blank=True, null=True)
     caption = models.CharField(max_length=50, blank=True)
-
-    # metadata = {
-    #     'image': 'get_meta_image',
-    # }
 
     def __str__(self):
         return str(self.id)

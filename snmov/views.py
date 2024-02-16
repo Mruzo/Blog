@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Product, Comment, Preference
-from .forms import ArticleModelForm, CommentForm, RegisterForm
+from .models import Product, Comment, Preference, ProductNotification
+from .forms import ArticleModelForm, CommentForm, RegisterForm, ReachOutForm
+from snm.forms import ProductNotificationForm
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
@@ -10,9 +11,10 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views import generic
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
-from django.views.generic.edit import DeleteView
+from django.views.generic.edit import FormView, DeleteView
 from django.views import View
 
 
@@ -25,10 +27,10 @@ class Product_list_view(generic.ListView):
     paginate_by = 4
 
 
-def home(request):
-    if not request.session.get('cookie_notification_shown', False):
-        request.session['cookie_notification_shown'] = True
-    return render(request, 'your_template.html')
+# def home(request):
+#     if not request.session.get('cookie_notification_shown', False):
+#         request.session['cookie_notification_shown'] = True
+#     return render(request, 'your_template.html')
 
 
 @staff_member_required
@@ -59,6 +61,22 @@ class ProductDetailView(View):
         return render(request, self.template_name, context)
 
 
+# def notify_me(request, product_id):
+#     product = Product.objects.get(pk=product_id)
+
+#     if request.method == 'POST':
+#         form = ProductNotificationForm(request.POST)
+#         if form.is_valid():
+#             email = form.cleaned_data['email']
+#             ProductNotification.objects.create(email=email, product=product)
+#             return redirect('product_detial', slug=product.slug)
+        
+#     else:
+#         form = ProductNotificationForm()
+
+#     return render(request, 'snmov/notify_me.html', {'form': form, 'product':product})
+
+
 @login_required
 def add_comment_to_article(request, slug):
     post = get_object_or_404(Article, slug=slug)
@@ -78,16 +96,6 @@ def add_comment_to_article(request, slug):
                   template_name='snmov/formc.html',
                   context={"title": f"Comment on {post.title}", "form": form}
                   )
-
-# def add_comment_to_article(request, slug):
-#     post = get_object_or_404(Article, slug=slug)
-#     formc = CommentForm()
-#     context = {'form': formc, "title": {post.title}}
-#     html_form = render_to_string('snmov/formc.html',
-#                                  context,
-#                                  request=request,
-#                                  )
-#     return JsonResponse({'html_form': html_form})
 
 
 @login_required
@@ -191,24 +199,6 @@ def article_delete_view(request, slug):
                   template_name,
                   context={"object": obj}
                   )
-
-
-# def comment_delete_view(request, pk, user):
-#     obj = get_object_or_404(Comment, pk=pk, user=user)
-#     # if obj.user_name == request.user:
-#     # template_name = 'snmov/deletec.html'
-#     data = dict()
-#     if request.method == "POST":
-#         obj.delete()
-#         data['form_is_valid'] = True
-#         objs = Comment.objects.all()
-#         data['comment_list'] = render_to_string('snmov/home.html', {'objs': objs})
-#     else:
-#         context = {'obj': obj}
-#         data['deletec_html'] = render_to_string('snmov/deletec.html',
-#                                                 context,
-#                                                 request=request,)
-#     return JsonResponse(data)
 
 
 def comment_delete_view(request, slug, pk):
