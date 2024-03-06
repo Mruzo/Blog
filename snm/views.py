@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.utils import timezone
 from .forms import ContactModelForm, ProductNotificationForm
 from snmov.models import Product, Comment, ReachOut, SiteImage, Testimonials, ProductNotification, About
 from django.contrib import messages
@@ -38,7 +39,8 @@ def home_page(request):
                     first_name=first_name,
                     last_name=last_name,
                     email=email,
-                    product=product
+                    product=product,
+                    created_at=timezone.now()
                 )
 
             # Send confirmation email (optional)

@@ -35,7 +35,22 @@ class AboutUno(admin.ModelAdmin):
     }
 
 class NotificationUno(admin.ModelAdmin):
-    list_display = ['id','created_at', 'first_name', 'last_name', 'email', 'product','is_active',]
+    # list_display = ['id','created_at', 'first_name', 'last_name', 'email', 'product','is_active',]
+
+    list_display = ['id', 'created_at', 'first_name', 'last_name', 'email', 'product_name', 'num_notifications', 'is_active', 'get_active_notifications']
+
+    def product_name(self, obj):
+        return obj.product.title  # Assuming Product model has a 'title' field
+
+    def num_notifications(self, obj):
+        return obj.product.productnotification_set.count()  # Number of notification requests for the product
+    
+    def get_active_notifications(self, obj):
+        return obj.product.productnotification_set.filter(is_active=True).count()
+
+    product_name.short_description = 'Product Name'
+    num_notifications.short_description = 'Number of Notifications'
+    get_active_notifications.short_description = 'Active Notifications'
 
 # Register your models here.
 admin.site.register(Product, ProductUno)
