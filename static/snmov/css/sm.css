@@ -15,6 +15,11 @@
     src: local('Quicksand'), url('Quicksand.ttf') format("truetype");
 }
 
+@font-face {
+    font-family: 'gillsans';
+    src: local('gillsansmt'), url('gillsansmt.ttf') format("truetype");
+}
+
 
 * {
     margin: 0;
@@ -79,7 +84,7 @@ h2 {
 }
 
 .landtext {
-    font-family: 'quicksand', sans-serif;
+    font-family: 'gillsans', sans-serif;
     font-size: 2rem;
     font-weight: 960;
 }
@@ -93,7 +98,7 @@ h2 {
 }
 
 .subtext {
-    font-family: 'quicksand', sans-serif;
+    font-family: 'gillsans', sans-serif;
     font-size: 2rem;
     font-weight: 600;
 }
@@ -118,7 +123,7 @@ h2 {
 
 .subtext-sm {
     font-family: 'quicksand', sans-serif;
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 400;
 }
 

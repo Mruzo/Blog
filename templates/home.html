@@ -18,16 +18,55 @@
 
 
 <div class="container">
+    
+        <div class="col-sm-6">           
+            {% for product in available_products %}
+            <div class="card my-1 border-0" >
 
-    <div class="card mt-2"></div>
-        <div id="availablePictureCarousel" class="carousel slide" style="background-color: white;" data-ride="carousel">
+                <div id="availablePictureCarousel_{{product.id}}" class="carousel slide" style="background-color: white;" data-ride="carousel">
+                    <div class="carousel-inner">
+                        {% for picture in available_pictures %}
+                            {% if picture.object_id == product.id %}
+                                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                    <img src="{{ picture.image.url }}" class="d-block w-100 border-2" alt="{{ picture.caption }}">
+                                    <!-- <div class="carousel-caption text-start d-block p-2 m-0 bg-secondary">
+                                        <h1 class="subtext-btn-sm m-0"><strong>{{ picture.content_object.title }}</strong></h1>
+                                        <p> {{ picture.caption }} </p>
+                                    </div> -->
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <a class="carousel-control-prev" href="#availablePictureCarousel_{{ product.id }}" role="button" data-slide="next">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Previous</span>
+                    </a>
+                    <a class="carousel-control-next" href="#availablePictureCarousel_{{ product.id }}" role="button" data-slide="prev">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Next</span>
+                    </a>
+                </div>
+
+
+                <div class="card-body border-top">
+                <h5 class="card-title subtext-btn-sm">{{ product.title }}</h5>
+                <p class="card-text subtext-sm border-top">{{ product.description }}</p>
+                </div>
+                
+            </div>
+            {% endfor %}
+        </div>
+    
+
+
+        <!-- <div id="availablePictureCarousel" class="carousel slide" style="background-color: white;" data-ride="carousel">
             <div class="carousel-inner">
                 {% for picture in available_pictures %}
                         <div class="carousel-item {% if forloop.first %}active{% endif %}">
                             <img src="{{ picture.image.url }}" class="d-block w-100 border-2" alt="{{ picture.caption }}">
                             <div class="carousel-caption text-start d-block p-2 m-0 bg-secondary">
                                 <h1 class="subtext-btn-sm m-0"><strong>{{ picture.content_object.title }}</strong></h1>
-                                <!-- <p> {{ picture.caption }} </p> -->
+                                <p> {{ picture.caption }} </p>
                             </div>
                         </div>
                 {% endfor %}
@@ -40,7 +79,7 @@
                 <span class="carousel-control-next-icon" aria-hidden="true"></span>
                 <span class="sr-only">Next</span>
             </a>
-        </div>
+        </div> -->
     </div>
 
     <div class="card mt-5 col-6 col-md-2 mx-auto bg-light border-0" >

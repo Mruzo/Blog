@@ -62,6 +62,7 @@ def home_page(request):
 
 
     context = {
+        'available_products': available_products,
         'available_pictures': available_pictures,
         'unavailable_pictures': unavailable_pictures,
         'testimonials': testimonials,
