@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Article, Comment, Preference, ReachOut
+from .models import Article, Comment, Preference, ReachOut, About
 from tinymce.widgets import TinyMCE
 from django.db import models
 from django.contrib.auth.models import User
@@ -14,9 +14,15 @@ class ArticleUno(admin.ModelAdmin):
         models.TextField: {'widget': TinyMCE()},
     }
 
+class AboutUno(admin.ModelAdmin):
+    formfield_overrides = {
+        models.TextField: {'widget': TinyMCE()},
+    }
+
 
 # Register your models here.
 admin.site.register(Article, ArticleUno)
+admin.site.register(About, AboutUno)
 admin.site.register(Comment)
 admin.site.register(Preference)
 admin.site.register(ReachOut)
