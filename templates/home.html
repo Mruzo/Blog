@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!--    {% url 'homepage' as my_view %}-->
+<!--    {% if request.path == my_view %}-->
+
+<section class="row m-1 position-relative">
+  <div id="slider-bg" class="col card mx-auto px-6 position-relative border border-dark">
+      <div class='slider'>
+          <!-- <input name="input-slider" id='input-slide-0' type="radio" class='input-slide input-slide-num' >
+          <input name="input-slider" id='input-slide-1' type="radio" class='input-slide input-slide-num' >
+          <input name="input-slider" id='input-slide-2' type="radio" class='input-slide input-slide-num' > -->
+          <input name="input-slider" id='input-slide-0' type="radio" class='input-slide input-slide-num' checked autocomplete="off">
+          <input name="input-slider" id='input-slide-1' type="radio" class='input-slide input-slide-num' autocomplete="off">
+          <input name="input-slider" id='input-slide-2' type="radio" class='input-slide input-slide-num' autocomplete="off">
+          <ul>
+            <li class='slide-0'></li>
+            <li class='slide-1'></li>
+            <li class='slide-2'></li>
+          </ul>
+          <div class='slide-description'>
+            <label class='slide-0'>
+              <h5 class="text-right">english</h5>
+              <h1 class="text-slide">Good roads <br> beckon return</h1>
+            </label>
+            <label class='slide-1'>
+              <h5 class="text-right">igbo</h5>
+              <h1 class="text-slide">Uzo di mma, <br> a gba ya mgbe ozo</h1>
+            </label>
+            <label class='slide-2'>
+              <h5 class="text-right">pidgin</h5>
+              <h1 class="text-slide">If e sure, <br> you go run am again</h1>
+            </label>
+          </div>
+          <div class='slider-arrow-prev'>
+            <label class='slide-0' for='input-slide-2'>prev</label>
+            <label class='slide-1' for='input-slide-0'>prev</label>
+            <label class='slide-2' for='input-slide-1'>prev</label>
+          </div>
+          
+          <div class='slider-arrow-next'>
+            <label class='slide-0' for='input-slide-1'>next</label>
+            <label class='slide-1' for='input-slide-2'>next</label>
+            <label class='slide-2' for='input-slide-0'>next</label>
+          </div>        
+          
+          <div class='slider-dot'>
+            <label class='slide-0' for='input-slide-0'></label>
+            <label class='slide-1' for='input-slide-1'></label>
+            <label class='slide-2' for='input-slide-2'></label>
+          </div>        
+        </div>
+  </div>
+</section>
+
+<div class="container col">
+  <div class="row justify-content-center justify-content-md-center my-4">
+    <div class="col-auto">
+      <button onclick="loadContent('/about', this)" class="neumorphic {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
+        <i class=""></i>
+        <span>PERSONA</span>
+      </button>
+    </div>
+    <div class="straight-line m-0"></div> <!-- Add this line -->
+    <div class="col-auto">
+      <button onclick="loadContent('/home-list', this)" class="neumorphic {% if request.resolver_match.url_name == 'article' %}active{% endif %}">
+        <i class=""></i>
+        <span>BRAIN DUMP</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!--    {% endif %}-->
+
+
+<div id="content" class="container">
+    
+</div>
+
+
+
+{% endblock %}
