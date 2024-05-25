@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from .forms import ContactModelForm, ContactForm
-from snmov.models import Article, Comment, ReachOut
+from snmov.models import Article, Comment, ReachOut, About
 from django.contrib import messages
 from django.core.mail import send_mail, BadHeaderError
 from django.http import HttpResponse, HttpResponseRedirect
@@ -20,11 +20,23 @@ def home_page(request):
     return render(request, "home.html", context)
 
 
+def home_list(request):
+    id_list = Article.objects.all().values_list('id', flat=True)
+    if id_list.count() > 2:
+        random_profiles_id_list = sample(list(id_list), 3
+                                        )
+        qs = Article.objects.filter(id__in=random_profiles_id_list)
+    else:
+        qs = id_list
+    context = {'article_list': qs}
+    return render(request, "article_list.html", context)
+
 
 def about_page(request):
+    about_me = About.objects.first()
     return render(request,
                   template_name="about.html",
-                  context={"title": "About"})
+                  context={"persona": about_me})
 
 def privacy_page(request):
     return render(request,

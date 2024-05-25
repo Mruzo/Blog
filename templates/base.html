@@ -34,18 +34,17 @@
     </style>
 </head>
 
-<body class="container bg-dark t p-0">
+<body class="container t p-0">
     <header id="">
     {% include 'navbar.html' %}
     </header>
     <div class="mx-auto">
         {% include 'toasts.html' %}
     </div>
+    
     <main class="flex-grow-1 burger" style="
     height:100%;
     overflow:hidden;">
-
-        <div class="container" style="padding-bottom: 48px;">
         {% block content %}
 
         {% endblock %}
@@ -57,12 +56,12 @@
 
                 <div class="col mt-5">
                     <ul class="list-group mx-auto text-center" style="list-style-type: none;">
-                        <li>
+                        <!-- <li>
                             <a class="list-group-item border-0 p-0 bg-transparent text-white" href="/about">About</a>
                         </li>
                         <li>
                             <a class="list-group-item border-0 p-0 bg-transparent text-white" href="/contact">Contact</a>
-                        </li>
+                        </li> -->
                         {% comment %}
                         <li>
                             <a class="list-group-item border-0 p-0 bg-transparent text-white" href="/privacy">Privacy Policy</a>

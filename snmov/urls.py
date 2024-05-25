@@ -11,7 +11,6 @@ from .views import (
 
 
 urlpatterns = [
-    # path('', article_list_view, name='article'),
     path('', article_list_view.as_view(), name='article'),
     path('<str:slug>/', article_detail_view, name='article_detail'),
     path('<str:slug>/addc/', add_comment_to_article, name='add_comment'),

@@ -92,6 +92,8 @@ class Article(ModelMeta, models.Model):
     def comments_count_multiplied(self):
         return 2 * self.comments.count()
 
+class About(models.Model):
+    body = models.TextField(null=True, blank=True)
 
 class Preference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

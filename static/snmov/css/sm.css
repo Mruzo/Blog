@@ -109,7 +109,7 @@ footer {
   background-repeat: no-repeat;
 }
 .burger {
-    background: black;
+    background: #6a6a6a;
 }
 .tsprnt {
     background: transparent;
@@ -160,6 +160,15 @@ section {
     display: block;
 }
 
+
+.buttons {
+	display: grid;
+	width: min(75rem, 100%);
+	margin-inline: auto;
+	grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr));
+	gap: 2rem;
+  }
+
 /* -------------------------------------------------------- reset */
 @import url('https://fonts.googleapis.com/css?family=Audiowide|Monoton|Poiret+One|Raleway');
 /* body{
@@ -204,7 +213,7 @@ input{
 	position: relative;
     height: 25vw;
 	overflow: hidden;
-    background-color: #dad8d8;
+    background-color: #dfdfdf;
     
 }
 
@@ -233,22 +242,37 @@ section #slider-bg{
 }
 .slider > #input-slide-0:checked ~ ul > li.slide-0,
 .slider > #input-slide-1:checked ~ ul > li.slide-1,
-.slider > #input-slide-2:checked ~ ul > li.slide-2,
-.slider > #input-slide-3:checked ~ ul > li.slide-3{
+.slider > #input-slide-2:checked ~ ul > li.slide-2{
 	opacity: 1;
 	z-index: 2;
 }
-/* .slider > ul > li.slide-0{
-	background-color: #00DBF9;
-}
-.slider > ul > li.slide-1{
-	background-color: #47D7ED;
-}
-.slider > ul > li.slide-2{
-	background-color: #0093E9;
-} */
 
-/* -------------------------------------------------------- arrow */
+/* Display arrows */
+.slider-arrow-prev,
+.slider-arrow-next {
+  display: block;
+}
+
+/* Position arrows */
+.slider-arrow-prev {
+  left: 0;
+}
+.slider-arrow-next {
+  right: 0;
+}
+
+/* Hide arrows initially */
+.slider-arrow-prev label,
+.slider-arrow-next label {
+  display: none;
+}
+
+/* Show arrows on hover */
+.slider:hover .slider-arrow-prev label,
+.slider:hover .slider-arrow-next label {
+  display: block;
+}
+
 .slider > .slider-arrow-prev,
 .slider > .slider-arrow-next {
 	position: absolute;
@@ -272,14 +296,10 @@ section #slider-bg{
   	-o-transition: all 0.5s ease;
   	transition: all 0.5s ease;
 }
-.slider > #input-slide-0:checked ~ .slider-arrow-prev > label.slide-3,
 .slider > #input-slide-0:checked ~ .slider-arrow-next > label.slide-1, 
 .slider > #input-slide-1:checked ~ .slider-arrow-prev > label.slide-0,
 .slider > #input-slide-1:checked ~ .slider-arrow-next > label.slide-2, 
-.slider > #input-slide-2:checked ~ .slider-arrow-prev > label.slide-1,
-.slider > #input-slide-2:checked ~ .slider-arrow-next > label.slide-3, 
-.slider > #input-slide-3:checked ~ .slider-arrow-prev > label.slide-2,
-.slider > #input-slide-3:checked ~ .slider-arrow-next > label.slide-0 {
+.slider > #input-slide-2:checked ~ .slider-arrow-prev > label.slide-2{
 	z-index: 1;
 }
 .slider:hover > .slider-arrow-prev > label,
@@ -356,8 +376,7 @@ section #slider-bg{
 }
 .slider > #input-slide-0:checked ~ .slide-description > .slide-0,
 .slider > #input-slide-1:checked ~ .slide-description > .slide-1,
-.slider > #input-slide-2:checked ~ .slide-description > .slide-2,
-.slider > #input-slide-3:checked ~ .slide-description > .slide-3{
+.slider > #input-slide-2:checked ~ .slide-description > .slide-2{
 	z-index: 2;
 	opacity: 1;
 	visibility: visible;	
@@ -368,18 +387,6 @@ section #slider-bg{
 	text-align: center;
 }
 
-/* .slider > .slide-description > .slide-0{
-	font-family: 'Raleway', cursive;	
-}
-.slider > .slide-description > .slide-1{
-	font-family: 'Poiret One', cursive;
-}
-.slider > .slide-description > .slide-2{
-	font-family: 'Monoton', cursive;	
-}
-.slider > .slide-description > .slide-3{
-	font-family: 'Audiowide', cursive;	
-} */
 /* -------------------------------------------------------- autoplay */
 /*
 	if you don't want to autoplay 
@@ -434,13 +441,7 @@ section #slider-bg{
 	-o-animation: slide 32000ms infinite 14000ms linear;
 	animation: slide 32000ms infinite 14000ms linear;	
 }
-.slider > #input-slide-autoplay:checked ~ ul > li.slide-3{
-	-webkit-animation: slide 32000ms infinite 22000ms linear;
-	-moz-animation: slide 32000ms infinite 22000ms linear;
-	-ms-animation: slide 32000ms infinite 22000ms linear;
-	-o-animation: slide 32000ms infinite 22000ms linear;
-	animation: slide 32000ms infinite 22000ms linear;	
-}
+
 .slider > #input-slide-autoplay:checked ~ ul > li{
 	-webkit-transition: none;
 	-moz-transition: none;
@@ -453,13 +454,9 @@ section #slider-bg{
 	0%, 24% { z-index: 1; }
 	25%, 100% { z-index: -1; }
 }
-@-moz-keyframes arrow {
-	0%, 24% { z-index: 1; }
-	25%, 100% { z-index: -1; }
-}
-@-ms-keyframes arrow {
-	0%, 24% { z-index: 1; }
-	25%, 100% { z-index: -1; }
+@-moz-keyframes arrow {<div class='slider-arrow-next'>
+	<label for='input-slide-1'>next</label>
+  </div>  
 }
 @-o-keyframes arrow {
 	0%, 24% { z-index: 1; }
@@ -472,7 +469,7 @@ section #slider-bg{
 	animation: arrow 32000ms infinite 6000ms;	
 }
 .slider > #input-slide-autoplay:checked ~ .slider-arrow-prev > label.slide-1,
-.slider > #input-slide-autoplay:checked ~ .slider-arrow-next > label.slide-3{
+.slider > #input-slide-autoplay:checked ~ .slider-arrow-next > label.slide-2{
 	-webkit-animation: arrow 32000ms infinite 14000ms;
 	-moz-animation: arrow 32000ms infinite 14000ms;
 	-ms-animation: arrow 32000ms infinite 14000ms;
@@ -529,13 +526,13 @@ section #slider-bg{
 	-o-animation: dot 32000ms infinite 14000ms;
 	animation: dot 32000ms infinite 14000ms;	
 }
-.slider > #input-slide-autoplay:checked ~ .slider-dot > label.slide-3{
+/* .slider > #input-slide-autoplay:checked ~ .slider-dot > label.slide-3{
 	-webkit-animation: dot 32000ms infinite 22000ms;
 	-moz-animation: dot 32000ms infinite 22000ms;
 	-ms-animation: dot 32000ms infinite 22000ms;
 	-o-animation: dot 32000ms infinite 22000ms;
 	animation: dot 32000ms infinite 22000ms;	
-}
+} */
 /* -------------------------------------------------------- autoplay description */
 @-webkit-keyframes description{
 	0%, 5% { opacity: 0; z-index: 2; visibility: visible; }
@@ -563,33 +560,33 @@ section #slider-bg{
 	25%, 100% { opacity: 0; z-index: 0; visibility: hidden; }
 }
 .slider > #input-slide-autoplay:checked ~ .slide-description > .slide-0{
-	-webkit-animation: description 32000ms infinite -2000ms ease;
-	-moz-animation: description 32000ms infinite -2000ms ease;
-	-ms-animation: description 32000ms infinite -2000ms ease;
-	-o-animation: description 32000ms infinite -2000ms ease;
-	animation: description 32000ms infinite -2000ms ease;
+	-webkit-animation: description 30000ms infinite -2000ms ease;
+	-moz-animation: description 30000ms infinite -2000ms ease;
+	-ms-animation: description 30000ms infinite -2000ms ease;
+	-o-animation: description 30000ms infinite -2000ms ease;
+	animation: description 30000ms infinite -2000ms ease;
 }
 .slider > #input-slide-autoplay:checked ~ .slide-description > .slide-1{
-	-webkit-animation: description 32000ms infinite 6000ms ease;
-	-moz-animation: description 32000ms infinite 6000ms ease;
-	-ms-animation: description 32000ms infinite 6000ms ease;
-	-o-animation: description 32000ms infinite 6000ms ease;
-	animation: description 32000ms infinite 6000ms ease;
+	-webkit-animation: description 30000ms infinite 5000ms ease;
+	-moz-animation: description 30000ms infinite 5000ms ease;
+	-ms-animation: description 30000ms infinite 5000ms ease;
+	-o-animation: description 30000ms infinite 5000ms ease;
+	animation: description 30000ms infinite 5000ms ease;
 }
 .slider > #input-slide-autoplay:checked ~ .slide-description > .slide-2{
-	-webkit-animation: description 32000ms infinite 14000ms ease;
-	-moz-animation: description 32000ms infinite 14000ms ease;
-	-ms-animation: description 32000ms infinite 14000ms ease;
-	-o-animation: description 32000ms infinite 14000ms ease;
-	animation: description 32000ms infinite 14000ms ease;
+	-webkit-animation: description 30000ms infinite 12000ms ease;
+	-moz-animation: description 30000ms infinite 12000ms ease;
+	-ms-animation: description 30000ms infinite 12000ms ease;
+	-o-animation: description 30000ms infinite 12000ms ease;
+	animation: description 30000ms infinite 12000ms ease;
 }
-.slider > #input-slide-autoplay:checked ~ .slide-description > .slide-3{
+/* .slider > #input-slide-autoplay:checked ~ .slide-description > .slide-3{
 	-webkit-animation: description 32000ms infinite 22000ms ease;
 	-moz-animation: description 32000ms infinite 22000ms ease;
 	-ms-animation: description 32000ms infinite 22000ms ease;
 	-o-animation: description 32000ms infinite 22000ms ease;
 	animation: description 32000ms infinite 22000ms ease;
-}
+} */
 .slider > #input-slide-autoplay:checked ~ .slide-description > label{
   	-webkit-transition: none;
   	-moz-transition: none;
@@ -597,8 +594,137 @@ section #slider-bg{
   	-o-transition: none;
   	transition: none;  	
 }
+
+/* Loop through slides */
+.slider > input[type="radio"]:checked + ul > li {
+	opacity: 0;
+	z-index: 1;
+  }
+  .slider > #input-slide-0:checked + ul > li.slide-0,
+  .slider > #input-slide-1:checked + ul > li.slide-1,
+  .slider > #input-slide-2:checked + ul > li.slide-2 {
+	opacity: 1;
+	z-index: 2;
+  }
+  .slider > #input-slide-0:checked + ul > li.slide-2,
+  .slider > #input-slide-1:checked + ul > li.slide-0,
+  .slider > #input-slide-2:checked + ul > li.slide-1 {
+	transition: none; /* Remove transition for loop */
+  }
+
 /* -------------------------------------------------------- end codepen */
 
+button.neumorphic {
+	/* Remove container-type and aspect-ratio properties */
+	border: 0.5rem solid transparent;
+	border-radius: 0.5rem;
+	color: hsl(0 0% 10%);
+	background: none;
+	
+	display: flex; /* Use flexbox instead of grid */
+	justify-content: center; /* Center content horizontally */
+	align-items: center; /* Center content vertically */
+	
+	/* Adjust shadow values */
+	--shadow: 
+	  -0.2rem -0.2rem 0.5rem rgba(255, 255, 255, 0.75),
+	  0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
+	box-shadow: var(--shadow);
+	outline: none;  
+	transition: all 0.1s;
+	
+	&:hover, &:focus-visible {
+	  color: #f9a602;
+	  transform: scale(1.0); /* Use transform for scaling */
+	}
+	&:active, &.active{
+	  box-shadow:
+		var(--shadow),
+		-0.1rem -0.1rem -0.5rem rgba(255, 255, 255, 0.75),
+	  0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
+	  color: #f9a602;
+	  > span { font-size: 1rem; font-weight: bold; text-underline-offset: 1px};
+	  
+	}
+  
+	> span {
+	  font-family: system-ui, sans-serif;
+	  font-size: 1rem; /* Use 'px' instead of 'cqi' for font size */
+	  font-weight: bold;
+	  
+	}
+  }
+
+
+/* Apply neumorphic styles to the link */
+a.neumorphic {
+    border: 0.5rem solid transparent;
+    border-radius: 0.5rem;
+    color: hsl(0 0% 10%);
+    background: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    --shadow: 
+        -0.2rem -0.2rem 0.5rem rgba(255, 255, 255, 0.75),
+        0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow);
+    outline: none;  
+    transition: all 0.1s;
+    text-decoration: none; /* Remove underline from link */
+}
+
+a.neumorphicc {
+    border: 0.5rem solid transparent;
+    border-radius: 0.5rem;
+    color: hsl(0 0% 10%);
+    background: #FFBC00;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    --shadow: 
+        -0.2rem -0.2rem 0.5rem rgba(255, 255, 255, 0.75),
+        0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow);
+    outline: none;  
+    transition: all 0.1s;
+    text-decoration: none; /* Remove underline from link */
+}
+
+/* Apply hover and active styles */
+a.neumorphic:hover, a.neumorphic:focus-visible {
+    color: #f9a602;
+    transform: scale(1.0);
+}
+
+a.neumorphicc:hover, a.neumorphic:focus-visible {
+    color: #4d4d4d;
+    transform: scale(1.0);
+}
+
+a.neumorphic:active, a.neumorphic.active {
+    box-shadow:
+        var(--shadow),
+        -0.1rem -0.1rem -0.5rem rgba(255, 255, 255, 0.75),
+        0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
+    color: #f9a602;
+}
+
+/* Style the inner strong tag */
+a.neumorphic strong {
+    font-family: system-ui, sans-serif;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+
+
+.straight-line {
+border-right: 2px solid black; /* Adjust the properties as needed */
+height: 40px; /* Adjust the height as needed */
+margin: auto; /* Center the line horizontally */
+}
+  
 
 /* Adjustments for mobile */
 @media only screen and (max-width: 768px) {
@@ -633,7 +759,13 @@ section #slider-bg{
         line-height: 12vw;
     }
 
+	.straight-line {
+		display: block; /* Hide the line on mobile */
+	}
+
     .centered-image {
         max-width: 20%; /* Set to 20% for laptops */
     }
+
+	
   }

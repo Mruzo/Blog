@@ -223,3 +223,20 @@ window.LLOS = window.LLOS || {};
 if($('#home-animation-wrapper').length){
   window.LLOS.TextSlider = new TextSlider();
 }
+
+function loadContent(url, button) {
+  fetch(url)
+    .then(response => response.text())
+    .then(html => {
+      document.getElementById('content').innerHTML = html;
+      // Remove active class from all buttons
+      document.querySelectorAll('.neumorphic').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      // Add active class to clicked button
+      button.classList.add('active');
+    })
+    .catch(error => {
+      console.error('Error fetching content:', error);
+    });
+}
