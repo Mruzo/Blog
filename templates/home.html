@@ -8,9 +8,6 @@
 <section class="row m-1 position-relative">
   <div id="slider-bg" class="col card mx-auto px-6 position-relative border border-dark">
       <div class='slider'>
-          <!-- <input name="input-slider" id='input-slide-0' type="radio" class='input-slide input-slide-num' >
-          <input name="input-slider" id='input-slide-1' type="radio" class='input-slide input-slide-num' >
-          <input name="input-slider" id='input-slide-2' type="radio" class='input-slide input-slide-num' > -->
           <input name="input-slider" id='input-slide-0' type="radio" class='input-slide input-slide-num' checked autocomplete="off">
           <input name="input-slider" id='input-slide-1' type="radio" class='input-slide input-slide-num' autocomplete="off">
           <input name="input-slider" id='input-slide-2' type="radio" class='input-slide input-slide-num' autocomplete="off">
@@ -34,15 +31,15 @@
             </label>
           </div>
           <div class='slider-arrow-prev'>
-            <label class='slide-0' for='input-slide-2'>prev</label>
-            <label class='slide-1' for='input-slide-0'>prev</label>
-            <label class='slide-2' for='input-slide-1'>prev</label>
+            <label class='slide-0' for='input-slide-2'>&#8249;</label> <!-- Left arrow for slide 0 -->
+            <label class='slide-1' for='input-slide-0'>&#8249;</label> <!-- Left arrow for slide 1 -->
+            <label class='slide-2' for='input-slide-1'>&#8249;</label> <!-- Left arrow for slide 2 -->
           </div>
           
           <div class='slider-arrow-next'>
-            <label class='slide-0' for='input-slide-1'>next</label>
-            <label class='slide-1' for='input-slide-2'>next</label>
-            <label class='slide-2' for='input-slide-0'>next</label>
+            <label class='slide-0' for='input-slide-1'>&#8250;</label> <!-- Right arrow for slide 0 -->
+            <label class='slide-1' for='input-slide-2'>&#8250;</label> <!-- Right arrow for slide 1 -->
+            <label class='slide-2' for='input-slide-0'>&#8250;</label> <!-- Right arrow for slide 2 -->
           </div>        
           
           <div class='slider-dot'>
@@ -54,19 +51,27 @@
   </div>
 </section>
 
-<div class="container col">
+
+<div class="container">
   <div class="row justify-content-center justify-content-md-center my-4">
     <div class="col-auto">
-      <button onclick="loadContent('/about', this)" class="neumorphic {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
+      <button onclick="loadContent('/home-list', this)" class="neumorphic {% if request.resolver_match.url_name == 'article' %}active{% endif %}">
         <i class=""></i>
-        <span>PERSONA</span>
+        <span>ROADWAYS</span>
       </button>
     </div>
     <div class="straight-line m-0"></div> <!-- Add this line -->
     <div class="col-auto">
       <button onclick="loadContent('/home-list', this)" class="neumorphic {% if request.resolver_match.url_name == 'article' %}active{% endif %}">
         <i class=""></i>
-        <span>BRAIN DUMP</span>
+        <span>CRAFTS</span>
+      </button>
+    </div>
+    <div class="straight-line m-0"></div> <!-- Add this line -->
+    <div class="col-auto">
+      <button onclick="loadContent('/about', this)" class="neumorphic {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
+        <i class=""></i>
+        <span>PERSONA</span>
       </button>
     </div>
   </div>

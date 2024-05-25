@@ -18,6 +18,7 @@ class AboutUno(admin.ModelAdmin):
     formfield_overrides = {
         models.TextField: {'widget': TinyMCE()},
     }
+    list_display = ('id', 'created_at') 
 
 
 # Register your models here.

@@ -33,7 +33,7 @@ def home_list(request):
 
 
 def about_page(request):
-    about_me = About.objects.first()
+    about_me = About.objects.order_by('-created_at').first()
     return render(request,
                   template_name="about.html",
                   context={"persona": about_me})

@@ -264,7 +264,8 @@ section #slider-bg{
 /* Hide arrows initially */
 .slider-arrow-prev label,
 .slider-arrow-next label {
-  display: none;
+  display: block;
+  text-align: center;
 }
 
 /* Show arrows on hover */
@@ -307,12 +308,12 @@ section #slider-bg{
 	opacity: 1;
 }
 .slider > .slider-arrow-prev > label {
-	left: 5vw;
-	background-image: url(http://panikaro.interiowo.pl/img/arrow-left.png);
+	left: 15vw;
+	font-size: xx-large;
 }
 .slider > .slider-arrow-next > label {
-	right: 5vw;
-	background-image: url(http://panikaro.interiowo.pl/img/arrow-right.png);
+	right: 15vw;
+	font-size: xx-large;
 }
 /* -------------------------------------------------------- dot */
 .slider > .slider-dot {
@@ -395,30 +396,24 @@ section #slider-bg{
   and remove the code below
 */
 /* -------------------------------------------------------- autoplay slide */
-@-webkit-keyframes slide{
+@-webkit-keyframes slide {
 	0%, 100% { opacity: 0; }
-	6%, 25% { opacity: 1; z-index: 2; }
-	30%, 50% { opacity: 0; z-index: 2; }
+	33%, 100% { opacity: 1; }
 }
-@-moz-keyframes slide{
+
+@-moz-keyframes slide {
 	0%, 100% { opacity: 0; }
-	6%, 24% { opacity: 1; z-index: 2; }
-	30%, 50% { opacity: 0; z-index: 2; }
+	33%, 100% { opacity: 1; }
 }
-@-ms-keyframes slide{
+
+@-o-keyframes slide {
 	0%, 100% { opacity: 0; }
-	6%, 25% { opacity: 1; z-index: 2; }
-	30%, 50% { opacity: 0; z-index: 2; }
+	33%, 100% { opacity: 1; }
 }
-@-o-keyframes slide{
+
+@keyframes slide {
 	0%, 100% { opacity: 0; }
-	6%, 25% { opacity: 1; z-index: 2; }
-	30%, 50% { opacity: 0; z-index: 2; }
-}
-@keyframes slide{
-	0%, 100% { opacity: 0; }
-	6%, 25% { opacity: 1; z-index: 2; }
-	30%, 50% { opacity: 0; z-index: 2; }
+	33%, 100% { opacity: 1; }
 }
 .slider > #input-slide-autoplay:checked ~ ul > li.slide-0{
 	-webkit-animation: slide 32000ms infinite -2000ms linear;
@@ -454,9 +449,9 @@ section #slider-bg{
 	0%, 24% { z-index: 1; }
 	25%, 100% { z-index: -1; }
 }
-@-moz-keyframes arrow {<div class='slider-arrow-next'>
-	<label for='input-slide-1'>next</label>
-  </div>  
+@-moz-keyframes arrow {
+	0%, 24% { z-index: 1; }
+	25%, 100% { z-index: -1; }
 }
 @-o-keyframes arrow {
 	0%, 24% { z-index: 1; }
@@ -526,13 +521,7 @@ section #slider-bg{
 	-o-animation: dot 32000ms infinite 14000ms;
 	animation: dot 32000ms infinite 14000ms;	
 }
-/* .slider > #input-slide-autoplay:checked ~ .slider-dot > label.slide-3{
-	-webkit-animation: dot 32000ms infinite 22000ms;
-	-moz-animation: dot 32000ms infinite 22000ms;
-	-ms-animation: dot 32000ms infinite 22000ms;
-	-o-animation: dot 32000ms infinite 22000ms;
-	animation: dot 32000ms infinite 22000ms;	
-} */
+
 /* -------------------------------------------------------- autoplay description */
 @-webkit-keyframes description{
 	0%, 5% { opacity: 0; z-index: 2; visibility: visible; }
@@ -580,13 +569,7 @@ section #slider-bg{
 	-o-animation: description 30000ms infinite 12000ms ease;
 	animation: description 30000ms infinite 12000ms ease;
 }
-/* .slider > #input-slide-autoplay:checked ~ .slide-description > .slide-3{
-	-webkit-animation: description 32000ms infinite 22000ms ease;
-	-moz-animation: description 32000ms infinite 22000ms ease;
-	-ms-animation: description 32000ms infinite 22000ms ease;
-	-o-animation: description 32000ms infinite 22000ms ease;
-	animation: description 32000ms infinite 22000ms ease;
-} */
+
 .slider > #input-slide-autoplay:checked ~ .slide-description > label{
   	-webkit-transition: none;
   	-moz-transition: none;
@@ -717,8 +700,6 @@ a.neumorphic strong {
     font-weight: bold;
 }
 
-
-
 .straight-line {
 border-right: 2px solid black; /* Adjust the properties as needed */
 height: 40px; /* Adjust the height as needed */
@@ -755,6 +736,15 @@ margin: auto; /* Center the line horizontally */
       margin-top: -5vw; /* Center the arrows vertically */
     }
 
+	.slider > .slider-arrow-prev > label {
+		left: 1vw;
+		font-size:larger;
+	}
+	.slider > .slider-arrow-next > label {
+		right: 1vw;
+		font-size: x-large
+	}
+
     .slider > .slide-description > label > .text-slide{
         line-height: 12vw;
     }
@@ -766,6 +756,46 @@ margin: auto; /* Center the line horizontally */
     .centered-image {
         max-width: 20%; /* Set to 20% for laptops */
     }
+
+	button.neumorphic {
+		/* Remove container-type and aspect-ratio properties */
+		border: 0.5rem solid transparent;
+		border-radius: 0.5rem;
+		color: hsl(0 0% 10%);
+		background: none;
+		
+		display: flex; /* Use flexbox instead of grid */
+		justify-content: center; /* Center content horizontally */
+		align-items: center; /* Center content vertically */
+		
+		/* Adjust shadow values */
+		--shadow: 
+		  -0.2rem -0.2rem 0.5rem rgba(255, 255, 255, 0.75),
+		  0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
+		box-shadow: var(--shadow);
+		outline: none;  
+		transition: all 0.1s;
+		
+		&:hover, &:focus-visible {
+		  color: #f9a602;
+		}
+		&:active, &.active{
+		  box-shadow:
+			var(--shadow),
+			-0.1rem -0.1rem -0.5rem rgba(255, 255, 255, 0.75),
+		  0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
+		  color: #f9a602;
+		  > span { font-size: 0.9rem; font-weight: bold; text-underline-offset: 1px};
+		  
+		}
+	  
+		> span {
+		  font-family: system-ui, sans-serif;
+		  font-size: 0.9rem; /* Use 'px' instead of 'cqi' for font size */
+		  font-weight: bold;
+		  
+		}
+	  }
 
 	
   }
