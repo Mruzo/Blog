@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from .forms import ContactModelForm, ContactForm
-from snmov.models import Article, Comment, ReachOut, About
+from snmov.models import Article, Comment, ReachOut, About, CraftCategory
 from django.contrib import messages
 from django.core.mail import send_mail, BadHeaderError
 from django.http import HttpResponse, HttpResponseRedirect
@@ -37,6 +37,11 @@ def about_page(request):
     return render(request,
                   template_name="about.html",
                   context={"persona": about_me})
+
+def get_craft_categories(request):
+    categories = CraftCategory.objects.all()
+    context = {'craft_categories':categories}
+    return render(request, "craft_categories_list.html",context)
 
 def privacy_page(request):
     return render(request,

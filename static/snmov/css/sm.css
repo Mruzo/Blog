@@ -742,7 +742,7 @@ margin: auto; /* Center the line horizontally */
 	}
 	.slider > .slider-arrow-next > label {
 		right: 1vw;
-		font-size: x-large
+		font-size: larger;
 	}
 
     .slider > .slide-description > label > .text-slide{

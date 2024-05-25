@@ -96,6 +96,12 @@ class About(models.Model):
     body = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now=False, auto_now_add=False, null=True, blank=True)
 
+class CraftCategory(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
 class Preference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='preferences')
