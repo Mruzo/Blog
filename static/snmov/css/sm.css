@@ -10,6 +10,13 @@
     src: local('Oswald-VariableFont_wght'), url('Oswald-VariableFont_wght.ttf') format("truetype");
 }
 
+@font-face {
+	font-family: 'Cabin';
+	font-style: normal;
+	src: url('cabin-bold.woff2') format('woff2'); /* Update with actual font file */
+	font-display: swap; /* Use fallback font until custom font is loaded */
+  }
+
 * {
     margin: 0;
     padding: 0;
@@ -668,8 +675,8 @@ button.neumorphic {
 	}
   
 	> span {
-	  font-family: system-ui, sans-serif;
-	  font-size: 1rem; /* Use 'px' instead of 'cqi' for font size */
+	  /* font-family: 'Cabin', sans-serif; */
+	  font-size: 0.9rem; /* Use 'px' instead of 'cqi' for font size */
 	  font-weight: bold;
 	  
 	}
@@ -827,9 +834,9 @@ margin: auto; /* Center the line horizontally */
 		}
 	  
 		> span {
-		  font-family: system-ui, sans-serif;
+		  font-family: 'Cabin', sans-serif;
 		  font-size: 0.9rem; /* Use 'px' instead of 'cqi' for font size */
-		  font-weight: bold;
+		  font-weight: Bold 700;
 		  
 		}
 	  }
