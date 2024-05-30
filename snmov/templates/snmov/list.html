@@ -7,18 +7,19 @@
     <div class="row">
         <div class="col">
             <div class="btn-group">
-                <button type="button" class="neumorphic btn  btn-sm dropdown-toggle border-0" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <button type="button" class="neumorphic btn btn-sm dropdown-toggle border-0" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Sort By
                 </button>
-                <div class="dropdown-menu rounded-0">
-                    <a class="dropdown-item {% if request.GET.sort == 'earliest' %}active{% endif %}" href="?sort=earliest">Earliest</a>
-                    <a class="dropdown-item {% if request.GET.sort == 'latest' %}active{% endif %}" href="?sort=latest">Latest</a>
-                    <a class="dropdown-item {% if request.GET.sort == 'title' %}active{% endif %}" href="?sort=title">Title</a>
-                </div>
+                <ul class="dropdown-menu rounded-0">
+                    <li><a class="dropdown-item {% if request.GET.sort == 'earliest' %}active{% endif %}" href="?sort=earliest">Earliest</a></li>
+                    <li><a class="dropdown-item {% if request.GET.sort == 'latest' %}active{% endif %}" href="?sort=latest">Latest</a></li>
+                    <li><a class="dropdown-item {% if request.GET.sort == 'title' %}active{% endif %}" href="?sort=title">Title</a></li>
+                </ul>
             </div>
         </div>
     </div>
 </div>
+
 
 {% for object in object_list %}
 <ul class="list-group col-md-8 mx-auto">
@@ -52,32 +53,30 @@
 
 
 
-{% if is_paginated %}
-<nav class="row w-100" aria-label="Page navigation example">
-    <ul class="pagination text-dark mx-auto d-flex justify-content-center">
-        {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
-        {% else %}
-            <li class=" page-item page-link disabled"><span>Previous</span></li>
-        {% endif %}
-        {% for i in paginator.page_range  %}
-            {% if page_obj.number == i %}
-                <li class="page-item page-link text-dark active">
-                    <span> {{ i }} <span class="sr-only">(current)</span></span>
-                </li>
-            {% else %}
-                <li class="page-item" ><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
-            {% endif %}
-        {% endfor %}
-        {% if page_obj.has_next %}
-            <li class="page-item" ><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
-        {% else %}
-            <li class="page-item page-link disabled"><span>Next</span></li>
-        {% endif %}
-    </ul>
-</nav>
-
-{% endif %}
+ {% if is_paginated %}
+ <nav class="row w-100" aria-label="Page navigation example">
+     <ul class="pagination text-dark mx-auto d-flex justify-content-center">
+         {% if page_obj.has_previous %}
+             <li class="page-item"><a class="page-link text-dark" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+         {% else %}
+             <li class="page-item page-link disabled"><span>Previous</span></li>
+         {% endif %}
+         {% for i in paginator.page_range  %}
+             {% if page_obj.number == i %}
+                 <li class="page-item page-link active b-0" style="background-color: #f9a602;"><span class="text-dark"> {{ i }} <span class="sr-only"></span></span></li>
+             {% else %}
+                 <li class="page-item" ><a class="page-link text-dark" href="?page={{ i }}">{{ i }}</a></li>
+             {% endif %}
+         {% endfor %}
+         {% if page_obj.has_next %}
+             <li class="page-item" ><a class="page-link text-dark" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+         {% else %}
+             <li class="page-item page-link disabled"><span>Next</span></li>
+         {% endif %}
+     </ul>
+ </nav>
+ {% endif %}
+ 
 
 
             </div>

@@ -101,6 +101,24 @@ class CraftCategory(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Craft(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    category = models.ForeignKey(CraftCategory, on_delete=models.CASCADE)
+    url = models.URLField(null=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+    
+class CraftImage(models.Model):
+    craft = models.ForeignKey(Craft, on_delete=models.CASCADE, related_name='craft_images')
+    image = models.ImageField(upload_to='craft_images/')
+    caption = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"Image for {self.craft.name}"
 
 class Preference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -150,6 +168,7 @@ class ReachOut(models.Model):
     email = models.EmailField(max_length=40)
     subject = models.CharField(max_length=50, null=True)
     content = models.TextField(max_length=250)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.subject

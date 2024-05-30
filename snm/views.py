@@ -1,11 +1,13 @@
-from django.shortcuts import render, redirect
-from .forms import ContactModelForm, ContactForm
-from snmov.models import Article, Comment, ReachOut, About, CraftCategory
+from django.shortcuts import render, redirect, get_object_or_404
+from .forms import ContactModelForm
+from snmov.models import Article,Comment, ReachOut, About, CraftCategory, Craft, CraftImage
 from django.contrib import messages
 from django.core.mail import send_mail, BadHeaderError
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from .settings.pro import EMAIL_HOST_USER
 from random import sample
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 def home_page(request):
@@ -43,6 +45,16 @@ def get_craft_categories(request):
     context = {'craft_categories':categories}
     return render(request, "craft_categories_list.html",context)
 
+def craft_list(request):
+    crafts = Craft.objects.select_related('category').all()
+    return render(request, 'craft_list.html', {'crafts': crafts})
+
+def craft_detail(request, craft_id):
+    craft = get_object_or_404(Craft, id=craft_id)
+    category = craft.category.name
+    images = craft.craft_images.all()
+    return render(request, 'craft_detail.html', {'craft': craft, 'category': category, 'images': images})
+
 def privacy_page(request):
     return render(request,
                   template_name="privacy.html",
@@ -65,32 +77,32 @@ def contact_page(request):
     if request.method == "POST":
         form = ContactModelForm(request.POST)
         if form.is_valid():
-            messages.success(request, f"Thanks for reaching out")
             obj = form.save()
-            return redirect(contact_page)
-
-    return render(request,
-                  template_name="form.html",
-                  context={"title": "Say Hello!", "form": form})
-
-
-def contact_page_m(request):
-    form = ContactForm(request.POST or None)
-    if request.method == 'POST':
-        form = ContactForm(request.POST)
-        if form.is_valid():
-            # full_name = form.cleaned_data['full_name']
-            subject = form.cleaned_data['subject']
-            from_email = form.cleaned_data['from_email']
-            message = form.cleaned_data['message']
+            # Send mail
             try:
-                send_mail(subject, message, from_email, ['chris@misteruzo.com'], fail_silently=True)
-                messages.success(request, f"Thanks for reaching out")
-            except BadHeaderError:
-                return HttpResponse('Invalid header found.')
-            return redirect('/contact')
-    return render(request, "contact.html", {"title": "", "form": form})
+                send_mail(
+                    subject=f"New reachout: {obj.full_name}",
+                    message=f"{obj.full_name}\n\n{obj.email}\n\n{obj.content}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=['chrisuzoewulu@gmail.com'],
+                    fail_silently=False,
+                )
+                response_data = {'success': True, 'message': "Thanks for reaching out. Tap logo to return home."}
+            except Exception as e:
+                response_data = {'success': False, 'message': "There was an error sending the email."}
 
+            # Return JSON response for AJAX
+            if request.is_ajax():
+                return JsonResponse(response_data)
+            else:
+                return redirect('contact_page')  # Redirect to clear form data
+
+        else:
+            response_data = {'success': False, 'message': "There was an error with your submission. Please try again."}
+            if request.is_ajax():
+                return JsonResponse(response_data)
+
+    return render(request, "form.html", { "title":"Reach out", "form": form})
 
 
 # def feedback_form(request):

@@ -47,13 +47,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'snmov.apps.SnmovConfig',
     'crispy_forms',
+    'crispy_bootstrap5',
     'storages',
     'django.contrib.sitemaps',
     'tinymce',
     'meta',
 ]
 
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 TINYMCE_DEFAULT_CONFIG = {
     'height': 360,
@@ -162,11 +165,10 @@ mimetypes.add_type("image/svg+sml", ".svgz", True)
 db_from_env = dj_database_url.config(conn_max_age=500)
 #DATABASES['default'].update(db_from_env)
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-DEFAULT_FROM_EMAIL = 'admin@misteruzo.com'
-
-EMAIL_HOST = 'smtp.mailgun.org'
+DEFAULT_FROM_EMAIL = config.get('section','MG_USER')
+EMAIL_HOST = 'mail.papamail.net'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = config.get('section','MG_USER')
 EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')

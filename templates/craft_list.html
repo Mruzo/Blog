@@ -1,0 +1,55 @@
+
+
+{% block content %}
+
+{% load static %}
+
+<div class="row justify-content-center">
+    {% for craft in crafts %}
+        <div class="col-6 col-md-3 mb-3 d-flex align-items-stretch">
+            <div class="card position-relative">
+                <div id="carousel{{ craft.id }}" class="carousel slide" data-ride="carousel">
+                    <div class="carousel-inner">
+                        {% for image in craft.craft_images.all %}
+                            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                <a href="{% if craft.url %}{{ craft.url }}{% else %}{% url 'craft_detail' craft.id %}{% endif %}">
+                                    <img src="{{ image.image.url }}" class="d-block rounded-top w-100" alt="{{ image.caption }}">
+                                </a>
+                                <div class="carousel-caption d-none d-md-block">
+                                    <p>{{ image.caption }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <a class="carousel-control-prev" href="#carousel{{ craft.id }}" role="button" data-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    </a>
+                    <a class="carousel-control-next" href="#carousel{{ craft.id }}" role="button" data-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    </a>
+                </div>
+                <div class="card-body p-0 mt-2 border-top text-center ">
+                    <h5 class="card-title my-1 fw-bold">{{ craft.name }}</h5>
+                </div>
+                <div class="position-absolute top-0 m-1 start-0 p-1 rounded" style="font-size: 0.8em; background-color: #faaf25;">
+                    {{ craft.category.name }}
+                </div>
+                <div class="card-body text-center p-0 pb-1">
+                    {% if craft.url %}
+                    <a href="{{ craft.url }}" class="card-link border border rounded p-1" style="font-size: 0.8em;">Website</a>
+                    {% else %}
+                    <a href="{% url 'craft_detail' craft.id %}" class="card-link border rounded p-1" style="font-size: 0.8em; background-color: #fdca6b;">Details</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+
+    <!-- <div class="card mb-4 col-5 col-md-3 mx-auto bg-transparent border-0">
+        <a class="d-flex justify-content-center font-weight-bold neumorphic"  href="/article"><h6 class="my-1">more dump</h6></a>
+    </div> -->
+
+
+{% endblock %}

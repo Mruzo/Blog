@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% load static %}
+
+<div class="container col-lg-8 mt-0 bg-light">
+    <div class="row bg-transparent">
+        <div class="col my-4  text-center">
+            <h1 class="display-4">{{ craft.name }}</h1>
+            <p class="lead">{{ craft.description }}</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col">
+            <div class="row">
+                {% for image in images %}
+                    <div class="col-6 col-md-4 mb-3">
+                        <div class="card h-100">
+                            <img src="{{ image.image.url }}" class="card-img-top rounded-top" alt="{{ image.caption }}">
+                            <div class="card-body">
+                                <p class="card-text">{{ image.caption }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            {% if subcrafts %}
+            <h2 class="h4">Subcrafts</h2>
+            <ul class="list-group">
+                {% for subcraft in subcrafts %}
+                
+                    <li class="list-group-item">
+                        <a href="{% url 'craft_detail' subcraft.id %}">{{ subcraft.name }}</a>
+                    </li>
+                
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

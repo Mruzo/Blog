@@ -1,4 +1,4 @@
-
+{% load crispy_forms_tags %}
 
 {% block content %}
 
@@ -27,11 +27,42 @@
 
                 </div>
 
-                <p class="row m-3 d-flex justify-content-center">
-                    <a class="neumorphic " href="https://twitter.com/misteruzo">
-                        <strong>Say Hello</strong>
-                    </a>
-                </p>
+                <div class="d-flex justify-content-center">
+                    <h4 style="font-weight:bold;">
+                        <p class=" text-center text-light">_____</p>
+                    </h4>
+                </div>
+
+                <div class="row m-3 d-flex justify-content-center">
+                    
+                    <p class="text-center fs-4 fw-bold font-weight-bold text-white">Reach out via</p>
+                    
+                </div>
+
+                <div class="row justify-content-center">
+                    <div class="col-4 col-md-4 d-flex justify-content-center mb-3">
+                        <a class="fw-bolder neumorphic d-flex align-items-center justify-content-center" style="background: #FFBC00; width: 150px;" href="https://twitter.com/misteruzo">
+                            <p class="fw-bolder m-0 font-weight-bold m-0">X</p>
+                        </a>
+                    </div>
+                
+                    <div class="col-4 col-md-4 d-flex justify-content-center mb-3">
+                        <a href="/reachout" class="neumorphic d-flex align-items-center justify-content-center {% if request.resolver_match.url_name == 'contact' %} active {% endif %}" style="background: #FFBC00; width: 150px;">
+                            <i class=""></i>
+                            <span>Email</span>
+                        </a>
+                    </div>
+                    </div>
+                </div>
+
+
+                {% block form-content %}
+        
+                <div id="reachout-content" >
+                
+                {% endblock %}
+    
+                </div>
 
                 <section class="container">
                     <ul class="col-4 mx-auto d-flex justify-content-center list-group list-group-horizontal px-0">

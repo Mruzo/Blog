@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Article, Comment, Preference, ReachOut, About, CraftCategory
+from .models import Article, Comment, Preference, ReachOut, About, CraftCategory, Craft, CraftImage
 from tinymce.widgets import TinyMCE
 from django.db import models
 from django.contrib.auth.models import User
@@ -21,6 +21,10 @@ class AboutUno(admin.ModelAdmin):
     list_display = ('id', 'created_at') 
 
 
+class CraftsAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'url') 
+
+
 # Register your models here.
 admin.site.register(Article, ArticleUno)
 admin.site.register(About, AboutUno)
@@ -28,6 +32,8 @@ admin.site.register(Comment)
 admin.site.register(Preference)
 admin.site.register(ReachOut)
 admin.site.register(CraftCategory)
+admin.site.register(Craft)
+admin.site.register(CraftImage)
 
 
 @admin.register(User)
