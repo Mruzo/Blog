@@ -105,19 +105,3 @@ def contact_page(request):
     return render(request, "form.html", { "title":"Reach out", "form": form})
 
 
-# def feedback_form(request):
-#     form = FeedbackForm(request.POST or None)
-#     if request.method == 'POST':
-#         form = FeedbackForm(request.POST)
-#         if form.is_valid():
-#             subject = 'Feedback'
-#             from_email = form.cleaned_data['from_email']
-#             message = form.cleaned_data['message']
-#             try:
-#                 send_mail(subject, message, from_email, ['sneakymotivator@gmail.com'], fail_silently=True)
-#                 messages.success(request, f"Thanks for the feedback")
-#             except BadHeaderError:
-#                 return HttpResponse('Invalid header found.')
-#             return redirect('/')
-#         return render(request, "base.html", {"feedback": "Leave a feedback?", "form": form})
-

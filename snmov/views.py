@@ -13,6 +13,8 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views.generic.edit import DeleteView
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 # Create your views here.
@@ -234,16 +236,30 @@ def register_view(request):
             user = form.save()
             username = form.cleaned_data.get('username')
             login(request, user)
+            
+            # Add success message
+            messages.success(request, f"Welcome, {username}! Your registration was successful.")
+            
+            # Send email to the user
+            send_mail(
+                'Welcome to Our Site!',
+                'Thank you for registering with us. You should receive a confirmation email anytime now. If you do not see it, please check you spam',
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+            
             return redirect("/article")
         else:
             for msg in form.error_messages:
-                form.error_messages[msg]
+                messages.error(request, f"{msg}: {form.error_messages[msg]}")
 
-    form1 = RegisterForm
+    form1 = RegisterForm()
     return render(request,
                   template_name="snmov/register.html",
                   context={"title": "Register", "form1": form1}
                   )
+                  
 
 
 def validate_username(request):

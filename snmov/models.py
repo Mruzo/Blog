@@ -106,7 +106,7 @@ class Craft(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
     category = models.ForeignKey(CraftCategory, on_delete=models.CASCADE)
-    url = models.URLField(null=True)
+    url = models.URLField(null=True, blank=True)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
@@ -119,6 +119,10 @@ class CraftImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.craft.name}"
+    
+    def get_craft_category(self):
+        return self.craft.category.name
+    get_craft_category.short_description = 'Category'
 
 class Preference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -132,6 +136,9 @@ class Preference(models.Model):
     class Meta:
         unique_together = ('user', 'post', 'value')
 
+class CommentManager(models.Manager):
+    def approved(self):
+        return self.filter(approved_comment=True)
 
 class Comment(models.Model):
     comment_cont = models.TextField(max_length=200, verbose_name='Comment')
@@ -139,6 +146,8 @@ class Comment(models.Model):
     comment_post = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='comments')
     comment_date = models.DateTimeField(default=timezone.now)
     approved_comment = models.BooleanField(default=False)
+
+    objects = CommentManager()
 
     class Meta:
         ordering = ['-comment_date']
@@ -161,6 +170,14 @@ class Comment(models.Model):
     def approve(self):
         self.approved_comment = True
         self.save()
+
+    def get_article(self):
+        return self.comment_post.slug
+    get_article.short_description = 'Article'
+
+    def get_email(self):
+        return self.user_name.email
+    get_email.short_description = 'User Email'
 
 
 class ReachOut(models.Model):

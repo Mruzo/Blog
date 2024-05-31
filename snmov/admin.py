@@ -13,6 +13,7 @@ class ArticleUno(admin.ModelAdmin):
     formfield_overrides = {
         models.TextField: {'widget': TinyMCE()},
     }
+    list_display = ('id', 'title', 'slug', 'publish_date', 'updated', 'likes', 'dislikes')
 
 class AboutUno(admin.ModelAdmin):
     formfield_overrides = {
@@ -22,18 +23,44 @@ class AboutUno(admin.ModelAdmin):
 
 
 class CraftsAdmin(admin.ModelAdmin):
+    formfield_overrides = {
+        models.TextField: {'widget': TinyMCE()},
+    }
     list_display = ('name', 'category', 'url') 
+
+
+class CraftsImageAdmin(admin.ModelAdmin):
+    list_display = ('id','craft', 'get_craft_category', 'url') 
+
+    def url(self, obj):
+        return obj.craft.url
+    url.short_description = 'Craft URL'
+
+
+class ReachOutAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'full_name','email', 'subject') 
+
+
+class ReachOutAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'full_name','email', 'subject') 
+
+
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ('comment_date', 'user_name', 'get_email', 'get_article','comment_cont', 'approved_comment') 
+
+    
+
 
 
 # Register your models here.
 admin.site.register(Article, ArticleUno)
 admin.site.register(About, AboutUno)
-admin.site.register(Comment)
+admin.site.register(Comment, CommentAdmin)
 admin.site.register(Preference)
-admin.site.register(ReachOut)
+admin.site.register(ReachOut, ReachOutAdmin)
 admin.site.register(CraftCategory)
-admin.site.register(Craft)
-admin.site.register(CraftImage)
+admin.site.register(Craft, CraftsAdmin)
+admin.site.register(CraftImage, CraftsImageAdmin)
 
 
 @admin.register(User)

@@ -13,7 +13,7 @@
 @font-face {
 	font-family: 'Cabin';
 	font-style: normal;
-	src: url('cabin-bold.woff2') format('woff2'); /* Update with actual font file */
+	src: local('Cabin'), url('Cabin.ttf') format('truetype'); /* Update with actual font file */
 	font-display: swap; /* Use fallback font until custom font is loaded */
   }
 
@@ -30,15 +30,6 @@ body, html {
 	flex-direction: column;
 	font-family: 'Cabin', sans-serif;
 }
-
-/* body {
-    min-height: 100vh;
-    min-width: 100%;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    font-family: 'Cabin', sans-serif;
-} */
 
 .vertical-center {
     min-height: 100%;
@@ -192,23 +183,7 @@ section {
 
 
 /* -------------------------------------------------------- reset */
-@import url('https://fonts.googleapis.com/css?family=Audiowide|Monoton|Poiret+One|Raleway');
-/* body{
-  width: 100%;
-  margin: 0 auto;
-  font-family: 'Raleway', sans-serif;
-  color: #FFF;
-  font-size: 1.75vw;
-}
-body *{
-  width: 100%;
-  position: relative;
-  display: block;
-  margin: 0 auto;
-  padding: 0;
-  text-align: center;
-  z-index: 100;
-} */
+
 section > div .slider > h1{
   font-size: 6vw;
   text-transform: uppercase;
