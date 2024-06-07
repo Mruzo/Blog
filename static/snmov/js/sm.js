@@ -1,9 +1,10 @@
-// $(document).ready(function(){
-//   $("a.nav-link").on("click", function () {
-//     $("a.nav-link").each(function(i,o) {
-//       $(this).removeClass("active");
-//     });
-//     $(this).addClass("active");
+document.addEventListener('DOMContentLoaded', function () {
+    const navLinks = document.querySelectorAll('.nav-item.nav-link');
     
-//   })
-// });
+    navLinks.forEach(link => {
+      link.addEventListener('click', function () {
+        navLinks.forEach(link => link.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  });
