@@ -12,12 +12,15 @@
                     <div class="carousel-inner">
                         {% for image in craft.craft_images.all %}
                             <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                <a href="{% if craft.url %}{{ craft.url }}{% else %}{% url 'craft_detail' craft.id %}{% endif %}">
-                                    <img src="{{ image.image.url }}" class="d-block rounded-top w-100" alt="{{ image.caption }}">
-                                </a>
-                                <div class="carousel-caption d-none d-md-block">
-                                    <p>{{ image.caption }}</p>
-                                </div>
+                                {% if craft.url %}
+                                    <a href="{{ craft.url }}" target="_blank">
+                                        <img src="{{ image.image.url }}" class="d-block rounded-top w-100" alt="{{ image.caption }}">
+                                    </a>
+                                    {% else %}
+                                    <a href="{% url 'craft_detail' craft.id %}">
+                                        <img src="{{ image.image.url }}" class="d-block rounded-top w-100" alt="{{ image.caption }}">
+                                    </a>
+                                {% endif %}
                             </div>
                         {% endfor %}
                     </div>
@@ -36,7 +39,7 @@
                 </div>
                 <div class="card-body text-center p-0 pb-1">
                     {% if craft.url %}
-                    <a href="{{ craft.url }}" class="card-link border border rounded p-1" style="font-size: 0.8em;">Website</a>
+                    <a href="{{ craft.url }}" class="card-link border border rounded p-1" target="_blank" style="font-size: 0.8em;">Website</a>
                     {% else %}
                     <a href="{% url 'craft_detail' craft.id %}" class="card-link border rounded p-1" style="font-size: 0.8em; background-color: #fdca6b;">Details</a>
                     {% endif %}

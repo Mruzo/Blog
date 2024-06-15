@@ -1,5 +1,11 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ craft.name }} | MisterUzo {% endblock %}
+
+{% block meta_tags %}
+    {{ craft.generate_meta_tags|safe }}
+{% endblock %}
+
 {% block content %}
 
 {% load static %}
@@ -7,7 +13,7 @@
 <div class="container col-lg-8 mt-0 bg-light">
     <div class="row bg-transparent">
         <div class="col my-4  text-center">
-            <h1 class="display-4">{{ craft.name }}</h1>
+            <h1 class="display-4 border-bottom">{{ craft.name }}</h1>
             <div class="col lead fs-6 h-base">
                 {{ craft.description | safe }}
             </div>

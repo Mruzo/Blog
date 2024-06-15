@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
 from meta.models import ModelMeta
+from django.template.loader import render_to_string
 
 
 # Create your models here.
@@ -70,6 +71,15 @@ class Article(ModelMeta, models.Model):
         if self.image:
             return self.image.url
 
+    def generate_meta_tags(self):
+        meta_tags = {
+            'title': self.title,
+            'description': self.description,
+            'image': self.get_meta_image(),
+            'url': self.get_absolute_url(),
+        }
+        return render_to_string('meta_tags.html', {'meta_tags': meta_tags})
+
     class Meta:
         ordering = ['-publish_date', '-updated', '-timestamp']
 
@@ -111,6 +121,15 @@ class Craft(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def generate_meta_tags(self):
+        primary_image = self.craft_images.first()
+        meta_tags = {
+            'title': self.name,
+            'description': self.description,
+            'image': primary_image.image.url if primary_image else None,
+        }
+        return render_to_string('meta_tags.html', {'meta_tags': meta_tags})
     
 class CraftImage(models.Model):
     craft = models.ForeignKey(Craft, on_delete=models.CASCADE, related_name='craft_images')
