@@ -113,6 +113,7 @@ class ReachOut(models.Model):
     email = models.EmailField(max_length=40)
     subject = models.CharField(max_length=50, null=True)
     content = models.TextField(max_length=250)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.subject

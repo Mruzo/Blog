@@ -30,6 +30,7 @@
 html {
     font-size: 1rem;
     height: 100%;
+    scroll-behavior: smooth;
 }
   
 @include media-breakpoint-up(sm) {
@@ -124,6 +125,12 @@ h2 {
 .subtext-sm {
     font-family: 'quicksand', sans-serif;
     font-size: 1rem;
+    font-weight: 400;
+}
+
+.subtext-smm {
+    font-family: 'quicksand', sans-serif;
+    font-size: 0.9rem;
     font-weight: 400;
 }
 

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, reverse
 from django.utils import timezone
 from .forms import ContactModelForm, ProductNotificationForm
 from snmov.models import Product, Comment, ReachOut, SiteImage, Testimonials, ProductNotification, About
@@ -7,70 +7,86 @@ from django.conf import settings
 from django.core.mail import send_mail, BadHeaderError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic.edit import DeleteView
-# from .settings.pro import EMAIL_HOST_USER
+from django.views.generic import TemplateView, FormView
+from django.conf import settings
 from random import sample
 
+class HomePageView(FormView, TemplateView):
+    template_name = 'home.html'
+    form_class = ProductNotificationForm
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Fetch pictures, testimonials, and products
+        pictures = SiteImage.objects.filter(content_type__model='product')
+        testimonials = Testimonials.objects.all()
+        available_products = Product.objects.filter(available=True)
+        unavailable_products = Product.objects.filter(available=False)
+        
+        # Prefetch related SiteImage objects for better performance
+        available_pictures = pictures.filter(object_id__in=available_products.values('id'))
+        unavailable_pictures = pictures.filter(object_id__in=unavailable_products.values('id'))
+        
+        # Add these to the context
+        context.update({
+            'available_products': available_products,
+            'available_pictures': available_pictures,
+            'unavailable_pictures': unavailable_pictures,
+            'testimonials': testimonials,
+            'about': About.objects.first(),
+        })
+        
+        return context
 
+    def form_valid(self, form):
+        first_name = form.cleaned_data['first_name']
+        last_name = form.cleaned_data['last_name']
+        email = form.cleaned_data['email']
+        products = form.cleaned_data['products']
 
-def home_page(request):
-    pictures = SiteImage.objects.filter(content_type__model='product')
-    testimonials = Testimonials.objects.all()
+        # Initialize a list to store notification details
+        notification_details = []
 
-    # Filter available and unavailable products
-    available_products = Product.objects.filter(available=True)
-    unavailable_products = Product.objects.filter(available=False)
+        # Save notifications for each selected product
+        for product in products:
+            notification = ProductNotification.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                product=product,
+                created_at=timezone.now(),
+            )
 
-    # Prefetch related SiteImage objects for better performance
-    available_pictures = pictures.filter(object_id__in=available_products.values('id'))
-    unavailable_pictures = pictures.filter(object_id__in=unavailable_products.values('id'))
+            # Add the notification ID and product title to the details list
+            notification_details.append(f"\nProduct: {product.title} \nNotification ID: JVN-{notification.id}")
 
-    # Process Notify Me form
-    if request.method == 'POST':
-        form = ProductNotificationForm(request.POST)
-        if form.is_valid():
-            first_name = form.cleaned_data['first_name']
-            last_name = form.cleaned_data['last_name']
-            email = form.cleaned_data['email']
-            products = form.cleaned_data['products']
+        # Send email notification
+        notification_info = "\n".join(notification_details)
+        email_subject = 'Product Availability Notification Request'
+        email_message = (
+            f"Hello {first_name},\n\n"
+            f"Thank you for your interest in our products. You will be notified when the following products become available:\n"
+            f"{notification_info}\n\n"
+            "Best regards,\n"
+            "Team Justvybz"
+        )
+        send_mail(
+            email_subject,
+            email_message,
+            settings.DEFAULT_FROM_EMAIL,  # From email
+            [settings.DEFAULT_TO_EMAIL],  # To email
+            fail_silently=False,
+        )
 
-            # Save notifications for each selected product
-            for product in products:
-                ProductNotification.objects.create(
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=email,
-                    product=product,
-                    created_at=timezone.now()
-                )
+        # Display success message and redirect with the anchor
+        messages.success(self.request, 'Thank you, we will notify you of product availability.')
+        return redirect(reverse('homepage') + '#notification_form')
 
-            # Send confirmation email (optional)
-            # send_mail(
-            #     'Notification Confirmation',
-            #     'Thank you, we will only notify you of product availability.',
-            #     settings.DEFAULT_FROM_EMAIL,
-            #     [email],
-            #     fail_silently=True,
-            # )
-
-            # Display success message
-            messages.success(request, 'Thank you, we will only notify you of product availability.')
-            return redirect(home_page)
-    else:
-        form = ProductNotificationForm()
-
-    about_us = About.objects.first()
-
-
-    context = {
-        'available_products': available_products,
-        'available_pictures': available_pictures,
-        'unavailable_pictures': unavailable_pictures,
-        'testimonials': testimonials,
-        'form': form,
-        'about': about_us
-    }
-
-    return render(request, 'home.html', context)
+    def form_invalid(self, form):
+        # Simply render the form with the context
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
 
 
 def about_page(request):
@@ -107,8 +123,8 @@ def contact_page(request):
             obj = form.save()
 
             #Send an email to your custom email address
-            subject = 'New Contact Form Submission'
-            message = f"Name: {obj.full_name}\nEmail: {obj.email}\nMessage:{obj.content}"
+            subject = 'Contact Form'
+            message = f"Name: {obj.full_name}\nEmail: {obj.email}\n\nSubject:{obj.subject}\n\nMessage:{obj.content}"
             from_email = 'justvybz@justvybz.com'
             to_email = 'uzo@justvybz.com'
 
@@ -120,6 +136,6 @@ def contact_page(request):
 
     return render(request,
                   template_name="form.html",
-                  context={"title": "Contact Us", "form": form})
+                  context={"title": "feedback & enquiry", "form": form})
 
 

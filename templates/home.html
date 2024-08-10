@@ -56,34 +56,11 @@
             </div>
             {% endfor %}
         </div>
-    
-
-
-        <!-- <div id="availablePictureCarousel" class="carousel slide" style="background-color: white;" data-ride="carousel">
-            <div class="carousel-inner">
-                {% for picture in available_pictures %}
-                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                            <img src="{{ picture.image.url }}" class="d-block w-100 border-2" alt="{{ picture.caption }}">
-                            <div class="carousel-caption text-start d-block p-2 m-0 bg-secondary">
-                                <h1 class="subtext-btn-sm m-0"><strong>{{ picture.content_object.title }}</strong></h1>
-                                <p> {{ picture.caption }} </p>
-                            </div>
-                        </div>
-                {% endfor %}
-            </div>
-            <a class="carousel-control-prev" href="#availablePictureCarousel" role="button" data-slide="next">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="sr-only">Previous</span>
-            </a>
-            <a class="carousel-control-next" href="#availablePictureCarousel" role="button" data-slide="prev">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="sr-only">Next</span>
-            </a>
-        </div> -->
+  
     </div>
 
-    <div class="card mt-5 col-6 col-md-2 mx-auto bg-light border-0" >
-        <a class="btn shadow p-2 mb-5 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="https://www.amazon.ca/dp/B0C6HH585D?ref=myi_title_dp"  target="_blank">
+    <div class="card mt-5 col-6 col-md-3 mx-auto bg-light border-0" >
+        <a class="btn shadow p-2 mb-5 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="https://www.amazon.ca/dp/B0C6HH585D?ref=myi_title_dp" target="_blank">
             <h3 class="subtext-btn-sm m-0"><strong> GET YOURS </strong></h3>
         </a>
     </div>
@@ -136,11 +113,14 @@
         </div>        
     </div>
 
-    <div class="container text-center">
+    <div id="notification_form" class="container text-center">
         <h6 class="subtext my-2">
             get notified on stock availability
         </h6>
-        <form id="stock_notification" method="post" action="{% url 'homepage' %}" class="text-center my-4">
+        <div class="container text-center mt-1 mx-auto subtext-smm" id="" style="opacity: 1">
+            *select at least one
+        </div>
+        <form id="stock_notification" method="post" action="{% url 'homepage' %}#notification_form" class="text-center my-2">
             {% csrf_token %}
             
             <div class="list-group list-group-flush form-group custom-checkbox">
@@ -148,7 +128,7 @@
                     <div class=" mx-auto subtext-btn-sm">
                     {{ checkbox }} 
                     {% if form.is_bound and form.errors.products %}
-                        <p class="text-danger">{{ form.errors.products.0 }}</p>
+                        <p class="text-danger subtext-smm">{{ form.errors.products.0 }}</p>
                     {% endif %}
                     </div>
                 {% endfor %}
@@ -158,11 +138,11 @@
                 <div class="col-md-4 mx-auto">
                     <input type="text" name="first_name" class="form-control text-center my-2 border-bottom custom-placeholder" placeholder="first name" required>
                     <input type="text" name="last_name" class="form-control text-center my-2 custom-placeholder" placeholder="last name" required>
-                    <input type="email" name="email" class="form-control text-center my-2 custom-placeholder" placeholder="email@address.com" required>
+                    <input type="email" name="email" class="form-control text-center my-1 custom-placeholder" placeholder="email@address.com" required>
                 </div>
             </div>
             
-            <button class="btn subtext-btn-sm shadow p- mb-0 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 mt-4" role="button" aria-disabled="true" style="background-color: #FFBC00;" type="submit">Notify Me</button>
+            <button class="btn subtext-btn-sm shadow mb-0 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 mt-1" role="button" aria-disabled="true" style="background-color: #FFBC00;" type="submit">notify me</button>
         </form>
 
     </div>
@@ -189,25 +169,27 @@
 
     </div>
 
-    <!-- <div class="row border-top bd-light my-5 mx-auto">
+    <div class="row border-top bd-light mb-5 mx-auto">
 
-        <div class="container text-center test-border mt-5 mx-auto" id="" style="opacity: 1">
+        <div class="container text-center test-border mt-0 mx-auto" id="" style="opacity: 1">
 
             <h5 class="subtext my-2">
-                Contact Us
+                for feedback & enquiries
             </h5>
         </div>
         
-        <div class="container text-center my-3 mx-auto" id="" style="opacity: 1">
-
-            <div class="card mt-2 col-2 mx-auto bg-light border-0" >
-                <a class="btn subtext-btn-sm shadow p-2 mb-5 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="/contact"  target="_blank">
-                    <strong> by email </strong>
+        <div class="container text-center my-3 mx-auto" style="opacity: 1">
+            <div class="card mt-2 col-6 col-md-4 col-lg-2 mx-auto bg-light border-0">
+                <a class="btn subtext-btn-sm shadow p-2 mb-5 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 my-auto" 
+                   role="button" 
+                   aria-disabled="true" 
+                   style="background-color: #FFBC00;" 
+                   href="/contact"  
+                   target="_blank">
+                    <strong>email us</strong>
                 </a>
             </div>
-
-
-        </div> -->
+        </div>
 
     </div>
 

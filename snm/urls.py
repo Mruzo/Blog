@@ -1,5 +1,5 @@
 from .views import(
-    home_page,
+    HomePageView,
     about_page,
     contact_page,
     privacy_page,
@@ -25,7 +25,7 @@ sitemaps = {
 }
 
 urlpatterns = [
-    path('', home_page, name="homepage"),
+    path('', HomePageView.as_view(), name='homepage'),
     path('new-article/', article_create_view, name='article_create'),
     path('product/', include('snmov.urls')),
     path('about/', about_page, name='about'),

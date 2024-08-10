@@ -163,12 +163,13 @@ db_from_env = dj_database_url.config(conn_max_age=500)
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-DEFAULT_FROM_EMAIL = 'uzo@justvybz.com'
+DEFAULT_FROM_EMAIL = config.get('section', 'VYBZ_FB_USER')
+DEFAULT_TO_EMAIL = config.get('section', 'VYBZ_MG_USER')
 
 EMAIL_HOST = 'mail.papamail.net'
-EMAIL_PORT = 993
-EMAIL_HOST_USER = config.get('section', 'VYBZ_MG_USER')
-EMAIL_HOST_PASSWORD = config.get('section', 'VYBZ_MG_PASS')
+EMAIL_PORT = 587
+EMAIL_HOST_USER = config.get('section', 'VYBZ_FB_USER')
+EMAIL_HOST_PASSWORD = config.get('section', 'VYBZ_FB_PASS')
 EMAIL_USE_TLS = True
 
 # Static files (CSS, JavaScript, Images)

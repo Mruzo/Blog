@@ -28,6 +28,8 @@ class SiteImageAdmin(admin.ModelAdmin):
 
     related_product.short_description = 'Related Product'
 
+class ReachOutAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'full_name','email', 'subject') 
 
 class AboutUno(admin.ModelAdmin):
     formfield_overrides = {
@@ -56,7 +58,7 @@ class NotificationUno(admin.ModelAdmin):
 admin.site.register(Product, ProductUno)
 admin.site.register(Comment)
 admin.site.register(Preference)
-admin.site.register(ReachOut)
+admin.site.register(ReachOut, ReachOutAdmin)
 admin.site.register(About, AboutUno)
 admin.site.register(SiteImage, SiteImageAdmin)
 admin.site.register(Testimonials)
