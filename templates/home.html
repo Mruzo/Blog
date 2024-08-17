@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
 
+
 {% block content %}
 
 <!--    {% url 'homepage' as my_view %}-->
 <!--    {% if request.path == my_view %}-->
 
+<main id="main-section" class="flex-grow-1 burger align-items-center text-center" style="overflow: hidden;">
+
 <section class="row m-1 position-relative">
   <div id="slider-bg" class="col card mx-auto px-6 position-relative border border-dark">
-      <div class='slider'>
+      <div class='slider pb-4'>
           <input name="input-slider" id='input-slide-0' type="radio" class='input-slide input-slide-num' checked autocomplete="off">
           <input name="input-slider" id='input-slide-1' type="radio" class='input-slide input-slide-num' autocomplete="off">
           <input name="input-slider" id='input-slide-2' type="radio" class='input-slide input-slide-num' autocomplete="off">
@@ -50,7 +53,7 @@
         </div>
   </div>
 </section>
-
+</main>
 
 <div class="container">
   <div class="row justify-content-center my-4">

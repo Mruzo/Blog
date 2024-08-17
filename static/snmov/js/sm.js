@@ -1,7 +1,3 @@
-// $(document).ready(function(){
-//    $('.toast').toast('show');
-//    });
-
 $(document).ready(function(){
   // Enable Bootstrap dropdown functionality
   $('.dropdown-toggle').dropdown();
@@ -60,7 +56,7 @@ if($('#home-animation-wrapper').length){
   window.LLOS.TextSlider = new TextSlider();
 }
 
-function loadContent(url, button) {
+function loadContent(url, button = null) {
   fetch(url)
     .then(response => response.text())
     .then(html => {
@@ -69,8 +65,17 @@ function loadContent(url, button) {
       document.querySelectorAll('.neumorphic').forEach(btn => {
         btn.classList.remove('active');
       });
-      // Add active class to clicked button
-      button.classList.add('active');
+      // Add active class to clicked button if present
+      if (button) {
+        button.classList.add('active');
+      } else {
+        // Automatically add active class to the Persona button if button is not provided
+        const personaButton = document.querySelector('[href*="#about"]');
+        if (personaButton) {
+          personaButton.classList.add('active');
+        }
+      }
+      window.scrollTo(0, 0);
       initCarousel();
     })
     .catch(error => {

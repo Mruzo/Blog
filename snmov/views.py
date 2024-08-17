@@ -53,10 +53,12 @@ def article_create_view(request):
 
 def article_detail_view(request, slug):
     obj = get_object_or_404(Article, slug=slug)
-    template_name = ['snmov/home.html']
-    context = {}
-    context['object'] = obj
-    context['meta'] = obj.as_meta()
+    meta_data = obj.generate_meta_tags() 
+    template_name = 'snmov/home.html'  # Assuming 'home.html' is your base template
+    context = {
+        'object': obj,
+        'meta_data': meta_data  # Get the rendered meta tags HTML
+    }
     return render(request, template_name, context)
 
 
