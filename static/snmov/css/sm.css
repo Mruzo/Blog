@@ -103,7 +103,7 @@ footer {
   }
 
   .footer-logo img {
-    max-width: 33%;
+    max-width: 100% !important ;
     height: auto;
   }
 
@@ -171,3 +171,8 @@ footer {
     width: 100%;
 }
 
+.subtext-smm {
+  font-family: 'quicksand', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 400;
+}
