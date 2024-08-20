@@ -11,7 +11,14 @@
                 <div class="card">
                     <img class="card-img-top mb-2" src="{{ article.image.url }}" alt="image of {{ article.title }}" width="270px">
                     <div class="card-body">
-                        <h5 class="card-title font-weight-bolder px-2 m-0">{{ article.title }}</h5>
+                        <div class="row border-bottom">
+                            <div class="col-8">
+                                <h5 class="card-title font-weight-bolder px-2 m-0">{{ article.title }}</h5>
+                            </div>
+                            <div class="col-4">
+                                {{ article.publish_date | date:"M d, Y" }}
+                            </div>
+                        </div>
                         <article class="card-subtitle px-2">{{ article.content | safe | linebreaks | truncatewords:23 }}</article>
                     </div>
                     <div class="card-footer">

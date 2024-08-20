@@ -27,14 +27,21 @@
         <div class="col-md-8 col-lg-6">
             <div class="card m-2">
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row justify-content-between border-bottom">
+                        <div class="col-8">
+                            <h6 class="fs-5 m-0" style="font-weight:bold;">{{ object.title }}</h6>
+                        </div>
                         <div class="col-4">
+                            {{ object.publish_date | date:"M d, Y" }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4 align-self-center">
                             <img class="img-fluid mx-auto d-block p-2" src="{{ object.image.url }}" alt="image of {{object.title}}">
                         </div>
                         <div class=" col-8">
-                            <h6 class="m-0" style="font-weight:bold;">{{ object.title }}</h6>
                             <p class="card-text mb-0">
-                                <small>{{ object.content | safe | linebreaks | truncatewords:18 }}</small>
+                                <small>{{ object.content | safe | linebreaks | truncatewords:22 }}</small>
                             </p>
                             
                             
@@ -52,7 +59,7 @@
                                 {{ object.dislikes }}
                             </small>
                             {% endcomment %}
-                            <a class="neumorphicc p-0 font-weight-bolder" href="{{ object.get_absolute_url }}">Read</a>
+                            <a class="neumorphicc p-0 font-weight-bolder" href="{{ object.get_absolute_url }}">continue...</a>
                         </div>
                     </div>
                 </div>
