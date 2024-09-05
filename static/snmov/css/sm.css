@@ -98,6 +98,51 @@ h2 {
     color: #242424; /* Adjust placeholder text color as needed */
 }
 
+#canvas-container {
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center;     /* Center vertically */
+    height: 100vh;           /* Adjust as needed */
+}
+
+#canvas-container canvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center the canvas */
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.custom-ar-button {
+    position: relative;
+    display: block;
+    margin: 10px auto;  /* Center it under the canvas */
+    position: relative;
+    top: 10px; /* Adjust this value to control spacing under the canvas */
+    z-index: 10; /* Ensure it stays on top */
+}
+
+.ar-button:hover {
+    content: 'view in AR';  /* Use 'content' for hover effect text */
+    
+}
+
+#ar {
+    position: relative;
+}
+
+#canvas-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#canvas-container canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
 .subtext {
     font-family: 'gillsans', sans-serif;
     font-size: 2rem;

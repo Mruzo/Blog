@@ -25,6 +25,16 @@
     <link href="https://fonts.googleapis.com/css?family=Cabin|Marmelad&display=swap" rel="stylesheet"> -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
+    <!-- <script type="module" src="https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js"></script> -->
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js"
+          }
+        }
+        </script>
+
     <style>
         body {
             font-family: 'Cabin', sans-serif;
@@ -82,12 +92,11 @@
         </div>
     </footer>
     
-    <script data-ad-client="ca-pub-2701198258292083" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
     <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.1.1/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
-    <script src="{% static 'snmov/js/sm.js' %}"></script>
+    <script type="module" src="{% static 'snmov/js/sm.js' %}"></script>
     <script src="{% static 'tinymce/js/prism.js' %}"></script>
     {% if messages %}
       <script>
