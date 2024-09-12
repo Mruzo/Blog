@@ -2,10 +2,10 @@
 
 {% block content %}
 
-<script>
+<script type="text/javascript">
     const productUrls = {
         {% for product in available_products %}
-            '{{ product.slug }}': '{{ product.gltf_model.name }}',
+            '{{ product.slug }}': '{{ product.gltf_model.url }}',
         {% endfor %}
     };
 </script>

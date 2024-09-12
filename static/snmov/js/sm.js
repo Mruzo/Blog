@@ -61,7 +61,7 @@ let hitTestSource = null;
 let hitTestSourceRequested = false;
 
 const manager = new THREE.LoadingManager();
-const loader = new GLTFLoader(manager).setPath("/media/")
+const loader = new GLTFLoader(manager).setPath("")
 let modelLoaded = false;
 let model;
 
@@ -125,8 +125,10 @@ function init() {
 
     function onSelect() {
 
-        const productSlug = "ethnicbliss"; // Replace with the actual slug or a dynamic value
-        const gltfUrl = productUrls[productSlug];
+        // Assuming you want to get the first product's GLTF model
+        const firstProductSlug = Object.keys(productUrls)[0]; // Get the slug of the first available product
+        const gltfUrl = productUrls[firstProductSlug]; // Get the GLTF URL for the first product
+
 
         if (reticle.visible &&!modelLoaded) {
             loader.load(

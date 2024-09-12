@@ -26,7 +26,7 @@ class HomePageView(FormView, TemplateView):
         
 
         # Create a dictionary with product slugs and their respective GLTF model file paths
-        product_urls = {product.slug: product.gltf_model.url if product.gltf_model else '' for product in available_products}
+        product_urls = {product.gltf_model: product.gltf_model if product.gltf_model else '' for product in available_products}
         
         # Prefetch related SiteImage objects for better performance
         available_pictures = pictures.filter(object_id__in=available_products.values('id'))
