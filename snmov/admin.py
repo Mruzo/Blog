@@ -14,7 +14,7 @@ class ProductUno(admin.ModelAdmin):
     formfield_overrides = {
         models.TextField: {'widget': TinyMCE()},
     }
-    list_display = ['id', 'title', 'available']
+    list_display = ['id', 'title', 'available', 'gltf_model',]
 
 class SiteImageAdmin(admin.ModelAdmin):
     list_display = ('id', 'content_type', 'object_id', 'related_product', 'image', 'caption')

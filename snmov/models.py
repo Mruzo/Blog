@@ -62,6 +62,9 @@ class Product(ModelMeta, models.Model):
     updated = models.DateTimeField(auto_now=True)
     available = models.BooleanField(default=True)
 
+    # Add GLTF model field
+    gltf_model = models.FileField(upload_to='gltf_models/', blank=True, null=True)
+
     objects = ProductManager()
 
     _metadata = {

@@ -61,8 +61,9 @@ let hitTestSource = null;
 let hitTestSourceRequested = false;
 
 const manager = new THREE.LoadingManager();
-const loader = new GLTFLoader(manager).setPath("/static/snmov/img/")
+const loader = new GLTFLoader(manager).setPath("/media/gltf_models/")
 let modelLoaded = false;
+let model;
 
 init()
 
@@ -95,23 +96,42 @@ function init() {
     const arButton = ARButton.createButton(renderer, { requiredFeatures: ["hit-test", "light-estimation"] });
     setTimeout(() => {
         arButton.textContent = "view in AR";
-    }, 5);
-    arButton.classList.add('custom-ar-button', 'mx-auto', 'subtext-btn-sm', 'pb-4', 'mt-4', 'font-weight-bolder',);
+    }, 4);
+    arButton.classList.add('custom-ar-button', 'mx-1', 'subtext-btn-sm', 'pb-4', 'mt-4', 'font-weight-bolder',);
     document.getElementById('ar-button').appendChild(arButton);
     arButton.style.background = '#343a40';
     arButton.style.color = '#FFBC00';
     arButton.style.opacity = 1;
+    arButton.style.fontSize = "1rem";
+    console.log(arButton.classList);
     
+    // Add an event listener to monitor when the AR session starts
+    renderer.xr.addEventListener('sessionstart', (event) => {
+        const session = renderer.xr.getSession();
+
+        // Add an event listener for when the AR session ends
+        session.addEventListener('end', () => {
+            // Reset the button's hover state and styles after AR session ends
+            arButton.classList.remove('hover', 'focus', 'active'); // Remove hover, active, and focus classes
+            arButton.style.backgroundColor = '#343a40';  // Reset background color if changed
+            arButton.style.color = '#FFBC00';  // Reset text color if changed
+            arButton.style.opacity = 1;
+            // Optionally, change the button text back to its original state
+            arButton.textContent = "view in AR";
+        });
+    });
     
     console.log('ARButton created and appended to the DOM.');
 
     function onSelect() {
         if (reticle.visible &&!modelLoaded) {
             loader.load(
-                "mouse.gltf",
+                // "mouse.gltf",
+                "ethnicbliss.gltf",
                 function (gltf) {
-                    gltf.scene.children[0].position.setFromMatrixPosition(reticle.matrix);
-                    scene.add(gltf.scene);
+                    model = gltf.scene;
+                    model.children[0].position.setFromMatrixPosition(reticle.matrix);
+                    scene.add(model);
                     modelLoaded = true;
                 },
                 undefined,
@@ -135,6 +155,24 @@ function init() {
     scene.add(reticle);
 
     window.addEventListener("resize", onWindowResize, false);
+
+
+    // Event listener to clear the model when AR session ends
+    renderer.xr.addEventListener('sessionstart', (event) => {
+        const session = renderer.xr.getSession();
+        
+        session.addEventListener('end', () => {
+            // Remove the loaded model from the scene if it exists
+            if (model) {
+                scene.remove(model);
+                model = null;  // Clear the reference to the model
+                modelLoaded = false;  // Reset the modelLoaded flag
+            }
+
+            // Reset the reticle or any other session-specific objects if needed
+            reticle.visible = false;
+        });
+    });
     
 }
 

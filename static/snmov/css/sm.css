@@ -115,6 +115,9 @@ h2 {
 }
 
 .custom-ar-button {
+    font-family: 'quicksand', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 600;
     position: relative;
     display: block;
     margin: 10px auto;  /* Center it under the canvas */
@@ -162,7 +165,7 @@ h2 {
 }
 
 .subtext-btn-sm {
-    font-family: 'quicksand', sans-serif;
+    font-family: 'quicksand', sans-serif !important;
     font-size: 1.4rem;
     font-weight: 600;
 }
