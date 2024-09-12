@@ -76,6 +76,12 @@ class Product(ModelMeta, models.Model):
     def get_meta_image(self):
         if self.image:
             return self.image.url
+        
+    
+    def get_meta_gltf(self):
+        if self.gltf_model:
+            return self.gltf_model.url
+        
 
     class Meta:
         ordering = ['-publish_date', '-updated', '-timestamp']
@@ -85,6 +91,9 @@ class Product(ModelMeta, models.Model):
         return self.title
 
     def get_absolute_url(self):
+        return f"/product/{self.slug}"
+    
+    def get_gltf_url(self):
         return f"/product/{self.slug}"
 
     def get_edit_url(self):

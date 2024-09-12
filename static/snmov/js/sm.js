@@ -61,7 +61,7 @@ let hitTestSource = null;
 let hitTestSourceRequested = false;
 
 const manager = new THREE.LoadingManager();
-const loader = new GLTFLoader(manager).setPath("/media/gltf_models/")
+const loader = new GLTFLoader(manager).setPath("/media/")
 let modelLoaded = false;
 let model;
 
@@ -124,10 +124,13 @@ function init() {
     console.log('ARButton created and appended to the DOM.');
 
     function onSelect() {
+
+        const productSlug = "ethnicbliss"; // Replace with the actual slug or a dynamic value
+        const gltfUrl = productUrls[productSlug];
+
         if (reticle.visible &&!modelLoaded) {
             loader.load(
-                // "mouse.gltf",
-                "ethnicbliss.gltf",
+                gltfUrl,
                 function (gltf) {
                     model = gltf.scene;
                     model.children[0].position.setFromMatrixPosition(reticle.matrix);

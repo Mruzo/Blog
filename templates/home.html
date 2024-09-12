@@ -2,6 +2,13 @@
 
 {% block content %}
 
+<script>
+    const productUrls = {
+        {% for product in available_products %}
+            '{{ product.slug }}': '{{ product.gltf_model.name }}',
+        {% endfor %}
+    };
+</script>
 
 <section class="row my-3 position-relative" style="background-color: inherit; display: flex; justify-content: center; align-items: center; min-height: 22vh;">
     <div class="col card mx-auto position-relative rounded-0 border-0 d-flex justify-content-center align-items-center" style="background-color:inherit;">
