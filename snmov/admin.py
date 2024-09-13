@@ -1,10 +1,12 @@
 from django.contrib import admin
-from .models import Product, Comment, Preference, ReachOut, About, SiteImage, Testimonials, ProductNotification
+from .models import Product, Comment, Preference, ReachOut, About, SiteImage, Testimonials, ProductNotification, ARUsage, ModelUsage
 from tinymce.widgets import TinyMCE
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Sum, Avg
+
 
 # unregiser provided model admin
 admin.site.unregister(User)
@@ -54,6 +56,26 @@ class NotificationUno(admin.ModelAdmin):
     num_notifications.short_description = 'Number of Notifications'
     get_active_notifications.short_description = 'Active Notifications'
 
+class ARUsageUno(admin.ModelAdmin):
+    list_display = ('user', 'anonymous_user_id', 'timestamp','count', 'total_usage') 
+
+    def total_usage(self, obj):
+        # Assuming you want to display a total count across all records
+        total = ARUsage.objects.aggregate(total_count=Sum('count'))['total_count'] or 0
+        return total
+
+    total_usage.short_description = 'Total Usage'
+
+class ModelUsageUno(admin.ModelAdmin):
+    list_display = ('user','anonymous_user_id', 'timestamp', 'count', 'total_usage')
+
+    def total_usage(self, obj):
+        # Assuming you want to display a total count across all records
+        total = ModelUsage.objects.aggregate(total_count=Sum('count'))['total_count'] or 0
+        return total
+
+    total_usage.short_description = 'Total Usage'
+
 # Register your models here.
 admin.site.register(Product, ProductUno)
 admin.site.register(Comment)
@@ -63,6 +85,8 @@ admin.site.register(About, AboutUno)
 admin.site.register(SiteImage, SiteImageAdmin)
 admin.site.register(Testimonials)
 admin.site.register(ProductNotification, NotificationUno)
+admin.site.register(ARUsage, ARUsageUno)
+admin.site.register(ModelUsage, ModelUsageUno)
 
 
 @admin.register(User)

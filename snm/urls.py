@@ -1,5 +1,7 @@
 from .views import(
     HomePageView,
+    track_ar_usage,
+    track_model_usage,
     about_page,
     contact_page,
     privacy_page,
@@ -16,6 +18,7 @@ from snmov.views import (
     logout_request,
     register_view,
     validate_username,
+    
 )
 from snmov.sitemaps import StaticViewSitemap, ProductSitemap, CommentSitemap
 sitemaps = {
@@ -33,6 +36,8 @@ urlpatterns = [
     path('terms/', terms_page, name='terms'),
     path('cookies/', cookie_page, name='cookie'),
     path('contact/', contact_page, name='contact'),
+    path('track-ar-usage/', track_ar_usage, name='track-ar-usage'),
+    path('track-model-usage/', track_model_usage, name='track-ar-usage'),
     path('logout/', logout_request, name='logout_req'),
     path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'),
          name='login_req'),

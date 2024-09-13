@@ -97,17 +97,18 @@ function init() {
     setTimeout(() => {
         arButton.textContent = "view in AR";
     }, 4);
-    arButton.classList.add('custom-ar-button', 'mx-1', 'subtext-btn-sm', 'pb-4', 'mt-4', 'font-weight-bolder',);
+    arButton.classList.add('custom-ar-button', 'mx-auto', 'subtext-btn-sm', 'pb-4', 'mt-4', 'font-weight-bolder',);
     document.getElementById('ar-button').appendChild(arButton);
     arButton.style.background = '#343a40';
     arButton.style.color = '#FFBC00';
     arButton.style.opacity = 1;
     arButton.style.fontSize = "1rem";
-    console.log(arButton.classList);
     
     // Add an event listener to monitor when the AR session starts
     renderer.xr.addEventListener('sessionstart', (event) => {
         const session = renderer.xr.getSession();
+
+        recordARUsage();
 
         // Add an event listener for when the AR session ends
         session.addEventListener('end', () => {
@@ -120,8 +121,41 @@ function init() {
             arButton.textContent = "view in AR";
         });
     });
-    
-    console.log('ARButton created and appended to the DOM.');
+
+    // Function to record AR usage via an AJAX call
+    function recordARUsage() {
+        // Perform a POST request to your Django view to track usage
+        fetch("/track-ar-usage/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie('csrftoken') // Include CSRF token if using Django
+            },
+            body: JSON.stringify({
+                message: "AR button used"
+            })
+        })
+        .then(response => response.json())
+        .catch((error) => {
+            console.error("Error recording AR usage:", error);
+        });
+    }
+
+    // Helper function to get the CSRF token from cookies (for Django)
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 
     function onSelect() {
 
@@ -136,15 +170,42 @@ function init() {
                 function (gltf) {
                     model = gltf.scene;
                     model.children[0].position.setFromMatrixPosition(reticle.matrix);
+                    model.children[0].position.y -= 0.01; // 1 cm lower than the detected surface
                     scene.add(model);
                     modelLoaded = true;
+
+                    recordModelUsage();
                 },
+
                 undefined,
                 function (error) {
                     console.error(error);
                 }
             );
         }
+
+         // Function to record AR usage via an AJAX call
+        function recordModelUsage() {
+            // Perform a POST request to your Django view to track usage
+            fetch("/track-model-usage/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie('csrftoken') // Include CSRF token if using Django
+                },
+                body: JSON.stringify({
+                    message: "Model loaded"
+                })
+            })
+            .then(response => response.json())
+            // .then(data => {
+            //     console.log("Model usage recorded:", data);
+            // })
+            .catch((error) => {
+                console.error("Error recording Model usage:", error);
+            });
+        }
+
     }
 
     controller = renderer.xr.getController(0);

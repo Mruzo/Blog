@@ -162,6 +162,29 @@ class Testimonials(models.Model):
             return self.image.url
 
 
+class ARUsage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # Track user (optional)
+    anonymous_user_id = models.CharField(max_length=255, null=True, blank=True)
+    timestamp = models.DateTimeField(default=timezone.now)
+    count = models.IntegerField(default=0)
+
+    def __str__(self):
+        if self.user:
+            return f"AR usage by {self.user} at {self.timestamp}"
+        return f"AR usage by anonymous user {self.anonymous_user_id} at {self.timestamp}"
+
+class ModelUsage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # Track user (optional)
+    anonymous_user_id = models.CharField(max_length=255, null=True, blank=True)
+    timestamp = models.DateTimeField(default=timezone.now)
+    count = models.IntegerField(default=0)
+    
+    def __str__(self):
+        if self.user:
+            return f"Model usage by {self.user} at {self.timestamp}"
+        return f"Model usage by anonymous user {self.anonymous_user_id} at {self.timestamp}"
+
+
 class Preference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(

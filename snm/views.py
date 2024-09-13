@@ -1,15 +1,17 @@
 from django.shortcuts import render, redirect, reverse
 from django.utils import timezone
 from .forms import ContactModelForm, ProductNotificationForm
-from snmov.models import Product, Comment, ReachOut, SiteImage, Testimonials, ProductNotification, About
+from snmov.models import Product, Comment, ReachOut, SiteImage, Testimonials, ProductNotification, About, ARUsage, ModelUsage
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import send_mail, BadHeaderError
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.generic.edit import DeleteView
 from django.views.generic import TemplateView, FormView
 from django.conf import settings
 from random import sample
+import uuid
+
 
 class HomePageView(FormView, TemplateView):
     template_name = 'home.html'
@@ -92,6 +94,47 @@ class HomePageView(FormView, TemplateView):
         # Simply render the form with the context
         context = self.get_context_data(form=form)
         return self.render_to_response(context)
+
+def track_ar_usage(request):
+    # Track the AR usage
+    user = request.user if request.user.is_authenticated else None
+    anonymous_user_id = None
+
+    if not user:
+        # Get session key or generate a UUID
+        anonymous_user_id = request.session.session_key or str(uuid.uuid4())
+
+    if request.method == "POST":
+        # Save the usage data
+        ARUsage.objects.create(
+            user=user,
+            anonymous_user_id=anonymous_user_id,
+            count=1  # Or any count logic you need
+        )
+
+        return JsonResponse({"status": "success"})
+    return JsonResponse({"status": "error"}, status=400)
+
+
+def track_model_usage(request):
+    # Track the AR usage
+    user = request.user if request.user.is_authenticated else None
+    anonymous_user_id = None
+
+    if not user:
+        # Get session key or generate a UUID
+        anonymous_user_id = request.session.session_key or str(uuid.uuid4())
+
+    if request.method == "POST":
+        # Save the usage data
+        ModelUsage.objects.create(
+            user=user,
+            anonymous_user_id=anonymous_user_id,
+            count=1  # Or any count logic you need
+        )
+
+        return JsonResponse({"status": "success"})
+    return JsonResponse({"status": "error"}, status=400)
 
 
 def about_page(request):
