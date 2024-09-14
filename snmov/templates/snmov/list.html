@@ -37,7 +37,11 @@
                     </div>
                     <div class="row">
                         <div class="col-4 align-self-center">
-                            <img class="img-fluid mx-auto d-block p-2" src="{{ object.image.url }}" alt="image of {{object.title}}">
+                            {% if object.gif_model %}
+                                <img class="img-fluid mx-auto d-block p-2" src="{{ object.gif_model.url }}" alt="GIF of {{object.title}}">
+                            {% else %}
+                                <img class="img-fluid mx-auto d-block p-2" src="{{ object.image.url }}" alt="image of {{object.title}}">
+                            {% endif %}
                         </div>
                         <div class=" col-8">
                             <p class="card-text mb-0">
