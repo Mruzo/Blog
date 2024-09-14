@@ -5,11 +5,27 @@
 {% if not detail %}
 
 <div class="card m-1">
-    <img
-        class="card-img-top mb-2"
-        src="{{ article.image.url }}"
-        alt="image of {{ article.title }}"
-        width="270px">
+    {% if article.gif_model %}
+        <!-- Display the GIF if it exists -->
+        <img
+            class="card-img-top mb-2"
+            src="{{ article.gif_model.url }}"
+            alt="GIF of {{ article.title }}"
+            width="270px"
+            height="auto">
+    {% elif article.image %}
+        <!-- Fallback to the regular image -->
+        <img
+            class="card-img-top mb-2"
+            src="{{ article.image.url }}"
+            alt="image of {{ article.title }}"
+            width="270px"
+            height="auto">
+    {% else %}
+        <!-- Optionally handle case where no image or GIF is present -->
+        <p>No image available</p>
+    {% endif %}
+
     <div class="row">
         <div class="col-8">
             <h5 class="card-title font-weight-bolder px-2 m-0">{{ article.title }}</h5>
@@ -68,7 +84,24 @@
                 <p>By <a class="text-info" href="/#about" onclick="loadContent('/about', this)">Chris Uzo</a> {{ article.publish_date | date:"M d, Y" }}</p>
             </div>
 
-            <img class="img-fluid mx-auto d-block p-2" src="{{ article.image.url }}" alt="image of {{article.title}}">
+            <!-- <img class="img-fluid mx-auto d-block p-2" src="{{ article.image.url }}" alt="image of {{article.title}}"> -->
+
+            {% if article.gif_model %}
+                <!-- Display the GIF if it exists -->
+                <img
+                    class="img-fluid mx-auto d-block p-2"
+                    src="{{ article.gif_model.url }}"
+                    alt="GIF of {{ article.title }}">
+            {% elif article.image %}
+                <!-- Fallback to the regular image -->
+                <img
+                    class="img-fluid mx-auto d-block p-2"
+                    src="{{ article.image.url }}"
+                    alt="image of {{ article.title }}">
+            {% else %}
+                <!-- Optionally handle case where no image or GIF is present -->
+                <p>No image available</p>
+            {% endif %}
 
             <!-- <div class="row w-100 m-0 mb-2 d-flex justify-content-end">
                 <small class="ml-auto">

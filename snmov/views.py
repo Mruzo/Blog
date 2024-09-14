@@ -52,12 +52,19 @@ def article_create_view(request):
 
 
 def article_detail_view(request, slug):
-    obj = get_object_or_404(Article, slug=slug)
+    obj = Article.objects.get(slug=slug)
+    
+    # Get the image URL, prioritizing the GIF if present
+    model_url = obj.get_meta_image()  # This now handles both GIF and regular image
+    model_type = "gif" if obj.gif_model else "image"
+    
     meta_data = obj.generate_meta_tags() 
     template_name = 'snmov/home.html'  # Assuming 'home.html' is your base template
     context = {
         'object': obj,
-        'meta_data': meta_data  # Get the rendered meta tags HTML
+        'meta_data': meta_data,
+        'model_url': model_url,  # URL of the image or gif
+        'model_type': model_type,  # Type of the file (gif or image)
     }
     return render(request, template_name, context)
 

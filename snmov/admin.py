@@ -4,6 +4,8 @@ from tinymce.widgets import TinyMCE
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
+from django.utils.html import format_html
+from django.urls import reverse
 
 # unregiser provided model admin
 admin.site.unregister(User)
@@ -13,7 +15,15 @@ class ArticleUno(admin.ModelAdmin):
     formfield_overrides = {
         models.TextField: {'widget': TinyMCE()},
     }
-    list_display = ('id', 'title', 'slug', 'publish_date', 'updated', 'likes', 'dislikes')
+    list_display = ('id', 'title_link', 'slug', 'publish_date', 'updated', 'likes', 'dislikes')
+
+    def title_link(self, obj):
+        # Generate the admin edit URL for the current article
+        url = reverse('admin:snmov_article_change', args=[obj.id])
+        return format_html('<a href="{}">{}</a>', url, obj.title)
+
+    title_link.short_description = 'Title'  # Column title in the admin list
+    title_link.admin_order_field = 'title'  # Make the column sortable
 
 class AboutUno(admin.ModelAdmin):
     formfield_overrides = {

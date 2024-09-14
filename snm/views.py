@@ -24,13 +24,24 @@ def home_page(request):
 
 def home_list(request):
     id_list = Article.objects.all().values_list('id', flat=True)
+
     if id_list.count() > 2:
-        random_profiles_id_list = sample(list(id_list), 3
-                                        )
+        random_profiles_id_list = sample(list(id_list), 3)
         qs = Article.objects.filter(id__in=random_profiles_id_list)
     else:
-        qs = id_list
-    context = {'article_list': qs}
+        qs = Article.objects.all()  # Show all articles if fewer than 3 exist
+
+    # Attach media (either gif or image) to each article in the queryset
+    article_list = []
+    for article in qs:
+        # Get the meta image or gif for each article
+        article_media = article.get_meta_image()  # get_meta_image() will handle both gif and image
+        article_list.append({
+            'article': article,
+            'media_url': article_media  # This is either the gif URL or the image URL
+        })
+
+    context = {'article_list': article_list}
     return render(request, "article_list.html", context)
 
 

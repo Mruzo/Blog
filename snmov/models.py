@@ -59,6 +59,9 @@ class Article(ModelMeta, models.Model):
     dislikes = models.IntegerField(default=0)
     updated = models.DateTimeField(auto_now=True)
 
+    # GIF model field
+    gif_model = models.ImageField(upload_to='gif_models/', blank=True, null=True)
+
     objects = ArticleManager()
 
     _metadata = {
@@ -68,8 +71,12 @@ class Article(ModelMeta, models.Model):
     }
 
     def get_meta_image(self):
-        if self.image:
+        # Check if a GIF is available, if not return the image
+        if self.gif_model:
+            return self.gif_model.url
+        elif self.image:
             return self.image.url
+        return None
 
     def generate_meta_tags(self):
         meta_tags = {
