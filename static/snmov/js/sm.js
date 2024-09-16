@@ -94,15 +94,16 @@ function init() {
     renderer.setAnimationLoop(animate);
 
     const arButton = ARButton.createButton(renderer, { requiredFeatures: ["hit-test", "light-estimation"] });
-    setTimeout(() => {
-        arButton.textContent = "view in AR";
-    }, 4);
-    arButton.classList.add('custom-ar-button', 'mx-auto', 'subtext-btn-sm', 'pb-4', 'mt-4', 'font-weight-bolder',);
+
+    arButton.classList.add('custom-ar-button', 'mx-auto', 'subtext-btn-sm', 'py-2', 'my-2', 'font-weight-bolder',);
     document.getElementById('ar-button').appendChild(arButton);
+    // Override default styles, removing 'left' and centering using flexbox and Bootstrap
     arButton.style.background = '#343a40';
     arButton.style.color = '#FFBC00';
     arButton.style.opacity = 1;
     arButton.style.fontSize = "1rem";
+    arButton.style.left = '';  // Remove calc(50% - 50px) to avoid manual centering
+    arButton.style.position = 'relative';  // Keep it relative, but allow flexbox to center it
     
     // Add an event listener to monitor when the AR session starts
     renderer.xr.addEventListener('sessionstart', (event) => {

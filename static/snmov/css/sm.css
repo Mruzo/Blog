@@ -98,6 +98,12 @@ h2 {
     color: #242424; /* Adjust placeholder text color as needed */
 }
 
+.list-group-item {
+    border: none; /* Remove all default borders */
+    border-bottom: 1px solid #dee2e6; /* Add bottom border */
+}
+
+
 #canvas-container {
     display: flex;
     justify-content: center; /* Center horizontally */
@@ -116,14 +122,14 @@ h2 {
 
 .custom-ar-button {
     font-family: 'quicksand', sans-serif;
-    font-size: 1.4rem;
+    /* font-size: 1.4rem; */
     font-weight: 600;
     position: relative;
     display: block;
     margin: 10px auto;  /* Center it under the canvas */
-    position: relative;
     top: 10px; /* Adjust this value to control spacing under the canvas */
     z-index: 10; /* Ensure it stays on top */
+    left: auto !important;
 }
 
 .ar-button:hover {
