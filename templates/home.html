@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
 
+{% block meta_extend %}
+  <meta property="og:image" content="{{ random_image_url }}">
+  <meta name="twitter:image" content="{{ random_image_url }}">
+
+  <!-- Fallback if no image is available -->
+  {% if random_image_url == "https://default_image_url.jpg" %}
+    <meta property="og:image" content="https://default_image_url.jpg">
+    <meta name="twitter:image" content="https://default_image_url.jpg">
+  {% endif %}
+{% endblock %}
+
+
 {% block content %}
 
 <script type="text/javascript">
@@ -70,7 +82,7 @@
         <div class="col-md-6 d-flex flex-column align-items-center justify-content-center mx-auto">
 
             <div class="card w-100 border-0">
-                <div class="card-header subtext text-center py-0" style="background-color: #343a40; color: #fcfbfb;">
+                <div class="card-header subtext-md text-center py-0" style="background-color: #343a40; color: #fcfbfb;">
                     Visualize with AR
                 </div>
                 <ol class="list-group list-group-numbered">
@@ -143,9 +155,16 @@
     </div>
 
     <div id="notification_form" class="container text-center">
-        <h6 class="subtext my-2">
+
+        <div class="card w-100 border-0">
+            <div class="card-header subtext-md text-center py-0" style="background-color: #343a40; color: #fcfbfb;">
+                get notified on stock availability
+            </div>
+
+
+        <!-- <h6 class="subtext-md my-2" style="background-color: #343a40; color: #fcfbfb;">
             get notified on stock availability
-        </h6>
+        </h6> -->
         <div class="container text-center mt-1 mx-auto subtext-smm" id="" style="opacity: 1">
             *select at least one
         </div>
@@ -173,6 +192,8 @@
             
             <button class="btn subtext-btn-sm shadow mb-0 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 mt-1 p-1" role="button" aria-disabled="true" style="background-color: #FFBC00;" type="submit">get notified</button>
         </form>
+
+        </div>
 
     </div>
 

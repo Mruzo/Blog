@@ -158,6 +158,12 @@ h2 {
     font-weight: 600;
 }
 
+.subtext-md {
+    font-family: 'gillsans', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 500;
+}
+
 .subtext-28 {
     font-family: 'quicksand', sans-serif;
     font-size: 28px;

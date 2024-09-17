@@ -9,7 +9,7 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.generic.edit import DeleteView
 from django.views.generic import TemplateView, FormView
 from django.conf import settings
-from random import sample
+import random
 import uuid
 
 
@@ -33,6 +33,13 @@ class HomePageView(FormView, TemplateView):
         # Prefetch related SiteImage objects for better performance
         available_pictures = pictures.filter(object_id__in=available_products.values('id'))
         unavailable_pictures = pictures.filter(object_id__in=unavailable_products.values('id'))
+
+        # Select a random picture for the meta tag
+        if available_pictures.exists():
+            random_picture = random.choice(available_pictures)
+            random_image_url = random_picture.image.url
+        else:
+            random_image_url = 'https://default_image_url.jpg'
         
         # Add these to the context
         context.update({
@@ -41,7 +48,8 @@ class HomePageView(FormView, TemplateView):
             'unavailable_pictures': unavailable_pictures,
             'testimonials': testimonials,
             'about': About.objects.first(),
-            'product_urls': product_urls, 
+            'product_urls': product_urls,
+            'random_image_url': random_image_url, 
         })
         
         return context

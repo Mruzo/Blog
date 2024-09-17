@@ -6,26 +6,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Shop Vibrant Desk Mats Online | Get Notified on availability of Out of Stock items | Justvybz</title>
-    <meta name="description" content="Welcome to Justvybz! Shop now and stay updated with the latest available products and offers. Sign up to receive notifications when products are back in stock .">
+    <title>Shop Beautiful Desk Mats - Experience in Augmented Reality. | Justvybz</title>
+    <meta name="description" content="Explore the most beautiful desk mats for your workspace. Experience their vibrance in Augmented Reality. Sign up to stay updated on new designs.">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Shop Ethnic Bliss or Sign up to Get Notified on the availability of Stardust and Hound Haven">
-    <meta property="og:description" content="Discover the vibrant Ethnic Bliss on Justvybz.com. Sign up to receive notifications on the upcoming Stardust and Hound Haven. Stay updated on all arrivals and be the first to know when they become available.">
-    <meta property="og:image" content="https://misteruzo.s3.ca-central-1.amazonaws.com/media/image/20230527_181919_1.jpg">
-    <meta property="og:image:alt" content="A simple, durable, and neatly designed desk mat">
-    <meta property="og:url" content="www.justvybz.com">
+    <meta property="og:title" content="Shop Beautiful Desk Mats | Justvybz">
+    <meta property="og:description" content="Discover stunning desk mats for your workspace. Experience their vibrance in Augmented Reality and sign up for exclusive new designs.">
+
+    <meta property="og:image" content="{{ random_image_url }}">
+    <meta property="og:image:alt" content="{% block og_image_alt %}A stylish desk mat in a workspace{% endblock %}">
+    <meta property="og:url" content="https://www.justvybz.com">
     {% block meta_extend %}
     <meta name="robots" content="index, follow">
     <meta name="googlebot" content="index, follow">
-
     {% endblock %}
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta name="theme-color" content="#ffbc00">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@your_twitter_handle">
+    <meta name="twitter:title" content="Shop Beautiful Desk Mats | Justvybz">
+    <meta name="twitter:description" content="Discover stunning desk mats for your workspace. Experience their vibrance in Augmented Reality and sign up for exclusive new designs.">
+
+    <meta name="twitter:image" content="{{ random_image_url }}">
+    <meta name="twitter:image:alt" content="{% block twitter_image_alt %}A stylish desk mat in a workspace{% endblock %}">
+    
+    <link rel="canonical" href="https://www.justvybz.com">
     <link rel="shortcut icon" type="image/png" href="{% static 'snmov/img/wbicon.png' %}"/>
     <link rel="stylesheet" href="{% static 'tinymce/css/prism.css' %}">
-    <!-- <link href="https://fonts.googleapis.com/css?family=Marmelad&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Cabin|Marmelad&display=swap" rel="stylesheet"> -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
-    <!-- <script type="module" src="https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js"></script> -->
+</head>
 
     <script type="importmap">
         {
