@@ -24,6 +24,18 @@ class HomePageView(FormView, TemplateView):
         pictures = SiteImage.objects.filter(content_type__model='product')
         testimonials = Testimonials.objects.all()
         available_products = Product.objects.filter(available=True)
+
+        discounted_products = []
+
+        for product in available_products:
+            if product.discount_percentage > 0:
+                discounted_products.append({
+                    'title': product.title,
+                    'original_price': product.price,
+                    'discounted_price': product.get_discounted_price(),
+                    'discount_percentage': product.discount_percentage,
+                })
+
         unavailable_products = Product.objects.filter(available=False)
         
 
@@ -45,6 +57,8 @@ class HomePageView(FormView, TemplateView):
         context.update({
             'available_products': available_products,
             'available_pictures': available_pictures,
+            'available_products': available_products,
+            'discounted_products': discounted_products,
             'unavailable_pictures': unavailable_pictures,
             'testimonials': testimonials,
             'about': About.objects.first(),

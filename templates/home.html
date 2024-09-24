@@ -48,10 +48,6 @@
                             {% if picture.object_id == product.id %}
                                 <div class="carousel-item {% if forloop.first %}active{% endif %}">
                                     <img src="{{ picture.image.url }}" class="d-block w-100 border-2" alt="{{ picture.caption }}">
-                                    <!-- <div class="carousel-caption text-start d-block p-2 m-0 bg-secondary">
-                                        <h1 class="subtext-btn-sm m-0"><strong>{{ picture.content_object.title }}</strong></h1>
-                                        <p> {{ picture.caption }} </p>
-                                    </div> -->
                                 </div>
                             {% endif %}
                         {% endfor %}
@@ -68,8 +64,40 @@
 
 
                 <div class="card-body border-top">
-                <h5 class="card-title subtext-btn-sm">{{ product.title }}</h5>
+                
+                    
+                    
+                    {% if product.discount_percentage > 0 %}
+                    <h5 class="card-title subtext-btn-sm">
+
+                    
+                    <p class="card-text">
+                        
+                        <span style="color: #DC2229;">
+                           <b> ${{ product.get_discounted_price|floatformat:2 }} </b>
+
+                        </span><br>
+
+                        <span class="subtext-sm text-dark" >
+                            <b style="text-decoration: line-through;">${{ product.price }} </b> <b style="color: #DC2229;"> &nbsp; -{{ product.discount_percentage|floatformat:0 }}% </b><b class="text-dark" > Original Price</b>
+                        </span>
+                        </h5>
+                        {% else %}
+                        <h5 class="card-title subtext-btn-sm text-right">
+                        <span style="text-decoration: line-through; color: #DC2229;"></span>
+                            CAD${{ product.price }}
+                        </span><br>
+
+                    </p>
+                    </h5>
+                    {% endif %}
+                
+                
+                
+                    
+                <h5 class="card-title subtext-btn-sm border-top">{{ product.title }}</h5>
                 <p class="card-text subtext-sm border-top">{{ product.description }}</p>
+
                 </div>
                 
             </div>

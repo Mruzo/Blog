@@ -56,6 +56,8 @@ class Product(ModelMeta, models.Model):
     content = models.TextField(null=True, blank=True)
     publish_date = models.DateTimeField(
         auto_now=False, auto_now_add=False, null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)  # Original price
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # Discount percentage
     timestamp = models.DateTimeField(auto_now_add=True)
     likes = models.IntegerField(default=0)
     dislikes = models.IntegerField(default=0)
@@ -95,6 +97,11 @@ class Product(ModelMeta, models.Model):
     
     def get_gltf_url(self):
         return f"/product/{self.slug}"
+    
+    def get_discounted_price(self):
+        if self.discount_percentage > 0:
+            return self.price * (1 - self.discount_percentage / 100)
+        return self.price
 
     def get_edit_url(self):
         return f"{self.get_absolute_url()}/edit"
