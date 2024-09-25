@@ -68,7 +68,6 @@ let model;
 init()
 
 function init() {
-    
     canvasContainer = document.getElementById("canvas");
     const canvas = document.createElement("canvas");
     canvas.style.display = 'none';
@@ -77,7 +76,7 @@ function init() {
     scene = new THREE.Scene();
 
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-    
+
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
     light.position.set(0.5, 1, 0.25);
     scene.add(light);
@@ -95,31 +94,30 @@ function init() {
 
     const arButton = ARButton.createButton(renderer, { requiredFeatures: ["hit-test", "light-estimation"] });
 
-    arButton.classList.add('custom-ar-button', 'mx-auto', 'subtext-btn-sm', 'py-2', 'my-2', 'font-weight-bolder',);
+    arButton.classList.add('custom-ar-button', 'mx-auto', 'subtext-btn-sm', 'py-2', 'my-2', 'font-weight-bolder');
     document.getElementById('ar-button').appendChild(arButton);
+    
     // Override default styles, removing 'left' and centering using flexbox and Bootstrap
     arButton.style.background = '#343a40';
     arButton.style.color = '#FFBC00';
     arButton.style.opacity = 1;
     arButton.style.fontSize = "1rem";
-    arButton.style.left = '';  // Remove calc(50% - 50px) to avoid manual centering
-    arButton.style.position = 'relative';  // Keep it relative, but allow flexbox to center it
-    
+    arButton.style.left = ''; // Remove calc(50% - 50px) to avoid manual centering
+    arButton.style.position = 'relative'; // Keep it relative, but allow flexbox to center it
+
     // Add an event listener to monitor when the AR session starts
     renderer.xr.addEventListener('sessionstart', (event) => {
         const session = renderer.xr.getSession();
-
         recordARUsage();
 
         // Add an event listener for when the AR session ends
         session.addEventListener('end', () => {
             // Reset the button's hover state and styles after AR session ends
             arButton.classList.remove('hover', 'focus', 'active'); // Remove hover, active, and focus classes
-            arButton.style.backgroundColor = '#343a40';  // Reset background color if changed
-            arButton.style.color = '#FFBC00';  // Reset text color if changed
+            arButton.style.backgroundColor = '#343a40'; // Reset background color if changed
+            arButton.style.color = '#FFBC00'; // Reset text color if changed
             arButton.style.opacity = 1;
-            // Optionally, change the button text back to its original state
-            arButton.textContent = "view in AR";
+            arButton.textContent = "view in AR"; // Optionally, change the button text back to its original state
         });
     });
 
@@ -136,10 +134,10 @@ function init() {
                 message: "AR button used"
             })
         })
-        .then(response => response.json())
-        .catch((error) => {
-            console.error("Error recording AR usage:", error);
-        });
+            .then(response => response.json())
+            .catch((error) => {
+                console.error("Error recording AR usage:", error);
+            });
     }
 
     // Helper function to get the CSRF token from cookies (for Django)
@@ -159,54 +157,68 @@ function init() {
     }
 
     function onSelect() {
-
         // Assuming you want to get the first product's GLTF model
         const firstProductSlug = Object.keys(productUrls)[0]; // Get the slug of the first available product
-        const gltfUrl = productUrls[firstProductSlug]; // Get the GLTF URL for the first product
+        const modelUrl = getModelUrl(firstProductSlug); // Get the correct URL for the first product
 
-
-        if (reticle.visible &&!modelLoaded) {
-            loader.load(
-                gltfUrl,
-                function (gltf) {
-                    model = gltf.scene;
-                    model.children[0].position.setFromMatrixPosition(reticle.matrix);
-                    model.children[0].position.y -= 0.01; // 1 cm lower than the detected surface
-                    scene.add(model);
-                    modelLoaded = true;
-
-                    recordModelUsage();
-                },
-
-                undefined,
-                function (error) {
-                    console.error(error);
-                }
-            );
+        if (!modelUrl) {
+            console.error("Model URL not found");
+            return;
         }
 
-         // Function to record AR usage via an AJAX call
-        function recordModelUsage() {
-            // Perform a POST request to your Django view to track usage
-            fetch("/track-model-usage/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCookie('csrftoken') // Include CSRF token if using Django
-                },
-                body: JSON.stringify({
-                    message: "Model loaded"
-                })
+        // Determine which loader to use based on the file extension
+        const isUSDZ = modelUrl.endsWith('.usdz');
+
+        if (reticle.visible && !modelLoaded) {
+            if (isUSDZ) {
+                // For USDZ files, handle them natively with AR Quick Look on iOS.
+                const anchor = document.createElement('a');
+                anchor.setAttribute('rel', 'ar');
+                anchor.setAttribute('href', modelUrl);
+                anchor.style.display = 'none';
+                document.body.appendChild(anchor);
+                anchor.click();
+                document.body.removeChild(anchor);
+                modelLoaded = true;
+            } else {
+                // Load GLTF models using the GLTFLoader
+                loader.load(
+                    modelUrl,
+                    function (gltf) {
+                        model = gltf.scene;
+                        model.children[0].position.setFromMatrixPosition(reticle.matrix);
+                        model.children[0].position.y -= 0.01; // 1 cm lower than the detected surface
+                        scene.add(model);
+                        modelLoaded = true;
+
+                        recordModelUsage();
+                    },
+                    undefined,
+                    function (error) {
+                        console.error(error);
+                    }
+                );
+            }
+        }
+    }
+
+    // Function to record model usage via an AJAX call
+    function recordModelUsage() {
+        // Perform a POST request to your Django view to track usage
+        fetch("/track-model-usage/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie('csrftoken') // Include CSRF token if using Django
+            },
+            body: JSON.stringify({
+                message: "Model loaded"
             })
+        })
             .then(response => response.json())
-            // .then(data => {
-            //     console.log("Model usage recorded:", data);
-            // })
             .catch((error) => {
                 console.error("Error recording Model usage:", error);
             });
-        }
-
     }
 
     controller = renderer.xr.getController(0);
@@ -223,24 +235,22 @@ function init() {
 
     window.addEventListener("resize", onWindowResize, false);
 
-
     // Event listener to clear the model when AR session ends
     renderer.xr.addEventListener('sessionstart', (event) => {
         const session = renderer.xr.getSession();
-        
+
         session.addEventListener('end', () => {
             // Remove the loaded model from the scene if it exists
             if (model) {
                 scene.remove(model);
-                model = null;  // Clear the reference to the model
-                modelLoaded = false;  // Reset the modelLoaded flag
+                model = null; // Clear the reference to the model
+                modelLoaded = false; // Reset the modelLoaded flag
             }
 
             // Reset the reticle or any other session-specific objects if needed
             reticle.visible = false;
         });
     });
-    
 }
 
 function onWindowResize() {
@@ -299,4 +309,3 @@ function animate( timestamp, xrFrame) {
     renderer.render(scene, camera);
 
 }
-

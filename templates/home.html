@@ -14,13 +14,32 @@
 
 {% block content %}
 
+
 <script type="text/javascript">
+    // Dictionary of product URLs dynamically inserted by Django
     const productUrls = {
         {% for product in available_products %}
-            '{{ product.slug }}': '{{ product.gltf_model.url }}',
+            '{{ product.slug }}': {
+                'gltf': '{{ product.gltf_model.url }}',
+                'usdz': '{{ product.usdz_model.url }}'
+            },
         {% endfor %}
     };
+
+    // Function to detect if the user is on an iPhone
+    function isIphone() {
+        return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    // Function to get the correct URL based on device type
+    function getModelUrl(slug) {
+        const product = productUrls[slug];
+        if (!product) return null;
+
+        return isIphone() ? product.usdz : product.gltf;
+    }
 </script>
+
 
 <section class="row my-3 position-relative" style="background-color: inherit; display: flex; justify-content: center; align-items: center; min-height: 22vh;">
     <div class="col card mx-auto position-relative rounded-0 border-0 d-flex justify-content-center align-items-center" style="background-color:inherit;">

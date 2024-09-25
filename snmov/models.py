@@ -66,6 +66,7 @@ class Product(ModelMeta, models.Model):
 
     # Add GLTF model field
     gltf_model = models.FileField(upload_to='gltf_models/', blank=True, null=True)
+    usdz_model = models.FileField(upload_to='usdz_models/', blank=True, null=True)
 
     objects = ProductManager()
 
@@ -95,8 +96,15 @@ class Product(ModelMeta, models.Model):
     def get_absolute_url(self):
         return f"/product/{self.slug}"
     
+    # def get_gltf_url(self):
+    #     return f"/product/{self.slug}"
+    
     def get_gltf_url(self):
-        return f"/product/{self.slug}"
+        return self.gltf_model.url if self.gltf_model else ""
+
+    def get_meta_usdz(self):
+        return self.usdz_model.url if self.gltf_model else ""
+            
     
     def get_discounted_price(self):
         if self.discount_percentage > 0:
