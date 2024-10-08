@@ -31,6 +31,8 @@ html {
     font-size: 1rem;
     height: 100%;
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%; /* For Safari/Apple devices */
+    text-size-adjust: 100%;   
 }
   
 @include media-breakpoint-up(sm) {
@@ -383,14 +385,6 @@ footer {
     width: 100%;
 }
 
-
-/* .navbar .navbar-nav li a:hover {
-
-    outline: 5px solid #414042;
-    background: linear-gradient(180deg, #414042, rgba(0,0,0,0) 20% );
-    z-index: auto;
-}  */
-
 .card-header {
     background-color: #929292;
 }
@@ -415,3 +409,9 @@ section {
     display: block;
 }
 
+/* Target iPhone specifically to reduce the font size */
+@media only screen and (min-device-width: 375px) and (max-device-width: 812px) and (-webkit-min-device-pixel-ratio: 2) {
+    .subtext-btn-sm {
+        font-size: 1.2rem; /* Adjust this value to fit the desired look */
+    }
+}
