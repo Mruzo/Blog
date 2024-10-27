@@ -4,7 +4,25 @@
 <!-- Twitter Card meta tags -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@misteruzo">
+{% if meta_tags.title %}
+    <meta name="twitter:title" content="{{ meta_tags.title }}">
+{% endif %}
+
 <meta name="twitter:creator" content="@misteruzo">
+
+{% if meta_tags.description %}
+    <meta name="twitter:description" content="{{ meta_tags.description }}">
+{% endif %}
+{% if meta_tags.gif %}
+    <meta name="twitter:image" content="{{ meta_tags.gif }}">
+{% elif meta_tags.image %}
+    <meta name="twitter:image" content="{{ meta_tags.image }}">
+    <meta name="twitter:image:alt" content="illustration of the title">
+{% endif %}
+{% if meta_tags.url %}
+    <meta name="twitter:url" content="{{ meta_tags.url }}">
+{% endif %}
+
 
 <!-- Open Graph meta tags (for LinkedIn, Facebook, etc.) -->
 {% if meta_tags.url %}
