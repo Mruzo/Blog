@@ -1,6 +1,27 @@
 
 {% load meta %}
 
+
+<!-- Open Graph meta tags (for LinkedIn, Facebook, etc.) -->
+<meta property="og:type" content="website">
+{% if meta_tags.url %}
+    <meta property="og:url" content="{{ meta_tags.url }}">
+{% endif %}
+
+{% if meta_tags.title %}
+    <meta property="og:title" content="{{ meta_tags.title }}">
+{% endif %}
+
+{% if meta_tags.description %}
+    <meta property="og:description" content="{{ meta_tags.description }}">
+{% endif %}
+
+{% if meta_tags.gif %}
+    <meta property="og:image" content="{{ meta_tags.gif }}">
+{% elif meta_tags.image %}
+    <meta property="og:image" content="{{ meta_tags.image }}">
+{% endif %}
+
 <!-- Twitter Card meta tags -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@misteruzo">
@@ -22,22 +43,4 @@
 
 
 
-<!-- Open Graph meta tags (for LinkedIn, Facebook, etc.) -->
-{% if meta_tags.url %}
-    <meta property="og:url" content="{{ meta_tags.url }}">
-{% endif %}
-
-{% if meta_tags.title %}
-    <meta property="og:title" content="{{ meta_tags.title }}">
-{% endif %}
-
-{% if meta_tags.description %}
-    <meta property="og:description" content="{{ meta_tags.description }}">
-{% endif %}
-
-{% if meta_tags.gif %}
-    <meta property="og:image" content="{{ meta_tags.gif }}">
-{% elif meta_tags.image %}
-    <meta property="og:image" content="{{ meta_tags.image }}">
-{% endif %}
 
