@@ -24,6 +24,16 @@
     <link href="https://fonts.googleapis.com/css?family=Cabin|Marmelad&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js"
+          }
+        }
+    </script>
+
+
 </head>
 
 <body class="container-fluid t p-0">
@@ -103,7 +113,7 @@
 
                 </ul>
                 <div class="footer-copyright mx-auto font-weight-bold">
-                    &copy 2024 misteruzo 
+                    &copy 2025 misteruzo 
                 </div>
             </div>
         </div>
@@ -118,6 +128,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{% static 'snmov/js/sm.js' %}"></script>
+    <script type="module" src="{% static 'snmov/js/sm-module.js' %}"></script>
     <script src="{% static 'tinymce/js/prism.js' %}"></script>
 
     {% block javascript %}

@@ -52,8 +52,8 @@ INSTALLED_APPS = [
     'django.contrib.sitemaps',
     'tinymce',
     'meta',
+    'tilf',
 ]
-
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
@@ -64,7 +64,6 @@ TINYMCE_DEFAULT_CONFIG = {
     'cleanup_on_startup': True,
     'custom_undo_redo_levels': 20,
     'selector': 'textarea',
-    # 'content_css': '../static-root/snmov/css/sm.css',
     'contents_style': 'body {font-family: Cabin; }',
     'theme': 'modern',
     'plugins': '''
@@ -87,6 +86,8 @@ TINYMCE_DEFAULT_CONFIG = {
     'contextmenu': 'formats | link image',
     'menubar': True,
     'statusbar': True,
+    'paste_as_text': True,
+    'forced_root_block': False,  # Add this line
     }
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -101,6 +102,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
 
 
 ROOT_URLCONF = 'snm.urls'

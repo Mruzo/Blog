@@ -1,13 +1,16 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from .forms import ContactModelForm
+from django.shortcuts import render, redirect, get_object_or_404, reverse
+from .forms import ContactModelForm, RegisterForm
 from snmov.models import Article,Comment, ReachOut, About, CraftCategory, Craft, CraftImage
 from django.contrib import messages
+from django.contrib.auth import login, logout, authenticate, get_user_model
+from django.contrib.auth.models import User
 from django.core.mail import send_mail, BadHeaderError
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from .settings.pro import EMAIL_HOST_USER
 from random import sample
 from django.core.mail import send_mail
 from django.conf import settings
+from django.contrib.auth.tokens import PasswordResetTokenGenerator, default_token_generator
 
 
 def home_page(request):
@@ -65,6 +68,91 @@ def craft_detail(request, craft_id):
     category = craft.category.name
     images = craft.craft_images.all()
     return render(request, 'craft_detail.html', {'craft': craft, 'category': category, 'images': images})
+
+
+def register_view(request):
+    form = RegisterForm()
+
+    if request.method == "POST":
+        form = RegisterForm(request.POST)
+        
+        if form.is_valid():
+            print("form is valid")
+            
+            # Temporarily store user data in session or cache
+            user_data = form.cleaned_data
+            
+            # Generate the verification token
+            username = user_data.get('username')
+            email = user_data.get('email')
+            token = default_token_generator.make_token(user_data)  # Make token with user data
+            print(token)
+            
+            # Get current site and build the full verification URL dynamically
+            current_host = settings.ALLOWED_HOSTS[0]
+            scheme = "https" if request.is_secure() else "http"
+            verification_link = reverse('verify_email', args=[user_data.get('username'), token])
+            full_verification_url = f"{scheme}://{current_host}{verification_link}"
+            
+            # Send the email
+            subject = "Verify Your Email"
+            message = (
+                f"Hi {username},\n\n"
+                f"Thanks for signing up. Please verify your email address by clicking the link below:\n"
+                f"{full_verification_url}\n\n"
+                "Best regards,\nTeam Uzo"
+            )
+            from_email = settings.DEFAULT_FROM_EMAIL
+            to_email = email
+
+            send_mail(subject, message, from_email, [to_email])
+
+            # Show a success message
+            messages.success(request, "Registration successful. Please check your email to verify your account.")
+
+            return redirect("homepage")
+        else:
+            for msg in form.error_messages:
+                messages.error(request, "Registration was unsuccessful")
+                print(form.error_messages[msg])
+
+    return render(request, "register.html", {"title": "Register", "form": form})
+
+
+def validate_username(request):
+    username = request.GET.get('username', None)
+    data = {
+        'is_taken': User.objects.filter(username__iexact=username).exists()
+    }
+    if data['is_taken']:
+        data['error_message'] = 'A user with this username already exists.'
+    return JsonResponse(data)
+
+def verify_email(request, user_id, token):
+    try:
+        user = get_user_model().objects.get(id=user_id)
+        
+        if default_token_generator.check_token(user, token):
+            # Token is valid, activate the user
+            user.is_active = True
+            user.save()
+            login(request, user)  # Log in after verification
+            messages.success(request, "Your email has been verified successfully!")
+            return redirect('homepage')  # Redirect to homepage
+        else:
+            messages.error(request, "Invalid or expired verification link.")
+            return redirect('homepage')  # Redirect to home or error page
+    except get_user_model().DoesNotExist:
+        messages.error(request, "User does not exist.")
+        return redirect('invalid_link')
+
+def invalidlink_view(request):
+    return render(request, "invalid_link.html", {"message": "Invalid verification link"})
+
+def logout_request(request):
+    logout(request)
+    messages.info(request, "Logged out successfully!")
+    return redirect('/')
 
 def privacy_page(request):
     return render(request,

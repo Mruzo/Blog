@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Seasons</h1>
+<ul>
+    {% for season in seasons %}
+    <li>
+        <a href="{% url 'season_detail' pk=season.id %}">
+            {{ season.title }}
+        </a> - Released on {{ season.release_date }}
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

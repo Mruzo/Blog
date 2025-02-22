@@ -11,6 +11,11 @@
 }
 
 @font-face {
+    font-family: 'comic';
+    src: local('animeace2_ital'), url('animeace2_ital.ttf') format("truetype");
+}
+
+@font-face {
 	font-family: 'Cabin';
 	font-style: normal;
 	src: local('Cabin'), url('Cabin.ttf') format('truetype'); /* Update with actual font file */
@@ -29,6 +34,7 @@ body, html {
 	display: flex;
 	flex-direction: column;
 	font-family: 'Cabin', sans-serif;
+	overflow-x: hidden; /* Forces scrollbar visibility */
 }
 
 .vertical-center {
@@ -44,9 +50,37 @@ body, html {
     max-width: 50%; /* Set to 40% for mobile */
 }
 
+::-webkit-scrollbar {
+    width: 3px; /* Shrink scrollbar */
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2); /* Semi-transparent thumb */
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 main {
     flex: 1 0 auto;
 }
+
+form .form-group input, 
+form .form-group select, 
+form .form-group textarea {
+    width: 95%; /* Reduce width slightly to prevent shift */
+    font-size: 16px; /* Prevent iOS zoom on focus */
+}
+
+
+#hint_id_password1 > ul {
+    padding: 0;
+    margin: 0;
+}
+
 
 footer {
     flex-shrink: 0;

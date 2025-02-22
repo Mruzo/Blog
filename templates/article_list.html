@@ -3,6 +3,15 @@
 {% block content %}
 
 {% load static %}
+{% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            <li class="{{ message.tags }}">
+                {{ message }} <button onclick="this.parentElement.style.display='none'">X</button>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
 
 <div class="row position-relative">
     {% for item in article_list %}
@@ -36,7 +45,7 @@
 </div>
 
 <div class="card mb-4 col-5 col-md-3 mx-auto bg-transparent border-0">
-    <a class="d-flex justify-content-center neumorphic" href="/article"><h6 class="fw-bolder my-1">more lessons</h6></a>
+    <a class="d-flex justify-content-center neumorphic" href="/article"><h6 class="fw-bolder my-1">view more</h6></a>
 </div>
 
 {% endblock %}

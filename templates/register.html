@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+{% crispy form %}
+
+{% block content %}
+
+{% block javascript %}
+
+<script>
+$("#div_id_username").change(function () {
+    var form = $(this).closest("form");
+    $.ajax({
+        url: form.attr("data-validate-username-url"),
+        data: form.serialize(),
+        dataType: 'json',
+        success: function (data) {
+            if (data.is_taken) {
+                alert(data.error_message);
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}
+
+{% load crispy_forms_tags %}
+
+
+
+
+    <div class="row">
+        <div class="card col-lg-6 col-md-8 col-12 mx-auto mt-2">
+            <div class="card-title border-bottom text-center">
+                {% if title %}
+                    <h4>{{ title }}</h4>
+                {% endif %}
+            </div>
+            <form class="left-align black-text" style="margin:0 2%;" method="POST" data-validate-username-url="{% url 'validate_username' %}">
+                {% csrf_token %}
+                <div class="row">
+                    {% for field in form %}
+                        <div class="col-6">
+                            <div class="form-group">
+                                {{ field|as_crispy_field }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center ">
+                    <button class="btn btn-primary my-3" type="submit">Sign Up</button>
+                    <p class="text-center">Check your email to complete Sign Up</p>
+                </div>
+            </form>
+            <div class="card-footer border-top"></div>
+                <p class="text-center">Already have an account? <a href="/login"><strong><u>Login</u></strong></a> instead</p>
+                <div class="text-center">
+                    <a href="/terms"><u>Terms of Use</u></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+{% endblock %}
+

@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="display-4">{{ episode.title }}</h1>
+    <p class="lead">Season: {{ episode.season.title }}</p>
+    <p class="lead">Episode Number: {{ episode.episode_number }}</p>
+    <p class="lead">Description: {{ episode.description }}</p>
+
+    <!-- Scene Navigation -->
+    <div class="scene-navigation">
+        {% for scene_data in scenes_data %}
+        <div class="scene card mb-4" id="scene-{{ scene_data.scene.order }}" style="display: {% if forloop.first %}block{% else %}none{% endif %};">
+            <div class="card-body">
+                <h2 class="card-title">Scene {{ scene_data.scene.order }}: {{ scene_data.scene.title }}</h2>
+                <p class="card-text">{{ scene_data.scene.description }}</p>
+
+                <!-- Dialogues (Hidden) -->
+                <div class="dialogues" style="display: none;">
+                    {% for dialogue in scene_data.dialogues %}
+                    <div class="dialogue card mb-3" 
+                         data-pov='{
+                            "camera_orbit": "{{ dialogue.camera_orbit }}",
+                            "camera_target": "{{ dialogue.camera_target }}",
+                            "field_of_view": "{{ dialogue.field_of_view }}",
+                            "zoom_speed": "{{ dialogue.zoom_speed }}",
+                            "rotation": "{{ dialogue.rotation }}",
+                            "head_x": {{ dialogue.pov.head_x|default:0 }},
+                            "head_y": {{ dialogue.pov.head_y|default:0 }},
+                            "head_z": {{ dialogue.pov.head_z|default:0 }}
+                         }'>
+                        <div class="card-body p-1">
+                            <p class="card-text mb-0"><strong>{{ dialogue.pov.character.name }}:</strong> {{ dialogue.text }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 3D Model Container with Speech Bubbles -->
+    <div class="card model-container mb-4 position-relative" style="height: 400px;">
+        <!-- Speech Bubble at the Top -->
+        <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark">
+            <div id="top-dialogue"></div>
+            <svg id="top-pointer" class="pointer" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; top: 100%; left: 0;">
+                <line x1="50" y1="0" x2="50" y2="20" stroke="black" stroke-width="0.5" />
+                <line x1="40" y1="0" x2="50" y2="20" stroke="black" stroke-width="0.5" />
+            </svg>
+        </div>
+
+        <!-- 3D Model -->
+        <model-viewer
+            id="model-viewer"
+            src="{{ scenes_data.0.scene.intersection.model_gltf.url }}"
+            ios-src="{{ scenes_data.0.scene.intersection.model_usdz.url }}"
+            alt="3D Scene"
+            style="width: 100%; height: 100%;"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+        ></model-viewer>
+
+        <!-- Speech Bubble at the Bottom -->
+        <div id="bottom-bubble" class="speech-bubble position-absolute bottom-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark">
+            <div id="bottom-dialogue"></div>
+            <svg id="bottom-pointer" class="pointer" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; bottom: 100%; left: 0;">
+                <line x1="50" y1="100" x2="50" y2="80" stroke="black" stroke-width="0.5" />
+                <line x1="40" y1="100" x2="50" y2="80" stroke="black" stroke-width="0.5" />
+            </svg>
+        </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="text-center mt-4">
+        <button id="prevButton" class="btn btn-primary me-2" disabled>Previous</button>
+        <button id="nextButton" class="btn btn-primary">Next</button>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center mt-4">
+        <a href="{% url 'season_list' %}" class="btn btn-secondary">Back to Titles</a>
+    </div>
+</div>
+
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const scenes = document.querySelectorAll('.scene');
+        const prevButton = document.getElementById('prevButton');
+        const nextButton = document.getElementById('nextButton');
+        const modelViewer = document.getElementById('model-viewer');
+        const topDialogue = document.getElementById('top-dialogue');
+        const bottomDialogue = document.getElementById('bottom-dialogue');
+        const topPointer = document.getElementById('top-pointer');
+        const bottomPointer = document.getElementById('bottom-pointer');
+        let currentSceneIndex = 0;
+
+        // Function to project 3D coordinates to 2D screen space
+        function project3DTo2D(headX, headY, headZ) {
+            if (!modelViewer) return { x: 0, y: 0 };
+
+            // Normalize the coordinates to fit within the SVG viewBox (0-100)
+            const x = ((headX + 1) / 2) * 100; // Map to 0-100 range
+            const y = ((-headY + 1) / 2) * 100; // Map to 0-100 range
+
+            return { x, y };
+        }
+
+        // Function to update the pointer position
+        function updatePointer(pointer, headX, headY, headZ) {
+            const { x, y } = project3DTo2D(headX, headY, headZ);
+
+            // Constrain the x and y values to stay within the SVG viewBox
+            const clampedX = Math.max(0, Math.min(100, x));
+            const clampedY = Math.max(0, Math.min(100, y));
+
+            // Update the pointer position
+            const lines = pointer.querySelectorAll('line');
+            lines.forEach(line => {
+                line.setAttribute('x2', clampedX);
+                line.setAttribute('y2', clampedY);
+            });
+        }
+
+        function showScene(index) {
+            scenes.forEach((scene, i) => {
+                scene.style.display = i === index ? 'block' : 'none';
+            });
+
+            // Enable/disable buttons based on current scene
+            prevButton.disabled = index === 0;
+            nextButton.disabled = index === scenes.length - 1;
+
+            // Update camera settings for the current scene
+            const dialogues = scenes[index].querySelectorAll('.dialogue');
+            if (dialogues.length > 0) {
+                const pov = JSON.parse(dialogues[0].dataset.pov);
+                if (modelViewer && pov) {
+                    modelViewer.cameraOrbit = pov.camera_orbit;
+                    modelViewer.cameraTarget = pov.camera_target;
+                    modelViewer.fieldOfView = pov.field_of_view + "deg";
+                    modelViewer.zoomSpeed = pov.zoom_speed;
+                    modelViewer.rotation = pov.rotation;
+
+                    // Update the pointer position for the top bubble
+                    updatePointer(topPointer, pov.head_x, pov.head_y, pov.head_z);
+                }
+
+                // Update speech bubbles
+                if (dialogues[0]) {
+                    const dialogueContent = dialogues[0].querySelector('.card-text').cloneNode(true);
+                    topDialogue.innerHTML = '';
+                    topDialogue.appendChild(dialogueContent);
+                }
+                if (dialogues[1]) {
+                    const dialogueContent = dialogues[1].querySelector('.card-text').cloneNode(true);
+                    bottomDialogue.innerHTML = '';
+                    bottomDialogue.appendChild(dialogueContent);
+
+                    // Update the pointer position for the bottom bubble
+                    const povBottom = JSON.parse(dialogues[1].dataset.pov);
+                    updatePointer(bottomPointer, povBottom.head_x, povBottom.head_y, povBottom.head_z);
+                }
+            }
+        }
+
+        prevButton.addEventListener('click', () => {
+            if (currentSceneIndex > 0) {
+                currentSceneIndex--;
+                showScene(currentSceneIndex);
+            }
+        });
+
+        nextButton.addEventListener('click', () => {
+            if (currentSceneIndex < scenes.length - 1) {
+                currentSceneIndex++;
+                showScene(currentSceneIndex);
+            }
+        });
+
+        // Initialize the first scene
+        showScene(currentSceneIndex);
+    });
+</script>
+
+<style>
+    /* Custom CSS for speech bubbles */
+    .speech-bubble {
+        width: 100%;
+        max-width: none;
+        text-align: left;
+        z-index: 10;
+        font-family: 'Comic';
+        font-size: small;
+    }
+
+    .pointer {
+        pointer-events: none; /* Ensure the pointer doesn't interfere with interactions */
+    }
+</style>
+
+{% endblock %}

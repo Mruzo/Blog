@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<h1>3D Comics</h1>
+{% for comic in comics %}
+<div class="card title-card">
+    <h2>{{ comic.title }}</h2>
+    <p>{{ comic.description }}</p>
+    <ul>
+        {% for season in comic.seasons.all %}
+        <li>
+            <strong><h3></h3>{{ season.title }}</h3></strong> ({{ season.release_date }})
+            <ul>
+                {% for episode in season.episodes.all %}
+                <li>
+                    <a href="{% url 'episode_detail' season_id=season.id pk=episode.id %}">
+                        Episode {{ episode.episode_number }}: {{ episode.title }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endfor %}
+{% endblock %}

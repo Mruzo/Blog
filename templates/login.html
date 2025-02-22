@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load crispy_forms_tags %}
+<div class="row burger">
+    <div class="col-lg-4 col-md-6 col-12 mx-auto mt-2">
+        <form class="card left-align" method="POST">
+            <!-- Centered Login Title -->
+            <div class="card-title text-center border-bottom">
+                <h4>Login</h4>
+            </div>
+
+            {% csrf_token %}
+            <ul class="list-group border-0">
+                <!-- Email and Password Fields in Two Columns (Even on Mobile) -->
+                <li class="list-group-item border-0">
+                    <div class="row">
+                        <!-- Email Field -->
+                        <div class="col-6">
+                            {{ form.username|as_crispy_field }}
+                        </div>
+                        <!-- Password Field -->
+                        <div class="col-6">
+                            {{ form.password|as_crispy_field }}
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Sign In Button -->
+                <li class="list-group-item text-center border-top">
+                    <button class="btn btn-success" type="submit">Sign In</button>
+                </li>
+            </ul>
+        
+            <div class="card-footer ">
+                <!-- Forgot Password Link -->
+                <small class="mx-auto">
+                    <a class="text-center p-0" href="{% url 'password_reset' %}"><p><u>Forgot your Password?</u></p></a>
+                </small>
+
+                <!-- Register Link -->
+                <p class="text-center">
+                    Don't have an account? <a href="/register"><strong><u>Register here</u></strong></a>.
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

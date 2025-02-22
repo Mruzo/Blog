@@ -120,23 +120,6 @@ function initCarousel() {
   });
 }
 
-// function loadform(url, button) {
-//   fetch(url)
-//     .then(response => response.text())
-//     .then(html => {
-//       document.getElementById('reachout-content').innerHTML = html;
-//       // Remove active class from all buttons
-//       document.querySelectorAll('.neumorphic').forEach(btn => {
-//         btn.classList.remove('active');
-//       });
-//       // Add active class to clicked button
-//       button.classList.add('active');
-//     })
-//     .catch(error => {
-//       console.error('Error fetching content:', error);
-//     });
-// }
-
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('user-form');
 

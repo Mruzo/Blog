@@ -1,5 +1,7 @@
 from django import forms
 from snmov.models import ReachOut
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 
 
 class ContactModelForm(forms.ModelForm):
@@ -17,6 +19,16 @@ class ContactModelForm(forms.ModelForm):
             raise forms.ValidationError("Please use an email that ends with .com")
         return email
 
+
+class RegisterForm(UserCreationForm):
+    username = forms.CharField(label="Username")
+    email = forms.EmailField(label="Email")
+    first_name = forms.CharField(label="First Name")
+    last_name = forms.CharField(label="Last Name")
+
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email', 'username', 'password1', 'password2')
 
 # class FeedbackForm(forms.Form):
 #     from_email = forms.EmailField(required=True, label="Email")
