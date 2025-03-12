@@ -1,6 +1,12 @@
+console.log('here');
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js';
+
 $(document).ready(function(){
-   $('.toast').toast('show');
-   });
+  // Enable Bootstrap dropdown functionality
+  $('.dropdown-toggle').dropdown();
+  console.log("here");
+});
+
 
 //scroll animation
 $(window).scroll(function(){
@@ -49,182 +55,13 @@ function isElementInViewport(el) {
     );
 }
 
-//front page animation
-var TextSlider = function(){
-  this.container = $('#home-animation-wrapper');
-  this.currentSlide = 1;
-  this.slidesLength = this.container.find('.slide').length - 1; // To start at 0
-  this.content = { text1: '', text2: '', text3: ''};
-
-  this.allowChange = true;
-
-  this.init();
-};
-
-TextSlider.prototype = {
-
-  init: function(){
-//    console.log('init');
-
-    this.bind();
-
-    this.initSvg();
-
-  },
-
-  bind: function(){
-//    console.log('bind');
-
-    var self = this;
-
-    // Bind interval
-    var timerDuration = 4000,
-        timer = setInterval(function(){
-          self.resetSlide();
-        }, timerDuration);
-
-    // Bind restart on click with next slide
-    this.container.on('click', function(){
-
-      // Do not allow to change slide until last transition is complete
-      if(!self.allowChange){ return; }
-      self.allowChange = false;
-      setTimeout(function(){
-        self.allowChange = true;
-      }, 3000);
-
-      self.resetSlide();
-
-      clearInterval(timer);
-      timer = setInterval(function(){
-          self.resetSlide();
-        }, timerDuration);
-
-
-    });
-
-
-  },
-
-  initSvg: function(){
-//    console.log('initSvg');
-
-    this.bubblesRandomColors();
-    this.setTexts();
-    this.bubblesMovement();
-
-    // Trigger First slide
-    this.triggerSlide();
-  },
-
-  setTexts: function(){
-//    console.log('setTexts');
-
-    var texts = this.container.find('#svg-texts');
-
-    // Get texts
-    this.content.text1 = this.container.find('.slide[count="'+this.currentSlide+'"]').attr('data-1');
-    this.content.text2 = this.container.find('.slide[count="'+this.currentSlide+'"]').attr('data-2');
-    this.content.text3 = this.container.find('.slide[count="'+this.currentSlide+'"]').attr('data-3');
-
-    // UpperCase Texts
-    this.content.text1 = this.content.text1.toUpperCase();
-    this.content.text2 = this.content.text2.toUpperCase();
-    this.content.text3 = this.content.text3.toUpperCase();
-
-    // Append Texts
-    texts.find('text:nth-child(1)').html(this.content.text1);
-    texts.find('text:nth-child(2)').html(this.content.text2);
-    texts.find('text:nth-child(3)').html(this.content.text3);
-  },
-
-  bubblesRandomColors: function(){
-//    console.log('bubblesRandomColors');
-
-    var bubblesGroup = this.container.find('#bubbles'),
-        // colors = ['#03ee93','#ff0700','#ffe700','#5306de'];
-        // colors = ['#64AD60','#FFBC00','#DC2229','#000', '#OOO']
-        colors = ['#000', '#000','#4d4d4d',  '#000', '#000']
-
-    bubblesGroup.find('path').each(function(){
-      var rand = getRand(0,colors.length);
-      TweenMax.set(this, { fill: colors[rand], scale: 0, transformOrigin: 'top left' });
-    })
-  },
-
-  triggerSlide: function(){
-//    console.log('triggerSlide');
-
-    // Container loads invisible, needs this to be shown on the first iteration
-    TweenMax.set(this.container, { autoAlpha: 1 });
-
-    var bubbles =  this.container.find('#bubbles path');
-    bubbles.each(function(){
-      var rotateRand = getRand(-1,1);
-      TweenMax.to(this,1.5, { scale: 1.2, rotation: rotateRand, ease: Power2.easeInOut});
-    })
-  },
-
-  resetSlide: function(){
-//    console.log('hideSlide');
-
-    var self = this;
-
-    this.currentSlide++;
-    if(this.currentSlide > this.slidesLength){ this.currentSlide = 0; };
-
-    var bubbles = this.container.find('#bubbles path');
-    TweenMax.to(bubbles,1.5, { scale: 0, ease: Power2.easeInOut, onComplete: triggerContinue });
-
-    // Workaround gsap onComplete
-    function triggerContinue(){
-      self.initSvg();
-    }
-  },
-
-  // non used function (performance) (remove the 'return' to enable)
-  bubblesMovement: function(){
-
-    return; // Yup, this one
-
-    var bubbles = this.container.find('#bubbles path'),
-        count = 500;
-
-    bubbles.each(function(index){
-      if(index > count ) { return; }
-      $(this).attr('data-rand', getRand(15, 55))
-    });
-
-    this.container.on('mousemove', function(e){
-      bubbles.each(function(){
-        if(!$(this).attr('data-rand')){ return; };
-
-        var rand = $(this).attr('data-rand'),
-            cy = e.pageY,
-            cx = e.pageX,
-            py = Math.round($(this).offset().top),
-            px = Math.round($(this).offset().left),
-            x = Math.round(-(cx + px) / rand),
-            y = Math.round(-(cy + py) / rand);
-
-        TweenMax.to($(this), 0.2, { x: x, y: y, transformOrigin: 'center' });
-      });
-    })
-  }
-}
-
-function getRand(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min)) + min;
-}
 
 window.LLOS = window.LLOS || {};
 if($('#home-animation-wrapper').length){
   window.LLOS.TextSlider = new TextSlider();
 }
 
-function loadContent(url, button) {
+function loadContent(url, button = null) {
   fetch(url)
     .then(response => response.text())
     .then(html => {
@@ -233,10 +70,261 @@ function loadContent(url, button) {
       document.querySelectorAll('.neumorphic').forEach(btn => {
         btn.classList.remove('active');
       });
-      // Add active class to clicked button
-      button.classList.add('active');
+      // Add active class to clicked button if present
+      if (button) {
+        button.classList.add('active');
+      } else {
+        // Automatically add active class to the Persona button if button is not provided
+        const personaButton = document.querySelector('[href*="#about"]');
+        if (personaButton) {
+          personaButton.classList.add('active');
+        }
+      }
+      window.scrollTo(0, 0);
+      initCarousel();
     })
     .catch(error => {
       console.error('Error fetching content:', error);
     });
 }
+
+function initCarousel() {
+  var carousels = document.querySelectorAll('.carousel');
+
+  // Iterate over each carousel and manually initialize it
+  carousels.forEach(function(carousel) {
+    var slides = carousel.querySelectorAll('.carousel-item');
+    var activeIndex = 0; // Index of the initially active slide
+
+    // Make the first slide active initially
+    slides[activeIndex].classList.add('active');
+
+    // Set up event listeners for next and previous buttons
+    var nextButton = carousel.querySelector('.carousel-control-next');
+    var prevButton = carousel.querySelector('.carousel-control-prev');
+
+    nextButton.addEventListener('click', function() {
+      event.preventDefault(); // Prevent the default behavior (e.g., scrolling)
+      // Hide the currently active slide
+      slides[activeIndex].classList.remove('active');
+      // Increment the active index (looping back to 0 if necessary)
+      activeIndex = (activeIndex + 1) % slides.length;
+      // Show the next slide
+      slides[activeIndex].classList.add('active');
+    });
+
+    prevButton.addEventListener('click', function() {
+      event.preventDefault(); // Prevent the default behavior (e.g., scrolling)
+      // Hide the currently active slide
+      slides[activeIndex].classList.remove('active');
+      // Decrement the active index (looping to the last index if necessary)
+      activeIndex = (activeIndex - 1 + slides.length) % slides.length;
+      // Show the previous slide
+      slides[activeIndex].classList.add('active');
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('user-form');
+
+  if (form) {
+      form.addEventListener('submit', function(event) {
+          event.preventDefault(); // Prevent default form submission
+
+          const formData = new FormData(form); // Create FormData object
+
+          fetch(form.action, {
+              method: 'POST',
+              body: formData,
+              headers: {
+                  'X-Requested-With': 'XMLHttpRequest',
+              },
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  // Hide form and show success message
+                  form.style.display = 'none';
+                  showMessage('success', data.message);
+              } else {
+                  // Show error message
+                  showMessage('error', data.message);
+              }
+          })
+          .catch(error => {
+              console.error('Error submitting form:', error);
+              showMessage('error', 'There was an error submitting the form.');
+          });
+      });
+  } else {
+      console.error('Form element not found.');
+  }
+});
+
+function showMessage(type, message) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `alert alert-${type}`;
+  messageDiv.innerText = message;
+
+  const feedbackMessageContainer = document.getElementById('feedback-message');
+  feedbackMessageContainer.innerHTML = ''; // Clear previous messages
+  feedbackMessageContainer.appendChild(messageDiv);
+
+  setTimeout(() => {
+      messageDiv.remove(); // Remove message after 5 seconds
+  }, 5000);
+}
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    const scenes = document.querySelectorAll('.scene');
+    const prevButton = document.getElementById('prevButton');
+    const nextButton = document.getElementById('nextButton');
+    const modelViewer = document.getElementById('model-viewer');
+    const topDialogue = document.getElementById('top-dialogue');
+    const bottomDialogue = document.getElementById('bottom-dialogue');
+    const topPointer = document.getElementById('top-pointer');
+    const bottomPointer = document.getElementById('bottom-pointer');
+    let currentSceneIndex = 0;
+
+    function project3DTo2D(headX, headY, headZ) {
+        if (!modelViewer) return { x: 0, y: 0 };
+    
+        // Use model-viewer's built-in function if available
+        if (modelViewer.toScreen) {
+            const position = modelViewer.toScreen(new THREE.Vector3(headX, headY, headZ));
+            return position ? { x: position.x, y: position.y } : { x: 0, y: 0 };
+        }
+    
+        // Fallback method using matrices
+        const projectionMatrix = new THREE.Matrix4().fromArray(modelViewer.getCamera().projectionMatrix.elements);
+        const viewMatrix = new THREE.Matrix4().fromArray(modelViewer.getCamera().matrixWorldInverse.elements);
+    
+        const vector4 = new THREE.Vector4(headX, headY, headZ, 1);
+        vector4.applyMatrix4(viewMatrix);
+        vector4.applyMatrix4(projectionMatrix);
+    
+        if (vector4.w < 0) return { x: -9999, y: -9999 }; // Off-screen handling
+    
+        vector4.x /= vector4.w;
+        vector4.y /= vector4.w;
+    
+        const x = (vector4.x + 1) / 2 * modelViewer.offsetWidth;
+        const y = (1 - (vector4.y + 1) / 2) * modelViewer.offsetHeight;
+    
+        return { x, y };
+    }
+  
+
+    function updatePointer(pointer, headX, headY, headZ) {
+        const { x, y } = project3DTo2D(headX, headY, headZ);
+    
+        // Handle off-screen cases
+        if (x === -9999 && y === -9999) {
+            pointer.style.display = "none"; // Hide pointer if off-screen
+            return;
+        } else {
+            pointer.style.display = "block"; // Ensure it's visible if within bounds
+        }
+    
+        // Get SVG viewBox dimensions
+        const svgViewBox = pointer.viewBox.baseVal;
+        const svgWidth = svgViewBox.width;
+        const svgHeight = svgViewBox.height;
+    
+        // Normalize coordinates to SVG space
+        const normalizedX = (x / modelViewer.offsetWidth) * svgWidth;
+        const normalizedY = (y / modelViewer.offsetHeight) * svgHeight;
+    
+        // Clamp values to keep pointer within bounds
+        const clampedX = Math.max(0, Math.min(svgWidth, normalizedX));
+        const clampedY = Math.max(0, Math.min(svgHeight, normalizedY));
+    
+        // Use requestAnimationFrame to ensure smooth updates
+        requestAnimationFrame(() => {
+            pointer.querySelectorAll('line').forEach(line => {
+                line.setAttribute('x2', clampedX);
+                line.setAttribute('y2', clampedY);
+            });
+        });
+    }
+  
+
+    // Function to show the current scene
+    function showScene(index) {
+        scenes.forEach((scene, i) => {
+            scene.style.display = i === index ? 'block' : 'none';
+        });
+
+        // Enable/disable navigation buttons
+        prevButton.disabled = index === 0;
+        nextButton.disabled = index === scenes.length - 1;
+
+        // Update the 3D model and pointers for the current scene
+        const dialogues = scenes[index].querySelectorAll('.dialogue');
+        if (dialogues.length > 0) {
+            const pov = JSON.parse(dialogues[0].dataset.pov);
+            if (modelViewer && pov) {
+                modelViewer.cameraOrbit = pov.camera_orbit;
+                modelViewer.cameraTarget = pov.camera_target;
+                modelViewer.fieldOfView = pov.field_of_view + "deg";
+                modelViewer.zoomSpeed = pov.zoom_speed;
+                modelViewer.rotation = pov.rotation;
+
+                // Update the top pointer
+                updatePointer(topPointer, pov.head_x, pov.head_y, pov.head_z);
+            }
+
+            // Update the top speech bubble
+            if (dialogues[0]) {
+                const dialogueContent = dialogues[0].querySelector('.card-text').cloneNode(true);
+                topDialogue.innerHTML = '';
+                topDialogue.appendChild(dialogueContent);
+            }
+
+            // Update the bottom speech bubble and pointer
+            if (dialogues[1]) {
+                const dialogueContent = dialogues[1].querySelector('.card-text').cloneNode(true);
+                bottomDialogue.innerHTML = '';
+                bottomDialogue.appendChild(dialogueContent);
+
+                const povBottom = JSON.parse(dialogues[1].dataset.pov);
+                updatePointer(bottomPointer, povBottom.head_x, povBottom.head_y, povBottom.head_z);
+            }
+        }
+    }
+
+    // Event listeners for navigation buttons
+    prevButton.addEventListener('click', () => {
+        if (currentSceneIndex > 0) {
+            currentSceneIndex--;
+            showScene(currentSceneIndex);
+        }
+    });
+
+    nextButton.addEventListener('click', () => {
+        if (currentSceneIndex < scenes.length - 1) {
+            currentSceneIndex++;
+            showScene(currentSceneIndex);
+        }
+    });
+
+    // Initialize the first scene
+    showScene(currentSceneIndex);
+
+    // Update pointers on camera change
+    modelViewer.addEventListener('camera-change', () => {
+        const currentScene = document.querySelector('.scene[style*="block"]');
+        const dialogues = currentScene.querySelectorAll('.dialogue');
+        if (dialogues.length > 0) {
+            const topPov = JSON.parse(dialogues[0].dataset.pov);
+            updatePointer(topPointer, topPov.head_x, topPov.head_y, topPov.head_z);
+            if (dialogues[1]) {
+                const bottomPov = JSON.parse(dialogues[1].dataset.pov);
+                updatePointer(bottomPointer, bottomPov.head_x, bottomPov.head_y, bottomPov.head_z);
+            }
+        }
+    });
+});
+

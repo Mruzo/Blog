@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+
 <div class="container mt-4">
     <h1 class="display-4">{{ episode.title }}</h1>
     <p class="lead">Season: {{ episode.season.title }}</p>
@@ -20,16 +21,17 @@
                 <div class="dialogues" style="display: none;">
                     {% for dialogue in scene_data.dialogues %}
                     <div class="dialogue card mb-3" 
-                         data-pov='{
-                            "camera_orbit": "{{ dialogue.camera_orbit }}",
-                            "camera_target": "{{ dialogue.camera_target }}",
-                            "field_of_view": "{{ dialogue.field_of_view }}",
-                            "zoom_speed": "{{ dialogue.zoom_speed }}",
-                            "rotation": "{{ dialogue.rotation }}",
-                            "head_x": {{ dialogue.pov.head_x|default:0 }},
-                            "head_y": {{ dialogue.pov.head_y|default:0 }},
-                            "head_z": {{ dialogue.pov.head_z|default:0 }}
-                         }'>
+                        data-pov='{
+                            "character": "{{dialogue.pov}}",
+                            "camera_orbit": "{{ dialogue.camera_orbit|escapejs }}",
+                            "camera_target": "{{ dialogue.camera_target|escapejs }}",
+                            "field_of_view": "{{ dialogue.field_of_view|escapejs }}",
+                            "zoom_speed": "{{ dialogue.zoom_speed|escapejs }}",
+                            "rotation": "{{ dialogue.rotation|escapejs }}",
+                            "head_x": {{ dialogue.pov.head_x|default:"0" }},
+                            "head_y": {{ dialogue.pov.head_y|default:"0" }},
+                            "head_z": {{ dialogue.pov.head_z|default:"0" }}
+                        }'>
                         <div class="card-body p-1">
                             <p class="card-text mb-0"><strong>{{ dialogue.pov.character.name }}:</strong> {{ dialogue.text }}</p>
                         </div>
@@ -59,8 +61,6 @@
             ios-src="{{ scenes_data.0.scene.intersection.model_usdz.url }}"
             alt="3D Scene"
             style="width: 100%; height: 100%;"
-            ar
-            ar-modes="webxr scene-viewer quick-look"
         ></model-viewer>
 
         <!-- Speech Bubble at the Bottom -->
@@ -84,108 +84,6 @@
         <a href="{% url 'season_list' %}" class="btn btn-secondary">Back to Titles</a>
     </div>
 </div>
-
-<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const scenes = document.querySelectorAll('.scene');
-        const prevButton = document.getElementById('prevButton');
-        const nextButton = document.getElementById('nextButton');
-        const modelViewer = document.getElementById('model-viewer');
-        const topDialogue = document.getElementById('top-dialogue');
-        const bottomDialogue = document.getElementById('bottom-dialogue');
-        const topPointer = document.getElementById('top-pointer');
-        const bottomPointer = document.getElementById('bottom-pointer');
-        let currentSceneIndex = 0;
-
-        // Function to project 3D coordinates to 2D screen space
-        function project3DTo2D(headX, headY, headZ) {
-            if (!modelViewer) return { x: 0, y: 0 };
-
-            // Normalize the coordinates to fit within the SVG viewBox (0-100)
-            const x = ((headX + 1) / 2) * 100; // Map to 0-100 range
-            const y = ((-headY + 1) / 2) * 100; // Map to 0-100 range
-
-            return { x, y };
-        }
-
-        // Function to update the pointer position
-        function updatePointer(pointer, headX, headY, headZ) {
-            const { x, y } = project3DTo2D(headX, headY, headZ);
-
-            // Constrain the x and y values to stay within the SVG viewBox
-            const clampedX = Math.max(0, Math.min(100, x));
-            const clampedY = Math.max(0, Math.min(100, y));
-
-            // Update the pointer position
-            const lines = pointer.querySelectorAll('line');
-            lines.forEach(line => {
-                line.setAttribute('x2', clampedX);
-                line.setAttribute('y2', clampedY);
-            });
-        }
-
-        function showScene(index) {
-            scenes.forEach((scene, i) => {
-                scene.style.display = i === index ? 'block' : 'none';
-            });
-
-            // Enable/disable buttons based on current scene
-            prevButton.disabled = index === 0;
-            nextButton.disabled = index === scenes.length - 1;
-
-            // Update camera settings for the current scene
-            const dialogues = scenes[index].querySelectorAll('.dialogue');
-            if (dialogues.length > 0) {
-                const pov = JSON.parse(dialogues[0].dataset.pov);
-                if (modelViewer && pov) {
-                    modelViewer.cameraOrbit = pov.camera_orbit;
-                    modelViewer.cameraTarget = pov.camera_target;
-                    modelViewer.fieldOfView = pov.field_of_view + "deg";
-                    modelViewer.zoomSpeed = pov.zoom_speed;
-                    modelViewer.rotation = pov.rotation;
-
-                    // Update the pointer position for the top bubble
-                    updatePointer(topPointer, pov.head_x, pov.head_y, pov.head_z);
-                }
-
-                // Update speech bubbles
-                if (dialogues[0]) {
-                    const dialogueContent = dialogues[0].querySelector('.card-text').cloneNode(true);
-                    topDialogue.innerHTML = '';
-                    topDialogue.appendChild(dialogueContent);
-                }
-                if (dialogues[1]) {
-                    const dialogueContent = dialogues[1].querySelector('.card-text').cloneNode(true);
-                    bottomDialogue.innerHTML = '';
-                    bottomDialogue.appendChild(dialogueContent);
-
-                    // Update the pointer position for the bottom bubble
-                    const povBottom = JSON.parse(dialogues[1].dataset.pov);
-                    updatePointer(bottomPointer, povBottom.head_x, povBottom.head_y, povBottom.head_z);
-                }
-            }
-        }
-
-        prevButton.addEventListener('click', () => {
-            if (currentSceneIndex > 0) {
-                currentSceneIndex--;
-                showScene(currentSceneIndex);
-            }
-        });
-
-        nextButton.addEventListener('click', () => {
-            if (currentSceneIndex < scenes.length - 1) {
-                currentSceneIndex++;
-                showScene(currentSceneIndex);
-            }
-        });
-
-        // Initialize the first scene
-        showScene(currentSceneIndex);
-    });
-</script>
 
 <style>
     /* Custom CSS for speech bubbles */

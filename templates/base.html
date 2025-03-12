@@ -20,8 +20,6 @@
     {% block meta_extend %}{% endblock %}
     <link rel="shortcut icon" type="image/png" href="{% static 'snmov/img/wbicon.png' %}"/>
     <link rel="stylesheet" href="{% static 'tinymce/css/prism.css' %}">
-    <link href="https://fonts.googleapis.com/css?family=Marmela d&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Cabin|Marmelad&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
 
@@ -32,7 +30,8 @@
           }
         }
     </script>
-
+    <script type="module" src="{% static 'snmov/js/sm.js' %}"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
 </head>
 
@@ -121,15 +120,15 @@
 
     </footer>
 
-
-    <script data-ad-client="ca-pub-2701198258292083" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.1.1/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="{% static 'snmov/js/sm.js' %}"></script>
-    <script type="module" src="{% static 'snmov/js/sm-module.js' %}"></script>
+    
     <script src="{% static 'tinymce/js/prism.js' %}"></script>
+   
+
 
     {% block javascript %}
 
