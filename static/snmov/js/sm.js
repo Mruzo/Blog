@@ -174,345 +174,161 @@ function showMessage(type, message) {
   }, 5000);
 }
 
-
-document.addEventListener('DOMContentLoaded', function () {
-    const scenes = document.querySelectorAll('.scene');
+document.addEventListener('DOMContentLoaded', function() {
+    // ================ DOM ELEMENTS ================
+    const modelViewer = document.querySelector('model-viewer');
+    const topBubble = document.getElementById('top-bubble');
+    const topDialogue = document.getElementById('top-dialogue');
     const prevButton = document.getElementById('prevButton');
     const nextButton = document.getElementById('nextButton');
-    const modelViewer = document.getElementById('model-viewer');
-    const topDialogue = document.getElementById('top-dialogue');
-    const bottomDialogue = document.getElementById('bottom-dialogue');
-    const topPointer = document.getElementById('top-pointer');
-    const bottomPointer = document.getElementById('bottom-pointer');
+    const sceneElements = document.querySelectorAll('.scene');
+    
+    // ================ STATE ================
     let currentSceneIndex = 0;
-
-    function getCameraPosition() {
-        const activeDialogue = document.querySelector('.scene[style*="display: block"] .dialogue'); 
-        if (!activeDialogue) {
-            console.warn("No active dialogue found in getCameraPosition!");
-            return { x: 0, y: 0, z: 5 }; // Default position
-        }
+    let currentDialogueIndex = 0;
     
-        const pov = JSON.parse(activeDialogue.dataset.pov);
-        if (!pov || typeof pov.camera_orbit !== "string") {
-            console.error("Invalid POV data in getCameraPosition:", pov);
-            return { x: 0, y: 0, z: 5 }; // Default position
-        }
-    
-        const orbitString = pov.camera_orbit.trim(); // Ensure no extra spaces
-        const orbitParts = orbitString.split(" ");
-    
-        if (orbitParts.length !== 3) {
-            console.error("Invalid camera_orbit format:", orbitString);
-            return { x: 0, y: 0, z: 5 }; // Default position
-        }
-    
-        // Parse values safely
-        const theta = parseFloat(orbitParts[0]) * (Math.PI / 180); // Convert degrees to radians
-        const phi = parseFloat(orbitParts[1]) * (Math.PI / 180);
-        const radius = parseFloat(orbitParts[2]);
-    
-        // Validate parsed values
-        if (isNaN(theta) || isNaN(phi) || isNaN(radius)) {
-            console.error("Invalid cameraOrbit values:", orbitString);
-            return { x: 0, y: 0, z: 5 }; // Default position
-        }
-    
-        // Convert spherical coordinates to Cartesian
-        return {
-            x: radius * Math.sin(phi) * Math.cos(theta),
-            y: radius * Math.cos(phi),
-            z: radius * Math.sin(phi) * Math.sin(theta),
-        };
+    // ================ INITIALIZATION ================
+    function init() {
+      initPointerLine();
+      setupEventListeners();
+      updateView();
     }
-  
-
-
-    // Function to project 3D coordinates to 2D screen space
-    function project3DTo2D(headX, headY, headZ) {
-      const activeDialogue = document.querySelector('.scene[style*="display: block"] .dialogue');
-      if (!activeDialogue) {
-          console.warn("No active dialogue found!");
-          return { x: 0, y: 0 };
+    
+    function initPointerLine() {
+      if (!document.getElementById('pointer-line')) {
+        const line = document.createElement('div');
+        line.id = 'pointer-line';
+        Object.assign(line.style, {
+          position: 'fixed',
+          height: '2px',
+          backgroundColor: 'black',
+          transformOrigin: '0 0',
+          zIndex: '9',
+          display: 'none',
+          pointerEvents: 'none'
+        });
+        document.body.appendChild(line);
       }
-
-      const pov = JSON.parse(activeDialogue.dataset.pov);
-      console.log("Updated POV:", pov.character);
-      console.dir(modelViewer.getBoundingClientRect());
-      console.log(pov);
-
-      if (!modelViewer || !pov || !pov.camera_target) return { x: 0, y: 0 };
-
-
-      console.log("Raw camera_target:", pov.camera_target);
-
-
-      // Ensure camera_target is an object, if it's a string, parse it
-      let targetX, targetY, targetZ;
-
-      if (typeof pov.camera_target === "string") {
-          const targetParts = pov.camera_target.split(" "); // Split string into ["0m", "3m", "0m"]
-          
-          if (targetParts.length === 3) {
-              targetX = parseFloat(targetParts[0].replace("m", ""));
-              targetY = parseFloat(targetParts[1].replace("m", ""));
-              targetZ = parseFloat(targetParts[2].replace("m", ""));
-          } else {
-              console.error("Invalid camera target format:", pov.camera_target);
-              return { x: -9999, y: -9999 };
-          }
-      } else if (typeof pov.camera_target === "object") {
-          targetX = parseFloat(pov.camera_target.x.toString().replace("m", ""));
-          targetY = parseFloat(pov.camera_target.y.toString().replace("m", ""));
-          targetZ = parseFloat(pov.camera_target.z.toString().replace("m", ""));
-      } else {
-          console.error("Invalid camera target format:", pov.camera_target);
-          return { x: -9999, y: -9999 };
+    }
+    
+    function setupEventListeners() {
+      nextButton.addEventListener('click', nextDialogue);
+      prevButton.addEventListener('click', prevDialogue);
+      modelViewer.addEventListener('load', updateView);
+      window.addEventListener('resize', updateView);
+    }
+    
+    // ================ CORE FUNCTIONS ================
+    function updateView() {
+      updateDialogueContent();
+      updateCameraPosition();
+      updatePointer();
+      updateButtonStates();
+    }
+    
+    function updateDialogueContent() {
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      const dialogue = dialogues?.[currentDialogueIndex];
+      
+      if (!dialogue) return;
+      
+      const povData = JSON.parse(dialogue.getAttribute('data-pov'));
+      topDialogue.innerHTML = `<strong>${povData.character}:</strong> ${dialogue.querySelector('p').textContent}`;
+    }
+    
+    function updateCameraPosition() {
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      const dialogue = dialogues?.[currentDialogueIndex];
+      
+      if (!dialogue) return;
+      
+      const povData = JSON.parse(dialogue.getAttribute('data-pov'));
+      if (povData.camera_orbit) modelViewer.cameraOrbit = povData.camera_orbit;
+      if (povData.camera_target) modelViewer.cameraTarget = povData.camera_target;
+    }
+    
+    function updatePointer() {
+      const line = document.getElementById('pointer-line');
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      const dialogue = dialogues?.[currentDialogueIndex];
+      
+      if (!dialogue || !line) return;
+      
+      const povData = JSON.parse(dialogue.getAttribute('data-pov'));
+      const hotspot = document.querySelector(`.hotspot[data-character="${povData.character}"]`);
+      
+      if (!hotspot) {
+        line.style.display = 'none';
+        return;
       }
-
-      console.log("Converted camera_target:", targetX, targetY, targetZ);
-
-      if (isNaN(targetX) || isNaN(targetY) || isNaN(targetZ)) {
-          console.error("Invalid camera target values:", pov.camera_target);
-          return { x: -9999, y: -9999 };
-      }
-
-      if (isNaN(pov.field_of_view)) {
-          console.error("Invalid field_of_view:", pov.field_of_view);
-          return { x: -9999, y: -9999 };
-      }
-
-      // Get camera position
-      console.log("getCameraPosition result:", getCameraPosition(pov));
-
-      const { x: cameraX, y: cameraY, z: cameraZ } = getCameraPosition(pov);
-      console.log(`Camera Position: (${cameraX}, ${cameraY}, ${cameraZ})`);
-
-      if (isNaN(cameraX) || isNaN(cameraY) || isNaN(cameraZ)) {
-          console.error("Invalid camera position from getCameraPosition");
-          return { x: -9999, y: -9999 };
-      }
-
-      console.log("fov type:", typeof pov.field_of_view, "value:", pov.field_of_view);
-
-      // Ensure FOV is a valid number
-      let fov = pov.field_of_view.replace(/[^\d.]/g, ""); // Remove non-numeric characters
-      fov = parseFloat(fov);
-
-      // Validate FOV before conversion
-      if (isNaN(fov) || fov <= 0 || fov >= 180) {
-          console.error("Invalid FOV (before conversion):", pov.field_of_view);
-          return { x: -9999, y: -9999 };
-      }
-
-      // Convert degrees to radians
-      fov = fov * (Math.PI / 180);
-
-      // Validate FOV after conversion (if needed)
-      if (isNaN(fov)) {
-          console.error("Invalid FOV (after conversion):", fov);
-          return { x: -9999, y: -9999 };
-      }
-
-      console.log("final fov:", fov, typeof fov);
-
-
-      const rect = modelViewer.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
-
-      // Ensure aspect ratio is valid
-      if (width <= 0 || height <= 0) {
-        console.error("Invalid viewport dimensions:", width, height);
-        return { x: -9999, y: -9999 };
-      }
-
-      const aspect = width / height;
-      console.log("type of aspect:", aspect, typeof(aspect));
-      const near = 0.1;
-      const far = 100;
-      console.log("near, far:", near, typeof(near), far, typeof(far));
-      const projectionMatrix = new THREE.Matrix4();
-      // const camera = new THREE.PerspectiveCamera(fov * (180 / Math.PI), aspect, near, far);
-      // camera.updateProjectionMatrix();
-      // projectionMatrix.copy(camera.projectionMatrix);
-      const top = near * Math.tan(fov / 2);
-      const bottom = -top;
-      const right = top * aspect;
-      const left = -right;
-      projectionMatrix.makePerspective(left, right, top, bottom, near, far);
-      console.log("Projection Matrix:", projectionMatrix);
-
-
-      // Create view matrix
-      console.log("Target Coordinates:", targetX, targetY, targetZ);
-      console.log("View Matrix LookAt - Camera Position:", cameraX, cameraY, cameraZ);
-      console.log("View Matrix LookAt - Target Position:", targetX, targetY, targetZ);
-
-      const viewMatrix = new THREE.Matrix4();
-      viewMatrix.lookAt(
-          new THREE.Vector3(cameraX, cameraY, cameraZ), // Camera position
-          new THREE.Vector3(targetX, targetY, targetZ), // Target (Fixed parsing issue)
-          new THREE.Vector3(0, 1, 0) // Up vector
+      
+      // Get positions
+      const bubbleRect = topBubble.getBoundingClientRect();
+      const hotspotRect = hotspot.getBoundingClientRect();
+      
+      // Calculate endpoints
+      const bubbleCenterX = bubbleRect.left + bubbleRect.width / 2;
+      const bubbleBottomY = bubbleRect.bottom;
+      const hotspotCenterX = hotspotRect.left + hotspotRect.width / 2;
+      const hotspotCenterY = hotspotRect.top + hotspotRect.height / 2;
+      
+      // Calculate line geometry
+      const length = Math.sqrt(
+        Math.pow(hotspotCenterX - bubbleCenterX, 2) + 
+        Math.pow(hotspotCenterY - bubbleBottomY, 2)
       );
-      console.log("View Matrix:", viewMatrix);
-
-      if (!THREE || !THREE.Matrix4 || !THREE.Matrix4.prototype.makePerspective) {
-          console.error("THREE.js not loaded or makePerspective is missing!");
-      }
-    
-
-      // Apply transformations
-      console.log("Head Position:", headX, headY, headZ);
-
-      const vector4 = new THREE.Vector4(headX, headY, headZ, 1);
-      vector4.applyMatrix4(viewMatrix);
-      vector4.applyMatrix4(projectionMatrix);
-
-      if (vector4.w === 0 || isNaN(vector4.x) || isNaN(vector4.y)) {
-          console.warn("Projection failed: vector4 contains NaN or invalid w");
-          return { x: -9999, y: -9999 };
-      }
-
-      vector4.x /= vector4.w;
-      vector4.y /= vector4.w;
-
-      // Convert to pixel coordinates
-      const x = ((vector4.x + 1) / 2) * width;
-      const y = (1 - (vector4.y + 1) / 2) * height;
-
-      console.log(`3D (${headX}, ${headY}, ${headZ}) -> 2D (${x}, ${y})`);
-      console.log("Raw screen coordinates:", { x, y });
-
-      return { x, y };
-    }
-
-
-    // Function to update the pointer position
-    function updatePointer(pointer, headX, headY, headZ, pov) {
-      const { x, y } = project3DTo2D(headX, headY, headZ, pov);
-  
-      if (x === -9999 && y === -9999) {
-          pointer.style.display = "none"; // Hide pointer if off-screen
-          return;
-      } else {
-          pointer.style.display = "block"; // Ensure it's visible
-      }
-  
-      // Get SVG dimensions
-      const svgViewBox = pointer.viewBox.baseVal;
-      const svgWidth = svgViewBox.width;
-      const svgHeight = svgViewBox.height;
-  
-      // Normalize coordinates
-      // const normalizedX = (x / modelViewer.offsetWidth) * svgWidth;
-      // const normalizedY = (y / modelViewer.offsetHeight) * svgHeight;
-      const adjustedX = Math.max(0, x); // Prevent negative values
-      const normalizedX = (adjustedX / window.innerWidth) * svgWidth;
-      const normalizedY = (y / window.innerHeight) * svgHeight;
-
-  
-      // Clamp values
-      const clampedX = Math.max(0, Math.min(svgWidth, normalizedX));
-      const clampedY = Math.max(0, Math.min(svgHeight, normalizedY));
-      if (normalizedX !== clampedX || normalizedY !== clampedY) {
-          console.warn("Pointer position was clamped!", { normalizedX, normalizedY, clampedX, clampedY });
-      }
-  
-      // Animate update
-      requestAnimationFrame(() => {
-          pointer.querySelectorAll('line').forEach(line => {
-              line.setAttribute('x2', clampedX);
-              line.setAttribute('y2', clampedY);
-          });
+      const angle = Math.atan2(
+        hotspotCenterY - bubbleBottomY,
+        hotspotCenterX - bubbleCenterX
+      ) * 180 / Math.PI;
+      
+      // Style the line
+      Object.assign(line.style, {
+        display: 'block',
+        width: `${length}px`,
+        transform: `rotate(${angle}deg)`,
+        left: `${bubbleCenterX}px`,
+        top: `${bubbleBottomY}px`,
+        backgroundColor: getComputedStyle(hotspot.querySelector('.dot')).backgroundColor
       });
-  
-      console.log(`Pointer Position -> Screen: (${x}, ${y}), SVG: (${clampedX}, ${clampedY})`);
-    }
-  
-  
-
-    // Function to show the current scene
-    function showScene(index) {
-      scenes.forEach((scene, i) => {
-          scene.style.display = i === index ? 'block' : 'none';
-      });
-  
-      prevButton.disabled = index === 0;
-      nextButton.disabled = index === scenes.length - 1;
-  
-      const dialogues = scenes[index].querySelectorAll('.dialogue');
-      if (dialogues.length > 0) {
-          try {
-              const pov = JSON.parse(dialogues[0].dataset.pov);
-              if (modelViewer && pov) {
-                  console.log("POV Data:", pov); // Debugging
-  
-                  modelViewer.cameraOrbit = pov.camera_orbit;
-                  
-                  // Now directly set cameraTarget
-                  if (pov.camera_target) {
-                      modelViewer.cameraTarget = `${pov.camera_target.x}m ${pov.camera_target.y}m ${pov.camera_target.z}m`;
-                  }
-  
-                  modelViewer.fieldOfView = pov.field_of_view + "deg";
-                  modelViewer.zoomSpeed = pov.zoom_speed;
-                  modelViewer.rotation = pov.rotation;
-  
-                  updatePointer(topPointer, pov.head_x, pov.head_y, pov.head_z);
-              }
-  
-              if (dialogues[0]) {
-                  const dialogueContent = dialogues[0].querySelector('.card-text').cloneNode(true);
-                  topDialogue.innerHTML = '';
-                  topDialogue.appendChild(dialogueContent);
-              }
-  
-              if (dialogues[1]) {
-                  const dialogueContent = dialogues[1].querySelector('.card-text').cloneNode(true);
-                  bottomDialogue.innerHTML = '';
-                  bottomDialogue.appendChild(dialogueContent);
-  
-                  const povBottom = JSON.parse(dialogues[1].dataset.pov);
-                  updatePointer(bottomPointer, povBottom.head_x, povBottom.head_y, povBottom.head_z);
-              }
-          } catch (e) {
-              console.error("Error parsing POV JSON:", e);
-            }
-        }
     }
     
-  
-    // Event listeners for navigation buttons
-    prevButton.addEventListener('click', () => {
-        if (currentSceneIndex > 0) {
-            currentSceneIndex--;
-            showScene(currentSceneIndex);
-        }
-    });
-
-    nextButton.addEventListener('click', () => {
-        if (currentSceneIndex < scenes.length - 1) {
-            currentSceneIndex++;
-            showScene(currentSceneIndex);
-        }
-    });
-
-    // Initialize the first scene
-    showScene(currentSceneIndex);
-
-    // Update pointers on camera change
-    modelViewer.addEventListener('camera-change', () => {
-        const currentScene = document.querySelector('.scene[style*="block"]');
-        const dialogues = currentScene.querySelectorAll('.dialogue');
-        if (dialogues.length > 0) {
-            const topPov = JSON.parse(dialogues[0].dataset.pov);
-            updatePointer(topPointer, topPov.head_x, topPov.head_y, topPov.head_z);
-            if (dialogues[1]) {
-                const bottomPov = JSON.parse(dialogues[1].dataset.pov);
-                updatePointer(bottomPointer, bottomPov.head_x, bottomPov.head_y, bottomPov.head_z);
-            }
-        }
-    });
-});
+    function updateButtonStates() {
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      
+      prevButton.disabled = currentDialogueIndex === 0 && currentSceneIndex === 0;
+      nextButton.disabled = currentDialogueIndex === dialogues?.length - 1 && 
+                          currentSceneIndex === sceneElements.length - 1;
+    }
+    
+    // ================ NAVIGATION ================
+    function nextDialogue() {
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      
+      currentDialogueIndex++;
+      if (currentDialogueIndex >= dialogues?.length) {
+        currentDialogueIndex = 0;
+        currentSceneIndex = (currentSceneIndex + 1) % sceneElements.length;
+      }
+      updateView();
+    }
+    
+    function prevDialogue() {
+      currentDialogueIndex--;
+      if (currentDialogueIndex < 0) {
+        currentSceneIndex = (currentSceneIndex - 1 + sceneElements.length) % sceneElements.length;
+        const dialogues = sceneElements[currentSceneIndex]?.querySelectorAll('.dialogue');
+        currentDialogueIndex = dialogues?.length - 1 || 0;
+      }
+      updateView();
+    }
+    
+    // ================ START APPLICATION ================
+    init();
+  });
 
