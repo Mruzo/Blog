@@ -5,12 +5,32 @@ from django.db.models import Q
 from meta.models import ModelMeta
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from dj_shop_cart.cart import CartItem
+from dj_shop_cart.protocols import Numeric
+import uuid
+from django.contrib.auth.models import AbstractUser
+from decimal import Decimal
 
 
 # Create your models here.
 
-User = settings.AUTH_USER_MODEL
+class User(AbstractUser):
+    is_email_verified = models.BooleanField(default=False)
+    email_verification_token = models.CharField(max_length=100, blank=True, null=True)
+    email_verification_sent_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta(AbstractUser.Meta):
+        swappable = 'AUTH_USER_MODEL'
+        db_table = 'snmov_User'  # Match the case of the model name
+        verbose_name = 'User'  # Match the case of the model name
+        verbose_name_plural = 'Users'  # Match the case of the model name
+
+class Profile(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s profile"
 
 class ProductQuerySet(models.QuerySet):
     def published(self):
@@ -32,8 +52,8 @@ class ProductQuerySet(models.QuerySet):
 
 class ProductManager(models.Manager):
 
-    class Meta:
-        ordering = ['-publish_date', '-updated', '-timestamp']
+    # class Meta:
+    #     ordering = ['-publish_date', '-updated', '-timestamp']
 
     def get_queryset(self):
         return ProductQuerySet(self.model, using=self._db)
@@ -48,7 +68,8 @@ class ProductManager(models.Manager):
 
 
 class Product(ModelMeta, models.Model):
-    user = models.ForeignKey(User, default=1, null=True,
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)  # New UUID field
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, default=1, null=True,
                              on_delete=models.SET_NULL)
     title = models.CharField(max_length=120)
     slug = models.SlugField(unique=True, null=True, blank=True)
@@ -67,6 +88,12 @@ class Product(ModelMeta, models.Model):
     # Add GLTF model field
     gltf_model = models.FileField(upload_to='gltf_models/', blank=True, null=True)
     usdz_model = models.FileField(upload_to='usdz_models/', blank=True, null=True)
+    stock = models.PositiveIntegerField(default=0)
+    weight_grams = models.PositiveIntegerField(default=0, help_text="Weight in grams for Easyship")
+    package_width = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text="Width in cm")
+    package_height = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text="Height in cm")
+    package_length = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text="Length in cm")
+
 
     objects = ProductManager()
 
@@ -93,8 +120,8 @@ class Product(ModelMeta, models.Model):
     def __str__(self):
         return self.title
 
-    def get_absolute_url(self):
-        return f"/product/{self.slug}"
+    # def get_absolute_url(self):
+    #     return reverse('product_detail', kwargs={'slug': self.slug})
     
     # def get_gltf_url(self):
     #     return f"/product/{self.slug}"
@@ -110,6 +137,16 @@ class Product(ModelMeta, models.Model):
         if self.discount_percentage > 0:
             return self.price * (1 - self.discount_percentage / 100)
         return self.price
+    
+    # def get_price(self, item:CartItem) -> Numeric:
+    #     return item.product.price * item.quantity
+    
+    def get_package_dimensions(self):
+        return {
+            "width": float(self.package_width or 0),
+            "height": float(self.package_height or 0),
+            "length": float(self.package_length or 0),
+        }
 
     def get_edit_url(self):
         return f"{self.get_absolute_url()}/edit"
@@ -152,18 +189,23 @@ class About(models.Model):
 
 class SiteImage(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True)
-    object_id = models.PositiveIntegerField(null=True)
+    object_id = models.CharField(max_length=36, null=True)  # Use CharField instead of UUIDField
     content_object = GenericForeignKey('content_type', 'object_id')
+    
+    # Replace content_type and object_id with a ForeignKey to the Product model directly
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name="images")
+    
     image = models.ImageField(upload_to='image/', blank=True, null=True)
     caption = models.CharField(max_length=50, blank=True)
 
     def __str__(self):
-        return str(self.id)
+        return f"SiteImage {self.id} (Content Object: {self.content_object})"
 
     def get_meta_image(self):
+        """Returns the URL of the image if available."""
         if self.image:
             return self.image.url
-
+        return None
 
 class Testimonials(models.Model):
     caption = models.CharField(max_length=100)
@@ -178,7 +220,7 @@ class Testimonials(models.Model):
 
 
 class ARUsage(models.Model):
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # Track user (optional)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)  # Track user (optional)
     anonymous_user_id = models.CharField(max_length=255, null=True, blank=True)
     timestamp = models.DateTimeField(default=timezone.now)
     count = models.IntegerField(default=0)
@@ -189,7 +231,7 @@ class ARUsage(models.Model):
         return f"AR usage by anonymous user {self.anonymous_user_id} at {self.timestamp}"
 
 class ModelUsage(models.Model):
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # Track user (optional)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)  # Track user (optional)
     anonymous_user_id = models.CharField(max_length=255, null=True, blank=True)
     timestamp = models.DateTimeField(default=timezone.now)
     count = models.IntegerField(default=0)
@@ -199,9 +241,88 @@ class ModelUsage(models.Model):
             return f"Model usage by {self.user} at {self.timestamp}"
         return f"Model usage by anonymous user {self.anonymous_user_id} at {self.timestamp}"
 
+class ShippingAddress(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='shipping_addresses', null=True)
+    full_name = models.CharField(max_length=255)
+    address_line_1 = models.CharField(max_length=255)
+    address_line_2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    postal_code = models.CharField(max_length=20)
+    country_code = models.CharField(max_length=2)  # e.g., 'US', 'CA'
+
+    class Meta:
+        verbose_name_plural = "ShippingAddress"
+
+    def save(self, *args, **kwargs):
+        if not self.full_name:
+            self.full_name = f'{self.user.first_name()} {self.user.last_name}'
+        super().save(*args, **kwargs)
+        
+
+class Order(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('ORDERED', 'Payment Received'),
+        ('PROCESSING', 'Processing'),
+        ('LABEL_CREATED', 'Label Created'),
+        ('SHIPPED', 'Shipped'),
+        ('DELIVERED', 'Delivered'),
+        ('CANCELLED', 'Cancelled'),
+        ('FAILED', 'Failed'),
+    ]
+
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders")
+    order_date = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')  # Increased max_length
+    products = models.ManyToManyField(Product, through='OrderItem')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    shipping_address = models.ForeignKey(ShippingAddress, on_delete=models.SET_NULL, null=True, blank=True)
+    shipping_rate_id = models.CharField(max_length=100, blank=True, null=True)
+    shipping_provider = models.CharField(max_length=50, blank=True, null=True)
+    shipping_service = models.CharField(max_length=100, blank=True, null=True)
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    tracking_number = models.CharField(max_length=100, blank=True, null=True)
+    label_url = models.URLField(blank=True, null=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
+    shipping_label_created_at = models.DateTimeField(null=True, blank=True)  # New field
+    shipping_label_error = models.TextField(blank=True, null=True)  # New field for storing error messages
+    
+
+    def __str__(self):
+        return f"Order {self.id} by {self.customer.username}"
+    
+    def calculate_total_weight(self):
+        return sum([
+            item.product.weight_grams * item.quantity
+            for item in self.orderitem_set.select_related('product')
+        ])
+
+    def calculate_total_value(self):
+        return sum([
+            item.product.get_discounted_price() * item.quantity
+            for item in self.orderitem_set.select_related('product')
+        ])
+    
+    def calculate_grand_total(self):
+        subtotal = self.calculate_total_value()
+        shipping = self.shipping_cost or Decimal("0.00")
+        return subtotal + shipping
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.title} (Order {self.order.id})"
+
+
+
 
 class Preference(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     post = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name='preferences')
     value = models.IntegerField()
@@ -217,7 +338,7 @@ class Preference(models.Model):
 class Comment(models.Model):
     comment_cont = models.TextField(max_length=200, verbose_name='Comment')
     user_name = models.ForeignKey(
-        User, default=1, null=True, on_delete=models.SET_NULL)
+        settings.AUTH_USER_MODEL, default=1, null=True, on_delete=models.SET_NULL)
     comment_post = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name='comments')
     comment_date = models.DateTimeField(default=timezone.now)

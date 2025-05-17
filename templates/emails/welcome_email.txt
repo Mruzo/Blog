@@ -1,0 +1,26 @@
+Welcome to Justvybz!
+
+Hi {{ user.first_name|default:user.username }},
+
+Thank you for joining Justvybz! We're excited to have you as part of our community. Get ready to explore our collection of beautiful desk mats and experience them in augmented reality.
+
+Here's what you can do now:
+* Browse our collection of desk mats
+* Experience products in AR before buying
+* Save your favorite items
+* Track your orders easily
+
+Start shopping now: {{ site_url }}/products
+
+If you have any questions, our support team is here to help. Just reply to this email or contact us at support@justvybz.com.
+
+---
+This email was sent to {{ user.email }}.
+You're receiving this email because you recently created an account on Justvybz.
+
+Privacy Policy: {{ site_url }}{% url 'privacy' %}
+Terms of Service: {{ site_url }}{% url 'terms' %}
+Cookie Policy: {{ site_url }}{% url 'cookie_policy' %}
+
+© 2025 Justvybz Inc.
+All rights reserved 

@@ -1,89 +1,95 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="container py-5">
+    <div class="card shadow-sm">
+        <div class="card-body p-4 p-md-5">
+            <h1 class="card-title h2 text-center mb-4">Cookie Policy</h1>
+            <p class="text-muted small text-center mb-5">Last updated: {% now "F j, Y" %}</p>
 
+            <div class="policy-content">
+                <p class="lead mb-4">Justvybz Inc. ("us", "we", or "our") uses cookies on www.justvybz.com (the "Website"). This policy explains how we use cookies and similar technologies to provide, customize, evaluate, improve, promote and protect our services.</p>
 
-                        <div class="card white" style="width-max: 25rem;padding:5%;">
-                            <div class="center">
-                                <h5 style="font-weight:bold;">
-                                    {{title}}
-                                </h5>
-                            </div>
+                <h2 class="h4 mt-5 mb-3">What are Cookies?</h2>
+                <p>Cookies are small text files that are stored on your device when you visit our website. They help make our website work efficiently and provide us with analytical information that helps improve your experience.</p>
 
-                            <div class="left-align" style="margin:0 5%;">
-                                <p class="row"><small> Last updated: November 28, 2019 </small></p>
+                <h2 class="h4 mt-5 mb-3">How We Use Cookies</h2>
+                <p>We use cookies for the following purposes:</p>
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item bg-transparent"><i class="fas fa-check-circle text-success me-2"></i>Essential cookies: Required for the website to function properly, including shopping cart management and secure checkout</li>
+                    <li class="list-group-item bg-transparent"><i class="fas fa-check-circle text-success me-2"></i>Authentication cookies: Remember your login status and preferences</li>
+                    <li class="list-group-item bg-transparent"><i class="fas fa-check-circle text-success me-2"></i>Analytics cookies: Help us understand how visitors interact with our website</li>
+                    <li class="list-group-item bg-transparent"><i class="fas fa-check-circle text-success me-2"></i>Shopping experience cookies: Remember your preferences and improve your shopping experience</li>
+                </ul>
 
-                                <p>Sneaky Motivator ("us", "we", or "our") uses cookies on the www.sneakymotivator.com website (the "Service"). By using the Service, you consent to the use of cookies.</p>
+                <h2 class="h4 mt-5 mb-3">Types of Cookies We Use</h2>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-top-0">Type</th>
+                                <th class="border-top-0">Purpose</th>
+                                <th class="border-top-0">Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Session Cookies</strong></td>
+                                <td>Maintain your shopping session and cart contents</td>
+                                <td>Deleted when browser closes</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Persistent Cookies</strong></td>
+                                <td>Remember your preferences and login information</td>
+                                <td>Up to 12 months</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Analytics Cookies</strong></td>
+                                <td>Understand website usage and improve our services</td>
+                                <td>Up to 24 months</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                                <p>Our Cookies Policy explains what cookies are, how we use cookies, how third-parties we may partner with may use cookies on the Service, your choices regarding cookies and further information about cookies. This Cookies Policy  for Sneaky Motivator has been created with the help of <a href="https://www.termsfeed.com/cookie-policy-generator/">Cookies Policy Generator</a>.</p>
+                <h2 class="h4 mt-5 mb-3">Your Cookie Choices</h2>
+                <p>You can control cookies through your browser settings. However, please note that disabling certain cookies may affect the functionality of our website and your shopping experience. Your options include:</p>
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item bg-transparent"><i class="fas fa-check-circle text-success me-2"></i>Accepting all cookies</li>
+                    <li class="list-group-item bg-transparent"><i class="fas fa-check-circle text-success me-2"></i>Notifying you when cookies are being sent</li>
+                    <li class="list-group-item bg-transparent"><i class="fas fa-check-circle text-success me-2"></i>Rejecting all cookies</li>
+                </ul>
 
-                                <p><strong>What are cookies</strong></p>
+                <h2 class="h4 mt-5 mb-3">Browser-Specific Cookie Management</h2>
+                <p>To manage cookies in your browser, visit the following links:</p>
+                <div class="list-group mb-4">
+                    <a href="https://support.google.com/chrome/answer/95647" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fab fa-chrome me-2"></i>Google Chrome
+                    </a>
+                    <a href="https://support.mozilla.org/en-US/kb/enhanced-tracking-protection-firefox-desktop" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fab fa-firefox me-2"></i>Mozilla Firefox
+                    </a>
+                    <a href="https://support.apple.com/guide/safari/manage-cookies-sfri11471" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fab fa-safari me-2"></i>Safari
+                    </a>
+                    <a href="https://support.microsoft.com/en-us/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fab fa-edge me-2"></i>Microsoft Edge
+                    </a>
+                </div>
 
-                                <p>Cookies are small pieces of text sent by your web browser by a website you visit. A cookie file is stored in your web browser and allows the Service or a third-party to recognize you and make your next visit easier and the Service more useful to you.</p>
+                <h2 class="h4 mt-5 mb-3">Updates to This Policy</h2>
+                <p>We may update this Cookie Policy to reflect changes in our practices or for operational, legal, or regulatory reasons. The date at the top of this policy indicates when it was last updated.</p>
 
-                                <p>Cookies can be "persistent" or "session" cookies. Persistent cookies remain on your personal computer or mobile device when you go offline, while session cookies are deleted as soon as you close your web browser.</p>
-
-                                <p><strong>How Sneaky Motivator uses cookies</strong></p>
-
-                                <p>When you use and access the Service, we may place a number of cookies files in your web browser.</p>
-
-                                <p>We use cookies for the following purposes:</p>
-
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">
-                                        <p>To enable certain functions of the Service</p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>We use both session and persistent cookies on the Service and we use different types of cookies to run the Service:</p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>Essential cookies. We may use essential cookies to authenticate users and prevent fraudulent use of user accounts.</p>
-                                    </li>
-                                </ul>
-
-                                <p><strong>What are your choices regarding cookies</strong></p>
-
-                                <p>If you'd like to delete cookies or instruct your web browser to delete or refuse cookies, please visit the help pages of your web browser. As an European citizen, under GDPR, you have certain individual rights. You can learn more about these rights in the <a href="https://termsfeed.com/blog/gdpr/#Individual_Rights_Under_the_GDPR">GDPR Guide</a>.</p>
-
-                                <p>Please note, however, that if you delete cookies or refuse to accept them, you might not be able to use all of the features we offer, you may not be able to store your preferences, and some of our pages might not display properly.</p>
-
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">
-                                        <p>For the Chrome web browser, please visit this page from Google: <a href="https://support.google.com/accounts/answer/32050">https://support.google.com/accounts/answer/32050</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>For the Internet Explorer web browser, please visit this page from Microsoft: <a href="http://support.microsoft.com/kb/278835">http://support.microsoft.com/kb/278835</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>For the Firefox web browser, please visit this page from Mozilla: <a href="https://support.mozilla.org/en-US/kb/delete-cookies-remove-info-websites-stored">https://support.mozilla.org/en-US/kb/delete-cookies-remove-info-websites-stored</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>For the Safari web browser, please visit this page from Apple: <a href="https://support.apple.com/kb/PH21411?locale=en_US">https://support.apple.com/kb/PH21411?locale=en_US</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>For any other web browser, please visit your web browser's official web pages.</p>
-                                    </li>
-                                </ul>
-
-                                <p><strong>Where can you find more information about cookies</strong></p>
-
-                                <p>You can learn more about cookies and the following third-party websites:</p>
-
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">
-                                        <p>AllAboutCookies: <a href="http://www.allaboutcookies.org/">http://www.allaboutcookies.org/</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>Network Advertising Initiative: <a href="http://www.networkadvertising.org/">http://www.networkadvertising.org/</a></p>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-
-
-
-
-
-
+                <h2 class="h4 mt-5 mb-3">Contact Us</h2>
+                <p>If you have questions about our Cookie Policy, please contact us at:</p>
+                <div class="card bg-light border-0 p-4 mb-4">
+                    <div class="card-body">
+                        <p class="mb-2"><i class="fas fa-envelope me-2"></i>Email: <a href="mailto:support@justvybz.com" class="text-decoration-none">support@justvybz.com</a></p>
+                        <p class="mb-0"><i class="fas fa-globe me-2"></i>Website: <a href="https://www.justvybz.com/contact" class="text-decoration-none">www.justvybz.com/contact</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

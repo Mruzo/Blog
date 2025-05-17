@@ -3,44 +3,116 @@
 
 {% block content %}
 
-<div class="col p-1 mt-5">
-    <h3 class="text-center" style="font-weight:bold;">
-        <p>Products</p>
+<div class="col p-1 mt-4">
+    <h3 class="text-center bold subtext-btn-sm text-decoration-none border-0" style="font-weight:bold;">
+        <p class="mb-1" >Desk Mats</p>
     </h3>
 </div>
 
-{% for object in product_list %}
-<ul class="list-group col-md-8 mx-auto">
-    <li class="list-group-item row w-100 m-2 d-flex justify-content-between">
-        <div class="col-md-10">
-        <h6  style="font-weight:bold;">{{ object.title }}</h6>
-            <p class="card-text ">
-                <small>{{ object.content | safe | linebreaks | truncatewords:23 }}</small>
-            </p>
+<div class="container p-0">
+    <div id="cart-message"
+        class="alert alert-success d-none subtext-sm text-center"
+        style="position: fixed; top: 0; left: 0; width: 100%; z-index: 1050; margin: 0; border-radius: 0;"
+        role="alert">
+    </div>
+
+    <div class="row d-flex flex-wrap justify-content-center">
+        {% for product in products %}
+        <div class="col-md-4 col-12 p-1">
+            <ul class="list-group mx-auto p-0">
+                {% if product.available %}
+                <li class="list-group-item row w-100 mb-2 mx-auto d-flex justify-content-center shadow">
+                    <div class="subtext-btn p-0">
+                        <h6 class="subtext-btn-sm border-bottom mb-" style="font-weight:bold;">
+                            {{ product.title }}
+                        </h6>
+                        <div class="row">
+
+                            <!-- Carousel Container -->
+                            <div id="carousel-{{ product.id }}" class="carousel slide">
+                                <!-- Main Image Display -->
+                                <div class="carousel-inner">
+                                    {% for image in product.images_list %}
+                                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                        <img id="main-image-{{ product.id }}" src="{{ image.get_meta_image }}" 
+                                            alt="{{ image.caption }}" class="d-block w-100" style="height: auto;">
+                                    </div>
+                                    {% empty %}
+                                    <div class="carousel-item active">
+                                        <p class="subtext-sm text-center py-3">No images available for this product.</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Thumbnail Navigation -->
+                                {% if product.images_list|length > 1 %}
+                                <div class="d-flex justify-content-center mt-2">
+                                    {% for image in product.images_list %}
+                                    <div class="col-2 p-1">
+                                        <img src="{{ image.get_meta_image }}" alt="{{ image.caption }}" 
+                                            class="img-thumbnail border {% if forloop.first %}border-dark{% else %}border-0{% endif %}"
+                                            style="cursor: pointer;" 
+                                            onclick="switchImage('{{ product.id }}', {{ forloop.counter0 }})">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col p-0 my-2 subtext-sm border-top">
+                                {% if product.available %}
+                                    <div class="row align-items-center justify-content-between border-bottom">
+                                        <div class="col-auto">
+                                        {% if product.discount_percentage > 0 %}
+                                            <h6 class="card-title subtext-btn-sm my-auto">
+                                                <p class="card-text">
+                                                    <span style="color: #DC2229;">
+                                                        <b> C${{ product.get_discounted_price|floatformat:2 }} </b>
+                                                    </span><br>
+                                                    <span class="subtext-sm text-dark">
+                                                        <b style="text-decoration: line-through;">C${{ product.price }}</b>
+                                                        <b style="color: #DC2229;"> &nbsp; -{{ product.discount_percentage|floatformat:0 }}% </b>
+                                                        <b class="text-dark"> Original Price</b>
+                                                    </span>
+                                                </p>
+                                            </h6>
+                                        {% else %}
+                                            <h6 class="card-title subtext-btn-sm text-right my-auto">
+                                                <span style="text-decoration: line-through; color: #DC2229;"></span>
+                                                C${{ product.price }}
+                                            </h6>
+                                        {% endif %}
+                                        </div>                                        
+
+                                        <div class="col-auto">
+                                            <button class="btn subtext-sm shadow mb-0 bg-body-tertiary justify-content-center text-dark rounded-5 mt-1 p-1 add-to-cart-btn my-auto" role="button" aria-disabled="true" data-product-id="{{ product.uuid }}" data-quantity="1" style="background-color: #FFBC00;" type="submit">Add to cart</button>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="row align-items-center justify-content-between border-bottom">
+                                        <div class="col-auto">
+                                            <span class="subtext-sm text-dark">
+                                                <b class="text-dark">Unavailable</b>
+                                            </span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <button class="btn subtext-sm shadow mb-0 bg-body-tertiary justify-content-center text-dark rounded-5 my-1 p-1" role="button" aria-disabled="true" style="background-color: #FFBC00;" type="submit">Get notified</button>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    {{ product.content | safe | truncatewords:7 }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                {% endif %}
+            </ul>
         </div>
-        <div class="col-md-2 d-flex flex-wrap justify-content-center">
-
-
-            <small class="p-2 bd-highlight">
-                <svg xmlns="http://www.w3.org/2000/svg" height=24 viewBox="0 0 13 18.75" x="0px" y="0px"><path fill-rule="evenodd" d="M225.7237,18.1321555 C223.445082,17.9286539 221.389184,15.615621 222.167984,12.5082871 C223.162048,9.32396029 226.388091,9.78792641 227.625348,4 C230.174515,6.31064362 231.198896,8.79235326 230.698491,11.4451289 C232.101851,11.7907384 233.068385,11.2383376 233.598092,9.78792641 C236.062199,11.9635432 235.274115,17.9563237 231.264322,19 C228.56438,18.3042158 227.094805,16.4236556 226.855596,13.3583193 C225.598407,14.4326908 225.221108,16.0239696 225.7237,18.1321555 Z" transform="translate(-222 -4)"/></svg>
-                {{ object.likes }}
-            </small>
-
-
-            <small class="p-2 bd-highlight">
-                <svg xmlns="http://www.w3.org/2000/svg" height=25 version="1.1" x="0px" y="0px" viewBox="1 -1 100 125" style="enable-background:new 1 -1 100 100;" xml:space="preserve"><path d="M88.6,15.3c-5-5.1-11.7-7.9-19-7.9c-7,0-13.8,2.7-18.6,7.4C46,10,39.4,7.4,32.4,7.4c-7.2,0-13.9,2.8-18.9,7.8  c-5.1,5.1-7.8,11.8-7.8,19c0,7.2,2.8,13.9,7.8,19l37.1,37.2l0.4,0.4l37.6-37.6c5-5,7.8-11.7,7.8-18.9S93.6,20.3,88.6,15.3z"/></svg>
-                {{ object.dislikes }}
-            </small>
-
-            <a class="btn btn-small neww-success p-2 bd-highlight" href="{{ object.get_absolute_url }}">
-                        Read
-            </a>
-
-        </div>
-    </li>
-</ul>
- {% endfor %}
-
+        {% endfor %}
+    </div>
+</div>
 
 
 {% if is_paginated %}
@@ -71,5 +143,88 @@
 {% endif %}
 
     </div>
+
+
+    <script>
+        //JavaScript to Handle Thumbnail Clicks
+        function switchImage(productId, index) {
+        // Get all carousel items for this product
+        let carouselItems = document.querySelectorAll(`#carousel-${productId} .carousel-item`);
+        let thumbnails = document.querySelectorAll(`#carousel-${productId} .img-thumbnail`);
+
+        // Remove "active" class from all items
+        carouselItems.forEach(item => item.classList.remove('active'));
+        thumbnails.forEach(thumb => thumb.classList.remove('border-dark'));
+        thumbnails.forEach(thumb => thumb.classList.add('border-0'));
+
+        // Add "active" class to the selected index
+        if (carouselItems[index]) {
+            carouselItems[index].classList.add('active');
+        }
+        if (thumbnails[index]) {
+            thumbnails[index].classList.add('border-dark');
+            thumbnails[index].classList.remove('border-0');
+        }
+    }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            // Add event listener for Add to Cart buttons
+            const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+
+            addToCartButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const productId = this.getAttribute('data-product-id');
+                    const quantity = this.getAttribute('data-quantity') || 1; // Default quantity to 1 if not specified
+
+                    fetch(`/product/add-to-cart/${productId}/`, {
+                        method: 'POST', 
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken // Include the CSRF token here
+                        },
+                        body: JSON.stringify({ product_id: productId, quantity: quantity }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const cartCount = document.getElementById('cart-count');
+                        if (data.success) {
+                            // Update cart count
+                            cartCount.textContent = data.cart_count;
+                            showMessage(data.message);
+                            // Update badge color based on cart count
+                            if (data.cart_count > 0) {
+                                cartCount.classList.remove('bg-danger');
+                                cartCount.classList.add('bg-success');
+                            } else {
+                                cartCount.classList.remove('bg-success');
+                                cartCount.classList.add('bg-danger');
+                            }
+                        } else {
+                            alert('Error: ' + data.error); // Show error message
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
+            });
+            function showMessage(message) {
+                const container = document.getElementById("cart-message");
+                if (container) {
+                    container.textContent = message;
+                    container.classList.remove("d-none");
+
+                    setTimeout(() => {
+                        container.classList.add("d-none");
+                        container.textContent = "";
+                    }, 3000);
+                }
+            }
+        });
+        
+
+    </script>
+    
+    
 
 {% endblock %}

@@ -1,7 +1,10 @@
 from django import forms
 from snmov.models import ReachOut, ProductNotification, Product
 from django.core.validators import EmailValidator
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import UserCreationForm
 
+User = get_user_model()
 
 class ContactModelForm(forms.ModelForm):
 
@@ -45,3 +48,14 @@ class ProductNotificationForm(forms.ModelForm):
             self.add_error('products', 'Please select at least one product.')
 
         return cleaned_data
+
+
+class RegisterForm(UserCreationForm):
+    username = forms.CharField(label="Username")
+    email = forms.EmailField(label="Email")
+    first_name = forms.CharField(label="First Name")
+    last_name = forms.CharField(label="Last Name")
+
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email', 'username', 'password1', 'password2')

@@ -1,71 +1,82 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title h3 text-center mb-4">Terms of Service</h1>
+            <p class="text-muted small">Last updated: {% now "F j, Y" %}</p>
 
+            <div class="policy-content">
+                <p>Welcome to Justvybz Inc. These Terms of Service ("Terms") govern your use of www.justvybz.com (the "Website") and all related services provided by Justvybz Inc. ("we", "us", or "our"). By accessing or using our Website, you agree to be bound by these Terms.</p>
 
+                <h2 class="h5 mt-4">1. Account Registration</h2>
+                <p>To use certain features of our Website, you must:</p>
+                <ul class="list-unstyled">
+                    <li>✓ Be at least 18 years old</li>
+                    <li>✓ Register for an account with accurate information</li>
+                    <li>✓ Maintain the security of your account credentials</li>
+                    <li>✓ Notify us immediately of any unauthorized access</li>
+                </ul>
 
+                <h2 class="h5 mt-4">2. Products and Orders</h2>
+                <p>When placing an order:</p>
+                <ul class="list-unstyled">
+                    <li>✓ All product descriptions are accurate to the best of our knowledge</li>
+                    <li>✓ Prices are subject to change without notice</li>
+                    <li>✓ Orders are subject to availability and acceptance</li>
+                    <li>✓ We reserve the right to limit order quantities</li>
+                    <li>✓ Shipping times are estimates only</li>
+                </ul>
 
+                <h2 class="h5 mt-4">3. Payment Terms</h2>
+                <ul class="list-unstyled">
+                    <li>✓ All prices are in Canadian Dollars (CAD)</li>
+                    <li>✓ Payment is required at the time of order</li>
+                    <li>✓ We accept major credit cards and other specified payment methods</li>
+                    <li>✓ All payments are processed securely through our payment processors</li>
+                </ul>
 
+                <h2 class="h5 mt-4">4. Shipping and Returns</h2>
+                <ul class="list-unstyled">
+                    <li>✓ We ship to addresses in Canada and the United States</li>
+                    <li>✓ Shipping costs are calculated at checkout</li>
+                    <li>✓ Returns are accepted within 30 days of delivery</li>
+                    <li>✓ Items must be unused and in original packaging</li>
+                    <li>✓ Return shipping costs are the customer's responsibility</li>
+                </ul>
 
+                <h2 class="h5 mt-4">5. Intellectual Property</h2>
+                <p>All content on our Website, including text, graphics, logos, and images, is our property and protected by copyright and other intellectual property laws.</p>
 
+                <h2 class="h5 mt-4">6. Prohibited Activities</h2>
+                <p>You agree not to:</p>
+                <ul class="list-unstyled">
+                    <li>✓ Use the Website for any illegal purpose</li>
+                    <li>✓ Attempt to gain unauthorized access</li>
+                    <li>✓ Interfere with the Website's operation</li>
+                    <li>✓ Upload malicious code or content</li>
+                    <li>✓ Impersonate others or provide false information</li>
+                </ul>
 
-                            <div class="card" style="padding:5%;">
+                <h2 class="h5 mt-4">7. Limitation of Liability</h2>
+                <p>To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of our Website or services.</p>
 
-                                <div class="center">
-                                    <h5 style="font-weight:bold;">
-                                        {{title}}
-                                    </h5>
-                                </div>
-                                <p class="row"><small> Last updated: November 28, 2019 </small></p>
+                <h2 class="h5 mt-4">8. Changes to Terms</h2>
+                <p>We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting to the Website. Your continued use of the Website after changes constitutes acceptance of the modified Terms.</p>
 
-                                <p>Welcome to SneakyMotivator.</p>
-                                <p>SneakyMotivator provides this Website and Services (located at sneakymotivator.com) to you subject to the notices, terms, and conditions set forth in these terms (the "Terms of Use"). In addition, when you use any of our Services, you will be subject to the rules, guidelines, policies, terms, and conditions applicable to such service, and they are incorporated into this Terms of Use by this reference.</p>
-                                <p>These Terms of Use are effective as of November 25, 2019.</p>
-                                <p>Your eligibility for use of the Website is contingent upon meeting the following conditions:</p>
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">You are at least 18 years of age</li>
-                                    <li style="list-style-type: initial;">You use the Website and Services according to these Terms of Use and all applicable laws and regulations determined by the state and country of residence</li>
-                                    <li style="list-style-type: initial;">You provide complete and accurate registration information and maintain accurate registration information on the Website</li>
-                                    <li style="list-style-type: initial;">ou agree and understand that SneakyMotivator may, at any time, and without prior notice, revoke and/or cancel your access if you fail to meet these criteria or violate any portion of these Terms of Use
-</li>
-                                </ul>
+                <h2 class="h5 mt-4">9. Governing Law</h2>
+                <p>These Terms are governed by the laws of Canada. Any disputes shall be resolved exclusively in the courts of Canada.</p>
 
-                                <p style="font-weight:bold;padding-top:2%;">Use of this Website</p>
-                                <p>Sneaky Motivator does not come with a comment delete button at the moment, but in subsequent versions, this feature will be added. If you for any reason, need to delete a comment you made, contact us, and we’ll see that your comment is deleted.</p>
-
-                                <p>In connection with your use of our Website, you must act responsibly and exercise good judgment. Without limiting the foregoing, you will not:</p>
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">Violate any local, state, provincial, national, or other law or regulation, or any order of a court</li>
-                                    <li style="list-style-type: initial;">Infringe the rights of any person or entity, including without limitation, their intellectual property, privacy, publicity or contractual rights</li>
-                                    <li style="list-style-type: initial;">Interfere with or damage our Services, including, without limitation, through the use of viruses, cancel bots, Trojan horses, harmful code, flood pings, denial-of-service attacks, packet or IP spoofing, forged routing or electronic mail address information or similar methods or technology</li>
-                                    <li style="list-style-type: initial;">Use automated scripts to collect information or otherwise interact with the Services or the Website</li>
-                                    <li style="list-style-type: initial;">Enter into this agreement on behalf of another person or entity without consent or the legal capacity to make such agreements as a representative of an organization or entity</li>
-                                </ul>
-
-                                <p style="font-weight:bold;padding-top:2%;">Intellectual Property</p>
-                                <p>All code, text, software, scripts, graphics, files, photos, images, logos, and materials contained on this Website, or within the Services, are the sole property of SneakyMotivator.</p>
-
-                                <p>Unauthorized use of any materials contained on this Website or within the Service may violate copyright laws, trademark laws, the laws of privacy and publicity, and/or other regulations and statutes. If you believe that any of the materials infringe on any third party's rights, please contact SneakyMotivator immediately at the address provided below.</p>
-
-                                <p style="font-weight:bold;padding-top:2%;">Third Party Websites </p>
-                                <p>Our Website may link you to other sites on the Internet or otherwise include references to information, documents, software, materials and/or services provided by other parties. These websites may contain information or material that some people may find inappropriate or offensive.</p>
-                                <p>These other websites and parties are not under our control, and you acknowledge that we are not responsible for the accuracy, copyright compliance, legality, decency, or any other aspect of the content of such sites, nor are we responsible for errors or omissions in any references to other parties or their products and services. The inclusion of such a link or reference is provided merely as a convenience and does not imply endorsement of, or association with, the Website or party by us, or any warranty of any kind, either express or implied.</p>
-                                <p style="font-weight:bold;padding-top:2%;">Disclaimer of Warranty and Limitation of Liability </p>
-                                <p>The Website is provided "AS IS." appfigures, its suppliers, officers, directors, employees, and agents exclude and disclaim all representations and warranties, express or implied, related to this Website or in connection with the Services. You exclude Sneaky Motivator from all liability for damages related to or arising out of the use of this Website.</p>
-                                <p style="font-weight:bold;padding-top:2%;">Changes to these Terms of Use</p>
-                                <p>Sneaky Motivator retains the right to, at any time, modify or discontinue, any or all parts of the Website without notice.</p>
-                                <p>This Terms of Use was created by termsusetemplate.com for Sneaky Motivator</p>
-                                <p>Additionally, Sneaky Motivator reserves the right, in its sole discretion, to modify these Terms of Use at any time, effective by posting new terms on the Website with the date of modification. You are responsible for reading and understanding the terms of this agreement prior to registering with, or using the Service. Your use of the Website and/or Services after any such modification has been published constitutes your acceptance of the new terms as modified in these Terms of Use.</p>
-                                <p style="font-weight:bold;padding-top:2%;">Governing Law</p>
-                                <p>These Terms of Use and any dispute or claim arising out of, or related to them, shall be governed by and construed in accordance with the internal laws of the Canada without giving effect to any choice or conflict of law provision or rule.</p>
-                                <p>Any legal suit, action or proceeding arising out of, or related to, these Terms of Use or the Website shall be instituted exclusively in the federal courts of Canada.</p>
-                            </div>
-
-
-
-
-
-
-
-
+                <h2 class="h5 mt-4">10. Contact Information</h2>
+                <p>For questions about these Terms:</p>
+                <ul class="list-unstyled">
+                    <li>Email: legal@justvybz.com</li>
+                    <li>Address: [Your Business Address]</li>
+                    <li>Phone: [Your Business Phone]</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

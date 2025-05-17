@@ -1,0 +1,11 @@
+<!-- templates/payment_success.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="success-container subtext-btn-sm">
+    <h2>Payment Successful 🎉</h2>
+    <p>Thank you for your order. A confirmation has been sent to your email.</p>
+    <a href="{% url 'homepage' %}" class="btn btn-primary">Return to Home</a>
+</div>
+{% endblock %}

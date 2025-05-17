@@ -28,10 +28,14 @@ config = RawConfigParser()
 config.read('/etc/vybz/settings.ini')
 #SECRET_KEY = os.environ.get('SNM_KEY')
 SECRET_KEY = config.get('section', 'VYBZ_KEY')
+STRIPE_PUBLIC_KEY = config.get('section','STRIPE_PUBLIC_KEY')
+STRIPE_SECRET_KEY = config.get('section', 'STRIPE_SECRET_KEY')
+
+SHIPPO_API_KEY=config.get('section', 'SHIPPO_LIVE')
 
 
 META_SITE_PROTOCOL = 'http', 'https'
-META_SITE_DOMAIN = 'adamaduka.com'
+
 
 ROOT_URLCONF = 'snm.urls'
 
@@ -48,13 +52,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'snmov',
     'crispy_forms',
     'storages',
     'django.contrib.sitemaps',
     'tinymce',
     'meta',
+    'crispy_bootstrap4',
+    'bootstrap4',
+    
 ]
+
+SITE_ID = 1
+SITE_DOMAIN = 'justvybz.com'
+SITE_NAME = 'Justvybz'
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
 
@@ -119,6 +131,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "snm.context_processors.cart_context",
+                "snm.context_processors.cart_count",
             ],
         },
     },
@@ -163,8 +177,12 @@ db_from_env = dj_database_url.config(conn_max_age=500)
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-DEFAULT_FROM_EMAIL = config.get('section', 'VYBZ_FB_USER')
-DEFAULT_TO_EMAIL = config.get('section', 'VYBZ_MG_USER')
+# Force HTTPS for password reset emails
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+
+# Email configuration
+DEFAULT_FROM_EMAIL = 'noreply@justvybz.com'
+SUPPORT_EMAIL = 'support@justvybz.com'
 
 EMAIL_HOST = 'mail.papamail.net'
 EMAIL_PORT = 587
@@ -186,4 +204,24 @@ MEDIA_URL = '/media/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
+]
+
+# Default Sender Address (fallback if admin user's address is not found)
+DEFAULT_SENDER_NAME = 'Justvybz Inc.'
+DEFAULT_SENDER_STREET1 = '206 Winston Blvd'
+DEFAULT_SENDER_STREET2 = ''
+DEFAULT_SENDER_CITY = 'Cambridge'
+DEFAULT_SENDER_STATE = 'ON'
+DEFAULT_SENDER_ZIP = 'N3C 1M3'
+DEFAULT_SENDER_COUNTRY = 'CA'
+
+# Debug settings - ensure error pages are shown in production
+DEBUG = False  # This should be True in local.py and False in pro.py
+
+# Allow hosts
+ALLOWED_HOSTS = [
+    'justvybz.com',
+    'www.justvybz.com',
+    'localhost',
+    '127.0.0.1',
 ]

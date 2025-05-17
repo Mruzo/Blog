@@ -1,6 +1,25 @@
-<div id="cookie-notification" class="cookies-notification" style="z-index: 1000;">
+<div id="cookie-notification" class="cookies-notification" style="z-index: 1000; display: none;">
     <p>This website uses cookies to ensure you get the best experience. 
         <!-- <a href="#">Learn more</a> -->
     </p>
     <button id="accept-cookie" class="btn btn-primary" style="background-color: #414042;">Accept</button>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cookieNotification = document.getElementById('cookie-notification');
+    const acceptButton = document.getElementById('accept-cookie');
+    
+    // Check if user has already accepted cookies
+    if (!localStorage.getItem('cookiesAccepted')) {
+        cookieNotification.style.display = 'block';
+    }
+    
+    acceptButton.addEventListener('click', function() {
+        // Store acceptance in localStorage
+        localStorage.setItem('cookiesAccepted', 'true');
+        // Hide the notification
+        cookieNotification.style.display = 'none';
+    });
+});
+</script>

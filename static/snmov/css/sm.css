@@ -190,6 +190,10 @@ h2 {
     font-weight: 400;
 }
 
+.subtext-sm p {
+    margin: 0;
+}
+
 .subtext-smm {
     font-family: 'quicksand', sans-serif;
     font-size: 0.9rem;
