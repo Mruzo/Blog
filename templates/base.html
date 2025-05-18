@@ -37,27 +37,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
-        html, body {
-            height: 100%;
-            width: 100%;
+        body {
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        body {
-            display: flex;
-            flex-direction: column;
             background-color: #f8f9fa;
-        }
-
-        main {
-            flex: 1 0 auto;
-            width: 100%;
-            position: relative;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
         }
 
         .container {
@@ -100,8 +83,6 @@
 
         /* Footer styles */
         footer {
-            flex-shrink: 0;
-            width: 100%;
             background-color: #fff;
         }
 
@@ -166,9 +147,12 @@
         }
 
         @media (max-width: 768px) {
-            .container {
-                padding-right: 10px;
-                padding-left: 10px;
+            body {
+                margin-bottom: 450px; /* Larger footer height for mobile */
+            }
+
+            footer {
+                height: 450px;
             }
         }
     </style>
@@ -198,7 +182,7 @@
             {% include 'cookies_policy.html' %}
         </div>
     </main>
-    <footer class="page-footer border-top py-4">
+    <footer class="card border-top py-4">
         <div class="container">
             <div class="row">
                 <div class="col-12 text-center">
