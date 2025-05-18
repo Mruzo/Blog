@@ -188,7 +188,7 @@ class ReachOut(models.Model):
 class SiteImage(models.Model):
     # Generic relation fields
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    object_id = models.CharField(max_length=36, null=True, blank=True)  # Use CharField for UUID compatibility
+    object_id = models.TextField(null=True, blank=True)  # Changed to TextField to handle both UUID and integer IDs
     content_object = GenericForeignKey('content_type', 'object_id')
     
     # Direct product relationship for better admin interface
@@ -215,6 +215,20 @@ class SiteImage(models.Model):
         if self.product and not self.content_type:
             self.content_type = ContentType.objects.get_for_model(Product)
             self.object_id = str(self.product.uuid)
+        
+        # Convert integer IDs to strings for consistent storage
+        if self.object_id and self.content_type:
+            model_class = self.content_type.model_class()
+            if model_class:
+                pk_type = type(model_class._meta.pk)
+                if pk_type in (models.AutoField, models.BigAutoField, models.IntegerField, models.BigIntegerField):
+                    try:
+                        # Ensure integer IDs are stored as strings
+                        int_id = int(self.object_id)
+                        self.object_id = str(int_id)
+                    except (ValueError, TypeError):
+                        pass  # Not an integer ID, leave as is (could be UUID)
+        
         super().save(*args, **kwargs)
 
 class Testimonials(models.Model):
