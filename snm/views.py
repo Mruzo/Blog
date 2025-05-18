@@ -86,10 +86,10 @@ class HomePageView(FormView, TemplateView):
             product__in=unavailable_products
         ).exclude(image__isnull=True).exclude(image='')
 
-        # Get testimonial images
+        # Get testimonial images - Convert IDs to strings for proper comparison
         testimonial_images = SiteImage.objects.filter(
             content_type=ContentType.objects.get_for_model(Testimonials),
-            object_id__in=testimonials.values_list('id', flat=True)
+            object_id__in=[str(t.id) for t in testimonials]  # Convert IDs to strings
         ).exclude(image__isnull=True).exclude(image='')
 
         # Add these to the context
