@@ -271,10 +271,15 @@ h2 {
 }
 
 footer {
-    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
     width: 100%;
     position: relative;
     z-index: 1;
+    height: 100%; /* Optional: remove if you're not using a fixed height */
+    padding: 0; /* Ensure no unexpected padding */
+    margin: 0;
 }
 
 /* .main {
