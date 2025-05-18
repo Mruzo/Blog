@@ -87,15 +87,12 @@ class ProductDetailView(View):
 
     def get(self, request, slug):
         product = get_object_or_404(Product, slug=slug)
-        product_content_type = ContentType.objects.get_for_model(Product)
-        images = SiteImage.objects.filter(
-            content_type=product_content_type, object_id=product.id
-        )
+        images = product.images.all()  # Use the related_name to get all images
 
         context = {
             'object': product,
             'meta': product.as_meta(),
-            'images': images,  # Pass related images to the context
+            'images': images,
         }
         return render(request, self.template_name, context)
 

@@ -104,8 +104,10 @@ class Product(ModelMeta, models.Model):
     }
 
     def get_meta_image(self):
-        if self.image:
-            return self.image.url
+        first_image = self.images.first()
+        if first_image:
+            return first_image.image.url
+        return None
         
     
     def get_meta_gltf(self):
@@ -183,29 +185,37 @@ class ReachOut(models.Model):
         return self.subject
 
 
-class About(models.Model):
-    body = models.TextField(null=True, blank=True)
-
-
 class SiteImage(models.Model):
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True)
-    object_id = models.CharField(max_length=36, null=True)  # Use CharField instead of UUIDField
+    # Generic relation fields
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.CharField(max_length=36, null=True, blank=True)  # Use CharField for UUID compatibility
     content_object = GenericForeignKey('content_type', 'object_id')
     
-    # Replace content_type and object_id with a ForeignKey to the Product model directly
-    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name="images")
+    # Direct product relationship for better admin interface
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, blank=True, related_name="images")
     
     image = models.ImageField(upload_to='image/', blank=True, null=True)
     caption = models.CharField(max_length=50, blank=True)
 
     def __str__(self):
-        return f"SiteImage {self.id} (Content Object: {self.content_object})"
+        if self.product:
+            return f"Image for {self.product.title} - {self.caption}"
+        elif self.content_object:
+            return f"Image for {self.content_object} - {self.caption}"
+        return f"Image {self.id}"
 
     def get_meta_image(self):
         """Returns the URL of the image if available."""
         if self.image:
             return self.image.url
         return None
+
+    def save(self, *args, **kwargs):
+        # If product is set but content_type/object_id isn't, set them
+        if self.product and not self.content_type:
+            self.content_type = ContentType.objects.get_for_model(Product)
+            self.object_id = str(self.product.uuid)
+        super().save(*args, **kwargs)
 
 class Testimonials(models.Model):
     caption = models.CharField(max_length=100)
@@ -365,3 +375,6 @@ class Comment(models.Model):
     def approve(self):
         self.approved_comment = True
         self.save()
+
+class About(models.Model):
+    body = models.TextField(null=True, blank=True)

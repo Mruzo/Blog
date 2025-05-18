@@ -81,11 +81,16 @@ class HomePageView(FormView, TemplateView):
         all_available_pictures = [img for product in available_products for img in product.product_images]
         random_image_url = random.choice(all_available_pictures).image.url if all_available_pictures else 'https://justvybz.com/static/snmov/img/default-product.jpg'
 
+        # Get unavailable product images
         unavailable_pictures = SiteImage.objects.filter(
-            product__in=unavailable_products  # Ensure filtering by product, not content_type
+            product__in=unavailable_products
         ).exclude(image__isnull=True).exclude(image='')
 
-
+        # Get testimonial images
+        testimonial_images = SiteImage.objects.filter(
+            content_type=ContentType.objects.get_for_model(Testimonials),
+            object_id__in=testimonials.values_list('id', flat=True)
+        ).exclude(image__isnull=True).exclude(image='')
 
         # Add these to the context
         context.update({
@@ -97,6 +102,7 @@ class HomePageView(FormView, TemplateView):
             'about': About.objects.first(),
             'product_urls': product_urls,
             'random_image_url': random_image_url, 
+            'testimonial_images': testimonial_images,
         })
         
         return context
@@ -138,7 +144,7 @@ class HomePageView(FormView, TemplateView):
             email_subject,
             email_message,
             settings.DEFAULT_FROM_EMAIL,  # From email
-            [SUPPORT_EMAIL],  # To email
+            [settings.DEFAULT_TO_EMAIL],  # To email
             fail_silently=False,
         )
 

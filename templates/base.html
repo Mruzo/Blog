@@ -1,32 +1,30 @@
 <!DOCTYPE html>
+<html lang="en">
 {% load static %}
 {% load meta %}
 {% load crispy_forms_tags %}
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Shop Beautiful Desk Mats - Experience in Augmented Reality. | Justvybz</title>
-    <meta name="description" content="Explore the most beautiful desk mats for your workspace. Experience their vibrance in Augmented Reality. Sign up to stay updated on new designs.">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Shop Beautiful Desk Mats | Justvybz">
-    <meta property="og:description" content="Discover stunning desk mats for your workspace. Experience their vibrance in Augmented Reality and sign up for exclusive new designs.">
+    <title>{% block head_title %}{% endblock %} JustVybz</title>
+    
+    <meta name="description" content="{% block meta_description %}Stylish desk mats for your workspace{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}desk mat, desk pad, desk accessories, workspace{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}JustVybz - Stylish Desk Mats{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Enhance your workspace with our stylish desk mats{% endblock %}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}https://www.justvybz.com{% endblock %}">
+    {% block meta_extend %}{% endblock %}
 
-    <meta property="og:image" content="{{ random_image_url }}">
-    <meta property="og:image:alt" content="{% block og_image_alt %}A stylish desk mat in a workspace{% endblock %}">
-    <meta property="og:url" content="https://www.justvybz.com">
-    {% block meta_extend %}
-    <meta name="robots" content="index, follow">
-    <meta name="googlebot" content="index, follow">
-    {% endblock %}
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <meta name="theme-color" content="#ffbc00">
 
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@justvybz27070">
-    <meta name="twitter:title" content="Shop Stunning Desk Mats: Experience in AR Before You Buy">
-    <meta name="twitter:description" content="Discover stunning desk mats for your workspace. Experience their vibrance in Augmented Reality and sign up for exclusive new designs.">
+    <meta name="twitter:title" content="{% block twitter_title %}JustVybz - Stylish Desk Mats{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Enhance your workspace with our stylish desk mats{% endblock %}">
     <meta name="twitter:image" content="{{ random_image_url }}">
     <meta name="twitter:image:alt" content="{% block twitter_image_alt %}A stylish desk mat in a workspace{% endblock %}">
     <meta name="csrf-token" content="{{ csrf_token }}">
@@ -39,6 +37,37 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background-color: #f8f9fa;
+        }
+
+        main {
+            flex: 1 0 auto;
+            width: 100%;
+            position: relative;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .container {
+            width: 100%;
+            padding-right: 15px;
+            padding-left: 15px;
+            margin-right: auto;
+            margin-left: auto;
+        }
+
         /* Carousel animations */
         .carousel-fade .carousel-item {
             opacity: 0;
@@ -51,6 +80,8 @@
         
         .carousel-item img {
             transition: transform 0.5s ease-in-out;
+            max-width: 100%;
+            height: auto;
         }
         
         .carousel-item:hover img {
@@ -68,6 +99,12 @@
         }
 
         /* Footer styles */
+        footer {
+            flex-shrink: 0;
+            width: 100%;
+            background-color: #fff;
+        }
+
         .hover-underline {
             position: relative;
             transition: color 0.3s ease;
@@ -127,80 +164,72 @@
         .card:hover {
             box-shadow: 0 .5rem 1rem rgba(0,0,0,.1) !important;
         }
+
+        @media (max-width: 768px) {
+            .container {
+                padding-right: 10px;
+                padding-left: 10px;
+            }
+        }
     </style>
-</head>
+
+    {% block head %}{% endblock %}
 
     <script type="importmap">
-        {
-          "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js"
-          }
-        }
-        </script>
-
-    <!-- <style>
-        body {
-            font-family: 'Cabin', sans-serif;
-        }
-
-    </style> -->
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js"
+      }
+    }
+    </script>
 </head>
 
-
-<body class="container bg-light min-vh-100 p-0">
-    <header id="">
-    {% include 'navbar.html' %}
+<body>
+    <header>
+        {% include 'navbar.html' %}
     </header>
     <div class="mx-auto">
         {% include 'toasts.html' %}
     </div>
-    <main class="flex-grow-1" style="
-    height:100%;
-    overflow:hidden;">
-
-        <div class="container">
-        {% block content %}
-
-        {% endblock %}
-        </div>
+    <main>
+        {% block content %}{% endblock %}
+        
         <div>
-        {% include 'cookies_policy.html' %}
+            {% include 'cookies_policy.html' %}
         </div>
-
     </main>
-    <footer class="page-footer col border border-dark py-4">
-        <div class="row">
-            <!-- Center Column -->
-            <div class="col-12 text-center">
-                <!-- Logo -->
-                <ul class="bg-transparent col-4 mx-auto d-flex justify-content-center list-group list-group-horizontal px-0 mb-4">
-                    <a class="col-4 p-0" href="/">
-                        <li class="bg-transparent col list-group-item border-0 px-0 d-flex justify-content-center">
+    <footer class="page-footer border-top py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <!-- Logo -->
+                    <div class="mb-4">
+                        <a href="/">
                             <img src="{% static 'snmov/img/logo 80x80.svg' %}" alt="" width="120" height="120">
-                        </li>
-                    </a>
-                </ul>
-                
-                <!-- Policy Links and Copyright in one row -->
-                <div class="row align-items-center justify-content-center mb-4">
-                    <div class="col-auto policy-links subtext-sm">
-                        <a href="{% url 'privacy' %}" class="text-dark mx-0 text-decoration-none hover-underline">Privacy Policy</a>
-                        <span class="text-muted">|</span>
-                        <a href="{% url 'cookie_policy' %}" class="text-dark mx-0 text-decoration-none hover-underline">Cookie Policy</a>
-                        <span class="text-muted">|</span>
-                        <a href="{% url 'terms' %}" class="text-dark mx-0 text-decoration-none hover-underline">Terms of Service</a>
+                        </a>
                     </div>
-                    <div class="col-12 footer-copyright subtext-smm mt-2">
-                        <p class="mb-0">&copy; 2025 Justvybz</p>
+                    
+                    <!-- Policy Links and Copyright -->
+                    <div class="mb-4">
+                        <div class="policy-links subtext-sm mb-3">
+                            <a href="{% url 'privacy' %}" class="text-dark mx-2 text-decoration-none hover-underline">Privacy Policy</a>
+                            <span class="text-muted">|</span>
+                            <a href="{% url 'cookie_policy' %}" class="text-dark mx-2 text-decoration-none hover-underline">Cookie Policy</a>
+                            <span class="text-muted">|</span>
+                            <a href="{% url 'terms' %}" class="text-dark mx-2 text-decoration-none hover-underline">Terms of Service</a>
+                        </div>
+                        <div class="footer-copyright subtext-smm">
+                            <p class="mb-0">&copy; 2025 Justvybz</p>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Powered By -->
-                <div class="powered-by mt-2">
-                    <p class="mb-2 subtext-smm">Powered by</p>
-                    <a href="https://www.misteruzo.com" target="_blank" rel="noopener">
-                        <img src="{% static 'snmov/img/powered-by-logo.png' %}" alt="powered by Logo" width="50">
-                    </a>
+                    <!-- Powered By -->
+                    <div class="powered-by">
+                        <p class="mb-2 subtext-smm">Powered by</p>
+                        <a href="https://www.misteruzo.com" target="_blank" rel="noopener">
+                            <img src="{% static 'snmov/img/powered-by-logo.png' %}" alt="powered by Logo" width="50">
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -212,38 +241,17 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
     <script type="module" src="{% static 'snmov/js/sm.js' %}"></script>
     <script src="{% static 'tinymce/js/prism.js' %}"></script>
+    
     {% if messages %}
-      <script>
-          {% for message in messages %}
-              $(document).ready(function () {
-                  $('.toast').toast('show');
-              });
-          {% endfor %}
-      </script>
+    <script>
+        $(document).ready(function () {
+            $('.toast').toast('show');
+        });
+    </script>
     {% endif %}
 
-    <!-- <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var form = document.querySelector('#stock_notification');
-    
-            form.addEventListener('submit', function(event) {
-                var checkboxes = form.querySelectorAll('[data-required]');
-                var checked = Array.prototype.slice.call(checkboxes).some(function(checkbox) {
-                    return checkbox.checked;
-                });
-    
-                if (!checked) {
-                    alert('Please select at least one checkbox.');
-                    event.preventDefault();
-                }
-            });
-        });
-    </script> -->
-
-    {% block javascript %}
-
-    {% endblock %}
-
+    {% block javascript %}{% endblock %}
 </body>
+</html>
 
 

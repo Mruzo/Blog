@@ -26,15 +26,17 @@ class ProductUno(admin.ModelAdmin):
 
 
 class SiteImageAdmin(admin.ModelAdmin):
-    form = SiteImageForm  # Use the custom form
-    list_display = ('id', 'content_type', 'related_product', 'image', 'caption')
-
-    def related_product(self, obj):
-        if obj.content_object:
-            return obj.content_object.title if obj.content_type.model == 'product' else 'N/A'
-        return 'N/A'
-
-    related_product.short_description = 'Related Product'
+    list_display = ('id', 'get_related_object', 'image', 'caption')
+    list_filter = ('content_type', 'product')
+    search_fields = ('caption', 'product__title')
+    
+    def get_related_object(self, obj):
+        if obj.product:
+            return f"Product: {obj.product.title}"
+        elif obj.content_object:
+            return f"{obj.content_type.model.title()}: {obj.content_object}"
+        return "N/A"
+    get_related_object.short_description = 'Related Object'
 
 
 class ReachOutAdmin(admin.ModelAdmin):

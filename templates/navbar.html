@@ -1,35 +1,35 @@
 {% load static %}
 
-  <nav class="navbar navbar-expand-lg navbar-light border-bottom" style="background-color: #ffbc00;">
-      <div class="container-fluid">
-          <a class="navbar-brand" href="/">
-              <img src="{% static 'snmov/img/jv_header 1.2.svg' %}" alt="" height="50">
-          </a>
-          
-          <div class="d-flex align-items-center gap-3">
-              {% if user.is_authenticated %}
-              <a href="{% url 'snmov:my_orders' %}" class="btn btn-light btn-sm px-2 mx-1">
-                  <i class="fas fa-user"></i>
-                  <span class="d-none d-sm-inline ms-1">My Orders</span>
-              </a>
-              {% endif %}
-              <a href="{% url 'snmov:view_cart' %}" class="btn btn-light btn-sm px-2 mx-1 position-relative">
-                  <i class="fas fa-shopping-cart"></i>
-                  <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill {% if cart_count > 0 %}bg-success{% else %}bg-danger{% endif %}">
-                      {{ cart_count }}
-                  </span>
-              </a>
-          </div>
-      </div>
-  </nav>
-  {% if request.path == '/' %}
-  <div class="row border-bottom">
-    <div class="col text-center py-2">
-      <a href="{% url 'snmov:product_list' %}" class="btn btn-light btn-sm px-3 subtext-btn-sm">
-        <i class="fas fa-store me-1"></i>Products
-      </a>
+<nav class="navbar navbar-expand-lg navbar-light border-bottom w-100" style="background-color: #ffbc00;">
+    <div class="container-fluid px-0">
+        <a class="navbar-brand" href="/">
+            <img src="{% static 'snmov/img/jv_header 1.2.svg' %}" alt="" height="50">
+        </a>
+        
+        <div class="d-flex align-items-center">
+            {% if user.is_authenticated %}
+            <a href="{% url 'snmov:my_orders' %}" class="btn btn-light btn-sm mx-2 px-2">
+                <i class="fas fa-user"></i>
+                <span class="d-none d-sm-inline ms-1">My Orders</span>
+            </a>
+            {% endif %}
+            <a href="{% url 'snmov:view_cart' %}" class="btn btn-light btn-sm px-2 ms-2 position-relative">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill {% if cart_count > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                    {{ cart_count }}
+                </span>
+            </a>
+        </div>
     </div>
+</nav>
+{% if request.path == '/' %}
+<div class="row border-bottom w-100 mx-0">
+  <div class="col text-center py-2">
+    <a href="{% url 'snmov:product_list' %}" class="btn btn-light btn-sm px-3 subtext-btn-sm">
+      <i class="fas fa-store me-1"></i>Products
+    </a>
   </div>
-  {% endif %}
+</div>
+{% endif %}
 
 

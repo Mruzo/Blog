@@ -156,7 +156,14 @@
             <div class="card-deck">
                 {% for testimonial in testimonials %}
                 <div class="card">
-                    <img src="{{ testimonial.image.url }}" class="card-img-top" alt="{{ testimonial.caption }}">
+                    {% for image in testimonial_images %}
+                        {% if image.object_id == testimonial.id|stringformat:"s" %}
+                            <img src="{{ image.image.url }}" class="card-img-top" alt="{{ image.caption }}">
+                        {% endif %}
+                    {% endfor %}
+                    <div class="card-body">
+                        <p class="card-text">{{ testimonial.caption }}</p>
+                    </div>
                 </div>
                 {% endfor %}
             </div>

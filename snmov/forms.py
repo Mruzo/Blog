@@ -96,18 +96,32 @@ class CommentForm(forms.ModelForm):
 class SiteImageForm(forms.ModelForm):
     class Meta:
         model = SiteImage
-        fields = ['image', 'caption']
+        fields = ['product', 'content_type', 'object_id', 'image', 'caption']
+        widgets = {
+            'object_id': forms.TextInput(attrs={'placeholder': 'Enter UUID or ID'})
+        }
 
-    # def clean_object_id(self):
-    #     object_id = self.cleaned_data.get('object_id')
-    #     if object_id:
-    #         try:
-    #             # Ensure the object_id is a valid UUID
-    #             from uuid import UUID
-    #             UUID(str(object_id))
-    #         except ValueError:
-    #             raise forms.ValidationError("Enter a valid UUID.")
-    #     return object_id
+    def clean(self):
+        cleaned_data = super().clean()
+        product = cleaned_data.get('product')
+        content_type = cleaned_data.get('content_type')
+        object_id = cleaned_data.get('object_id')
+
+        # If product is set, clear content_type and object_id
+        if product:
+            cleaned_data['content_type'] = None
+            cleaned_data['object_id'] = None
+        # If content_type is set, ensure object_id is valid
+        elif content_type and object_id:
+            try:
+                # Get the model class from content type
+                model_class = content_type.model_class()
+                # Try to get the object to validate it exists
+                model_class.objects.get(id=object_id)
+            except (ValueError, model_class.DoesNotExist):
+                raise forms.ValidationError("Invalid object ID for the selected content type.")
+        
+        return cleaned_data
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(required=True)
