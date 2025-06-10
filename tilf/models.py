@@ -65,13 +65,7 @@ class POV(models.Model):
     scenes = models.ManyToManyField(Scene, related_name='povs')
     character = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='povs')
 
-    # Camera angles and zoom level
-    angle_x = models.FloatField(default=0.0)
-    angle_y = models.FloatField(default=0.0)
-    angle_z = models.FloatField(default=0.0)
-    zoom_level = models.FloatField(default=1.0)
-
-    # Character head position for speech bubbles (stored per POV)
+    # Character head position for speech bubbles and camera targeting
     head_x = models.FloatField(default=0.0, help_text="Character's head X coordinate in world space")
     head_y = models.FloatField(default=1.6, help_text="Character's head Y coordinate (approx. head height)")
     head_z = models.FloatField(default=0.0, help_text="Character's head Z coordinate in world space")
@@ -82,23 +76,176 @@ class POV(models.Model):
     
 
 class Dialogue(models.Model):
+    # Shot type choices
+    SHOT_TYPES = [
+        ('closeUp', 'Close Up'),
+        ('mediumShot', 'Medium Shot'),
+        ('wideShot', 'Wide Shot'),
+        ('heroShot', 'Hero Shot (Low Angle)'),
+        ('vulnerableShot', 'Vulnerable Shot (High Angle)'),
+        ('overShoulder', 'Over the Shoulder'),
+        ('confrontation', 'Confrontation Shot'),
+    ]
+
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE)  # Link to Episode
     pov = models.ForeignKey(POV, on_delete=models.CASCADE, related_name='dialogues')
-    scene = models.ForeignKey(Scene, related_name='dialogues', on_delete=models.CASCADE)  # Add this line
+    scene = models.ForeignKey(Scene, related_name='dialogues', on_delete=models.CASCADE)
     text = models.TextField()
     order = models.PositiveIntegerField()  # Order in which dialogue appears within a POV
 
     # Camera attributes
-    camera_orbit = models.CharField(max_length=50, default="0deg 75deg 3m")  # Example: "90deg 75deg 3m"
-    camera_target = models.CharField(max_length=50, default="0m 0m 0m")  # Example: "0m 1m 0m"
-    field_of_view = models.FloatField(default=45.0)  # Example: 45.0 degrees
-    zoom_speed = models.FloatField(default=1.0)  # Example: 1.0 (default speed)
-    rotation = models.CharField(max_length=50, default="0deg 0deg 0deg")  # Example: "0deg 180deg 0deg"
+    shot_type = models.CharField(max_length=20, choices=SHOT_TYPES, default='mediumShot', help_text="Select a camera preset for this dialogue")
+    camera_orbit = models.CharField(max_length=50, default="0deg 75deg 3m", help_text="Camera position in degrees and meters (e.g., '0deg 75deg 3m')")
+    camera_target = models.CharField(max_length=50, default="0m 1.6m 0m", help_text="Point the camera is looking at (e.g., '0m 1.6m 0m')")
+    field_of_view = models.FloatField(default=45.0, help_text="Camera field of view in degrees")
+    zoom_speed = models.FloatField(default=1.0, help_text="Speed of camera transitions")
+    rotation = models.CharField(max_length=50, default="0deg 0deg 0deg", help_text="Model rotation in degrees (e.g., '0deg 0deg 0deg')")
     
     def __str__(self):
         return f"Dialogue {self.order} in {self.pov}"
     
     def save(self, *args, **kwargs):
+        # Only apply camera preset if shot_type is selected AND no manual camera settings exist
+        if self.shot_type and not (self.camera_orbit and self.camera_target and self.rotation):
+            # Get the speaking character's position
+            speaking_char = self.pov.character.name
+            
+            # Define character positions and their corresponding camera orbits
+            char_positions = {
+                'Nel': {  # North
+                    'x': -4.5, 'y': 2.5, 'z': 2.6,
+                    'rotation': '0deg 0deg 0deg',  # Facing North
+                    'camera_orbits': {
+                        'closeUp': '0deg 75deg 1m',      # Directly in front
+                        'mediumShot': '0deg 75deg 3m',   # Medium distance
+                        'wideShot': '0deg 75deg 5m',     # Far back
+                        'heroShot': '0deg 15deg 3m',     # Low angle
+                        'vulnerableShot': '0deg 120deg 3m', # High angle
+                        'overShoulder': '45deg 75deg 2m',  # Side angle
+                        'confrontation': '0deg 90deg 2m'   # Eye level
+                    }
+                },
+                'Sam': {  # South
+                    'x': 4.5, 'y': 2.71, 'z': -2.6,
+                    'rotation': '180deg 0deg 0deg',  # Facing South
+                    'camera_orbits': {
+                        'closeUp': '180deg 75deg 1m',    # Directly in front
+                        'mediumShot': '180deg 75deg 3m', # Medium distance
+                        'wideShot': '180deg 75deg 5m',   # Far back
+                        'heroShot': '180deg 15deg 3m',   # Low angle
+                        'vulnerableShot': '180deg 120deg 3m', # High angle
+                        'overShoulder': '225deg 75deg 2m',  # Side angle
+                        'confrontation': '180deg 90deg 2m'   # Eye level
+                    }
+                },
+                'Will': {  # East
+                    'x': 2.0, 'y': 2.5, 'z': 4.5,
+                    'rotation': '90deg 0deg 0deg',  # Facing East
+                    'camera_orbits': {
+                        'closeUp': '90deg 75deg 1m',     # Directly in front
+                        'mediumShot': '90deg 75deg 3m',  # Medium distance
+                        'wideShot': '90deg 75deg 5m',    # Far back
+                        'heroShot': '90deg 15deg 3m',    # Low angle
+                        'vulnerableShot': '90deg 120deg 3m', # High angle
+                        'overShoulder': '135deg 75deg 2m',  # Side angle
+                        'confrontation': '90deg 90deg 2m'   # Eye level
+                    }
+                },
+                'Ed': {  # West
+                    'x': -2.5, 'y': 2.71, 'z': -4.5,
+                    'rotation': '-90deg 0deg 0deg',  # Facing West
+                    'camera_orbits': {
+                        'closeUp': '-90deg 75deg 1m',    # Directly in front
+                        'mediumShot': '-90deg 75deg 3m', # Medium distance
+                        'wideShot': '-90deg 75deg 5m',   # Far back
+                        'heroShot': '-90deg 15deg 3m',   # Low angle
+                        'vulnerableShot': '-90deg 120deg 3m', # High angle
+                        'overShoulder': '-45deg 75deg 2m',  # Side angle
+                        'confrontation': '-90deg 90deg 2m'   # Eye level
+                    }
+                },
+            }
+            
+            # Get the speaking character's position and rotation
+            char_pos = char_positions.get(speaking_char, {
+                'x': 0, 'y': 1.6, 'z': 0, 
+                'rotation': '0deg 0deg 0deg',
+                'camera_orbits': {
+                    'closeUp': '0deg 75deg 1m',
+                    'mediumShot': '0deg 75deg 3m',
+                    'wideShot': '0deg 75deg 5m',
+                    'heroShot': '0deg 15deg 3m',
+                    'vulnerableShot': '0deg 120deg 3m',
+                    'overShoulder': '45deg 75deg 2m',
+                    'confrontation': '0deg 90deg 2m'
+                }
+            })
+            
+            # Use POV head position for camera target
+            head_pos = {
+                'x': self.pov.head_x,
+                'y': self.pov.head_y,
+                'z': self.pov.head_z
+            }
+            
+            # Calculate camera position based on shot type and character position
+            presets = {
+                'closeUp': {
+                    'orbit': char_pos['camera_orbits']['closeUp'],
+                    'target': f"{head_pos['x']}m {head_pos['y']}m {head_pos['z']}m",
+                    'fov': 30,
+                    'rotation': char_pos['rotation']
+                },
+                'mediumShot': {
+                    'orbit': char_pos['camera_orbits']['mediumShot'],
+                    'target': f"{head_pos['x']}m {head_pos['y']}m {head_pos['z']}m",
+                    'fov': 45,
+                    'rotation': char_pos['rotation']
+                },
+                'wideShot': {
+                    'orbit': char_pos['camera_orbits']['wideShot'],
+                    'target': f"{head_pos['x']}m {head_pos['y']}m {head_pos['z']}m",
+                    'fov': 60,
+                    'rotation': char_pos['rotation']
+                },
+                'heroShot': {
+                    'orbit': char_pos['camera_orbits']['heroShot'],
+                    'target': f"{head_pos['x']}m {head_pos['y']}m {head_pos['z']}m",
+                    'fov': 45,
+                    'rotation': char_pos['rotation']
+                },
+                'vulnerableShot': {
+                    'orbit': char_pos['camera_orbits']['vulnerableShot'],
+                    'target': f"{head_pos['x']}m {head_pos['y']}m {head_pos['z']}m",
+                    'fov': 45,
+                    'rotation': char_pos['rotation']
+                },
+                'overShoulder': {
+                    'orbit': char_pos['camera_orbits']['overShoulder'],
+                    'target': f"{head_pos['x']}m {head_pos['y']}m {head_pos['z']}m",
+                    'fov': 45,
+                    'rotation': char_pos['rotation']
+                },
+                'confrontation': {
+                    'orbit': char_pos['camera_orbits']['confrontation'],
+                    'target': f"{head_pos['x']}m {head_pos['y']}m {head_pos['z']}m",
+                    'fov': 40,
+                    'rotation': char_pos['rotation']
+                },
+            }
+            
+            preset = presets.get(self.shot_type)
+            if preset:
+                # Only set values if they haven't been manually set
+                if not self.camera_orbit:
+                    self.camera_orbit = preset['orbit']
+                if not self.camera_target:
+                    self.camera_target = preset['target']
+                if not self.field_of_view:
+                    self.field_of_view = preset['fov']
+                if not self.rotation:
+                    self.rotation = preset['rotation']
+
         self.text = self.text.strip()  # Removes leading and trailing whitespace
         super().save(*args, **kwargs)
 

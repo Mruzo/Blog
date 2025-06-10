@@ -129,14 +129,21 @@ class POVAdmin(admin.ModelAdmin):
 
 @admin.register(Dialogue)
 class DialogueAdmin(admin.ModelAdmin):
-    list_display = ('order', 'episode', 'scene', 'pov', 'text', 'camera_orbit', 'camera_target', 'field_of_view', 'zoom_speed', 'rotation')  # Show updated camera attributes
-    list_display_links = ('text', 'order')  # Make the text field clickable for editing
-    list_filter = ('episode', 'scene', 'pov')  # Filter by episode and pov
-    ordering = ('order', 'episode', 'pov__title')  # Order by episode and pov title
-    search_fields = ('text', 'pov__title')  # Adjust search fields
+    list_display = ('order', 'episode', 'scene', 'pov', 'text', 'shot_type', 'camera_orbit', 'camera_target', 'field_of_view')
+    list_display_links = ('text', 'order')
+    list_filter = ('episode', 'scene', 'pov', 'shot_type')
+    ordering = ('order', 'episode', 'pov__title')
+    search_fields = ('text', 'pov__title')
 
-    # Ensure the camera attributes are editable in the admin
-    fields = ('order', 'episode', 'scene', 'pov', 'text', 'camera_orbit', 'camera_target', 'field_of_view', 'zoom_speed', 'rotation')
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('order', 'episode', 'scene', 'pov', 'text')
+        }),
+        ('Camera Settings', {
+            'fields': ('shot_type', 'camera_orbit', 'camera_target', 'field_of_view', 'zoom_speed', 'rotation'),
+            'description': 'Select a shot type preset or customize the camera settings manually.'
+        }),
+    )
 
 
 

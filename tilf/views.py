@@ -54,6 +54,13 @@ class EpisodeDetailView(DetailView):
                     'head_x': pov.head_x,
                     'head_y': pov.head_y,
                     'head_z': pov.head_z,
+                    'character': pov.character.name,
+                    'shot_type': dialogue.shot_type,
+                    'camera_orbit': dialogue.camera_orbit,
+                    'camera_target': dialogue.camera_target,
+                    'field_of_view': dialogue.field_of_view,
+                    'zoom_speed': dialogue.zoom_speed,
+                    'rotation': dialogue.rotation,
                 })
 
             scenes_data.append({
