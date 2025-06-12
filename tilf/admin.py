@@ -1,31 +1,18 @@
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericTabularInline
-from .models import Comic, Season, Episode, Scene, Character, POV, Dialogue, SocialMediaLink, Intersection
+from .models import Comic, Season, Episode, Character, POV, Dialogue
 from django.db import models
 from tinymce.widgets import TinyMCE
 from django import forms
 
 
-class SocialMediaLinkInline(GenericTabularInline):
-    model = SocialMediaLink
-    extra = 1
-
 class ComicInline(admin.TabularInline):
     model = Comic
     extra = 1
 
-class SceneInlineForm(forms.ModelForm):
-    class Meta:
-        model = Scene
-        fields = '__all__'
-        widgets = {
-            'title': forms.Textarea(attrs={'rows': 1, 'cols': 10}),
-            'description': forms.Textarea(attrs={'rows': 2, 'cols': 40})  # Shrinks the text area
-        }
 
-class SceneInline(admin.TabularInline):
-    model = Scene
-    form = SceneInlineForm  # Apply the form to shrink the description field
+class SeasonInline(admin.TabularInline):
+    model = Season
     extra = 1
 
 
@@ -39,123 +26,48 @@ class DialogueInline(admin.TabularInline):
     extra = 1
 
 
-class POVInline(admin.TabularInline):
-    model = POV
-    extra = 1
-
-
 @admin.register(Comic)
 class ComicAdmin(admin.ModelAdmin):
-    list_display = ('title', 'description', 'season_count')
-    # inlines = [ComicInline]
-    search_fields = ('title',)
-    ordering = ('id',)
-
-    def season_count(self, obj):
-        return obj.seasons.count()  # Count related seasons
-    season_count.short_description = 'Season Count'  # Column header in admin
+    list_display = ('title', 'description')
+    inlines = [SeasonInline]
 
 
 @admin.register(Season)
 class SeasonAdmin(admin.ModelAdmin):
-    list_display = ('title', 'release_date', 'episode_count')
+    list_display = ('title', 'comic', 'release_date')
+    list_filter = ('comic',)
     inlines = [EpisodeInline]
     search_fields = ('title',)
-    ordering = ('release_date',)
+    ordering = ('comic', 'release_date')
 
-    def episode_count(self, obj):
-        return obj.episodes.count()  # Count related episodes
-    episode_count.short_description = 'Episode Count'  # Column header in admin
-
-class EpisodeAdminForm(forms.ModelForm):
-    class Meta:
-        model = Scene
-        fields = '__all__'
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 2, 'cols': 40})  # Reduces the height of the box
-        }
 
 @admin.register(Episode)
 class EpisodeAdmin(admin.ModelAdmin):
-    form = EpisodeAdminForm
     list_display = ('title', 'season', 'episode_number')
     list_filter = ('season',)
-    inlines = [SceneInline]
+    inlines = [DialogueInline]
     search_fields = ('title',)
     ordering = ('season', 'episode_number')
-
-
-class SceneAdminForm(forms.ModelForm):
-    class Meta:
-        model = Scene
-        fields = '__all__'
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 2, 'cols': 40})  # Reduces the height of the box
-        }
-
-@admin.register(Scene)
-class SceneAdmin(admin.ModelAdmin):
-    form = SceneAdminForm
-    list_display = ('title', 'episode', 'order')
-    list_filter = ('episode',)
-    search_fields = ('title', 'episode__title')
-    ordering = ('episode__title', 'order')
+    fields = ('title', 'season', 'episode_number', 'description', 'cover_image')
 
 
 @admin.register(Character)
 class CharacterAdmin(admin.ModelAdmin):
-    list_display = ('name', 'personality', 'love_interest' )
+    list_display = ('name', 'personality', 'love_interest')
     search_fields = ('name',)
 
 
 @admin.register(POV)
 class POVAdmin(admin.ModelAdmin):
-    list_display = (
-        'title',
-        'character',
-        'head_x',
-        'head_y',
-        'head_z',
+    list_display = ('title', 'character', 'head_x', 'head_y', 'head_z', 'default_camera_target')
+    list_filter = ('character',)
+    search_fields = ('character__name',)
+    fields = ('title', 'character', 'head_x', 'head_y', 'head_z', 'default_camera_target')
 
-    )
-    list_filter = ('scenes',)
-    inlines = [DialogueInline]
-    search_fields = ('character__name',)  # Adjusted to search by character name
-
-    # Optional: You can add this method if you want to show camera angles more clearly
-    def camera_angles(self, obj):
-        return f"X: {obj.angle_x}, Y: {obj.angle_y}, Z: {obj.angle_z}"
-    camera_angles.short_description = 'Camera Angles'
 
 @admin.register(Dialogue)
 class DialogueAdmin(admin.ModelAdmin):
-    list_display = ('order', 'episode', 'scene', 'pov', 'text', 'shot_type', 'camera_orbit', 'camera_target', 'field_of_view')
-    list_display_links = ('text', 'order')
-    list_filter = ('episode', 'scene', 'pov', 'shot_type')
-    ordering = ('order', 'episode', 'pov__title')
-    search_fields = ('text', 'pov__title')
-
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('order', 'episode', 'scene', 'pov', 'text')
-        }),
-        ('Camera Settings', {
-            'fields': ('shot_type', 'camera_orbit', 'camera_target', 'field_of_view', 'zoom_speed', 'rotation'),
-            'description': 'Select a shot type preset or customize the camera settings manually.'
-        }),
-    )
-
-
-
-
-@admin.register(SocialMediaLink)
-class SocialMediaLinkAdmin(admin.ModelAdmin):
-    list_display = ('platform', 'url', 'content_object')
-    list_filter = ('platform',)
-    search_fields = ('url',)
-
-
-@admin.register(Intersection)
-class IntersectionAdmin(admin.ModelAdmin):
-    list_display = ('name', 'model_gltf', 'model_usdz')
-    search_fields = ('name',)
+    list_display = ('episode', 'pov', 'order', 'text', 'camera_target', 'camera_orbit','shot_type')
+    list_filter = ('episode', 'pov__character', 'shot_type')
+    search_fields = ('text', 'pov__character__name')
+    ordering = ('order','episode')

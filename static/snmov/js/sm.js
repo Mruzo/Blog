@@ -184,6 +184,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const prevButton = document.getElementById('prevButton');
     const nextButton = document.getElementById('nextButton');
     const sceneElements = document.querySelectorAll('.scene');
+    const startButton = document.getElementById('startButton');
+    const coverSection = document.getElementById('cover-section');
+    const modelSection = document.getElementById('model-section');
     
     console.log('Found elements:', {
         modelViewer: !!modelViewer,
@@ -191,12 +194,16 @@ document.addEventListener('DOMContentLoaded', function() {
         topDialogue: !!topDialogue,
         prevButton: !!prevButton,
         nextButton: !!nextButton,
-        sceneElements: sceneElements.length
+        sceneElements: sceneElements.length,
+        startButton: !!startButton,
+        coverSection: !!coverSection,
+        modelSection: !!modelSection
     });
     
     // ================ STATE ================
     let currentSceneIndex = 0;
     let currentDialogueIndex = 0;
+    let isStarted = false;
     
     // ================ INITIALIZATION ================
     function init() {
@@ -211,527 +218,127 @@ document.addEventListener('DOMContentLoaded', function() {
         modelViewer.setAttribute('camera-controls', '');
         modelViewer.setAttribute('interpolation', 'cubic-bezier(0.3, 0.0, 0.7, 1.0)');
         
-        // Set camera orbit limits
+        // Set camera orbit limits and field of view
         modelViewer.setAttribute('min-camera-orbit', 'auto auto 1m');
         modelViewer.setAttribute('max-camera-orbit', 'auto auto 30m');
+        modelViewer.setAttribute('min-field-of-view', '10deg');  // Allow closer zooming
+        modelViewer.setAttribute('max-field-of-view', '90deg');  // Maximum zoom out
         
         // Initialize with first dialogue
         currentSceneIndex = 0;
         currentDialogueIndex = 0;
         
-        initPointerSystem();
-        setupEventListeners();
-        updateView();
-    }
-    
-    function initPointerSystem() {
-        console.log('Initializing pointer system...');
-        
-        // Remove existing SVG if it exists
-        const existingSvg = document.getElementById('pointer-svg');
-        if (existingSvg) {
-            existingSvg.remove();
+        // Set up start button handler
+        if (startButton) {
+            startButton.addEventListener('click', startEpisode);
         }
         
-        // Create new SVG container
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.id = 'pointer-svg';
-        
-        // Get model-viewer dimensions
-        const modelRect = modelViewer.getBoundingClientRect();
-        
-        // Set SVG properties
-        Object.assign(svg.style, {
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-            zIndex: '9999',
-            overflow: 'visible'
-        });
-        
-        // Set initial viewBox
-        svg.setAttribute('viewBox', `0 0 ${modelRect.width} ${modelRect.height}`);
-        svg.setAttribute('preserveAspectRatio', 'none');
-        
-        // Create initial path
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.id = 'pointer-path';
-        path.setAttribute('stroke', 'black');
-        path.setAttribute('stroke-width', '3');
-        path.setAttribute('fill', 'none');
-        svg.appendChild(path);
-        
-        // Add SVG to model-viewer
-        modelViewer.appendChild(svg);
-        console.log('SVG container created and added to model-viewer with viewBox:', svg.getAttribute('viewBox'));
+        // Wait for model to be fully loaded
+        if (modelViewer.loaded) {
+            console.log('Model already loaded, initializing...');
+            updateHotspots();
+            setupEventListeners();
+        } else {
+            console.log('Waiting for model to load...');
+            modelViewer.addEventListener('load', () => {
+                console.log('Model loaded, initializing...');
+                updateHotspots();
+                setupEventListeners();
+            });
+        }
+    }
+    
+    // ================ EVENT HANDLERS ================
+    function startEpisode() {
+        console.log('Starting episode...');
+        if (coverSection) coverSection.style.display = 'none';
+        if (modelSection) modelSection.style.display = 'block';
+        isStarted = true;
+        updateView();
     }
     
     function setupEventListeners() {
         console.log('Setting up event listeners...');
         
-        if (nextButton) {
-            nextButton.addEventListener('click', () => {
-                console.log('Next button clicked');
-                nextDialogue();
-            });
-        }
-        
         if (prevButton) {
-            prevButton.addEventListener('click', () => {
-                console.log('Previous button clicked');
-                prevDialogue();
-            });
+            prevButton.addEventListener('click', prevDialogue);
         }
         
-        if (modelViewer) {
-            modelViewer.addEventListener('load', () => {
-                console.log('Model viewer loaded');
-                updateView();
-            });
-            
-            modelViewer.addEventListener('camera-change', () => {
-                console.log('Camera changed');
-                updatePointer();
-            });
-            
-            // Add resize observer
-            const resizeObserver = new ResizeObserver(() => {
-                console.log('Model viewer resized');
-                setTimeout(updatePointer, 100);
-            });
-            resizeObserver.observe(modelViewer);
+        if (nextButton) {
+            nextButton.addEventListener('click', nextDialogue);
         }
+        
+        // Listen for camera changes
+        modelViewer.addEventListener('camera-change', () => {
+            console.log('Camera changed');
+            updateButtonStates();
+        });
     }
     
+    // ================ VIEW UPDATES ================
     function updateView() {
-        // Update dialogue content first
+        console.log('Updating view...');
+        
+        // Update dialogue content
         updateDialogueContent();
         
-        // Start both animations at the same time
-        const cameraPromise = updateCameraPosition();
-        const pointerPromise = updatePointer();
+        // Update camera position
+        updateCameraPosition();
         
-        // Wait for both to complete before updating button states
-        Promise.all([cameraPromise, pointerPromise])
-            .then(() => {
-                updateButtonStates();
-            })
-            .catch(error => {
-                console.error('Error updating view:', error);
-                updateButtonStates();
-            });
+        // Update button states
+        updateButtonStates();
     }
     
     function updateDialogueContent() {
+        console.log('Updating dialogue content...');
+        
         const currentScene = sceneElements[currentSceneIndex];
         const dialogues = currentScene?.querySelectorAll('.dialogue');
         const dialogue = dialogues?.[currentDialogueIndex];
         
         if (!dialogue) {
-            console.error('No dialogue found for current scene/dialogue index');
+            console.log('No dialogue found');
             return;
         }
         
         const povData = JSON.parse(dialogue.getAttribute('data-pov'));
-        console.log('Updating dialogue content with POV data:', povData);
+        console.log('POV data:', povData);
         
-        // Find the hotspot that matches the camera target
-        const hotspots = modelViewer.querySelectorAll('[slot^="hotspot"]');
-        const closestHotspot = findClosestHotspot(hotspots, povData.camera_target, povData.character);
+        // Update text bubble content
+        if (topBubble) {
+            topBubble.textContent = povData.text;
+        }
         
-        if (closestHotspot) {
-            const position = closestHotspot.getAttribute('data-position');
-            const hotspotName = HOTSPOT_NAMES[position];
-            // Use the hotspot's name in the text bubble
-            topDialogue.innerHTML = `<strong>${hotspotName}:</strong> ${dialogue.querySelector('p').textContent}`;
-        } else {
-            // Fallback to POV character if no hotspot found
-            topDialogue.innerHTML = `<strong>${povData.character}:</strong> ${dialogue.querySelector('p').textContent}`;
+        // Update dialogue content
+        if (topDialogue) {
+            topDialogue.textContent = povData.character;
         }
     }
     
-    // Function to parse camera orbit string into components
-    function parseOrbit(orbitString) {
-        if (!orbitString) return { theta: 0, phi: 75, radius: 3 };
-        const [theta, phi, radius] = orbitString.split(' ').map(part => parseFloat(part));
-        return { theta, phi, radius };
-    }
-
-    // Function to create a camera orbit string from components
-    function createOrbitString(theta, phi, radius) {
-        return `${theta}deg ${phi}deg ${radius}m`;
-    }
-
-    // Function to animate camera movement
-    function animateCamera(modelViewer, startOrbit, endOrbit, startTarget, endTarget, duration = 1000) {
-        // Set initial position
-        modelViewer.cameraOrbit = startOrbit;
-        modelViewer.cameraTarget = startTarget;
-
-        // Animate to end position
-        modelViewer.animate({
-            cameraOrbit: endOrbit,
-            cameraTarget: endTarget
-        }, {
-            duration: duration,
-            easing: 'ease-in-out'
-        });
-    }
-
-    // Function to create a dolly-like effect
-    function dollyShot(modelViewer, startOrbit, endOrbit, duration = 1000) {
-        const start = parseOrbit(startOrbit);
-        const end = parseOrbit(endOrbit);
-        
-        // Keep the same angle, just change the distance
-        const orbit = createOrbitString(start.theta, start.phi, end.radius);
-        
-        modelViewer.animate({
-            cameraOrbit: orbit
-        }, {
-            duration: duration,
-            easing: 'ease-in-out'
-        });
-    }
-
-    // Function to create a pan-like effect
-    function panShot(modelViewer, startOrbit, endOrbit, duration = 1000) {
-        const start = parseOrbit(startOrbit);
-        const end = parseOrbit(endOrbit);
-        
-        // Keep the same distance, just change the angle
-        const orbit = createOrbitString(end.theta, start.phi, start.radius);
-        
-        modelViewer.animate({
-            cameraOrbit: orbit
-        }, {
-            duration: duration,
-            easing: 'ease-in-out'
-        });
-    }
-
-    // Function to create a tilt-like effect
-    function tiltShot(modelViewer, startOrbit, endOrbit, duration = 1000) {
-        const start = parseOrbit(startOrbit);
-        const end = parseOrbit(endOrbit);
-        
-        // Keep the same distance and horizontal angle, just change the vertical angle
-        const orbit = createOrbitString(start.theta, end.phi, start.radius);
-        
-        modelViewer.animate({
-            cameraOrbit: orbit
-        }, {
-            duration: duration,
-            easing: 'ease-in-out'
-        });
-    }
-
     function updateCameraPosition() {
-        return new Promise((resolve, reject) => {
-            const currentScene = sceneElements[currentSceneIndex];
-            const dialogues = currentScene?.querySelectorAll('.dialogue');
-            const dialogue = dialogues?.[currentDialogueIndex];
-            
-            if (!dialogue) {
-                console.log('No dialogue found for camera update');
-                resolve();
-                return;
-            }
-            
-            const povData = JSON.parse(dialogue.getAttribute('data-pov'));
-            console.log('POV Data for camera:', povData);
-            
-            // Get the current camera position
-            const currentOrbit = modelViewer.cameraOrbit;
-            const currentTarget = modelViewer.cameraTarget;
-            console.log('Current camera position:', { currentOrbit, currentTarget });
-            
-            // Parse the camera orbit string (format: "theta deg phi deg radius m")
-            let cameraOrbit = povData.camera_orbit;
-            if (cameraOrbit) {
-                // Split into parts and ensure proper format
-                const parts = cameraOrbit.split(' ');
-                if (parts.length === 6) { // Should be "theta deg phi deg radius m"
-                    const [theta, deg1, phi, deg2, radius, unit] = parts;
-                    // Ensure the radius is a number and has the correct unit
-                    const radiusValue = parseFloat(radius);
-                    if (!isNaN(radiusValue)) {
-                        // Convert radius to a zoom value (inverse relationship)
-                        const zoomValue = 1 / radiusValue;
-                        cameraOrbit = `${theta}${deg1} ${phi}${deg2} ${radiusValue}${unit}`;
-                        console.log('Parsed camera orbit:', cameraOrbit, 'Zoom value:', zoomValue);
-                        
-                        // Set zoom level
-                        if (povData.zoom_speed) {
-                            modelViewer.zoomSpeed = povData.zoom_speed;
-                        }
-                        modelViewer.zoom = zoomValue;
-                    } else {
-                        console.error('Invalid radius value:', radius);
-                    }
-                } else {
-                    console.error('Invalid camera orbit format:', cameraOrbit);
-                }
-            }
-            
-            // Parse the rotation string if it exists
-            let rotation = "0deg 0deg 0deg";
-            if (povData.rotation) {
-                // Ensure the rotation string has the correct format
-                const rotationParts = povData.rotation.split(' ');
-                if (rotationParts.length === 3) {
-                    rotation = povData.rotation;
-                }
-            }
-            
-            // Set initial position
-            modelViewer.cameraOrbit = currentOrbit;
-            modelViewer.cameraTarget = currentTarget;
-            
-            console.log('Starting camera animation with:', {
-                cameraOrbit,
-                cameraTarget: povData.camera_target,
-                rotation
-            });
-            
-            // Animate to the new camera position
-            const animation = modelViewer.animate({
-                cameraOrbit: cameraOrbit,
-                cameraTarget: povData.camera_target,
-                rotation: rotation
-            }, {
-                duration: 2  // Duration in seconds (not milliseconds)
-            });
-            
-            // Add event listeners for the animation
-            animation.addEventListener('finish', () => {
-                console.log('Camera animation finished');
-                // Ensure final values are set
-                modelViewer.cameraOrbit = cameraOrbit;
-                modelViewer.cameraTarget = povData.camera_target;
-                modelViewer.rotation = rotation;
-                resolve();
-            });
-            
-            // Update field of view if specified
-            if (povData.field_of_view) {
-                modelViewer.fieldOfView = povData.field_of_view + "deg";
-            }
-        });
-    }
-
-    // Add hotspot name mapping at the top of the file
-    const HOTSPOT_NAMES = {
-        "2m 2.5m 4.5m": "Will",  // Red dot
-        "-4.5m 2.5m 2.6m": "Nel",  // Blue dot
-        "-2.5m 2.71m -4.5m": "Ed",  // Green dot
-        "4.5m 2.71m -2.6m": "Sam"   // Yellow dot
-    };
-
-    function findClosestHotspot(hotspots, targetPosition, characterName) {
-        console.log('Finding hotspot for character:', characterName);
+        console.log('Updating camera position...');
         
-        // First try to find hotspot by character name
-        for (const hotspot of hotspots) {
-            const position = hotspot.getAttribute('data-position');
-            const mappedName = HOTSPOT_NAMES[position];
-            console.log('Checking hotspot:', { position, mappedName });
-            
-            if (mappedName === characterName) {
-                console.log('Found hotspot by character name:', mappedName);
-                return hotspot;
-            }
+        const currentScene = sceneElements[currentSceneIndex];
+        const dialogues = currentScene?.querySelectorAll('.dialogue');
+        const dialogue = dialogues?.[currentDialogueIndex];
+        
+        if (!dialogue) {
+            console.log('No dialogue found');
+            return;
         }
         
-        // If no match by name, fall back to closest position
-        console.log('No name match, falling back to closest position');
-        const targetParts = targetPosition.split(' ').map(p => parseFloat(p));
-        let closestHotspot = null;
-        let minDistance = Infinity;
+        const povData = JSON.parse(dialogue.getAttribute('data-pov'));
+        console.log('POV data:', povData);
         
-        hotspots.forEach(hotspot => {
-            const position = hotspot.getAttribute('data-position');
-            const mappedName = HOTSPOT_NAMES[position];
-            
-            if (position) {
-                const posParts = position.split(' ').map(p => parseFloat(p));
-                const distance = Math.sqrt(
-                    Math.pow(targetParts[0] - posParts[0], 2) +
-                    Math.pow(targetParts[1] - posParts[1], 2) +
-                    Math.pow(targetParts[2] - posParts[2], 2)
-                );
-                
-                console.log('Distance for hotspot:', { mappedName, distance });
-                
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    closestHotspot = hotspot;
-                }
-            }
-        });
+        // Set camera orbit and target
+        modelViewer.setAttribute('camera-orbit', povData.camera_orbit);
+        modelViewer.setAttribute('camera-target', povData.camera_target);
+        modelViewer.setAttribute('field-of-view', povData.field_of_view);
         
-        if (closestHotspot) {
-            const position = closestHotspot.getAttribute('data-position');
-            console.log('Found closest hotspot:', {
-                name: HOTSPOT_NAMES[position],
-                position: position,
-                distance: minDistance
-            });
+        // Set rotation if provided
+        if (povData.rotation) {
+            modelViewer.setAttribute('rotation', povData.rotation);
         }
-        
-        return closestHotspot;
-    }
-    
-    function updatePointer() {
-        return new Promise((resolve, reject) => {
-            console.log('=== Starting updatePointer ===');
-            
-            const svg = document.getElementById('pointer-svg');
-            const pointer = document.getElementById('pointer-path');
-            
-            if (!svg || !pointer) {
-                console.log('SVG or pointer not found, reinitializing...');
-                initPointerSystem();
-                resolve();
-                return;
-            }
-            
-            console.log('SVG and pointer elements found');
-            
-            // Get the model-viewer's dimensions
-            const modelRect = modelViewer.getBoundingClientRect();
-            console.log('Model viewer rect:', modelRect);
-            
-            // Update SVG viewBox to match model-viewer dimensions
-            svg.setAttribute('viewBox', `0 0 ${modelRect.width} ${modelRect.height}`);
-            
-            // Log SVG properties
-            console.log('SVG properties:', {
-                width: svg.style.width,
-                height: svg.style.height,
-                position: svg.style.position,
-                zIndex: svg.style.zIndex,
-                viewBox: svg.getAttribute('viewBox'),
-                overflow: svg.style.overflow
-            });
-            
-            const currentScene = sceneElements[currentSceneIndex];
-            const dialogues = currentScene?.querySelectorAll('.dialogue');
-            const dialogue = dialogues?.[currentDialogueIndex];
-            
-            if (!dialogue) {
-                console.log('No dialogue found');
-                resolve();
-                return;
-            }
-            
-            console.log('Dialogue found:', dialogue);
-            
-            const povData = JSON.parse(dialogue.getAttribute('data-pov'));
-            console.log('POV data:', povData);
-            
-            const hotspots = modelViewer.querySelectorAll('[slot^="hotspot"]');
-            console.log('Found hotspots:', hotspots.length);
-            
-            // Log all hotspot positions and mapped names
-            hotspots.forEach((hotspot, index) => {
-                const position = hotspot.getAttribute('data-position');
-                console.log(`Hotspot ${index}:`, {
-                    position: position,
-                    name: HOTSPOT_NAMES[position]
-                });
-            });
-            
-            // Find closest hotspot by character name
-            let closestHotspot = findClosestHotspot(hotspots, povData.camera_target, povData.character);
-            if (!closestHotspot) {
-                console.log('No matching hotspot found for character:', povData.character);
-                resolve();
-                return;
-            }
-            
-            const hotspotPosition = closestHotspot.getAttribute('data-position');
-            console.log('Closest hotspot found:', {
-                name: HOTSPOT_NAMES[hotspotPosition],
-                position: hotspotPosition
-            });
-            
-            // Get the text bubble position
-            const bubbleRect = topBubble.getBoundingClientRect();
-            console.log('Bubble rect:', bubbleRect);
-            
-            // Calculate bubble position relative to model-viewer
-            const bubbleCenterX = bubbleRect.left - modelRect.left + (bubbleRect.width / 2);
-            const bubbleBottomY = bubbleRect.bottom - modelRect.top;
-            
-            console.log('Calculated bubble position:', { bubbleCenterX, bubbleBottomY });
-            
-            // Get the hotspot's position in the DOM
-            const hotspotRect = closestHotspot.getBoundingClientRect();
-            const screenPosition = {
-                x: hotspotRect.left - modelRect.left + (hotspotRect.width / 2),
-                y: hotspotRect.top - modelRect.top + (hotspotRect.height / 2)
-            };
-            
-            console.log('Hotspot screen position:', screenPosition);
-            
-            try {
-                // Calculate control points for the curved line
-                const dx = screenPosition.x - bubbleCenterX;
-                const dy = screenPosition.y - bubbleBottomY;
-                
-                // Create a more pronounced curve by offsetting the control point
-                const offset = Math.min(Math.abs(dx), Math.abs(dy)) * 0.5; // Use 50% of the smaller distance
-                const controlX = bubbleCenterX + dx * 0.5;
-                const controlY = bubbleBottomY + dy * 0.5 + offset; // Add offset to create more curve
-                
-                // Create the path data for a curved line
-                const pathData = `M ${bubbleCenterX} ${bubbleBottomY} 
-                                Q ${controlX} ${controlY} ${screenPosition.x} ${screenPosition.y}`;
-                
-                // Create a new path element
-                const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                newPath.id = 'pointer-path';
-                newPath.setAttribute('d', pathData);
-                newPath.setAttribute('stroke', 'black');
-                newPath.setAttribute('stroke-width', '3');
-                newPath.setAttribute('fill', 'none');
-                
-                // Remove old path and add new one
-                const oldPath = document.getElementById('pointer-path');
-                if (oldPath) {
-                    oldPath.remove();
-                    console.log('Old path removed');
-                }
-                
-                svg.appendChild(newPath);
-                console.log('New path added to SVG');
-                
-                // Log final path properties
-                console.log('Path properties:', {
-                    d: newPath.getAttribute('d'),
-                    stroke: newPath.getAttribute('stroke'),
-                    strokeWidth: newPath.getAttribute('stroke-width'),
-                    fill: newPath.getAttribute('fill')
-                });
-                
-                // Force a repaint of the SVG
-                svg.style.display = 'none';
-                svg.offsetHeight; // Force reflow
-                svg.style.display = 'block';
-                
-                console.log('SVG repainted');
-                
-            } catch (error) {
-                console.error('Error creating/updating path:', error);
-            }
-            
-            console.log('=== Finished updatePointer ===');
-            resolve();
-        });
     }
     
     function updateButtonStates() {
@@ -770,7 +377,43 @@ document.addEventListener('DOMContentLoaded', function() {
         updateView();
     }
     
-    // ================ START APPLICATION ================
+    function updateHotspots() {
+        console.log('Updating hotspots...');
+        
+        // Remove existing hotspots
+        const existingHotspots = modelViewer.querySelectorAll('[slot^="hotspot"]');
+        existingHotspots.forEach(hotspot => {
+            console.log('Removing hotspot:', {
+                slot: hotspot.getAttribute('slot'),
+                character: hotspot.getAttribute('data-character')
+            });
+            hotspot.remove();
+        });
+        
+        // Add hotspots for each character
+        const characters = ['Will', 'Nel', 'Ed', 'Sam'];
+        characters.forEach((character, index) => {
+            const hotspot = document.createElement('button');
+            hotspot.setAttribute('slot', `hotspot-${index}`);
+            hotspot.setAttribute('data-character', character);
+            hotspot.setAttribute('data-position', `${index * 2 - 3}m 2m ${index * 2 - 3}m`);
+            hotspot.setAttribute('class', 'hotspot');
+            
+            // Add dot element
+            const dot = document.createElement('div');
+            dot.setAttribute('class', 'dot');
+            hotspot.appendChild(dot);
+            
+            modelViewer.appendChild(hotspot);
+            console.log('Added hotspot:', {
+                slot: hotspot.getAttribute('slot'),
+                character: hotspot.getAttribute('data-character'),
+                position: hotspot.getAttribute('data-position')
+            });
+        });
+    }
+    
+    // Initialize when DOM is loaded
     init();
 });
 

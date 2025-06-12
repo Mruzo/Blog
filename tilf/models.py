@@ -13,6 +13,8 @@ class Season(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     release_date = models.DateField()
+    model_gltf = models.FileField(upload_to='models/', null=True, blank=True)
+    model_usdz = models.FileField(upload_to='models/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.season_number}"
@@ -23,6 +25,7 @@ class Episode(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     episode_number = models.PositiveIntegerField()  # Order of episode in season
+    cover_image = models.ImageField(upload_to='episode_covers/', null=True, blank=True)
 
     def __str__(self):
         return f"S{self.season.season_number} - E{self.episode_number}"
@@ -39,7 +42,7 @@ class Intersection(models.Model):
 
 
 class Scene(models.Model):
-    episode = models.ForeignKey(Episode, on_delete=models.CASCADE, null=True, related_name='scenes')
+    episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='scenes')
     title = models.CharField(max_length=100)
     description = models.TextField(max_length=250)
     order = models.PositiveIntegerField()  # Order of the scenes
@@ -69,6 +72,9 @@ class POV(models.Model):
     head_x = models.FloatField(default=0.0, help_text="Character's head X coordinate in world space")
     head_y = models.FloatField(default=1.6, help_text="Character's head Y coordinate (approx. head height)")
     head_z = models.FloatField(default=0.0, help_text="Character's head Z coordinate in world space")
+    
+    # Default camera target for this POV
+    default_camera_target = models.CharField(max_length=50, default="0m 1.6m 0m", help_text="Default point the camera looks at for this POV (e.g., '0m 1.6m 0m')")
 
     def __str__(self):
         return f"{self.character.name}"
@@ -87,22 +93,26 @@ class Dialogue(models.Model):
         ('confrontation', 'Confrontation Shot'),
     ]
 
-    episode = models.ForeignKey(Episode, on_delete=models.CASCADE)  # Link to Episode
+    episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='dialogues')  # Link to Episode
     pov = models.ForeignKey(POV, on_delete=models.CASCADE, related_name='dialogues')
-    scene = models.ForeignKey(Scene, related_name='dialogues', on_delete=models.CASCADE)
     text = models.TextField()
-    order = models.PositiveIntegerField()  # Order in which dialogue appears within a POV
+    order = models.PositiveIntegerField()  # Order in which dialogue appears within the episode
+    scene_title = models.CharField(max_length=100, blank=True)  # Optional scene title
+    scene_description = models.TextField(max_length=250, blank=True)  # Optional scene description
 
     # Camera attributes
     shot_type = models.CharField(max_length=20, choices=SHOT_TYPES, default='mediumShot', help_text="Select a camera preset for this dialogue")
     camera_orbit = models.CharField(max_length=50, default="0deg 75deg 3m", help_text="Camera position in degrees and meters (e.g., '0deg 75deg 3m')")
-    camera_target = models.CharField(max_length=50, default="0m 1.6m 0m", help_text="Point the camera is looking at (e.g., '0m 1.6m 0m')")
+    camera_target = models.CharField(max_length=50, blank=True, null=True, help_text="Optional override for the camera target point (e.g., '0m 1.6m 0m'). If empty, uses POV's default target.")
     field_of_view = models.FloatField(default=45.0, help_text="Camera field of view in degrees")
     zoom_speed = models.FloatField(default=1.0, help_text="Speed of camera transitions")
     rotation = models.CharField(max_length=50, default="0deg 0deg 0deg", help_text="Model rotation in degrees (e.g., '0deg 0deg 0deg')")
     
+    class Meta:
+        ordering = ['order']  # Order by dialogue order
+    
     def __str__(self):
-        return f"Dialogue {self.order} in {self.pov}"
+        return f"Dialogue {self.order} in {self.episode}"
     
     def save(self, *args, **kwargs):
         # Only apply camera preset if shot_type is selected AND no manual camera settings exist
@@ -248,23 +258,3 @@ class Dialogue(models.Model):
 
         self.text = self.text.strip()  # Removes leading and trailing whitespace
         super().save(*args, **kwargs)
-
-class SocialMediaLink(models.Model):
-    PLATFORM_CHOICES = [
-        ('LinkedIn', 'LinkedIn'),
-        ('Twitter', 'Twitter'),
-        # Add other platforms as needed
-    ]
-    platform = models.CharField(max_length=50, choices=PLATFORM_CHOICES)
-    url = models.URLField(max_length=200)
-    content_type = models.ForeignKey('contenttypes.ContentType', on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    content_object = models.ForeignKey(
-        Intersection, 
-        on_delete=models.CASCADE, 
-        related_name='social_links', 
-        blank=True, null=True
-    )
-
-    def __str__(self):
-        return f"{self.platform} link for {self.content_object}"
