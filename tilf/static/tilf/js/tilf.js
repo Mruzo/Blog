@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Model loaded, initializing...');
                 initPointerSystem(); // Initialize pointer system first
                 createHotspots();
-                setupEventListeners();
+        setupEventListeners();
             });
         }
     }
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add a small delay before first view update to ensure everything is ready
         setTimeout(() => {
-            updateView();
+        updateView();
         }, 100);
     }
     
@@ -235,17 +235,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             },
             path: {
-                id: path.id,
+            id: path.id,
                 attributes: {
                     fill: path.getAttribute('fill'),
-                    stroke: path.getAttribute('stroke'),
-                    strokeWidth: path.getAttribute('stroke-width'),
+            stroke: path.getAttribute('stroke'),
+            strokeWidth: path.getAttribute('stroke-width'),
                     strokeDasharray: path.getAttribute('stroke-dasharray'),
                     strokeLinecap: path.getAttribute('stroke-linecap')
                 }
             }
         });
-        
+
         console.log('=== Finished initPointerSystem ===');
     }
     
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
             modelViewer.addEventListener('load', () => {
                 console.log('Model viewer loaded');
                 if (isStarted) {
-                    updateView();
+                updateView();
                 }
             });
             
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Set a new timeout
                 cameraChangeTimeout = setTimeout(() => {
                     console.log('Camera settled, updating pointer...');
-                    updatePointer();
+                updatePointer();
                 }, 500); // Wait 500ms after last camera change
             });
             
@@ -487,10 +487,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 modelViewer.cameraOrbit = cameraOrbit;
                 modelViewer.cameraTarget = povData.camera_target;
                 modelViewer.rotation = rotation;
-                
-                // Update field of view if specified
-                if (povData.field_of_view) {
-                    modelViewer.fieldOfView = povData.field_of_view + "deg";
+            
+            // Update field of view if specified
+            if (povData.field_of_view) {
+                modelViewer.fieldOfView = povData.field_of_view + "deg";
                 }
                 
                 console.log('Camera position set');
@@ -583,58 +583,58 @@ document.addEventListener('DOMContentLoaded', function() {
                     const dotRect = dot.getBoundingClientRect();
                     
                     // Use the dot's position
-                    const screenPosition = {
+            const screenPosition = {
                         x: dotRect.left - modelRect.left + (dotRect.width / 2),
                         y: dotRect.top - modelRect.top + (dotRect.height / 2)
-                    };
-                    
-                    // Calculate control points for the curved line
-                    const dx = screenPosition.x - bubbleCenterX;
-                    const dy = screenPosition.y - bubbleBottomY;
-                    
+            };
+            
+                // Calculate control points for the curved line
+                const dx = screenPosition.x - bubbleCenterX;
+                const dy = screenPosition.y - bubbleBottomY;
+                
                     // Create a more pronounced curve
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     const offset = distance * 0.3;
                     
                     // Calculate control point
-                    const controlX = bubbleCenterX + dx * 0.5;
+                const controlX = bubbleCenterX + dx * 0.5;
                     const controlY = bubbleBottomY + dy * 0.5 - offset;
-                    
-                    // Create the path data
-                    const pathData = `M ${bubbleCenterX} ${bubbleBottomY} 
-                                    Q ${controlX} ${controlY} ${screenPosition.x} ${screenPosition.y}`;
-                    
-                    // Update path attributes
-                    pointer.setAttribute('d', pathData);
-                    
-                    // Set color based on character
-                    let pointerColor = 'white';
-                    switch(povData.character.toLowerCase()) {
-                        case 'will':
-                            pointerColor = '#ff0000';
-                            break;
-                        case 'nel':
-                            pointerColor = '#0000ff';
-                            break;
-                        case 'ed':
-                            pointerColor = '#00ff00';
-                            break;
-                        case 'sam':
-                            pointerColor = '#ffff00';
-                            break;
-                    }
-                    pointer.setAttribute('stroke', pointerColor);
-                    
-                    // Force a repaint
-                    svg.style.display = 'none';
-                    svg.offsetHeight; // Force reflow
-                    svg.style.display = 'block';
-                    
-                } catch (error) {
-                    console.error('Error updating pointer:', error);
-                }
                 
-                resolve();
+                    // Create the path data
+                const pathData = `M ${bubbleCenterX} ${bubbleBottomY} 
+                                Q ${controlX} ${controlY} ${screenPosition.x} ${screenPosition.y}`;
+                
+                // Update path attributes
+                pointer.setAttribute('d', pathData);
+                
+                // Set color based on character
+                let pointerColor = 'white';
+                switch(povData.character.toLowerCase()) {
+                    case 'will':
+                        pointerColor = '#ff0000';
+                        break;
+                    case 'nel':
+                        pointerColor = '#0000ff';
+                        break;
+                    case 'ed':
+                        pointerColor = '#00ff00';
+                        break;
+                    case 'sam':
+                        pointerColor = '#ffff00';
+                        break;
+                }
+                pointer.setAttribute('stroke', pointerColor);
+                
+                    // Force a repaint
+                svg.style.display = 'none';
+                svg.offsetHeight; // Force reflow
+                svg.style.display = 'block';
+                
+            } catch (error) {
+                    console.error('Error updating pointer:', error);
+            }
+            
+            resolve();
             }, 1000);
         });
     }
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.error('No hotspot found for character:', povData.character);
                 // Fallback to normal update
-                updateView();
+            updateView();
             }
         }
     }
@@ -773,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.error('No hotspot found for character:', povData.character);
                 // Fallback to normal update
-                updateView();
+            updateView();
             }
         } else {
             console.log('Already at first dialogue');

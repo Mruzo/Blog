@@ -3,33 +3,32 @@
 
 {% block content %}
 
-<div class="container-fluid px-0">
+<div class="container-fluid px-0 col-md-4">
     <!-- Modern Comic Header -->
-    <div class="comic-header" style="background: linear-gradient(to right, #1a1a1a, #2a2a2a); color: white; padding: 2rem 0; margin-bottom: 2rem;">
+    <div class="comic-header" style="background: #4d4d4d; color: white; padding: 1.5rem 0; position: relative;">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <div class="episode-meta" style="margin-bottom: 1rem;">
-                        <span class="season-badge" style="background: #ff4d4d; color: white; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; margin-right: 1rem;">
-                            Season {{ episode.season.season_number }}
-                        </span>
-                        <span class="episode-badge" style="background: #4d4dff; color: white; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold;">
-                            Episode {{ episode.episode_number }}
-                        </span>
+                    <div class="episode-meta" style="margin-bottom: 1rem; display: flex; align-items: center;">
+                        <div style="background: #111e7f; padding: 0.3rem 0.6rem; border-radius: 0 4px 4px 0; display: flex; align-items: center;">
+                            <span class="season-badge" style="color: #f9a602; font-weight: bold; font-size: 0.9rem; margin-right: 0.5rem;">
+                                S{{ episode.season.season_number }}
+                            </span>
+                            <span class="episode-badge" style="color: white; font-weight: bold; font-size: 0.9rem;">
+                                E{{ episode.episode_number }}
+                            </span>
+                        </div>
                     </div>
-                    <h1 class="episode-title" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px;">
+                    <h1 class="episode-title" style="font-size: 1.6rem; font-weight: 800; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; color: #f9a602; text-shadow: 2px 2px 0 #111e7f;">
                         {{ episode.title }}
                     </h1>
-                    <p class="episode-description" style="font-size: 1.1rem; opacity: 0.9; max-width: 800px;">
-                        {{ episode.description }}
-                    </p>
+                    <div style="background-color: #111e7f; padding: 0rem;">
+                        <p class="episode-description m-0" style="font-size: 1.1rem; opacity: 0.9; max-width: 800px; font-style: italic; color: white;">
+                            {{ episode.description }}
+                        </p>
+                    </div>
                 </div>
-                <div class="col-md-4 text-end">
-                    <a href="{% url 'season_list' %}" class="back-button" style="color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-arrow-left"></i>
-                        Back to Titles
-                    </a>
-                </div>
+                
             </div>
         </div>
     </div>
@@ -37,14 +36,14 @@
     <!-- 3D Model Container -->
     <div class="container">
         <div class="card model-container mb-4 position-relative" style="height: 400px; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <model-viewer
-                id="model-viewer"
+        <model-viewer
+            id="model-viewer"
                 src="{{ model_gltf }}"
-                alt="3D Scene"
-                style="width: 100%; height: 100%;"
-                shadow-intensity="1"
-                exposure="1"
-                interaction-prompt="none"
+            alt="3D Scene"
+            style="width: 100%; height: 100%;"
+            shadow-intensity="1"
+            exposure="1"
+            interaction-prompt="none"
                 interpolation-decay="200"
                 interpolation="cubic-bezier(0.3, 0.0, 0.7, 1.0)"
                 min-camera-orbit="auto auto 1m"
@@ -59,15 +58,15 @@
                 <!-- Overlay Image with Start Button -->
                 <div id="overlay-container" class="overlay-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 2;">
                     <img src="{{ episode.cover_image.url }}" alt="Episode Cover" style="width: 100%; height: 100%; object-fit: cover;">
-                    <button id="start-button" class="btn btn-primary" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; padding: 1rem 2rem; font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; background: #ff4d4d; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
+                    <button id="start-button" class="btn btn-primary" onclick="startEpisode()" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; padding: 1rem 2rem; font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; background: #ff4d4d; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
                         Start Episode
                     </button>
                 </div>
 
-                <!-- Fixed Top Bubble -->
-                <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 1;">
-                    <div id="top-dialogue">Loading dialogue...</div>
-                </div>
+            <!-- Fixed Top Bubble -->
+            <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 1;">
+                <div id="top-dialogue">Loading dialogue...</div>
+            </div>
 
                 <!-- SVG for Pointer Line -->
                 <svg id="pointer-svg" style="display: none;">
@@ -76,10 +75,10 @@
 
                 <!-- Hotspots will be dynamically created from POV data -->
 
-                <!-- Styles for Hotspots -->
-                <style>
+            <!-- Styles for Hotspots -->
+            <style>
                     /* Hotspot styles */
-                    .hotspot {
+                .hotspot {
                         background: none;
                         border: none;
                         cursor: pointer;
@@ -87,23 +86,23 @@
                         height: 20px;
                         width: 20px;
                         padding: 0;
-                        position: absolute;
-                        transform: translate(-50%, -50%);
+                    position: absolute;
+                    transform: translate(-50%, -50%);
                         transition: opacity 0.3s;
                     }
 
                     .hotspot[data-visible="false"] {
                         opacity: 0;
-                    }
+                }
 
                     .hotspot .dot {
-                        width: 20px;
-                        height: 20px;
-                        border-radius: 50%;
-                        border: 2px solid white;
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    border: 2px solid white;
                         box-shadow: 0 0 4px rgba(0,0,0,0.5);
                         transition: transform 0.3s;
-                    }
+                }
 
                     .hotspot:hover .dot {
                         transform: scale(1.2);
@@ -114,9 +113,9 @@
                     .hotspot .dot.green { background-color: #00ff00; }
                     .hotspot .dot.yellow { background-color: #ffff00; }
 
-                    /* Pointer line styling */
+                /* Pointer line styling */
                     #pointer-svg {
-                        position: absolute;
+                position: absolute;
                         top: 0;
                         left: 0;
                         width: 100%;
@@ -129,52 +128,65 @@
                         stroke-width: 2;
                         stroke-dasharray: 5,5;
                         fill: none;
-                    }
+                }
 
-                    /* Speech bubble styling */
-                    .speech-bubble {
-                        position: fixed;
-                        top: 20px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        background: white;
-                        padding: 8px 12px;
-                        border-radius: 8px;
-                        max-width: 80%;
+                /* Speech bubble styling */
+                .speech-bubble {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: white;
+                padding: 8px 12px;
+                border-radius: 8px;
+                max-width: 80%;
                         z-index: 100;
-                    }
-                </style>
-            </model-viewer>
-        </div>
+                }
+            </style>
+        </model-viewer>
+    </div>
 
-        <!-- Navigation Buttons -->
-        <div class="text-center mt-4 mb-4">
-            <button id="prevButton" class="btn btn-primary me-2" disabled style="padding: 0.75rem 1.5rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; background: #4d4dff; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                Previous
-            </button>
-            <button id="nextButton" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; background: #4d4dff; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                Next
-            </button>
+    <!-- Comic Navigation -->
+    <div class="comic-navigation" style="display: none;">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-auto">
+                <button id="prevButton" class="btn btn-primary mx-1 p-1" onclick="prevComic()" disabled style="font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px;">
+                    &#x2B05;
+                </button>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'season_list' %}" class="back-button mx-1 p-1" style="color: #f9a602; text-decoration: none; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 500; transition: all 0.3s ease;">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Titles
+                </a>
+            </div>
+            <div class="col-auto">
+                <button id="nextButton" class="btn btn-primary mx-1 p-1" onclick="nextComic()" style="font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px;">
+                    &#x27A1;
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Dialogues Container -->
-    <div class="dialogues-container" style="display: none;">
-        {% for dialogue in dialogues_data %}
-            <div class="dialogue" data-pov='{
-                "character": "{{dialogue.character}}",
-                "camera_orbit": "{{ dialogue.camera_orbit|escapejs }}",
-                "camera_target": "{{ dialogue.camera_target|escapejs }}",
-                "field_of_view": "{{ dialogue.field_of_view|escapejs }}",
-                "zoom_speed": "{{ dialogue.zoom_speed|escapejs }}",
-                "rotation": "{{ dialogue.rotation|escapejs }}",
-                "head_x": {{ dialogue.head_x|default:"0" }},
-                "head_y": {{ dialogue.head_y|default:"0" }},
-                "head_z": {{ dialogue.head_z|default:"0" }},
-                "text": "{{ dialogue.text|escapejs }}"
-            }'></div>
-        {% endfor %}
-    </div>
+    
+</div>
+
+<!-- Dialogues Container -->
+<div class="dialogues-container" style="display: none;">
+    {% for dialogue in dialogues_data %}
+        <div class="dialogue" data-pov='{
+            "character": "{{dialogue.character}}",
+                                "camera_orbit": "{{ dialogue.camera_orbit|escapejs }}",
+                                "camera_target": "{{ dialogue.camera_target|escapejs }}",
+                                "field_of_view": "{{ dialogue.field_of_view|escapejs }}",
+                                "zoom_speed": "{{ dialogue.zoom_speed|escapejs }}",
+                                "rotation": "{{ dialogue.rotation|escapejs }}",
+            "head_x": {{ dialogue.head_x|default:"0" }},
+            "head_y": {{ dialogue.head_y|default:"0" }},
+            "head_z": {{ dialogue.head_z|default:"0" }},
+            "text": "{{ dialogue.text|escapejs }}"
+        }'></div>
+    {% endfor %}
 </div>
 
 <style>
@@ -196,38 +208,140 @@
     .comic-header {
         position: relative;
         overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    .comic-header::after {
+    .comic-header::before {
         content: '';
         position: absolute;
-        bottom: 0;
+        top: 0;
         left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(to right, #ff4d4d, #4d4dff);
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent 48%, #f9a602 49%, #f9a602 51%, transparent 52%);
+        background-size: 20px 20px;
+        opacity: 0.1;
     }
 
     .episode-title {
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        position: relative;
+        display: inline-block;
+    }
+
+    .episode-title::after {
+        content: '';
+        position: absolute;
+        bottom: -5px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: #f9a602;
+        transform: scaleX(0);
+        transform-origin: right;
+        transition: transform 0.3s ease;
+    }
+
+    .episode-title:hover::after {
+        transform: scaleX(1);
+        transform-origin: left;
+    }
+
+    .back-button {
+        color: #f9a602;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border: 1px solid #f9a602;
+        border-radius: 4px;
+        transition: all 0.3s ease;
     }
 
     .back-button:hover {
-        color: #ff4d4d;
-        transition: color 0.3s ease;
+        background: #f9a602;
+        color: #111e7f;
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #111e7f;
+        color: white;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: 0.5s;
     }
 
     .btn-primary:hover {
+        background: #f9a602;
         transform: translateY(-2px);
-        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
-        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover::before {
+        left: 100%;
     }
 
     .btn-primary:disabled {
         opacity: 0.5;
         transform: none;
-        box-shadow: none;
     }
 </style>
+
+<script>
+    let started = false;
+    let currentDialogueIndex = 0;
+    
+    function startEpisode() {
+        if (!started) {
+            started = true;
+            document.getElementById('start-button').style.display = 'none';
+            document.querySelector('.comic-navigation').style.display = 'block';
+            
+            // Initialize first dialogue
+            const dialogues = document.querySelectorAll('.dialogue');
+            if (dialogues.length > 0) {
+                const firstDialogue = dialogues[0];
+                const povData = JSON.parse(firstDialogue.getAttribute('data-pov'));
+                
+                // Update dialogue text
+                const topDialogue = document.getElementById('top-dialogue');
+                if (topDialogue) {
+                    topDialogue.innerHTML = `<span style="font-weight: 900; font-size: 1.1em; ">${povData.character}:</span> ${povData.text}`;
+                    topDialogue.style.display = 'block';
+                }
+                
+                // Update camera position
+                const modelViewer = document.querySelector('model-viewer');
+                if (modelViewer) {
+                    modelViewer.cameraOrbit = povData.camera_orbit;
+                    modelViewer.cameraTarget = povData.camera_target;
+                    modelViewer.fieldOfView = povData.field_of_view;
+                }
+                
+                // Enable next button if there are more dialogues
+                const nextButton = document.getElementById('nextButton');
+                if (nextButton) {
+                    nextButton.disabled = dialogues.length <= 1;
+                }
+            }
+        }
+    }
+</script>
 
 {% endblock %}

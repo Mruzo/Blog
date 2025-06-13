@@ -243,9 +243,9 @@ document.addEventListener('DOMContentLoaded', function() {
             modelViewer.addEventListener('load', () => {
                 console.log('Model loaded, initializing...');
                 updateHotspots();
-                setupEventListeners();
+      setupEventListeners();
             });
-        }
+    }
     }
     
     // ================ EVENT HANDLERS ================
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (nextButton) {
-            nextButton.addEventListener('click', nextDialogue);
+      nextButton.addEventListener('click', nextDialogue);
         }
         
         // Listen for camera changes
@@ -280,28 +280,28 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Updating view...');
         
         // Update dialogue content
-        updateDialogueContent();
+      updateDialogueContent();
         
         // Update camera position
-        updateCameraPosition();
+      updateCameraPosition();
         
         // Update button states
-        updateButtonStates();
+      updateButtonStates();
     }
     
     function updateDialogueContent() {
         console.log('Updating dialogue content...');
         
-        const currentScene = sceneElements[currentSceneIndex];
-        const dialogues = currentScene?.querySelectorAll('.dialogue');
-        const dialogue = dialogues?.[currentDialogueIndex];
-        
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      const dialogue = dialogues?.[currentDialogueIndex];
+      
         if (!dialogue) {
             console.log('No dialogue found');
             return;
         }
-        
-        const povData = JSON.parse(dialogue.getAttribute('data-pov'));
+      
+      const povData = JSON.parse(dialogue.getAttribute('data-pov'));
         console.log('POV data:', povData);
         
         // Update text bubble content
@@ -318,23 +318,23 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateCameraPosition() {
         console.log('Updating camera position...');
         
-        const currentScene = sceneElements[currentSceneIndex];
-        const dialogues = currentScene?.querySelectorAll('.dialogue');
-        const dialogue = dialogues?.[currentDialogueIndex];
-        
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      const dialogue = dialogues?.[currentDialogueIndex];
+      
         if (!dialogue) {
             console.log('No dialogue found');
-            return;
-        }
-        
+        return;
+      }
+      
         const povData = JSON.parse(dialogue.getAttribute('data-pov'));
         console.log('POV data:', povData);
-        
+      
         // Set camera orbit and target
         modelViewer.setAttribute('camera-orbit', povData.camera_orbit);
         modelViewer.setAttribute('camera-target', povData.camera_target);
         modelViewer.setAttribute('field-of-view', povData.field_of_view);
-        
+      
         // Set rotation if provided
         if (povData.rotation) {
             modelViewer.setAttribute('rotation', povData.rotation);
@@ -342,39 +342,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateButtonStates() {
-        const currentScene = sceneElements[currentSceneIndex];
-        const dialogues = currentScene?.querySelectorAll('.dialogue');
-        
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      
         if (prevButton) {
-            prevButton.disabled = currentDialogueIndex === 0 && currentSceneIndex === 0;
+      prevButton.disabled = currentDialogueIndex === 0 && currentSceneIndex === 0;
         }
         if (nextButton) {
-            nextButton.disabled = currentDialogueIndex === dialogues?.length - 1 && 
-                                currentSceneIndex === sceneElements.length - 1;
+      nextButton.disabled = currentDialogueIndex === dialogues?.length - 1 && 
+                          currentSceneIndex === sceneElements.length - 1;
         }
     }
     
     // ================ NAVIGATION ================
     function nextDialogue() {
-        const currentScene = sceneElements[currentSceneIndex];
-        const dialogues = currentScene?.querySelectorAll('.dialogue');
-        
-        currentDialogueIndex++;
-        if (currentDialogueIndex >= dialogues?.length) {
-            currentDialogueIndex = 0;
-            currentSceneIndex = (currentSceneIndex + 1) % sceneElements.length;
-        }
-        updateView();
+      const currentScene = sceneElements[currentSceneIndex];
+      const dialogues = currentScene?.querySelectorAll('.dialogue');
+      
+      currentDialogueIndex++;
+      if (currentDialogueIndex >= dialogues?.length) {
+        currentDialogueIndex = 0;
+        currentSceneIndex = (currentSceneIndex + 1) % sceneElements.length;
+      }
+      updateView();
     }
     
     function prevDialogue() {
-        currentDialogueIndex--;
-        if (currentDialogueIndex < 0) {
-            currentSceneIndex = (currentSceneIndex - 1 + sceneElements.length) % sceneElements.length;
-            const dialogues = sceneElements[currentSceneIndex]?.querySelectorAll('.dialogue');
-            currentDialogueIndex = dialogues?.length - 1 || 0;
-        }
-        updateView();
+      currentDialogueIndex--;
+      if (currentDialogueIndex < 0) {
+        currentSceneIndex = (currentSceneIndex - 1 + sceneElements.length) % sceneElements.length;
+        const dialogues = sceneElements[currentSceneIndex]?.querySelectorAll('.dialogue');
+        currentDialogueIndex = dialogues?.length - 1 || 0;
+      }
+      updateView();
     }
     
     function updateHotspots() {
@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize when DOM is loaded
     init();
-});
+  });
 
 // Add a function to check if a point is within the model-viewer
 function isPointInModelViewer(x, y) {

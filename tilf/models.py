@@ -3,6 +3,14 @@ from django.db import models
 class Comic(models.Model):
     title = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
+    comic_image = models.ImageField(upload_to='comic_images/', null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.title:
+            # Create a filename based on comic title
+            comic_title = self.title.lower().replace(' ', '_')
+            self.comic_image.name = f'comic_images/{comic_title}.jpg'
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
