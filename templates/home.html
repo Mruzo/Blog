@@ -57,32 +57,30 @@
 
 <div class="container">
   <div class="row justify-content-center my-4">
-    <div class="col-md-8 d-flex justify-content-around">
+    <div class="col-md-4 d-flex justify-content-between align-items-center">
       <div class="col-auto">
-        <button onclick="loadContent('/home-list', this)" class="neumorphic {% if request.resolver_match.url_name == 'homelist' %}active{% endif %}" >
-          <i class=""></i>
-          <span>&nbsp;PIECES&nbsp;</span>
+        <button onclick="loadContent('/home-list/', this)" class="neumorphic {% if request.resolver_match.url_name == 'homelist' %}active{% endif %}" style="font-size: 0.9rem;">
+          <span>PIECES</span>
         </button>
       </div>
 
-      <div class="straight-line m-0"></div>
-
       <div class="col-auto">
-        <button onclick="loadContent('/crafts', this)" class="neumorphic {% if request.resolver_match.url_name == 'craft' %}active{% endif %}">
-          <i class=""></i>
-          <span>&nbsp;&nbsp;PROJECTS&nbsp;&nbsp;</span>
+        <button onclick="loadContent('/crafts/', this)" class="neumorphic {% if request.resolver_match.url_name == 'craft' %}active{% endif %}" style="font-size: 0.9rem; ">
+          <span>PROJECTS</span>
         </button>
       </div>
 
-      <div class="straight-line m-0"></div>
-
       <div class="col-auto">
-        <button onclick="loadContent('/about', this)" class="neumorphic {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
-          <i class=""></i>
+        <button onclick="loadContent('/about/', this)" class="neumorphic {% if request.resolver_match.url_name == 'about' %}active{% endif %}" style="font-size: 0.9rem; ">
           <span>PERSONA</span>
         </button>
-    </div>
+      </div>
 
+      <div class="col-auto">
+        <button onclick="loadContent('/3dcomics/', this)" class="neumorphic {% if request.resolver_match.url_name == 'season_list' %}active{% endif %}" style="font-size: 0.9rem; ">
+          <span>3D COMICS</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>

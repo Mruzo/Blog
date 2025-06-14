@@ -174,91 +174,31 @@ function showMessage(type, message) {
   }, 5000);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== DOM Content Loaded ===', new Date().getTime());
     
-    // ================ DOM ELEMENTS ================
-    const modelViewer = document.querySelector('model-viewer');
-    const topBubble = document.getElementById('top-bubble');
-    const topDialogue = document.getElementById('top-dialogue');
-    const prevButton = document.getElementById('prevButton');
-    const nextButton = document.getElementById('nextButton');
-    const sceneElements = document.querySelectorAll('.scene');
+    // Get the start button and add click handler
     const startButton = document.getElementById('startButton');
-    const coverSection = document.getElementById('cover-section');
-    const modelSection = document.getElementById('model-section');
+    console.log('Start button element:', startButton);
     
-    console.log('Found elements:', {
-        modelViewer: !!modelViewer,
-        topBubble: !!topBubble,
-        topDialogue: !!topDialogue,
-        prevButton: !!prevButton,
-        nextButton: !!nextButton,
-        sceneElements: sceneElements.length,
-        startButton: !!startButton,
-        coverSection: !!coverSection,
-        modelSection: !!modelSection
-    });
-    
-    // ================ STATE ================
-    let currentSceneIndex = 0;
-    let currentDialogueIndex = 0;
-    let isStarted = false;
-    
-    // ================ INITIALIZATION ================
-    function init() {
-        console.log('Initializing...');
-        if (!modelViewer || !topBubble || !topDialogue) {
-            console.error('Required elements not found');
-            return;
-        }
-        
-        // Set the animation duration and easing
-        modelViewer.setAttribute('interpolation-decay', '200');
-        modelViewer.setAttribute('camera-controls', '');
-        modelViewer.setAttribute('interpolation', 'cubic-bezier(0.3, 0.0, 0.7, 1.0)');
-        
-        // Set camera orbit limits and field of view
-        modelViewer.setAttribute('min-camera-orbit', 'auto auto 1m');
-        modelViewer.setAttribute('max-camera-orbit', 'auto auto 30m');
-        modelViewer.setAttribute('min-field-of-view', '10deg');  // Allow closer zooming
-        modelViewer.setAttribute('max-field-of-view', '90deg');  // Maximum zoom out
-        
-        // Initialize with first dialogue
-        currentSceneIndex = 0;
-        currentDialogueIndex = 0;
-        
-        // Set up start button handler
         if (startButton) {
-            startButton.addEventListener('click', startEpisode);
-        }
-        
-        // Wait for model to be fully loaded
-        if (modelViewer.loaded) {
-            console.log('Model already loaded, initializing...');
-            initPointerSystem();
-            updateHotspots();
-            setupEventListeners();
+        console.log('Adding click listener to start button');
+        startButton.addEventListener('click', () => {
+            console.log('Start button clicked!');
+            // Hide overlay
+            const overlay = document.getElementById('overlay-container');
+            console.log('Overlay element:', overlay);
+            if (overlay) {
+                console.log('Hiding overlay');
+                overlay.style.display = 'none';
         } else {
-            console.log('Waiting for model to load...');
-            modelViewer.addEventListener('load', () => {
-                console.log('Model loaded, initializing...');
-                initPointerSystem();
-                updateHotspots();
-                setupEventListeners();
-            });
+                console.error('Could not find overlay element');
+            }
+        });
+    } else {
+        console.error('Could not find start button element');
         }
-    }
-    
-    function startEpisode() {
-        if (!isStarted) {
-            isStarted = true;
-            coverSection.style.display = 'none';
-            modelSection.style.display = 'block';
-            // Add a small delay before first view update
-            setTimeout(updateView, 100);
-        }
-    }
+});
     
     function initPointerSystem() {
         console.log('Initializing pointer system...');
@@ -305,38 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('SVG container created and added to model-viewer');
     }
     
-    function setupEventListeners() {
-        console.log('Setting up event listeners...');
-        
-        if (nextButton) {
-            nextButton.addEventListener('click', () => {
-                console.log('Next button clicked');
-                nextDialogue();
-            });
-        }
-        
-        if (prevButton) {
-            prevButton.addEventListener('click', () => {
-                console.log('Previous button clicked');
-                prevDialogue();
-            });
-        }
-        
-        if (modelViewer) {
-            modelViewer.addEventListener('load', () => {
-                console.log('Model viewer loaded');
-                updateView();
-            });
-            
-            // Add resize observer
-            const resizeObserver = new ResizeObserver(() => {
-                console.log('Model viewer resized');
-                setTimeout(updatePointer, 100);
-            });
-            resizeObserver.observe(modelViewer);
-        }
-    }
-    
     function updateView() {
         // Update dialogue content first
         updateDialogueContent();
@@ -363,40 +271,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const povData = JSON.parse(dialogue.getAttribute('data-pov'));
         console.log('Starting animations with POV data:', povData);
         
-        // Set camera values directly
-        modelViewer.cameraOrbit = povData.camera_orbit;
-        modelViewer.cameraTarget = povData.camera_target;
-        if (povData.rotation) {
-            modelViewer.rotation = povData.rotation;
-        }
-        if (povData.field_of_view) {
-            modelViewer.fieldOfView = povData.field_of_view;
-        }
-        if (povData.zoom_speed) {
-            modelViewer.zoomSpeed = povData.zoom_speed;
-        }
-        
-        // Wait for camera animation to complete before updating pointer
-        let animationComplete = false;
-        const checkAnimation = () => {
-            if (!animationComplete) {
-                const currentOrbit = modelViewer.cameraOrbit;
-                const currentTarget = modelViewer.cameraTarget;
-                
-                if (currentOrbit === povData.camera_orbit && 
-                    currentTarget === povData.camera_target) {
+    // Use the animation system for all camera changes
+    const animation = modelViewer.animate({
+        cameraOrbit: povData.camera_orbit,
+        cameraTarget: povData.camera_target,
+        fieldOfView: povData.field_of_view + "deg"
+    }, {
+        duration: 1000,
+        easing: 'ease-in-out',
+        fill: 'forwards'
+    });
+    
+    // Wait for animation to complete
+    animation.onfinish = () => {
                     console.log('Camera animation complete');
-                    animationComplete = true;
                     // Add a small delay before drawing the pointer
                     setTimeout(updatePointer, 50);
-                } else {
-                    setTimeout(checkAnimation, 50);
-                }
-            }
         };
-        
-        // Start checking for animation completion
-        setTimeout(checkAnimation, 100);
         
         // Update button states after a delay
         setTimeout(() => {
@@ -568,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const dialogue = dialogues?.[currentDialogueIndex];
             
             if (!dialogue) {
-                console.log('No dialogue found');
+            console.log('No dialogue found, skipping pointer update');
                 resolve();
                 return;
             }
@@ -578,22 +469,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Find all hotspots
             const hotspots = modelViewer.querySelectorAll('[slot^="hotspot"]');
-            console.log('All hotspots:', Array.from(hotspots).map(h => ({
-                slot: h.getAttribute('slot'),
-                character: h.getAttribute('data-character'),
-                position: h.getAttribute('data-position')
-            })));
+        if (!hotspots || hotspots.length === 0) {
+            console.log('No hotspots found, skipping pointer update');
+            resolve();
+            return;
+        }
             
             // Find the hotspot for this character
             const characterHotspot = Array.from(hotspots).find(hotspot => {
                 const hotspotCharacter = hotspot.getAttribute('data-character');
                 const targetCharacter = povData.character;
-                console.log('Checking hotspot:', {
-                    hotspotCharacter,
-                    targetCharacter,
-                    matches: hotspotCharacter === targetCharacter,
-                    exactMatch: hotspotCharacter === targetCharacter
-                });
                 return hotspotCharacter === targetCharacter;
             });
             
@@ -602,12 +487,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 resolve();
                 return;
             }
-            
-            console.log('Found matching hotspot:', {
-                character: characterHotspot.getAttribute('data-character'),
-                position: characterHotspot.getAttribute('data-position'),
-                povCharacter: povData.character
-            });
             
             // Get the text bubble position
             const bubbleRect = topBubble.getBoundingClientRect();
@@ -630,36 +509,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: dotRect.top - modelRect.top + (dotRect.height / 2)
                 };
                 
-                console.log('Screen positions:', {
-                    bubble: { x: bubbleCenterX, y: bubbleBottomY },
-                    hotspot: screenPosition,
-                    hotspotRect: {
-                        left: hotspotRect.left - modelRect.left,
-                        top: hotspotRect.top - modelRect.top,
-                        width: hotspotRect.width,
-                        height: hotspotRect.height
-                    },
-                    dotRect: {
-                        left: dotRect.left - modelRect.left,
-                        top: dotRect.top - modelRect.top,
-                        width: dotRect.width,
-                        height: dotRect.height
-                    },
-                    character: {
-                        hotspot: characterHotspot.getAttribute('data-character'),
-                        pov: povData.character
-                    }
-                });
-                
                 try {
                     // Calculate control points for the curved line
                     const dx = screenPosition.x - bubbleCenterX;
                     const dy = screenPosition.y - bubbleBottomY;
                     
                     // Create a more pronounced curve by offsetting the control point
-                    // The control point is offset perpendicular to the line between bubble and target
                     const distance = Math.sqrt(dx * dx + dy * dy);
-                    const offset = distance * 0.3; // Adjust this value to control curve amount
+                const offset = distance * 0.3;
                     
                     // Calculate control point that's perpendicular to the line
                     const controlX = bubbleCenterX + dx * 0.5;
@@ -668,8 +525,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Create the path data for a curved line using quadratic Bezier curve
                     const pathData = `M ${bubbleCenterX} ${bubbleBottomY} 
                                     Q ${controlX} ${controlY} ${screenPosition.x} ${screenPosition.y}`;
-                    
-                    console.log('Creating path with data:', pathData);
                     
                     // Create a new path element
                     const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -714,25 +569,115 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ================ NAVIGATION ================
     function nextDialogue() {
+    console.log('=== Next Dialogue Initiated ===', new Date().getTime());
+    console.log('Current index:', currentDialogueIndex);
+    
         const currentScene = sceneElements[currentSceneIndex];
-        const dialogues = currentScene?.querySelectorAll('.dialogue');
-        
+    if (!currentScene) {
+        console.error('Current scene not found');
+        return;
+    }
+    
+    const dialogueElements = currentScene.querySelectorAll('.dialogue');
+    if (!dialogueElements) {
+        console.error('No dialogue elements found');
+        return;
+    }
+    
+    if (currentDialogueIndex < dialogueElements.length - 1) {
         currentDialogueIndex++;
-        if (currentDialogueIndex >= dialogues?.length) {
-            currentDialogueIndex = 0;
-            currentSceneIndex = (currentSceneIndex + 1) % sceneElements.length;
+        console.log('Moving to next dialogue, new index:', currentDialogueIndex);
+        
+        // Load the next dialogue
+        const nextDialogueLoaded = loadDialogue(currentDialogueIndex);
+        if (!nextDialogueLoaded) {
+            console.error('Failed to load next dialogue');
+            return;
         }
-        updateView();
+        
+        const nextDialogue = dialogues[currentDialogueIndex];
+        console.log('Next dialogue loaded:', nextDialogue);
+        
+        // Update dialogue text
+        topDialogue.innerHTML = `<strong>${nextDialogue.character}:</strong> ${nextDialogue.text}`;
+        console.log('Dialogue text updated');
+        
+        // Animate camera to new position
+        console.log('Starting camera animation to:', {
+            orbit: nextDialogue.camera_orbit,
+            target: nextDialogue.camera_target,
+            fieldOfView: nextDialogue.field_of_view
+        });
+        
+        // Hide pointer during animation
+        const pointerPath = document.querySelector('.pointer-path');
+        if (pointerPath) {
+            pointerPath.style.display = 'none';
+        }
+        
+        // Start animation
+        modelViewer.animate({
+            cameraOrbit: nextDialogue.camera_orbit,
+            cameraTarget: nextDialogue.camera_target,
+            fieldOfView: nextDialogue.field_of_view + "deg"
+        }, {
+            duration: 1000,
+            easing: 'ease-in-out',
+            fill: 'forwards'
+        }).onfinish = () => {
+            console.log('=== Next Dialogue Animation Complete ===', new Date().getTime());
+            // Show pointer after animation
+            if (pointerPath) {
+                pointerPath.style.display = 'block';
+            }
+            // Update button states
+            prevButton.disabled = false;
+            nextButton.disabled = currentDialogueIndex >= dialogueElements.length - 1;
+            console.log('Button states updated');
+        };
+    } else {
+        console.log('Already at last dialogue');
+    }
     }
     
     function prevDialogue() {
+    console.log('Previous button clicked. Current index:', currentDialogueIndex);
+    const currentScene = sceneElements[currentSceneIndex];
+    const dialogues = currentScene?.querySelectorAll('.dialogue');
+    
+    if (currentDialogueIndex > 0) {
         currentDialogueIndex--;
-        if (currentDialogueIndex < 0) {
-            currentSceneIndex = (currentSceneIndex - 1 + sceneElements.length) % sceneElements.length;
-            const dialogues = sceneElements[currentSceneIndex]?.querySelectorAll('.dialogue');
-            currentDialogueIndex = dialogues?.length - 1 || 0;
+        console.log('Moving to previous dialogue, new index:', currentDialogueIndex);
+        
+        // Load the previous dialogue
+        loadDialogue(currentDialogueIndex);
+        
+        // Get the current dialogue
+        const currentDialogue = dialogues[currentDialogueIndex];
+        if (currentDialogue) {
+            const povData = JSON.parse(currentDialogue.getAttribute('data-pov'));
+            
+            // Update dialogue text
+            topDialogue.innerHTML = `<strong>${povData.character}:</strong> ${povData.text}`;
+            
+            // Animate camera to new position
+            modelViewer.animate({
+                cameraOrbit: povData.camera_orbit,
+                cameraTarget: povData.camera_target,
+                fieldOfView: povData.field_of_view + "deg"
+            }, {
+                duration: 1000,
+                easing: 'ease-in-out',
+                fill: 'forwards'
+            });
+            
+            // Update button states
+            prevButton.disabled = currentDialogueIndex === 0;
+            nextButton.disabled = false;
         }
-        updateView();
+    } else {
+        console.log('Already at first dialogue');
+    }
     }
     
     function updateHotspots() {
@@ -789,8 +734,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // ================ START APPLICATION ================
-    init();
-});
+function init() {
+    console.log('Initializing...');
+    if (!modelViewer || !topBubble || !topDialogue) {
+        console.error('Required elements not found');
+        return;
+    }
+    
+    // Set the animation duration and easing
+    modelViewer.setAttribute('interpolation-decay', '200');
+    modelViewer.setAttribute('camera-controls', '');
+    modelViewer.setAttribute('interpolation', 'cubic-bezier(0.3, 0.0, 0.7, 1.0)');
+    
+    // Set camera orbit limits and field of view
+    modelViewer.setAttribute('min-camera-orbit', 'auto auto 1m');
+    modelViewer.setAttribute('max-camera-orbit', 'auto auto 30m');
+    modelViewer.setAttribute('min-field-of-view', '10deg');
+    modelViewer.setAttribute('max-field-of-view', '90deg');
+    
+    // Initialize with first dialogue
+    currentSceneIndex = 0;
+    currentDialogueIndex = 0;
+    
+    // Wait for model to be fully loaded
+    if (modelViewer.loaded) {
+        console.log('Model already loaded, initializing...');
+        initPointerSystem();
+        updateHotspots();
+    } else {
+        console.log('Waiting for model to load...');
+        modelViewer.addEventListener('load', () => {
+            console.log('Model loaded, initializing...');
+            initPointerSystem();
+            updateHotspots();
+        });
+    }
+}
 
 // Add a function to check if a point is within the model-viewer
 function isPointInModelViewer(x, y) {
@@ -883,17 +862,195 @@ nextButton.addEventListener('click', () => {
 // Initialize the first scene
 showScene(currentSceneIndex);
 
-// Update pointers on camera change
-modelViewer.addEventListener('camera-change', () => {
-    const currentScene = document.querySelector('.scene[style*="block"]');
-    const dialogues = currentScene.querySelectorAll('.dialogue');
-    if (dialogues.length > 0) {
-        const topPov = JSON.parse(dialogues[0].dataset.pov);
-        updatePointer(topPointer, topPov.head_x, topPov.head_y, topPov.head_z);
-        if (dialogues[1]) {
-            const bottomPov = JSON.parse(dialogues[1].dataset.pov);
-            updatePointer(bottomPointer, bottomPov.head_x, bottomPov.head_y, bottomPov.head_z);
+// Remove the camera-change event listener that was causing continuous updates
+modelViewer.removeEventListener('camera-change', () => {
+    updatePointer();
+});
+
+// Only update pointer when dialogue changes
+function showDialogue(index) {
+    if (!isModelReady) {
+        console.log('Model not ready yet, skipping dialogue');
+        return;
+    }
+
+    console.log('=== Starting showDialogue ===', new Date().getTime());
+    console.log('Current dialogue index:', currentDialogueIndex);
+    const currentDialogue = dialogues[currentDialogueIndex];
+    
+    if (currentDialogue) {
+        console.log('Current dialogue:', currentDialogue);
+        
+        // Reset flags
+        isUpdatingPointer = false;
+        isAnimating = true;
+        
+        // Hide pointer during camera movement
+        const path = document.getElementById('pointer-path');
+        if (path) {
+            console.log('Hiding pointer path');
+            path.style.display = 'none';
         }
+        
+        // Update dialogue text - keep original styling
+        topDialogue.innerHTML = `<strong>${currentDialogue.character}:</strong> ${currentDialogue.text}`;
+        
+        // Parse camera orbit and target
+        const orbit = currentDialogue.camera_orbit.split(' ');
+        const target = currentDialogue.camera_target.split(' ');
+        
+        console.log('Camera settings:', {
+            orbit: orbit.join(' '),
+            target: target.join(' '),
+            fieldOfView: currentDialogue.field_of_view
+        });
+        
+        // Animate camera position using model-viewer's animation system
+        const animation = modelViewer.animate({
+            cameraOrbit: orbit.join(' '),
+            cameraTarget: target.join(' '),
+            fieldOfView: currentDialogue.field_of_view + "deg"
+        }, {
+            duration: 1000,
+            easing: 'ease-in-out',
+            fill: 'forwards'
+        });
+        
+        // Wait for animation to complete
+        animation.onfinish = () => {
+            console.log('Camera animation complete');
+            isAnimating = false;
+            if (!isUpdatingPointer && isModelReady) {
+                isUpdatingPointer = true;
+                updatePointer();
+            }
+        };
+    }
+}
+
+// Listen for animation start
+modelViewer.addEventListener('animation-start', () => {
+    console.log('=== Animation started ===', new Date().getTime());
+    isAnimating = true;
+    const path = document.getElementById('pointer-path');
+    if (path) {
+        path.style.display = 'none';
     }
 });
+
+// Listen for animation end
+modelViewer.addEventListener('animation-end', () => {
+    console.log('=== Animation ended ===', new Date().getTime());
+    isAnimating = false;
+    if (!isUpdatingPointer && isModelReady) {
+        isUpdatingPointer = true;
+        updatePointer();
+    }
+});
+
+// Keep camera-change as a backup
+modelViewer.addEventListener('camera-change', () => {
+    if (!isAnimating && !isUpdatingPointer && isModelReady) {
+        console.log('=== Camera changed (no animation) ===', new Date().getTime());
+        isUpdatingPointer = true;
+        updatePointer();
+    }
+});
+
+// Update loadDialogue function to ensure proper initialization
+function loadDialogue(index) {
+    console.log('Loading dialogue at index:', index);
+    const currentScene = sceneElements[currentSceneIndex];
+    if (!currentScene) {
+        console.error('Current scene not found');
+        return false;
+    }
+    
+    const dialogueElements = currentScene.querySelectorAll('.dialogue');
+    if (!dialogueElements || !dialogueElements[index]) {
+        console.error('Dialogue element not found at index:', index);
+        return false;
+    }
+    
+    const dialogueElement = dialogueElements[index];
+    const povData = JSON.parse(dialogueElement.getAttribute('data-pov'));
+    dialogues[index] = povData;
+    console.log('Loaded dialogue', index + ':', povData);
+    return true;
+}
+
+// Remove window.startEpisode and make it a regular function
+function startEpisode() {
+    // Hide the overlay
+    const overlay = document.getElementById('overlay-container');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
+    // Now create the hotspots
+    console.log('Creating all hotspots from POV data...');
+    const uniqueCharacters = new Set();
+    dialogues.forEach(dialogue => {
+        if (dialogue.character && !uniqueCharacters.has(dialogue.character)) {
+            uniqueCharacters.add(dialogue.character);
+            console.log('Creating hotspot for character:', dialogue.character);
+            createHotspot(dialogue.character, dialogue.head_x, dialogue.head_y, dialogue.head_z);
+        }
+    });
+}
+
+let currentDialogueIndex = 0;
+let dialogues = [];
+let isInitialized = false;  // Add initialization flag
+
+// Modify the start button click handler
+document.getElementById('startButton').addEventListener('click', function() {
+    if (isInitialized) return;  // Prevent multiple initializations
+    isInitialized = true;
+    
+    console.log('Start button clicked');
+    this.style.display = 'none';
+    document.getElementById('dialogueContainer').style.display = 'block';
+    document.getElementById('nextButton').style.display = 'block';
+    
+    // Initialize dialogues
+    initializeDialogues();
+});
+
+// Modify the next button click handler
+document.getElementById('nextButton').addEventListener('click', function() {
+    console.log('Next button clicked. Current index:', currentDialogueIndex);
+    
+    if (currentDialogueIndex < dialogues.length - 1) {
+        currentDialogueIndex++;
+        console.log('Moving to next dialogue, new index:', currentDialogueIndex);
+        displayCurrentDialogue();
+        
+        // Animate camera to the new target
+        const currentDialogue = dialogues[currentDialogueIndex];
+        if (currentDialogue.camera_target) {
+            const [x, y, z] = currentDialogue.camera_target.split(' ').map(v => parseFloat(v));
+            viewer.cameraTarget.set(x, y, z);
+            viewer.cameraOrbit.set(currentDialogue.camera_orbit);
+            viewer.fieldOfView = currentDialogue.field_of_view;
+            viewer.jumpCameraToGoal();
+        }
+    } else {
+        // Handle end of dialogues
+        this.style.display = 'none';
+        document.getElementById('dialogueContainer').style.display = 'none';
+    }
+});
+
+function hideOverlay() {
+    console.log('hideOverlay called');
+    const overlay = document.getElementById('overlay-container');
+    console.log('Overlay element:', overlay);
+    if (overlay) {
+        console.log('Hiding overlay');
+        overlay.style.display = 'none';
+    } else {
+        console.error('Could not find overlay element');
+    }
+}
 

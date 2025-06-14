@@ -1,0 +1,47 @@
+{% load static %}
+
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "{% if structured_data.type %}{{ structured_data.type }}{% else %}WebSite{% endif %}",
+    {% if structured_data.type == "Article" %}
+    "headline": "{{ structured_data.title }}",
+    "image": "{% if structured_data.gif %}{{ structured_data.gif }}{% elif structured_data.image %}{{ structured_data.image }}{% endif %}",
+    "datePublished": "{{ structured_data.publish_date|date:'c' }}",
+    "dateModified": "{{ structured_data.modified_date|date:'c' }}",
+    "author": {
+        "@type": "Person",
+        "name": "Chris Uzo",
+        "url": "https://twitter.com/misteruzo"
+    },
+    "publisher": {
+        "@type": "Organization",
+        "name": "MisterUzo",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "{% static 'snmov/img/wbicon.png' %}"
+        }
+    },
+    "description": "{{ structured_data.description }}",
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "{{ structured_data.url }}"
+    }
+    {% elif structured_data.type == "Craft" %}
+    "name": "{{ structured_data.name }}",
+    "description": "{{ structured_data.description }}",
+    "image": "{% if structured_data.images %}{{ structured_data.images.0.url }}{% endif %}",
+    "category": "{{ structured_data.category }}",
+    "url": "{{ structured_data.url }}"
+    {% else %}
+    "name": "MisterUzo | Lessons and Crafts",
+    "url": "{{ request.build_absolute_uri }}",
+    "description": "Roadways that beckon return",
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": "{{ request.build_absolute_uri }}search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+    }
+    {% endif %}
+}
+</script> 

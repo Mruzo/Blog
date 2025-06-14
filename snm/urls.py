@@ -21,9 +21,7 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from snmov.views import (
     article_create_view,
-    
-    
-    article_detail_view,
+    article_detail,
     validate_username,
 )
 from snmov.sitemaps import StaticViewSitemap, ArticleSitemap, CommentSitemap

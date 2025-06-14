@@ -655,6 +655,7 @@ button.neumorphic {
 	border: 0.5rem solid transparent;
 	border-radius: 0.5rem;
 	color: hsl(0 0% 10%);
+	padding: 0px;
 	background: none;
 	
 	display: flex; /* Use flexbox instead of grid */

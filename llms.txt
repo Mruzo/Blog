@@ -1,0 +1,32 @@
+# LLMs.txt - AI Crawler Instructions for misteruzo.com
+
+# Allow AI crawlers to access and index content
+Allow: /
+
+# Disallow access to admin and private areas
+Disallow: /admin/
+Disallow: /uno
+Disallow: /private/
+Disallow: /accounts/
+
+# Content Usage Guidelines
+Content-Usage: 
+- Articles and blog posts may be indexed and referenced
+- 3D comic content may be indexed but not reproduced
+- Craft projects may be indexed and referenced
+- Personal information should not be extracted or stored
+
+# Attribution Requirements
+Attribution:
+- When referencing content, please include "Source: misteruzo.com"
+- Include links back to the original content
+- Maintain original formatting and context
+
+# Rate Limiting
+Rate-Limit: 1 request per 2 seconds
+
+# Contact Information
+Contact: https://twitter.com/misteruzo
+
+# Last Updated
+Last-Updated: 2024-03-13 

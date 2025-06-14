@@ -51,22 +51,24 @@ def article_create_view(request):
                   )
 
 
-def article_detail_view(request, slug):
-    obj = Article.objects.get(slug=slug)
-    
-    # Get the image URL, prioritizing the GIF if present
-    model_url = obj.get_meta_image()  # This now handles both GIF and regular image
-    model_type = "gif" if obj.gif_model else "image"
-    
-    meta_data = obj.generate_meta_tags() 
-    template_name = 'snmov/home.html'  # Assuming 'home.html' is your base template
-    context = {
-        'object': obj,
-        'meta_data': meta_data,
-        'model_url': model_url,  # URL of the image or gif
-        'model_type': model_type,  # Type of the file (gif or image)
+def article_detail(request, slug):
+    article = get_object_or_404(Article, slug=slug)
+    structured_data = {
+        'type': 'Article',
+        'title': article.title,
+        'description': article.content[:200],  # First 200 characters as description
+        'publish_date': article.publish_date,
+        'modified_date': article.modified_date,
+        'url': request.build_absolute_uri(),
+        'gif': article.gif_model.url if article.gif_model else None,
+        'image': article.image.url if article.image else None
     }
-    return render(request, template_name, context)
+    context = {
+        'object': article,
+        'meta_data': article.generate_meta_tags(),
+        'structured_data': structured_data
+    }
+    return render(request, 'snmov/home.html', context)
 
 
 @login_required
@@ -80,7 +82,7 @@ def add_comment_to_article(request, slug):
             comment.comment_post = post
             comment.save()
             messages.success(request, 'Thank You!')
-            return redirect(article_detail_view, slug=post.slug)
+            return redirect(article_detail, slug=post.slug)
     else:
         form = CommentForm()
 
