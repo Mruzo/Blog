@@ -839,13 +839,13 @@ margin: auto; /* Center the line horizontally */
 			-0.1rem -0.1rem -0.5rem rgba(255, 255, 255, 0.75),
 		  0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
 		  color: #f9a602;
-		  > span { font-size: 0.9rem; font-weight: bold; text-underline-offset: 1px};
+		  > span { font-size: 0.8rem; font-weight: bold; text-underline-offset: 1px};
 		  
 		}
 	  
 		> span {
 		  font-family: 'Cabin', sans-serif;
-		  font-size: 0.9rem; /* Use 'px' instead of 'cqi' for font size */
+		  font-size: 0.7rem; /* Use 'px' instead of 'cqi' for font size */
 		  font-weight: Bold 700;
 		  
 		}

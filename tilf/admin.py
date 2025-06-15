@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericTabularInline
-from .models import Comic, Season, Episode, Character, POV, Dialogue
+from .models import Comic, Season, Episode, Character, POV, Dialogue, ComicComment
 from django.db import models
 from tinymce.widgets import TinyMCE
 from django import forms
@@ -71,3 +71,13 @@ class DialogueAdmin(admin.ModelAdmin):
     list_filter = ('episode', 'pov__character', 'shot_type')
     search_fields = ('text', 'pov__character__name')
     ordering = ('order','episode')
+
+
+@admin.register(ComicComment)
+class ComicCommentAdmin(admin.ModelAdmin):
+    list_display = ('user_name', 'episode', 'comment_date', 'approved_comment')
+    list_filter = ('approved_comment', 'comment_date')
+    search_fields = ('comment_cont', 'user_name__username', 'episode__title')
+    list_editable = ('approved_comment',)
+    date_hierarchy = 'comment_date'
+    ordering = ('-comment_date',)

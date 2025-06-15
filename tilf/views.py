@@ -1,7 +1,9 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView
-from .models import Comic, Season, Episode, Dialogue, POV
+from .models import Comic, Season, Episode, Dialogue, POV, ComicComment
 from django.utils.safestring import mark_safe
+from snmov.forms import CommentForm
+from .forms import ComicCommentForm
 import json
 
 
@@ -57,6 +59,33 @@ class EpisodeDetailView(DetailView):
             })
 
         context['dialogues_data'] = dialogues_data
+        
+        # Add comment form and comments
+        context['comment_form'] = ComicCommentForm()
+        context['comments'] = episode.comments.filter(approved_comment=True)
+        
         return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        comment_form = ComicCommentForm(request.POST)
+        
+        if comment_form.is_valid() and request.user.is_authenticated:
+            comment = comment_form.save(commit=False)
+            comment.user_name = request.user
+            comment.episode = self.object
+            comment.save()
+            return redirect('episode_detail', season_id=self.object.season.id, pk=self.object.pk)
+            
+        return self.render_to_response(self.get_context_data(comment_form=comment_form))
+
+def delete_comment(request, season_id, pk, comment_id):
+    episode = get_object_or_404(Episode, pk=pk, season_id=season_id)
+    comment = get_object_or_404(ComicComment, pk=comment_id, episode=episode)
+    
+    if request.user.is_authenticated and request.user == comment.user_name:
+        comment.delete()
+    
+    return redirect('episode_detail', season_id=season_id, pk=pk)
 
 

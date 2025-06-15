@@ -3,14 +3,14 @@
 
 {% block content %}
 <div class="container">
-    <div class="comic-header" style="background: #4d4d4d; color: white; padding: 1.5rem 0; margin-bottom: 1rem; position: relative;">
-        <h1 class="text-center m-0" style="font-size: 2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #f9a602; text-shadow: 2px 2px 0 #111e7f;">3D Comics</h1>
+    <div class="comic-header" style="background: #4d4d4d; color: white; padding: 1rem 0; margin-bottom: 1rem; position: relative;">
+        <h1 class="text-center m-0" style="font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #f9a602; text-shadow: 2px 2px 0 #111e7f;">3D Comics</h1>
     </div>
 
     {% for comic in comics %}
     <div class="card title-card mb-4" style="border: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-radius: 0px;">
         <div class="card-body">
-            <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; color: #000;">{{ comic.title }}</h2>
+            <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; color: #000;">{{ comic.title }}</h2>
             
             {% if comic.comic_image %}
             <div class="comic-image mb-2 border-top" style="width: 100%; aspect-ratio: 16/9; overflow: hidden; border-radius: 0px;">
@@ -48,6 +48,13 @@
                            style="color: #111e7f; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 500; transition: all 0.3s ease; font-size: 0.9rem;">
                             <span style="color: #f9a602; font-weight: bold;">E{{ episode.episode_number }}:</span>
                             {{ episode.title }}
+                            <div class="episode-metrics" style="display: inline-flex; align-items: center; gap: 0.5rem; margin-left: auto;">
+                                <span class="metric-badge" style="display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.8rem; color: #666;">
+                                    <i class="fas fa-comment"></i>
+                                    <span>{{ episode.comments.count }}</span>
+                                </span>
+                                <!-- Future metrics can be added here with the same structure -->
+                            </div>
                         </a>
                     </div>
                     {% endfor %}

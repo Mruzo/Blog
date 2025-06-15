@@ -1,89 +1,73 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="card white rounded-0" style="width-max: 25rem; padding: 5%;">
+    <div class="center">
+        <h5 style="font-weight: bold;">Cookie Policy</h5>
+    </div>
 
+    <div class="left-align" style="margin: 0 5%;">
+        <p class="row"><small>Last updated: March 14, 2025</small></p>
 
-                        <div class="card white" style="width-max: 25rem;padding:5%;">
-                            <div class="center">
-                                <h5 style="font-weight:bold;">
-                                    {{title}}
-                                </h5>
-                            </div>
+        <p>Welcome to MisterUzo's Cookie Policy. This policy explains how we use cookies and similar technologies on misteruzo.com (the "Service"). By using our Service, you consent to our use of cookies as described in this policy.</p>
 
-                            <div class="left-align" style="margin:0 5%;">
-                                <p class="row"><small> Last updated: January 24, 2021 </small></p>
+        <h6 class="mt-4" style="font-weight: bold;">What Are Cookies?</h6>
+        <p>Cookies are small text files that are stored on your device when you visit a website. They help us provide you with a better experience by:</p>
+        <ul style="margin-left: 5%;">
+            <li>Remembering your preferences</li>
+            <li>Understanding how you use our website</li>
+            <li>Making our website work more efficiently</li>
+        </ul>
 
-                                <p>MisterUzo ("us", "we", or "our") uses cookies on the www.miseruzo.com website (the "Service"). By using the Service, you consent to the use of cookies.</p>
+        <h6 class="mt-4" style="font-weight: bold;">Types of Cookies We Use</h6>
+        <p>We use the following types of cookies:</p>
+        <ul style="margin-left: 5%;">
+            <li><strong>Essential Cookies:</strong> Required for the website to function properly. These cannot be disabled.</li>
+            <li><strong>Authentication Cookies:</strong> Help us identify you when you log in and keep your session secure.</li>
+            <li><strong>Preference Cookies:</strong> Remember your settings and preferences for future visits.</li>
+            <li><strong>Analytics Cookies:</strong> Help us understand how visitors interact with our website.</li>
+        </ul>
 
-                                <p>Our Cookies Policy explains what cookies are, how we use cookies, how third-parties we may partner with may use cookies on the Service, your choices regarding cookies and further information about cookies. This Cookies Policy for MisterUzo has been created with the help of <a href="https://www.termsfeed.com/cookie-policy-generator/">Cookies Policy Generator</a>.</p>
+        <h6 class="mt-4" style="font-weight: bold;">How We Use Cookies</h6>
+        <p>We use cookies for the following purposes:</p>
+        <ul style="margin-left: 5%;">
+            <li>To maintain your session and keep you logged in</li>
+            <li>To remember your preferences (like language or theme)</li>
+            <li>To analyze how our website is used and improve its performance</li>
+            <li>To provide personalized content and recommendations</li>
+            <li>To ensure the security of your account</li>
+        </ul>
 
-                                <p><strong>What are cookies</strong></p>
+        <h6 class="mt-4" style="font-weight: bold;">Your Cookie Choices</h6>
+        <p>You can control and manage cookies in your browser settings. However, please note that disabling certain cookies may affect the functionality of our website.</p>
 
-                                <p>Cookies are small pieces of text sent by your web browser by a website you visit. A cookie file is stored in your web browser and allows the Service or a third-party to recognize you and make your next visit easier and the Service more useful to you.</p>
+        <p>To manage cookies in your browser:</p>
+        <ul style="margin-left: 5%;">
+            <li><strong>Chrome:</strong> Settings → Privacy and Security → Cookies and other site data</li>
+            <li><strong>Firefox:</strong> Options → Privacy & Security → Cookies and Site Data</li>
+            <li><strong>Safari:</strong> Preferences → Privacy → Cookies and website data</li>
+            <li><strong>Edge:</strong> Settings → Cookies and site permissions → Cookies</li>
+        </ul>
 
-                                <p>Cookies can be "persistent" or "session" cookies. Persistent cookies remain on your personal computer or mobile device when you go offline, while session cookies are deleted as soon as you close your web browser.</p>
+        <h6 class="mt-4" style="font-weight: bold;">Privacy and Data Protection</h6>
+        <p>We are committed to protecting your privacy. Our use of cookies complies with:</p>
+        <ul style="margin-left: 5%;">
+            <li>General Data Protection Regulation (GDPR)</li>
+            <li>California Consumer Privacy Act (CCPA)</li>
+            <li>Other applicable privacy laws</li>
+        </ul>
 
-                                <p><strong>How MisterUzo uses cookies</strong></p>
+        <p>For more information about how we handle your personal data, please see our <a href="{% url 'privacy' %}" style="color: #111e7f;">Privacy Policy</a>.</p>
 
-                                <p>When you use and access the Service, we may place a number of cookies files in your web browser.</p>
+        <h6 class="mt-4" style="font-weight: bold;">Updates to This Policy</h6>
+        <p>We may update this Cookie Policy from time to time. Any changes will be posted on this page with an updated revision date.</p>
 
-                                <p>We use cookies for the following purposes:</p>
-
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">
-                                        <p>To improve user experience of this service</p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>We use both session and persistent cookies on the Service and we use different types of cookies to run the Service:</p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>Essential cookies. We may use essential cookies to authenticate users and prevent fraudulent use of user accounts.</p>
-                                    </li>
-                                </ul>
-
-                                <p><strong>What are your choices regarding cookies</strong></p>
-
-                                <p>If you'd like to delete cookies or instruct your web browser to delete or refuse cookies, please visit the help pages of your web browser. As an European citizen, under GDPR, you have certain individual rights. You can learn more about these rights in the <a href="https://termsfeed.com/blog/gdpr/#Individual_Rights_Under_the_GDPR">GDPR Guide</a>.</p>
-
-                                <p>Please note, however, that if you delete cookies or refuse to accept them, you might not be able to use all of the features we offer, you may not be able to store your preferences, and some of our pages might not display properly.</p>
-
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">
-                                        <p>For the Chrome web browser, please visit this page from Google: <a href="https://support.google.com/accounts/answer/32050">https://support.google.com/accounts/answer/32050</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>For the Internet Explorer web browser, please visit this page from Microsoft: <a href="http://support.microsoft.com/kb/278835">http://support.microsoft.com/kb/278835</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>For the Firefox web browser, please visit this page from Mozilla: <a href="https://support.mozilla.org/en-US/kb/delete-cookies-remove-info-websites-stored">https://support.mozilla.org/en-US/kb/delete-cookies-remove-info-websites-stored</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>For the Safari web browser, please visit this page from Apple: <a href="https://support.apple.com/kb/PH21411?locale=en_US">https://support.apple.com/kb/PH21411?locale=en_US</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>For any other web browser, please visit your web browser's official web pages.</p>
-                                    </li>
-                                </ul>
-
-                                <p><strong>Where can you find more information about cookies</strong></p>
-
-                                <p>You can learn more about cookies and the following third-party websites:</p>
-
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">
-                                        <p>AllAboutCookies: <a href="http://www.allaboutcookies.org/">http://www.allaboutcookies.org/</a></p>
-                                    </li>
-                                    <li style="list-style-type: initial;">
-                                        <p>Network Advertising Initiative: <a href="http://www.networkadvertising.org/">http://www.networkadvertising.org/</a></p>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-
-
-
-
-
-
+        <h6 class="mt-4" style="font-weight: bold;">Contact Us</h6>
+        <p>If you have any questions about our Cookie Policy, please contact us at:</p>
+        <ul style="margin-left: 5%;">
+            <li>Email: reachout@misteruzo.com</li>
+            <li>Through our <a href="{% url 'contact' %}" style="color: #111e7f;">contact form</a></li>
+        </ul>
+    </div>
+</div>
 {% endblock %}

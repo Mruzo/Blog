@@ -1,0 +1,24 @@
+{% if not request.COOKIES.cookie_consent %}
+<div id="cookie-notification" class="cookie-banner" style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(17, 30, 127, 0.95); color: white; padding: 1rem; z-index: 1000; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">
+    <div style="flex: 1; margin-right: 1rem;">
+        <p class="mb-0" style="font-size: 0.9rem;">
+            We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies.
+            <a href="{% url 'cookie' %}" style="color: #f9a602; text-decoration: underline;">Learn more</a>
+        </p>
+    </div>
+    <div>
+        <button onclick="acceptCookies()" class="btn" style="background: #f9a602; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.9rem;">
+            Accept
+        </button>
+    </div>
+</div>
+
+<script>
+function acceptCookies() {
+    // Set cookie for 365 days
+    document.cookie = "cookie_consent=true; max-age=31536000; path=/";
+    // Hide the banner
+    document.getElementById('cookie-notification').style.display = 'none';
+}
+</script>
+{% endif %} 

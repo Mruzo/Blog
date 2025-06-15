@@ -1,5 +1,5 @@
 // Test if script is loaded
-console.log('sm.js is loaded');
+// console.log('sm.js is loaded');
 
 // ================ GLOBAL VARIABLES ================
 let currentDialogueIndex = 0;
@@ -71,22 +71,42 @@ loop();
 
 // ================ HOME PAGE CONTENT LOADING ================
 window.loadContent = function(url, button = null) {
-  console.log('loadContent called with URL:', url);
+  // console.log('loadContent called with URL:', url);
   fetch(url)
     .then(response => {
-      console.log('Response status:', response.status);
+      // console.log('Response status:', response.status);
       return response.text();
     })
     .then(html => {
-      console.log('Received HTML:', html.substring(0, 100) + '...'); // Log first 100 chars
+      // console.log('Received HTML:', html.substring(0, 100) + '...'); // Log first 100 chars
       const contentDiv = document.getElementById('content');
       if (!contentDiv) {
-        console.error('Content div not found!');
+        // console.error('Content div not found!');
         return;
       }
       
-      // The response is already the content we want
-      contentDiv.innerHTML = html;
+      // If this is the 3D comics page, strip header and footer
+      if (url.includes('/3dcomics/')) {
+        // Create a temporary div to parse the HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        
+        // Find the main content
+        const mainContent = tempDiv.querySelector('main');
+        if (mainContent) {
+          // Remove comic-header if it exists
+          const comicHeader = mainContent.querySelector('.comic-header');
+          if (comicHeader) {
+            comicHeader.remove();
+          }
+          contentDiv.innerHTML = mainContent.innerHTML;
+        } else {
+          contentDiv.innerHTML = html;
+        }
+      } else {
+        // For other pages, use the full HTML
+        contentDiv.innerHTML = html;
+      }
       
       // Update button states
       document.querySelectorAll('.neumorphic').forEach(btn => {
@@ -103,7 +123,7 @@ window.loadContent = function(url, button = null) {
       initCarousel();
     })
     .catch(error => {
-      console.error('Error fetching content:', error);
+      // console.error('Error fetching content:', error);
     });
 }
 
@@ -158,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
               }
           })
           .catch(error => {
-              console.error('Error submitting form:', error);
+              // console.error('Error submitting form:', error);
               showMessage('error', 'There was an error submitting the form.');
           });
       });
@@ -167,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ================ MODEL VIEWER ================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM Content Loaded');
+    // console.log('DOM Content Loaded');
     
     const modelViewer = document.querySelector('model-viewer');
     const topBubble = document.getElementById('top-bubble');
@@ -176,44 +196,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextButton = document.getElementById('nextButton');
     
     if (!modelViewer || !topBubble || !topDialogue || !prevButton || !nextButton) {
-        console.error('Required elements not found:', {
-            modelViewer: !!modelViewer,
-            topBubble: !!topBubble,
-            topDialogue: !!topDialogue,
-            prevButton: !!prevButton,
-            nextButton: !!nextButton
-        });
+        // console.error('Required elements not found:', {
+        //     modelViewer: !!modelViewer,
+        //     topBubble: !!topBubble,
+        //     topDialogue: !!topDialogue,
+        //     prevButton: !!prevButton,
+        //     nextButton: !!nextButton
+        // });
         return;
     }
 
     // Initialize dialogues array from the dialogues container
     const dialogueElements = document.querySelectorAll('.dialogue');
-    console.log('Found dialogue elements:', dialogueElements.length);
+    // console.log('Found dialogue elements:', dialogueElements.length);
     dialogueElements.forEach(element => {
         try {
             const povData = JSON.parse(element.getAttribute('data-pov'));
             dialogues.push(povData);
-            console.log('Added dialogue:', povData);
+            // console.log('Added dialogue:', povData);
         } catch (error) {
-            console.error('Error parsing dialogue data:', error);
+            // console.error('Error parsing dialogue data:', error);
         }
     });
-    console.log('Initialized dialogues array:', dialogues);
+    // console.log('Initialized dialogues array:', dialogues);
     
-    console.log('Model viewer found:', modelViewer);
-    console.log('Model viewer attributes:', {
-        interpolationDecay: modelViewer.getAttribute('interpolation-decay'),
-        cameraControls: modelViewer.getAttribute('camera-controls'),
-        interpolation: modelViewer.getAttribute('interpolation'),
-        minCameraOrbit: modelViewer.getAttribute('min-camera-orbit'),
-        maxCameraOrbit: modelViewer.getAttribute('max-camera-orbit'),
-        minFieldOfView: modelViewer.getAttribute('min-field-of-view'),
-        maxFieldOfView: modelViewer.getAttribute('max-field-of-view')
-    });
+    // console.log('Model viewer found:', modelViewer);
+    // console.log('Model viewer attributes:', {
+    //     interpolationDecay: modelViewer.getAttribute('interpolation-decay'),
+    //     cameraControls: modelViewer.getAttribute('camera-controls'),
+    //     interpolation: modelViewer.getAttribute('interpolation'),
+    //     minCameraOrbit: modelViewer.getAttribute('min-camera-orbit'),
+    //     maxCameraOrbit: modelViewer.getAttribute('max-camera-orbit'),
+    //     minFieldOfView: modelViewer.getAttribute('min-field-of-view'),
+    //     maxFieldOfView: modelViewer.getAttribute('max-field-of-view')
+    // });
         
     // Wait for model to be ready
     modelViewer.addEventListener('load', () => {
-        console.log('Model loaded');
+        // console.log('Model loaded');
         isModelReady = true;
     });
 
@@ -225,11 +245,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modelViewer.addEventListener('model-visibility', (event) => {
         if (event.detail.visible) {
-            console.log('=== Model and hotspots ready ===', new Date().getTime());
+            // console.log('=== Model and hotspots ready ===', new Date().getTime());
             isModelReady = true;
             
             // Create all hotspots from POV data
-            console.log('Creating all hotspots from POV data...');
+            // console.log('Creating all hotspots from POV data...');
             createHotspots();
             
             // Don't show first dialogue here - that's handled by startEpisode
@@ -237,15 +257,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function createHotspots() {
-        console.log('Creating hotspots...');
+        // console.log('Creating hotspots...');
         
         // Remove existing hotspots
         const existingHotspots = modelViewer.querySelectorAll('[slot^="hotspot"]');
         existingHotspots.forEach(hotspot => {
-            console.log('Removing existing hotspot:', {
-                slot: hotspot.getAttribute('slot'),
-                character: hotspot.getAttribute('data-character')
-            });
+            // console.log('Removing existing hotspot:', {
+            //     slot: hotspot.getAttribute('slot'),
+            //     character: hotspot.getAttribute('data-character')
+            // });
             hotspot.remove();
         });
         
@@ -275,28 +295,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add the hotspot to the model-viewer
                 modelViewer.appendChild(hotspot);
                 
-                console.log('Created hotspot:', {
-                    element: hotspot,
-                    attributes: {
-                        slot: hotspot.getAttribute('slot'),
-                        class: hotspot.className,
-                        position: hotspot.getAttribute('data-position'),
-                        normal: hotspot.getAttribute('data-normal'),
-                        character: hotspot.getAttribute('data-character')
-                    }
-                });
+                // console.log('Created hotspot:', {
+                //     element: hotspot,
+                //     attributes: {
+                //         slot: hotspot.getAttribute('slot'),
+                //         class: hotspot.className,
+                //         position: hotspot.getAttribute('data-position'),
+                //         normal: hotspot.getAttribute('data-normal'),
+                //         character: hotspot.getAttribute('data-character')
+                //     }
+                // });
             }
         });
     }
 
     function showDialogue(index) {
         if (!dialogues || !dialogues[index]) {
-            console.error('No dialogue loaded for index:', index);
+            // console.error('No dialogue loaded for index:', index);
             return;
         }
 
-        console.log('=== Starting showDialogue ===', new Date().getTime());
-        console.log('Dialogue index:', index);
+        // console.log('=== Starting showDialogue ===', new Date().getTime());
+        // console.log('Dialogue index:', index);
         
         // Update current index
         currentDialogueIndex = index;
@@ -304,13 +324,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentDialogue = dialogues[index];
         
         if (currentDialogue) {
-            console.log('Showing dialogue:', {
-                index: index,
-                character: currentDialogue.character,
-                text: currentDialogue.text,
-                camera_orbit: currentDialogue.camera_orbit,
-                camera_target: currentDialogue.camera_target
-            });
+            // console.log('Showing dialogue:', {
+            //     index: index,
+            //     character: currentDialogue.character,
+            //     text: currentDialogue.text,
+            //     camera_orbit: currentDialogue.camera_orbit,
+            //     camera_target: currentDialogue.camera_target
+            // });
             
             // Reset flags
             isUpdatingPointer = false;
@@ -340,13 +360,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const animation = modelViewer.animate({
                     cameraOrbit: currentDialogue.camera_orbit
                 }, {
-                    duration: 1000,  // 1 second
+                    duration: 500,  // 1 second
                     easing: 'ease-in-out'
                 });
                 
                 // Wait for animation to complete
                 animation.onfinish = () => {
-                    console.log('Camera animation complete');
+                    // console.log('Camera animation complete');
                     if (!isUpdatingPointer) {
                         isUpdatingPointer = true;
                         updatePointer();
@@ -362,15 +382,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 nextButton.disabled = index === dialogues.length - 1;
             }
             
-            console.log('=== Finished showDialogue ===', new Date().getTime());
+            // console.log('=== Finished showDialogue ===', new Date().getTime());
         } else {
-            console.error('No dialogue found for index:', index);
+            // console.error('No dialogue found for index:', index);
         }
     }
 
     // Listen for animation start
     modelViewer.addEventListener('animation-start', () => {
-        console.log('=== Animation started ===', new Date().getTime());
+        // console.log('=== Animation started ===', new Date().getTime());
         isAnimating = true;
         const path = document.getElementById('pointer-path');
         if (path) {
@@ -380,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listen for animation end
     modelViewer.addEventListener('animation-end', () => {
-        console.log('=== Animation ended ===', new Date().getTime());
+        // console.log('=== Animation ended ===', new Date().getTime());
         isAnimating = false;
         if (!isUpdatingPointer && isModelReady) {
             isUpdatingPointer = true;
@@ -391,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Keep camera-change as a backup
     modelViewer.addEventListener('camera-change', () => {
         if (!isAnimating && !isUpdatingPointer && isModelReady) {
-            console.log('=== Camera changed (no animation) ===', new Date().getTime());
+            // console.log('=== Camera changed (no animation) ===', new Date().getTime());
             isUpdatingPointer = true;
             updatePointer();
         }
@@ -399,32 +419,32 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function updatePointer() {
         if (!isModelReady) {
-            console.log('Model not ready yet, skipping pointer update');
+            // console.log('Model not ready yet, skipping pointer update');
             isUpdatingPointer = false;
                 return;
             }
             
-        console.log('=== Starting updatePointer ===', new Date().getTime());
+        // console.log('=== Starting updatePointer ===', new Date().getTime());
         const currentDialogue = dialogues[currentDialogueIndex];
         
         if (!currentDialogue) {
-            console.log('No dialogue found');
+            // console.log('No dialogue found');
             isUpdatingPointer = false;
                 return;
             }
             
         // Extract base character name (remove numbers)
         const baseCharacterName = currentDialogue.character.replace(/\s*\d+$/, '');
-        console.log('Updating pointer for character:', {
-            original: currentDialogue.character,
-            base: baseCharacterName
-        });
+        // console.log('Updating pointer for character:', {
+        //     original: currentDialogue.character,
+        //     base: baseCharacterName
+        // });
         
         // Find the hotspot using model-viewer's native syntax
         const hotspot = modelViewer.querySelector(`[slot="hotspot-${baseCharacterName}"]`);
         
         if (!hotspot) {
-            console.log('No hotspot found for character:', baseCharacterName);
+            // console.log('No hotspot found for character:', baseCharacterName);
             const path = document.getElementById('pointer-path');
             if (path) {
                 path.style.display = 'none';
@@ -460,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const pathData = `M ${bubbleCenterX} ${bubbleBottomY} 
                         Q ${controlX} ${controlY} ${hotspotCenterX} ${hotspotCenterY}`;
         
-        console.log('Creating path with data:', pathData);
+        // console.log('Creating path with data:', pathData);
         
         // Get or create path element
         let path = document.getElementById('pointer-path');
@@ -484,26 +504,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set up navigation button handlers
     if (prevButton && nextButton) {
         prevButton.onclick = function() {
-            console.log('Previous button clicked. Current index:', currentDialogueIndex);
+            // console.log('Previous button clicked. Current index:', currentDialogueIndex);
             if (currentDialogueIndex > 0) {
                 const newIndex = currentDialogueIndex - 1;
-                console.log('Moving to previous dialogue, new index:', newIndex);
+                // console.log('Moving to previous dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
                 showDialogue(newIndex);
             } else {
-                console.log('Already at first dialogue');
+                // console.log('Already at first dialogue');
             }
         };
         
         nextButton.onclick = function() {
-            console.log('Next button clicked. Current index:', currentDialogueIndex);
+            // console.log('Next button clicked. Current index:', currentDialogueIndex);
             if (currentDialogueIndex < dialogues.length - 1) {
                 const newIndex = currentDialogueIndex + 1;
-                console.log('Moving to next dialogue, new index:', newIndex);
+                // console.log('Moving to next dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
                 showDialogue(newIndex);
             } else {
-                console.log('Already at last dialogue');
+                // console.log('Already at last dialogue');
             }
         };
     }
@@ -514,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (startButton && overlayContainer) {
         startButton.addEventListener('click', () => {
-            console.log('Start button clicked');
+            // console.log('Start button clicked');
             overlayContainer.style.display = 'none';
             showDialogue();
         });
@@ -591,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Make startEpisode function globally available
 window.startEpisode = function() {
-    console.log('Start button clicked');
+    // console.log('Start button clicked');
     
     // Find required elements
     const elements = {
@@ -617,7 +637,7 @@ window.startEpisode = function() {
     if (dialoguesContainer) {
         // Get total number of dialogues
         const totalDialogues = dialoguesContainer.querySelectorAll('.dialogue').length;
-        console.log('Total available dialogues:', totalDialogues);
+        // console.log('Total available dialogues:', totalDialogues);
         
         // Initialize empty array with correct size
         dialogues = new Array(totalDialogues);
@@ -629,26 +649,26 @@ window.startEpisode = function() {
         // Set up navigation button handlers
         if (elements.prevButton && elements.nextButton) {
             elements.prevButton.onclick = function() {
-                console.log('Previous button clicked. Current index:', currentDialogueIndex);
+                // console.log('Previous button clicked. Current index:', currentDialogueIndex);
                 if (currentDialogueIndex > 0) {
                     const newIndex = currentDialogueIndex - 1;
-                    console.log('Moving to previous dialogue, new index:', newIndex);
+                    // console.log('Moving to previous dialogue, new index:', newIndex);
                     loadDialogue(newIndex);
                     showDialogue(newIndex);
                 } else {
-                    console.log('Already at first dialogue');
+                    // console.log('Already at first dialogue');
                 }
             };
             
             elements.nextButton.onclick = function() {
-                console.log('Next button clicked. Current index:', currentDialogueIndex);
+                // console.log('Next button clicked. Current index:', currentDialogueIndex);
                 if (currentDialogueIndex < totalDialogues - 1) {
                     const newIndex = currentDialogueIndex + 1;
-                    console.log('Moving to next dialogue, new index:', newIndex);
+                    // console.log('Moving to next dialogue, new index:', newIndex);
                     loadDialogue(newIndex);
                     showDialogue(newIndex);
                 } else {
-                    console.log('Already at last dialogue');
+                    // console.log('Already at last dialogue');
                 }
             };
         }
@@ -675,9 +695,9 @@ function loadDialogue(index) {
             head_y: povData.head_y || 0,
             head_z: povData.head_z || 0
         };
-        console.log(`Loaded dialogue ${index}:`, dialogues[index]);
+        // console.log(`Loaded dialogue ${index}:`, dialogues[index]);
     } catch (error) {
-        console.error('Error parsing POV data for dialogue', index, ':', error);
+        // console.error('Error parsing POV data for dialogue', index, ':', error);
     }
 }
 

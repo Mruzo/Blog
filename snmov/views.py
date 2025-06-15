@@ -58,7 +58,7 @@ def article_detail(request, slug):
         'title': article.title,
         'description': article.content[:200],  # First 200 characters as description
         'publish_date': article.publish_date,
-        'modified_date': article.modified_date,
+        'modified_date': article.updated,
         'url': request.build_absolute_uri(),
         'gif': article.gif_model.url if article.gif_model else None,
         'image': article.image.url if article.image else None

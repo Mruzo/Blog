@@ -3,7 +3,12 @@
 
 {% block content %}
 
-<div class="col p-1 mt-5 text-center">
+<div class="col p-0 mt-0 text-center">
+
+    <div class="comic-header" style="background: #4d4d4d; color: white; padding: 1rem 0; margin-bottom: 1rem; position: relative;">
+        <h1 class="text-center m-0" style="font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #f9a602;">REFLECTIONS</h1>
+    </div>
+    
     <div class="row">
         <div class="col">
             <div class="btn-group">
@@ -32,7 +37,7 @@
                             <h6 class="fs-5 m-0" style="font-weight:bold;">{{ object.title }}</h6>
                         </div>
                         <div class="col-4">
-                            {{ object.publish_date | date:"M d, Y" }}
+                            <small>{{ object.publish_date | date:"M d, Y" }}</small>
                         </div>
                     </div>
                     <div class="row">

@@ -1,4 +1,7 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+from django.template.loader import render_to_string
 
 class Comic(models.Model):
     title = models.CharField(max_length=100, blank=True)
@@ -37,6 +40,18 @@ class Episode(models.Model):
 
     def __str__(self):
         return f"S{self.season.season_number} - E{self.episode_number}"
+
+    def generate_meta_tags(self):
+        meta_tags = {
+            'title': self.season.comic.title,
+            'description': self.season.comic.description,
+            'image': self.season.comic.comic_image.url if self.season.comic.comic_image else None,
+            'url': self.get_absolute_url()
+        }
+        return render_to_string('meta_tags.html', {'meta_tags': meta_tags})
+
+    def get_absolute_url(self):
+        return f"/3dcomics/seasons/{self.season.id}/episodes/{self.id}/"
 
 
 class Intersection(models.Model):
@@ -266,3 +281,26 @@ class Dialogue(models.Model):
 
         self.text = self.text.strip()  # Removes leading and trailing whitespace
         super().save(*args, **kwargs)
+
+class ComicComment(models.Model):
+    comment_cont = models.TextField(max_length=200, verbose_name='Comment')
+    user_name = models.ForeignKey(User, default=1, null=True, on_delete=models.SET_NULL)
+    episode = models.ForeignKey('Episode', on_delete=models.CASCADE, related_name='comments')
+    comment_date = models.DateTimeField(default=timezone.now)
+    approved_comment = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-comment_date']
+
+    def __str__(self):
+        return self.comment_cont
+
+    def get_absolute_url(self):
+        return f"/3dcomics/seasons/{self.episode.season.id}/episodes/{self.episode.id}/"
+
+    def get_delete_url(self):
+        return f"{self.get_absolute_url()}delete-comment/{self.pk}/"
+
+    def approve(self):
+        self.approved_comment = True
+        self.save()
