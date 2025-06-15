@@ -177,6 +177,15 @@ EMAIL_HOST_USER = config.get('section','MG_USER')
 EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
 EMAIL_USE_TLS = True
 
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/2.2/howto/static-files/
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'live-static', 'static-root') #live cdn AWS S3
+
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
