@@ -50,3 +50,27 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
+
+# Virtual Environment
+blogenv/
+snmov/
+pyvenv.cfg
+include/
+share/
+
+# IDE and Editor files
+.cursor/
+*.swp
+*.swo
+.vscode/
+
+# Database and backups
+latest.dump
+*.dump
+
+# Media and static files
+media/
+live-static/
+
+# Local development settings
+local_settings.py
