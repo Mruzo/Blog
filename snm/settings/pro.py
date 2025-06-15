@@ -18,12 +18,12 @@ config.read('/etc/snmov/settings.ini')
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': config.get('section', 'SM_DB_NAME'),
         'USER': config.get('section', 'SM_DB_USER'),
         'PASSWORD': config.get('section', 'SM_DB_PASS'),
         'HOST': 'localhost',
-        'PORT': '',
+        'PORT': '5432',
     }
 }
 
