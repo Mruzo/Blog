@@ -53,7 +53,6 @@ htmlcov/
 
 # Virtual Environment
 blogenv/
-snmov/
 pyvenv.cfg
 include/
 share/
