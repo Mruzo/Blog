@@ -64,31 +64,31 @@ TINYMCE_DEFAULT_CONFIG = {
     'cleanup_on_startup': True,
     'custom_undo_redo_levels': 20,
     'selector': 'textarea',
-    'contents_style': 'body {font-family: Cabin; }',
-    'theme': 'modern',
+    'content_style': 'body {font-family: Cabin; }',
+    'theme': 'silver',
     'plugins': '''
             textcolor save link image media preview codesample contextmenu
-            table code lists fullscreen  insertdatetime  nonbreaking
+            table code lists fullscreen insertdatetime nonbreaking
             contextmenu directionality searchreplace wordcount visualblocks
-            visualchars code fullscreen autolink lists  charmap print  hr
+            visualchars code fullscreen autolink lists charmap print hr
             anchor pagebreak emoticons
             ''',
     'toolbar1': '''
             fullscreen preview bold italic underline | fontselect,
-            fontsizeselect  | forecolor backcolor | alignleft alignright |
+            fontsizeselect | forecolor backcolor | alignleft alignright |
             aligncenter alignjustify | indent outdent | bullist numlist table |
             | link image media | codesample | emoticons |
             ''',
     'toolbar2': '''
             visualblocks visualchars |
-            charmap hr pagebreak nonbreaking anchor |  code |
+            charmap hr pagebreak nonbreaking anchor | code |
             ''',
     'contextmenu': 'formats | link image',
     'menubar': True,
     'statusbar': True,
     'paste_as_text': True,
-    'forced_root_block': False,  # Add this line
-    }
+    'forced_root_block': False,
+}
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 

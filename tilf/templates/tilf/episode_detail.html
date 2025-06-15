@@ -48,14 +48,14 @@
                 </button>
             </div>
 
-            <model-viewer
-                id="model-viewer"
+        <model-viewer
+            id="model-viewer"
                 src="{{ model_gltf }}"
-                alt="3D Scene"
-                style="width: 100%; height: 100%;"
-                shadow-intensity="1"
-                exposure="1"
-                interaction-prompt="none"
+            alt="3D Scene"
+            style="width: 100%; height: 100%;"
+            shadow-intensity="1"
+            exposure="1"
+            interaction-prompt="none"
                 interpolation-decay="200"
                 interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
                 min-camera-orbit="auto auto 1m"
@@ -63,11 +63,11 @@
                 min-field-of-view="10deg"
                 max-field-of-view="90deg"
                 camera-controls>
-                
-                <!-- Fixed Top Bubble -->
-                <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 1;">
-                    <div id="top-dialogue">Loading dialogue...</div>
-                </div>
+
+            <!-- Fixed Top Bubble -->
+            <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 1;">
+                <div id="top-dialogue">Loading dialogue...</div>
+            </div>
 
                 <!-- SVG for Pointer Line -->
                 <svg id="pointer-svg" style="display: none;">
@@ -75,7 +75,7 @@
                 </svg>
 
                 <!-- Hotspots will be dynamically created from POV data -->
-            </model-viewer>
+        </model-viewer>
         </div>
     </div>
 
@@ -93,7 +93,7 @@
                 <div class="col-auto d-flex justify-content-center align-items-center my-auto">
                     <a href="{% url 'comic_list' %}" class="back-button mx-1 p-1" style="color: #f9a602; text-decoration: none; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 500; transition: all 0.3s ease;">
                         <span>Back to Comics</span>
-                    </a>
+                </a>
                 </div>
             </div>
             <div class="col-auto">

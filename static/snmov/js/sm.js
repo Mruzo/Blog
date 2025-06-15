@@ -105,7 +105,7 @@ window.loadContent = function(url, button = null) {
         }
       } else {
         // For other pages, use the full HTML
-        contentDiv.innerHTML = html;
+      contentDiv.innerHTML = html;
       }
       
       // Update button states
@@ -203,9 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
         //     prevButton: !!prevButton,
         //     nextButton: !!nextButton
         // });
-        return;
-    }
-
+            return;
+        }
+        
     // Initialize dialogues array from the dialogues container
     const dialogueElements = document.querySelectorAll('.dialogue');
     // console.log('Found dialogue elements:', dialogueElements.length);
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //     minFieldOfView: modelViewer.getAttribute('min-field-of-view'),
     //     maxFieldOfView: modelViewer.getAttribute('max-field-of-view')
     // });
-        
+
     // Wait for model to be ready
     modelViewer.addEventListener('load', () => {
         // console.log('Model loaded');
@@ -278,20 +278,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only create hotspot if we haven't seen this character before
             if (!uniqueCharacters.has(baseCharacterName)) {
                 uniqueCharacters.add(baseCharacterName);
-                
-                const hotspot = document.createElement('div');
-                hotspot.setAttribute('slot', `hotspot-${baseCharacterName}`);
-                hotspot.className = 'hotspot';
-                hotspot.setAttribute('data-position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
-                hotspot.setAttribute('data-normal', '0m 1m 0m');
-                hotspot.setAttribute('data-character', baseCharacterName);
-                
+            
+            const hotspot = document.createElement('div');
+            hotspot.setAttribute('slot', `hotspot-${baseCharacterName}`);
+            hotspot.className = 'hotspot';
+            hotspot.setAttribute('data-position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
+            hotspot.setAttribute('data-normal', '0m 1m 0m');
+            hotspot.setAttribute('data-character', baseCharacterName);
+            
                 // Create the dot element inside the hotspot
-                const dot = document.createElement('div');
+            const dot = document.createElement('div');
                 dot.className = 'dot';
                 dot.textContent = baseCharacterName;
-                hotspot.appendChild(dot);
-                
+            hotspot.appendChild(dot);
+            
                 // Add the hotspot to the model-viewer
                 modelViewer.appendChild(hotspot);
                 
@@ -505,28 +505,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (prevButton && nextButton) {
         prevButton.onclick = function() {
             // console.log('Previous button clicked. Current index:', currentDialogueIndex);
-            if (currentDialogueIndex > 0) {
-                const newIndex = currentDialogueIndex - 1;
+        if (currentDialogueIndex > 0) {
+            const newIndex = currentDialogueIndex - 1;
                 // console.log('Moving to previous dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
-                showDialogue(newIndex);
-            } else {
+            showDialogue(newIndex);
+        } else {
                 // console.log('Already at first dialogue');
-            }
+        }
         };
-        
+
         nextButton.onclick = function() {
             // console.log('Next button clicked. Current index:', currentDialogueIndex);
-            if (currentDialogueIndex < dialogues.length - 1) {
-                const newIndex = currentDialogueIndex + 1;
+        if (currentDialogueIndex < dialogues.length - 1) {
+            const newIndex = currentDialogueIndex + 1;
                 // console.log('Moving to next dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
-                showDialogue(newIndex);
-            } else {
+            showDialogue(newIndex);
+        } else {
                 // console.log('Already at last dialogue');
             }
         };
-    }
+        }
 
     // Set up start button handler
     const startButton = document.getElementById('start-button');

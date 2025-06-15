@@ -1,0 +1,180 @@
+{% load static %}
+<a name="totop"></a>
+
+
+{% if not detail %}
+
+<div class="card m-1">
+    {% if article.gif_model %}
+        <!-- Display the GIF if it exists -->
+        <img
+            class="card-img-top mb-2"
+            src="{{ article.gif_model.url }}"
+            alt="GIF of {{ article.title }}"
+            width="270px"
+            height="auto">
+    {% elif article.image %}
+        <!-- Fallback to the regular image -->
+        <img
+            class="card-img-top mb-2"
+            src="{{ article.image.url }}"
+            alt="image of {{ article.title }}"
+            width="270px"
+            height="auto">
+    {% else %}
+        <!-- Optionally handle case where no image or GIF is present -->
+        <p>No image available</p>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-8">
+            <h5 class="card-title font-weight-bolder px-2 m-0">{{ article.title }}</h5>
+        </div>
+        <div class="col-4">
+            {{ article.publish_date | date:"M d, Y" }}
+        </div>
+    </div>
+    
+    <article class="card-subtitle px-2">{{ article.content | safe | linebreaks | truncatewords:23 }}</article>
+    <div class="row text-center w-100 m-0 ">
+        <div class="col ">
+            <small>
+
+                <svg xmlns="http://www.w3.org/2000/svg" height=24 data-name="Layer 1" viewBox="0 0 512 640" x="0px" y="0px"><title>Untitled-2</title><path d="M96.21,363.1c-9.6-6.69-19.34-12.92-28.46-20C44,324.84,24.29,303,12.2,275.23c-19.62-45-15.2-88.45,10.53-129.74C49.4,102.66,89,75.86,135.39,58.79c76.87-28.3,154.66-29.7,232.4-3.65,45.48,15.24,85.13,39.7,114.5,78.73,42.11,56,39.18,127.61-7.1,180.67-37.5,43-86,66.37-140.39,79.22-38,9-76.5,10.47-115.32,7.08-3.3-.29-7.53,1.78-10.23,4-41.4,34.85-88.9,56.88-141.67,68-4.81,1-9.71,1.63-14.58,2.34-6.17.9-11.21-.79-14.36-6.56s-2-11,1.91-15.77c4.55-5.51,9.19-11,14.18-16.07A161.74,161.74,0,0,0,96.21,363.1Z"/></svg>
+                  {{ article.comments_count_multiplied }}</small>
+        </div>
+        <div class="col ">
+            <small>
+                <svg xmlns="http://www.w3.org/2000/svg" height=24 viewBox="0 0 13 18.75" x="0px" y="0px" style="fill:#DC2229"><path fill-rule="evenodd" d="M225.7237,18.1321555 C223.445082,17.9286539 221.389184,15.615621 222.167984,12.5082871 C223.162048,9.32396029 226.388091,9.78792641 227.625348,4 C230.174515,6.31064362 231.198896,8.79235326 230.698491,11.4451289 C232.101851,11.7907384 233.068385,11.2383376 233.598092,9.78792641 C236.062199,11.9635432 235.274115,17.9563237 231.264322,19 C228.56438,18.3042158 227.094805,16.4236556 226.855596,13.3583193 C225.598407,14.4326908 225.221108,16.0239696 225.7237,18.1321555 Z" transform="translate(-222 -4)"/></svg>
+                {{ article.likes }}
+            </small>
+        </div>
+        <div class="col">
+            <small>
+                <svg xmlns="http://www.w3.org/2000/svg" height=25 version="1.1" x="0px" y="0px" viewBox="1 -1 100 125" style="enable-background:new 1 -1 100 100;" xml:space="preserve"><path d="M88.6,15.3c-5-5.1-11.7-7.9-19-7.9c-7,0-13.8,2.7-18.6,7.4C46,10,39.4,7.4,32.4,7.4c-7.2,0-13.9,2.8-18.9,7.8  c-5.1,5.1-7.8,11.8-7.8,19c0,7.2,2.8,13.9,7.8,19l37.1,37.2l0.4,0.4l37.6-37.6c5-5,7.8-11.7,7.8-18.9S93.6,20.3,88.6,15.3z"/></svg>
+                {{ article.dislikes }}</small>
+        </div>
+    </div>
+<a class="btn neww-success" href="{{ article.get_absolute_url }}">Read more...</a>
+</div>
+
+
+{% else %}
+
+
+{% block meta_tags %}
+    {% include "meta_tags.html" with meta_tags=meta_data %}
+{% endblock %}
+
+
+{% comment %}
+
+{{ meta_tags|safe }}
+{% block meta_tags %}
+    {% include 'meta_tags.html' %}
+{% endblock %}
+
+{% endcomment %}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-10 my-2 bg-white p-4" >
+            <div class="border-bottom">
+                <h1 class="mt-2 card-title fw-bolder">{{ article.title }}</h1>
+                <p>By <a class="text-info" href="/#about" onclick="loadContent('/about', this)">Chris Uzo</a> {{ article.publish_date | date:"M d, Y" }}</p>
+            </div>
+
+            {% if article.gif_model %}
+                <!-- Display the GIF if it exists -->
+                <img
+                    class="img-fluid mx-auto d-block p-2"
+                    src="{{ article.gif_model.url }}"
+                    alt="GIF of {{ article.title }}">
+            {% elif article.image %}
+                <!-- Fallback to the regular image -->
+                <img
+                    class="img-fluid mx-auto d-block p-2"
+                    src="{{ article.image.url }}"
+                    alt="image of {{ article.title }}">
+            {% else %}
+                <!-- Optionally handle case where no image or GIF is present -->
+                <p>No image available</p>
+            {% endif %}
+
+            <!-- <div class="row w-100 m-0 mb-2 d-flex justify-content-end">
+                <small class="ml-auto">
+                    <a class="bg-dark text-white p-1" href="https://theikjn.com/graphic-design/" target="_blank">
+                        THEIKJN
+                    </a>
+                </small>
+            </div> -->
+
+            <div class="row text-center w-100 m-0 border-top border-bottom my-2"></div>
+
+            <article class="mx-2">{{ article.content | safe | linebreaks }}</article>
+            
+            <div class="row text-center w-100 m-0 border-top border-bottom mt-3 mb-3">
+                {% comment %}
+                <div class="col border-end align-middle">
+                    <a class="btn" href="/article/{{article.slug}}/addc/">
+                        <svg xmlns="http://www.w3.org/2000/svg" height=24 data-name="Layer 1" viewBox="0 0 512 640" x="0px" y="0px"><title>Untitled-2</title><path d="M96.21,363.1c-9.6-6.69-19.34-12.92-28.46-20C44,324.84,24.29,303,12.2,275.23c-19.62-45-15.2-88.45,10.53-129.74C49.4,102.66,89,75.86,135.39,58.79c76.87-28.3,154.66-29.7,232.4-3.65,45.48,15.24,85.13,39.7,114.5,78.73,42.11,56,39.18,127.61-7.1,180.67-37.5,43-86,66.37-140.39,79.22-38,9-76.5,10.47-115.32,7.08-3.3-.29-7.53,1.78-10.23,4-41.4,34.85-88.9,56.88-141.67,68-4.81,1-9.71,1.63-14.58,2.34-6.17.9-11.21-.79-14.36-6.56s-2-11,1.91-15.77c4.55-5.51,9.19-11,14.18-16.07A161.74,161.74,0,0,0,96.21,363.1Z"/></svg>
+                        {{ article.comments.approved.count }}
+                    </a>
+                </div>
+                <div class="col border-end align-middle">
+                    <a class="btn" href="#" onclick="document.getElementById('likebutton').submit()">
+                        <svg xmlns="http://www.w3.org/2000/svg" height=24 viewBox="0 0 13 18.75" x="0px" y="0px" style="fill:#DC2229";><path fill-rule="evenodd" d="M225.7237,18.1321555 C223.445082,17.9286539 221.389184,15.615621 222.167984,12.5082871 C223.162048,9.32396029 226.388091,9.78792641 227.625348,4 C230.174515,6.31064362 231.198896,8.79235326 230.698491,11.4451289 C232.101851,11.7907384 233.068385,11.2383376 233.598092,9.78792641 C236.062199,11.9635432 235.274115,17.9563237 231.264322,19 C228.56438,18.3042158 227.094805,16.4236556 226.855596,13.3583193 C225.598407,14.4326908 225.221108,16.0239696 225.7237,18.1321555 Z" transform="translate(-222 -4)"/></svg>
+                        {{ article.likes }}
+                    </a>
+                </div>
+                <div class="col align-middle">
+                    <a class="btn" href="#" onclick="document.getElementById('dislikebutton').submit()">
+                        <svg xmlns="http://www.w3.org/2000/svg" height=25 version="1.1" x="0px" y="0px" viewBox="1 -1 100 125" style="enable-background:new 1 -1 100 100;" xml:space="preserve"><path d="M88.6,15.3c-5-5.1-11.7-7.9-19-7.9c-7,0-13.8,2.7-18.6,7.4C46,10,39.4,7.4,32.4,7.4c-7.2,0-13.9,2.8-18.9,7.8  c-5.1,5.1-7.8,11.8-7.8,19c0,7.2,2.8,13.9,7.8,19l37.1,37.2l0.4,0.4l37.6-37.6c5-5,7.8-11.7,7.8-18.9S93.6,20.3,88.6,15.3z"/></svg>
+                        {{ article.dislikes }}
+                    </a>
+                </div>
+                {% endcomment %}
+            </div>
+
+            <form id="likebutton" method="POST" action="/article/{{article.slug}}/userpreference/1/">
+                {% csrf_token %}
+                <input type="hidden">
+            </form>
+
+            <form id="dislikebutton" method="POST" action="/article/{{article.slug}}/userpreference/2/">
+                {% csrf_token %}
+                <input type="hidden">
+            </form>
+
+            {% for c in article.comments.all %}
+            {% if c.approved_comment %}
+            <div class="col">
+                <div class="row rounded-0 bg-light border-bottom border-warning p-1">
+                    <div class="col-10">
+                        <strong>{{ c.user_name }}</strong>
+                        {{ c.comment_cont | linebreaks }}
+                    </div>
+                    {% if request.user.is_authenticated %}
+                    {% if request.user == c.user_name %}
+                    <div class="col-2 align-self-end">
+                        <a href="{% url 'delete_comment' article.slug c.pk %}">Delete</a>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+            
+
+            <div class="row w-90 m-2 d-flex justify-content-between">
+                <a class="col-3 p-0 btn fw-bolder neumorphicc" href="{% url 'article_list' %}">view more</a>
+                <a class="col-3 p-0 btn fw-bolder neumorphicc" href="#totop">to top</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+
