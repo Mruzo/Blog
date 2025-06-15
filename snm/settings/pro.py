@@ -23,7 +23,7 @@ DATABASES = {
         'USER': config.get('section', 'SM_DB_USER'),
         'PASSWORD': config.get('section', 'SM_DB_PASS'),
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '5434',
     }
 }
 
