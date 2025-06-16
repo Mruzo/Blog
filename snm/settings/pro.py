@@ -32,7 +32,7 @@ AWS_SECRET_ACCESS_KEY = config.get('section', 'S3_SCRT_KEY')
 AWS_STORAGE_BUCKET_NAME = config.get('section', 'S3_BUCKET_NAME')
 
 AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None
+AWS_DEFAULT_ACL = 'public-read'
 
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
