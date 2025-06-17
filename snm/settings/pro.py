@@ -1,6 +1,5 @@
 from configparser import RawConfigParser
 from .base import *
-import os
 
 DEBUG = False
 
@@ -34,7 +33,6 @@ AWS_STORAGE_BUCKET_NAME = config.get('section', 'S3_BUCKET_NAME')
 AWS_S3_REGION_NAME = 'us-east-1'
 
 AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = 'public-read'
 
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
