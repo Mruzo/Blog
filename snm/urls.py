@@ -1,3 +1,11 @@
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import path, include, re_path
+from django.contrib.sitemaps.views import sitemap
+from django.contrib.auth import views as auth_views
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.http import JsonResponse
 from .views import(
     home_page,
     home_list,
@@ -12,24 +20,25 @@ from .views import(
     register_view,
     verify_email,
     logout_request,
-    
 )
-from django.conf import settings
-from django.contrib import admin
-from django.contrib.sitemaps.views import sitemap
-from django.urls import path, include
-from django.contrib.auth import views as auth_views
 from snmov.views import (
     article_create_view,
     article_detail,
     validate_username,
 )
 from snmov.sitemaps import StaticViewSitemap, ArticleSitemap, CommentSitemap
+
 sitemaps = {
     'static': StaticViewSitemap,
     'article': ArticleSitemap,
     'comment': CommentSitemap,
 }
+
+def tinymce_version(request):
+    return JsonResponse({'version': '6.8.3'})
+
+def tinymce_list(request):
+    return JsonResponse({'plugins': []})
 
 urlpatterns = [
     path('', home_page, name="homepage"),
@@ -54,6 +63,8 @@ urlpatterns = [
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     path('tinymce/', include('tinymce.urls')),
     path('ajax/validate_username/', validate_username, name='validate_username'),
+    re_path(r'^json/version/?$', tinymce_version, name='tinymce_version'),
+    re_path(r'^json/list/?$', tinymce_list, name='tinymce_list'),
     path('password-reset/',
          auth_views.PasswordResetView.as_view(
              template_name='password_reset.html'),
@@ -72,10 +83,6 @@ urlpatterns = [
          name='password_reset_complete'),
 ]
 
-# Remove static file serving in DEBUG mode since we're using S3 in production
-# if settings.DEBUG:
-#     from django.conf.urls.static import static
-#     urlpatterns += static(settings.STATIC_URL,
-#                           document_root=settings.STATIC_ROOT)
-#     urlpatterns += static(settings.MEDIA_URL,
-#                           document_root=settings.MEDIA_ROOT)
+# Add static and media URL patterns
+urlpatterns += staticfiles_urlpatterns()
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

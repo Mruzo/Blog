@@ -88,6 +88,26 @@ TINYMCE_DEFAULT_CONFIG = {
     'statusbar': True,
     'paste_as_text': True,
     'forced_root_block': False,
+    'codesample_languages': [
+        {'text': 'HTML/XML', 'value': 'markup'},
+        {'text': 'JavaScript', 'value': 'javascript'},
+        {'text': 'CSS', 'value': 'css'},
+        {'text': 'PHP', 'value': 'php'},
+        {'text': 'Python', 'value': 'python'},
+        {'text': 'Java', 'value': 'java'},
+        {'text': 'C', 'value': 'c'},
+        {'text': 'C++', 'value': 'cpp'}
+    ],
+    'codesample_global_prismjs': True,
+    'external_plugins': {
+        'codesample': '/static/tinymce/plugins/codesample/plugin.min.js'
+    },
+    'content_css': [
+        '/static/tinymce/css/prism.css'
+    ],
+    'external_js': [
+        '/static/tinymce/js/prism.js'
+    ]
 }
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -177,17 +197,20 @@ EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
 EMAIL_USE_TLS = True
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.2/howto/static-files/
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'live-static', 'static-root') #live cdn AWS S3
-
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
-
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Static file serving
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 
 
