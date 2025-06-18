@@ -27,29 +27,30 @@ DATABASES = {
     }
 }
 
+# AWS S3 Configuration
 AWS_ACCESS_KEY_ID = config.get('section','S3_KEY_ID')
 AWS_SECRET_ACCESS_KEY = config.get('section', 'S3_SCRT_KEY')
 AWS_STORAGE_BUCKET_NAME = config.get('section', 'S3_BUCKET_NAME')
 AWS_S3_REGION_NAME = 'us-east-1'
-
 AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_S3_VERIFY = True
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 
+# Static files configuration
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3StaticStorage'
+STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+
+# Media files configuration
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+
+# Cache control
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
-
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-AWS_LOCATION = ''
-STATIC_URL = 'https://%s/static/' % AWS_S3_CUSTOM_DOMAIN
 
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
-
-# Media files
-MEDIA_URL = 'https://%s/media/' % AWS_S3_CUSTOM_DOMAIN
-MEDIA_ROOT = 'media/'
-
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-DEFAULT_FILE_STORAGE = 'snm.storage_backends.MediaStorage'
