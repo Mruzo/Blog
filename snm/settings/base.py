@@ -123,8 +123,6 @@ MIDDLEWARE = [
 ]
 
 
-
-
 ROOT_URLCONF = 'snm.urls'
 
 TEMPLATES = [
@@ -208,7 +206,7 @@ STATICFILES_DIRS = [
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Static file serving
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+# STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 
 

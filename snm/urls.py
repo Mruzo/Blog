@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.contrib.sitemaps.views import sitemap
 from django.contrib.auth import views as auth_views
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+# from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.http import JsonResponse
 from .views import(
     home_page,
@@ -84,5 +84,9 @@ urlpatterns = [
 ]
 
 # Add static and media URL patterns
-urlpatterns += staticfiles_urlpatterns()
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# urlpatterns += staticfiles_urlpatterns()
+# urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
