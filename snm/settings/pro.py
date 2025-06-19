@@ -47,7 +47,23 @@ AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 AWS_QUERYSTRING_AUTH = False
 
 # Static files configuration
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# settings/pro.py
+
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+        'OPTIONS': {
+            'location': 'static',  # or your desired S3 folder
+        },
+    },
+    'default': {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+        'OPTIONS': {
+            'location': 'media',
+        },
+    },
+}
+
 
 STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
 
