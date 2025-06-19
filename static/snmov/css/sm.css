@@ -697,7 +697,7 @@ button.neumorphic {
   
 	> span {
 	  /* font-family: 'Cabin', sans-serif; */
-	  font-size: 0.9rem; /* Use 'px' instead of 'cqi' for font size */
+	  font-size: 0.8rem; /* Use 'px' instead of 'cqi' for font size */
 	  font-weight: bold;
 	  
 	}
