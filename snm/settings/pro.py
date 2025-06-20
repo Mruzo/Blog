@@ -68,7 +68,7 @@ STORAGES = {
 STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
 
 # Media files configuration
-DEFAULT_FILE_STORAGE = 'snm.storage_backends.MediaStorage'
+
 MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
 
 # Cache control
@@ -76,7 +76,3 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 
-# STATICFILES_FINDERS = [
-#     'django.contrib.staticfiles.finders.FileSystemFinder',
-#     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-# ]
