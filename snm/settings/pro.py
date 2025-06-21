@@ -51,15 +51,11 @@ AWS_QUERYSTRING_AUTH = False
 STORAGES = {
     'staticfiles': {
         'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-        'OPTIONS': {
-            'location': 'static',  # or your desired S3 folder
-        },
+        
     },
     'default': {
         'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-        'OPTIONS': {
-            'location': 'media',
-        },
+        
     },
 }
 
