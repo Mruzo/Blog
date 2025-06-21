@@ -44,6 +44,7 @@ AWS_S3_VERIFY = True
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 # For static files (public)
 AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = None 
 
 # Static files configuration
 # settings/pro.py
