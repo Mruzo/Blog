@@ -42,20 +42,23 @@
         <div class="card model-container mb-2 position-relative" style="height: 400px; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <!-- Overlay Image with Start Button -->
             <div id="overlay-container" class="overlay-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 2;">
+                {% if episode.cover_image %}
                 <img src="{{ episode.cover_image.url }}" alt="Episode Cover" style="width: 100%; height: 100%; object-fit: cover;">
+                {% endif %}
                 <button id="startButton" class="btn btn-primary" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; padding: 1rem 2rem; font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; background: #ff4d4d; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
                     Start Episode
                 </button>
             </div>
 
-        <model-viewer
-            id="model-viewer"
+            {% if model_gltf %}
+            <model-viewer
+                id="model-viewer"
                 src="{{ model_gltf }}"
-            alt="3D Scene"
-            style="width: 100%; height: 100%;"
-            shadow-intensity="1"
-            exposure="1"
-            interaction-prompt="none"
+                alt="3D Scene"
+                style="width: 100%; height: 100%;"
+                shadow-intensity="1"
+                exposure="1"
+                interaction-prompt="none"
                 interpolation-decay="200"
                 interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
                 min-camera-orbit="auto auto 1m"
@@ -64,10 +67,10 @@
                 max-field-of-view="90deg"
                 camera-controls>
 
-            <!-- Fixed Top Bubble -->
-            <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 1;">
-                <div id="top-dialogue">Loading dialogue...</div>
-            </div>
+                <!-- Fixed Top Bubble -->
+                <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 1;">
+                    <div id="top-dialogue">Loading dialogue...</div>
+                </div>
 
                 <!-- SVG for Pointer Line -->
                 <svg id="pointer-svg" style="display: none;">
@@ -75,7 +78,12 @@
                 </svg>
 
                 <!-- Hotspots will be dynamically created from POV data -->
-        </model-viewer>
+            </model-viewer>
+            {% else %}
+            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                <p class="text-muted">3D model not available</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 

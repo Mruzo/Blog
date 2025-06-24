@@ -6,6 +6,7 @@ from tinymce.widgets import TinyMCE
 from django import forms
 
 
+
 class ComicInline(admin.TabularInline):
     model = Comic
     extra = 1
@@ -21,7 +22,10 @@ class EpisodeInline(admin.TabularInline):
     extra = 1
 
 
-class DialogueInline(admin.TabularInline):
+class DialogueInline(admin.StackedInline):
+    formfield_overrides = {
+        models.TextField: {'widget': TinyMCE()},
+    }
     model = Dialogue
     extra = 1
 

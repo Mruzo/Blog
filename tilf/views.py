@@ -38,26 +38,34 @@ class EpisodeDetailView(DetailView):
         # Get all dialogues for the episode, ordered by their 'order' field
         dialogues = Dialogue.objects.filter(episode=episode).order_by('order')
 
-        # Get the model files directly from the season
-        context['model_gltf'] = episode.season.model_gltf.url if episode.season.model_gltf else None
-        context['model_usdz'] = episode.season.model_usdz.url if episode.season.model_usdz else None
+        # Get the model files directly from the season with safety checks
+        try:
+            context['model_gltf'] = episode.season.model_gltf.url if episode.season.model_gltf else None
+            context['model_usdz'] = episode.season.model_usdz.url if episode.season.model_usdz else None
+        except Exception:
+            context['model_gltf'] = None
+            context['model_usdz'] = None
 
-        # Prepare dialogues data
+        # Prepare dialogues data with safety checks
         dialogues_data = []
         for dialogue in dialogues:
-            dialogues_data.append({
-                'character': dialogue.pov.character.name,
-                'camera_orbit': dialogue.camera_orbit,
-                'camera_target': dialogue.camera_target,
-                'field_of_view': dialogue.field_of_view,
-                'zoom_speed': dialogue.zoom_speed,
-                'rotation': dialogue.rotation,
-                'head_x': dialogue.pov.head_x,
-                'head_y': dialogue.pov.head_y,
-                'head_z': dialogue.pov.head_z,
-                'text': dialogue.text
-            })
-
+            try:
+                dialogues_data.append({
+                    'character': dialogue.pov.character.name if dialogue.pov and dialogue.pov.character else 'Unknown',
+                    'camera_orbit': dialogue.camera_orbit or '0deg 75deg 3m',
+                    'camera_target': dialogue.camera_target or '0m 1.6m 0m',
+                    'field_of_view': dialogue.field_of_view or 45.0,
+                    'zoom_speed': dialogue.zoom_speed or 1.0,
+                    'rotation': dialogue.rotation or '0deg 0deg 0deg',
+                    'head_x': dialogue.pov.head_x if dialogue.pov else 0,
+                    'head_y': dialogue.pov.head_y if dialogue.pov else 1.6,
+                    'head_z': dialogue.pov.head_z if dialogue.pov else 0,
+                    'text': dialogue.text or 'No dialogue text available'
+                })
+            except Exception as e:
+                # Skip problematic dialogues
+                continue
+        
         context['dialogues_data'] = dialogues_data
         
         # Add comment form and comments
