@@ -345,7 +345,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update dialogue text
             const topDialogue = document.getElementById('top-dialogue');
             if (topDialogue) {
-                topDialogue.innerHTML = `<strong>${currentDialogue.character}:</strong> ${currentDialogue.text}`;
+                // Create a span for the character name to make it bold
+                const characterSpan = document.createElement('strong');
+                characterSpan.textContent = currentDialogue.character + ': ';
+                
+                // Clear the dialogue element and append the character span and text
+                topDialogue.innerHTML = '';
+                topDialogue.appendChild(characterSpan);
+                topDialogue.appendChild(document.createTextNode(currentDialogue.text));
             }
             
             // Animate camera position
