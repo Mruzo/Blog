@@ -9,11 +9,11 @@
 
 <div class="container-fluid px-0 col-md-4">
     <!-- Modern Comic Header -->
-    <div class="comic-header" style="background: #4d4d4d; color: white; padding: 1.5rem 0; position: relative;">
+    <div class="comic-header" style="background: #4d4d4d; color: white; padding-top: 1.5rem; padding-left: 0; padding-right: 0; padding-bottom: .5rem 0; position: relative;">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <div class="episode-meta" style="margin-bottom: 0.5rem; display: flex; align-items: center;">
+                    <div class="episode-meta" style="margin-bottom: 0.2rem; display: flex; align-items: center;">
                         <div style="background: #111e7f; padding: 0.2rem 0.5rem; border-radius: 0 4px 4px 0; display: flex; align-items: center;">
                             <span class="season-badge" style="color: #f9a602; font-size: 0.7rem; margin-right: 0.5rem;">
                                 S{{ episode.season.season_number }}
@@ -23,14 +23,14 @@
                             </span>
                         </div>
                     </div>
-                    <h1 class="episode-title" style="font-size: 1.6rem; font-weight: 800; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; color: #f9a602; text-shadow: 2px 2px 0 #111e7f;">
+                    <!-- <h1 class="episode-title" style="font-size: 1.6rem; font-weight: 800; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; color: #f9a602; text-shadow: 2px 2px 0 #111e7f;">
                         {{ episode.title }}
-                    </h1>
-                    <div style="background-color: #111e7f; padding: 0rem;">
+                    </h1> -->
+                    <!-- <div style="background-color: #111e7f; padding: 0rem;">
                         <p class="episode-description m-0" style="font-size: 1.1rem; opacity: 0.9; max-width: 800px; font-style: italic; color: white;">
                             {{ episode.description|striptags }}
                         </p>
-                    </div>
+                    </div> -->
                 </div>
                 
             </div>
@@ -134,7 +134,13 @@
         }'></div>
     {% endfor %}
 </div>
-
+<div class="container">
+    <div style="background-color: #111e7f; padding: 0rem;">
+        <p class="episode-description m-0" style="font-size: 1.1rem; opacity: 0.9; max-width: 800px; font-style: italic; color: white;">
+            {{ episode.description|striptags }}
+        </p>
+    </div>
+</div>
 <!-- Comments Section -->
 <div class="container mt-3 col-md-4">
     <div class="row">
