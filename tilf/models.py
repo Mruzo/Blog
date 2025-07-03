@@ -52,6 +52,9 @@ class Episode(models.Model):
 
     def get_absolute_url(self):
         return f"/3dcomics/seasons/{self.season.id}/episodes/{self.id}/"
+    
+    def approved_comments_count(self):
+        return self.comments.filter(approved_comment=True).count()
 
 
 class Intersection(models.Model):

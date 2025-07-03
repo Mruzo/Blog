@@ -6,8 +6,8 @@ class ComicCommentForm(forms.ModelForm):
         widget=forms.Textarea(attrs={
             'rows': 2,
             'class': 'form-control',
-            'placeholder': 'Write your comment here...',
-            'style': 'resize: none; width: 100%;'
+            'placeholder': 'how cool is this?',
+            'style': 'resize: none; width: 100%; font-size: 0.85rem;'
 
         }),
         label=""

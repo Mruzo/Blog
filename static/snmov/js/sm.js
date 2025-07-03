@@ -695,7 +695,7 @@ function loadDialogue(index) {
             head_y: povData.head_y || 0,
             head_z: povData.head_z || 0
         };
-        // console.log(`Loaded dialogue ${index}:`, dialogues[index]);
+        console.log(`Loaded dialogue ${index}:`, dialogues[index]);
     } catch (error) {
         // console.error('Error parsing POV data for dialogue', index, ':', error);
     }
