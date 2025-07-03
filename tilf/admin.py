@@ -29,6 +29,8 @@ class DialogueInline(admin.StackedInline):
     model = Dialogue
     extra = 1
 
+    exclude = ('scene_title', 'scene_description')
+
 
 @admin.register(Comic)
 class ComicAdmin(admin.ModelAdmin):
@@ -75,6 +77,12 @@ class DialogueAdmin(admin.ModelAdmin):
     list_filter = ('episode', 'pov__character', 'shot_type')
     search_fields = ('text', 'pov__character__name')
     ordering = ('order','episode')
+
+    formfield_overrides = {
+        models.TextField: {'widget': TinyMCE()},
+    }
+
+    exclude = ('scene_title', 'scene_description')
 
 
 @admin.register(ComicComment)
