@@ -350,13 +350,29 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Animate camera position
             if (isModelReady) {
+                // console.log('=== CAMERA UPDATE DEBUG ===');
+                // console.log('Dialogue index:', index);
+                // console.log('Camera target before:', modelViewer.cameraTarget);
+                // console.log('Camera orbit before:', modelViewer.cameraOrbit);
+                // console.log('New camera target:', currentDialogue.camera_target);
+                // console.log('New camera orbit:', currentDialogue.camera_orbit);
+                // console.log('Field of view:', currentDialogue.field_of_view);
+                
                 // First set the target
                 modelViewer.cameraTarget = currentDialogue.camera_target;
+                // console.log('Camera target after setting:', modelViewer.cameraTarget);
                 
                 // Set field of view
                 modelViewer.fieldOfView = currentDialogue.field_of_view + "deg";
                 
                 // Use the animation system for smooth camera movement
+                // console.log('About to animate with orbit value:', currentDialogue.camera_orbit);
+                // console.log('Type of orbit value:', typeof currentDialogue.camera_orbit);
+                
+                // Try setting camera orbit directly first
+                modelViewer.cameraOrbit = currentDialogue.camera_orbit;
+                // console.log('Camera orbit after direct setting:', modelViewer.cameraOrbit);
+                
                 const animation = modelViewer.animate({
                     cameraOrbit: currentDialogue.camera_orbit
                 }, {
@@ -364,12 +380,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     easing: 'ease-in-out'
                 });
                 
+                // console.log('Animation started with orbit:', currentDialogue.camera_orbit);
+                
                 // Wait for animation to complete
                 animation.onfinish = () => {
                     // console.log('Camera animation complete');
                     if (!isUpdatingPointer) {
                         isUpdatingPointer = true;
-                        updatePointer();
+      updatePointer();
                     }
                 };
             }
@@ -442,8 +460,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Find the hotspot using model-viewer's native syntax
         const hotspot = modelViewer.querySelector(`[slot="hotspot-${baseCharacterName}"]`);
-        
-        if (!hotspot) {
+      
+      if (!hotspot) {
             // console.log('No hotspot found for character:', baseCharacterName);
             const path = document.getElementById('pointer-path');
             if (path) {
@@ -453,9 +471,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
-        // Get positions
-        const bubbleRect = topBubble.getBoundingClientRect();
-        const hotspotRect = hotspot.getBoundingClientRect();
+      // Get positions
+      const bubbleRect = topBubble.getBoundingClientRect();
+      const hotspotRect = hotspot.getBoundingClientRect();
         const modelRect = modelViewer.getBoundingClientRect();
         
         // Calculate endpoints relative to model-viewer
@@ -463,8 +481,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const bubbleBottomY = bubbleRect.bottom - modelRect.top;
         const hotspotCenterX = hotspotRect.left - modelRect.left + (hotspotRect.width / 2);
         const hotspotCenterY = hotspotRect.top - modelRect.top + (hotspotRect.height / 2);
-        
-        // Calculate line geometry
+      
+      // Calculate line geometry
         const dx = hotspotCenterX - bubbleCenterX;
         const dy = hotspotCenterY - bubbleBottomY;
         
@@ -504,26 +522,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set up navigation button handlers
     if (prevButton && nextButton) {
         prevButton.onclick = function() {
-            // console.log('Previous button clicked. Current index:', currentDialogueIndex);
+            // console.log('SET 1 - Previous button clicked. Current index:', currentDialogueIndex);
         if (currentDialogueIndex > 0) {
             const newIndex = currentDialogueIndex - 1;
-                // console.log('Moving to previous dialogue, new index:', newIndex);
+                // console.log('SET 1 - Moving to previous dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
             showDialogue(newIndex);
         } else {
-                // console.log('Already at first dialogue');
+                // console.log('SET 1 - Already at first dialogue');
         }
         };
 
         nextButton.onclick = function() {
-            // console.log('Next button clicked. Current index:', currentDialogueIndex);
+            // console.log('SET 1 - Next button clicked. Current index:', currentDialogueIndex);
         if (currentDialogueIndex < dialogues.length - 1) {
             const newIndex = currentDialogueIndex + 1;
-                // console.log('Moving to next dialogue, new index:', newIndex);
+                // console.log('SET 1 - Moving to next dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
             showDialogue(newIndex);
         } else {
-                // console.log('Already at last dialogue');
+                // console.log('SET 1 - Already at last dialogue');
             }
         };
         }
@@ -646,10 +664,10 @@ window.startEpisode = function() {
         loadDialogue(0);
         showDialogue(0);
         
-        // Set up navigation button handlers
+        // Set up navigation button handlers (SET 2 - handles actual button clicks)
         if (elements.prevButton && elements.nextButton) {
             elements.prevButton.onclick = function() {
-                // console.log('Previous button clicked. Current index:', currentDialogueIndex);
+                // console.log('Button clicked - Previous. Current index:', currentDialogueIndex);
                 if (currentDialogueIndex > 0) {
                     const newIndex = currentDialogueIndex - 1;
                     // console.log('Moving to previous dialogue, new index:', newIndex);
@@ -661,7 +679,7 @@ window.startEpisode = function() {
             };
             
             elements.nextButton.onclick = function() {
-                // console.log('Next button clicked. Current index:', currentDialogueIndex);
+                // console.log('Button clicked - Next. Current index:', currentDialogueIndex);
                 if (currentDialogueIndex < totalDialogues - 1) {
                     const newIndex = currentDialogueIndex + 1;
                     // console.log('Moving to next dialogue, new index:', newIndex);
@@ -695,7 +713,8 @@ function loadDialogue(index) {
             head_y: povData.head_y || 0,
             head_z: povData.head_z || 0
         };
-        console.log(`Loaded dialogue ${index}:`, dialogues[index]);
+        // console.log(`Loaded dialogue ${index}:`, dialogues[index]);
+        // console.log(`Camera orbit value for dialogue ${index}:`, povData.camera_orbit);
     } catch (error) {
         // console.error('Error parsing POV data for dialogue', index, ':', error);
     }

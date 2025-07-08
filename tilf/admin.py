@@ -4,6 +4,8 @@ from .models import Comic, Season, Episode, Character, POV, Dialogue, ComicComme
 from django.db import models
 from tinymce.widgets import TinyMCE
 from django import forms
+from django.urls import reverse
+from django.utils.html import format_html
 
 
 
@@ -24,7 +26,7 @@ class EpisodeInline(admin.TabularInline):
 
 class DialogueInline(admin.StackedInline):
     formfield_overrides = {
-        models.TextField: {'widget': TinyMCE()},
+        models.TextField: {'widget': TinyMCE(attrs={'style': 'height:100px;',})},
     }
     model = Dialogue
     extra = 1
@@ -49,12 +51,20 @@ class SeasonAdmin(admin.ModelAdmin):
 
 @admin.register(Episode)
 class EpisodeAdmin(admin.ModelAdmin):
-    list_display = ('title', 'season', 'episode_number')
-    list_filter = ('season',)
+    list_display = ('title', 'season', 'episode_number', 'is_published', 'preview_link')
+    list_filter = ('season', 'is_published')
+    list_editable = ('is_published',)
     inlines = [DialogueInline]
     search_fields = ('title',)
     ordering = ('season', 'episode_number')
-    fields = ('title', 'season', 'episode_number', 'description', 'cover_image')
+    fields = ('title', 'season', 'episode_number', 'description', 'cover_image', 'is_published')
+    
+    def preview_link(self, obj):
+        if obj.pk:
+            return format_html('<a href="{}" target="_blank">Preview</a>', 
+                             reverse('episode_preview', args=[obj.season.id, obj.pk]))
+        return "N/A"
+    preview_link.short_description = 'Preview'
 
 
 @admin.register(Character)
@@ -79,7 +89,7 @@ class DialogueAdmin(admin.ModelAdmin):
     ordering = ('order','episode')
 
     formfield_overrides = {
-        models.TextField: {'widget': TinyMCE()},
+        models.TextField: {'widget': TinyMCE(attrs={'style': 'height:10px;',})},
     }
 
     exclude = ('scene_title', 'scene_description')

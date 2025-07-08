@@ -7,7 +7,7 @@
 
 <h2>Episodes</h2>
 <ul>
-    {% for episode in season.episodes.all %}
+    {% for episode in season.published_episodes %}
     <li>
         <a href="{% url 'episode_detail' season_id=season.id pk=episode.id %}">
             {{ episode.title }}

@@ -37,6 +37,7 @@ class Episode(models.Model):
     description = models.TextField(blank=True)
     episode_number = models.PositiveIntegerField()  # Order of episode in season
     cover_image = models.ImageField(upload_to='episode_covers/', null=True, blank=True)
+    is_published = models.BooleanField(default=False, help_text="Check this to make the episode visible on the website")
 
     def __str__(self):
         return f"S{self.season.season_number} - E{self.episode_number}"
@@ -55,6 +56,14 @@ class Episode(models.Model):
     
     def approved_comments_count(self):
         return self.comments.filter(approved_comment=True).count()
+    
+    @classmethod
+    def published(cls):
+        return cls.objects.filter(is_published=True)
+    
+    @property
+    def is_public(self):
+        return self.is_published
 
 
 class Intersection(models.Model):

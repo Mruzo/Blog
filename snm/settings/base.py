@@ -59,7 +59,7 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 TINYMCE_DEFAULT_CONFIG = {
-    'height': 360,
+    'height': 240,
     'width': 'auto',
     'cleanup_on_startup': True,
     'custom_undo_redo_levels': 20,
@@ -77,11 +77,11 @@ TINYMCE_DEFAULT_CONFIG = {
             fullscreen preview bold italic underline | fontselect,
             fontsizeselect | forecolor backcolor | alignleft alignright |
             aligncenter alignjustify | indent outdent | bullist numlist table |
-            | link image media | codesample | emoticons |
+            | link image media | emoticons |
             ''',
     'toolbar2': '''
             visualblocks visualchars |
-            charmap hr pagebreak nonbreaking anchor | code |
+            charmap hr  nonbreaking anchor |  code |
             ''',
     'contextmenu': 'formats | link image',
     'menubar': True,
