@@ -14,6 +14,22 @@
     </div>
 </div>
 
+<!-- Edit Mode Toggle -->
+<div class="container mt-2 col-md-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="btn-group" role="group">
+            <button type="button" id="previewModeBtn" class="btn btn-outline-primary active">Preview Mode</button>
+            <button type="button" id="editModeBtn" class="btn btn-outline-warning">Edit Mode</button>
+        </div>
+        <div id="editControls" style="display: none;">
+            <button id="saveBtn" class="btn btn-success btn-sm me-2">Save Changes</button>
+            <button id="resetBtn" class="btn btn-secondary btn-sm">Reset</button>
+        </div>
+    </div>
+</div>
+
+
+
 <div class="container-fluid px-0 col-md-4">
     <!-- Modern Comic Header -->
     <div class="comic-header" style="background: #4d4d4d; color: white; padding-top: 1.5rem; padding-left: 0; padding-right: 0; padding-bottom: .5rem 0; position: relative;">
@@ -128,6 +144,7 @@
 <div class="dialogues-container" style="display: none;">
     {% for dialogue in dialogues_data %}
         <div class="dialogue" data-pov='{
+            "dialogue_id": {{ dialogue.dialogue_id }},
             "character": "{{dialogue.character}}",
             "camera_orbit": "{{ dialogue.camera_orbit|escapejs }}",
             "camera_target": "{{ dialogue.camera_target|escapejs }}",
@@ -147,6 +164,97 @@
             {{ episode.description|striptags }}
         </p>
     </div>
+</div>
+
+<!-- Editing Controls Overlay - Modern UI/UX -->
+<div id="editingOverlay" class="container mt-3 col-md-6 px-0" style="display: none;">
+  <div class="modern-card">
+    <div class="modern-card-header">
+      <span class="modern-card-title">Camera Editing Controls</span>
+    </div>
+    <div class="modern-card-body row g-3">
+      <!-- Camera Orbit (Left Column) -->
+      <div class="col-md-6 mt-0">
+        <div class="section-header">Camera Orbit</div>
+        <div class="form-group mb-3">
+          <label for="orbitAzimuth" class="form-label">Azimuth</label>
+          <div class="slider-row">
+            <input type="range" id="orbitAzimuth" class="form-range modern-slider" min="-180" max="180" step="1">
+            <span class="value-badge" id="orbitAzimuthValue">0°</span>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label for="orbitPolar" class="form-label">Polar</label>
+          <div class="slider-row">
+            <input type="range" id="orbitPolar" class="form-range modern-slider" min="0" max="180" step="1">
+            <span class="value-badge" id="orbitPolarValue">75°</span>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label for="orbitRadius" class="form-label">Radius</label>
+          <div class="slider-row">
+            <input type="range" id="orbitRadius" class="form-range modern-slider" min="1" max="10" step="0.1">
+            <span class="value-badge" id="orbitRadiusValue">3m</span>
+          </div>
+        </div>
+      </div>
+      <!-- Camera Target (Right Column) -->
+      <div class="col-md-6 mt-0">
+        <div class="section-header">Camera Target</div>
+        <div class="form-group mb-3">
+          <label for="targetX" class="form-label">X</label>
+          <div class="slider-row">
+            <input type="range" id="targetX" class="form-range modern-slider" min="-5" max="5" step="0.1">
+            <span class="value-badge" id="targetXValue">0m</span>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label for="targetY" class="form-label">Y</label>
+          <div class="slider-row">
+            <input type="range" id="targetY" class="form-range modern-slider" min="0" max="3" step="0.1">
+            <span class="value-badge" id="targetYValue">1.6m</span>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label for="targetZ" class="form-label">Z</label>
+          <div class="slider-row">
+            <input type="range" id="targetZ" class="form-range modern-slider" min="-5" max="5" step="0.1">
+            <span class="value-badge" id="targetZValue">0m</span>
+          </div>
+        </div>
+      </div>
+      <!-- Field of View and Zoom Speed (Full Width) -->
+      <div class="col-12 mt-0">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="fieldOfView" class="form-label">Field of View</label>
+            <div class="slider-row">
+              <input type="range" id="fieldOfView" class="form-range modern-slider" min="10" max="90" step="1">
+              <span class="value-badge" id="fieldOfViewValue">45°</span>
+            </div>
+          </div>
+          <div class="col-md-6 mt-0">
+            <label for="zoomSpeed" class="form-label">Zoom Speed</label>
+            <div class="slider-row">
+              <input type="range" id="zoomSpeed" class="form-range modern-slider" min="0.1" max="3" step="0.1">
+              <span class="value-badge" id="zoomSpeedValue">1.0x</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Current Values (Full Width) -->
+      <div class="col-12 mt-2">
+        <div class="current-values-box">
+          <div><strong>Camera Orbit:</strong> <span id="currentOrbit">0deg 75deg 3m</span></div>
+          <div><strong>Camera Target:</strong> <span id="currentTarget">0m 1.6m 0m</span></div>
+          <div><strong>Field of View:</strong> <span id="currentFOV">45°</span></div>
+          <div><strong>Zoom Speed:</strong> <span id="currentZoom">1.0</span></div>
+        </div>
+      </div>
+      
+      
+    </div>
+  </div>
 </div>
 
 <!-- Comments Section (Disabled in Preview) -->
@@ -291,6 +399,328 @@
         opacity: 0.5;
         transform: none;
     }
+
+    /* Editing Controls Styles - Cross-browser, especially for Firefox */
+    input[type="range"].form-range {
+        display: block !important;
+        width: 100% !important;
+        min-height: 32px !important;
+        background: #ddd !important;
+        margin: 8px 0 !important;
+        opacity: 1 !important;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: auto;
+    }
+
+    /* Webkit (Chrome, Safari) */
+    input[type="range"].form-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        background: #111e7f;
+        cursor: pointer;
+        border: 2px solid #f9a602;
+    }
+    input[type="range"].form-range::-webkit-slider-track {
+        width: 100%;
+        height: 8px;
+        cursor: pointer;
+        background: #ddd;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+
+    /* Firefox */
+    input[type="range"].form-range::-moz-range-thumb {
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        background: #111e7f;
+        cursor: pointer;
+        border: 2px solid #f9a602;
+    }
+    input[type="range"].form-range::-moz-range-track {
+        width: 100%;
+        height: 8px;
+        background: #ddd;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+    input[type="range"].form-range:focus {
+        outline: none;
+    }
+
+    /* Remove outline on focus for Firefox */
+    input[type="range"].form-range:focus::-moz-range-thumb {
+        box-shadow: 0 0 0 3px rgba(17, 30, 127, 0.3);
+    }
+
+    /* Make sure editing overlay is visible */
+    #editingOverlay {
+        z-index: 1000;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    #editingOverlay .card {
+        border: 2px solid #f9a602;
+    }
+
+    #editingOverlay .card-header {
+        background: linear-gradient(45deg, #f9a602, #ff6b35);
+        color: white;
+        font-weight: bold;
+    }
+
+  /* Modern Card Styles */
+  .modern-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+    padding: 0;
+    margin-bottom: 1.5rem;
+  }
+  .modern-card-header {
+    background: linear-gradient(90deg, #f8f9fa 60%, #f9a602 100%);
+    border-radius: 18px 18px 0 0;
+    padding: 1rem 1.5rem 0.5rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .modern-card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: 0.5px;
+  }
+  .modern-card-body {
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem 1.5rem;
+  }
+  .col-md-6 {
+    grid-column: span 1;
+  }
+  .col-12 {
+    grid-column: 1 / span 2;
+  }
+  @media (max-width: 600px) {
+    .modern-card {
+      padding: 0.2rem;
+    }
+    .modern-card-header {
+      padding: 0.7rem 0.7rem 0.3rem 0.7rem;
+      font-size: 1em;
+    }
+    .modern-card-title {
+      font-size: 1em;
+    }
+    .modern-card-body {
+      padding: 0.7rem 0.7rem 0.5rem 0.7rem;
+      gap: 0.5rem 0.5rem;
+      font-size: 0.95em;
+      grid-template-columns: 1fr 1fr;
+    }
+    .section-header {
+      font-size: 0.95em;
+      margin-bottom: 0.2rem;
+      margin-top: 0.2rem;
+    }
+    .form-label {
+      font-size: 0.95em;
+      margin-bottom: 0.1rem;
+    }
+    .slider-row {
+      gap: 0.3rem;
+    }
+    .value-badge {
+      min-width: 28px;
+      font-size: 0.85em;
+      padding: 1px 5px;
+      margin-left: 0.2rem;
+    }
+    .current-values-box {
+      padding: 0.4rem 0.5rem;
+      font-size: 0.92em;
+      margin-top: 0.2rem;
+    }
+    .modern-btn {
+      font-size: 0.95em;
+      padding: 0.5em 0.7em;
+      border-radius: 6px;
+    }
+    input[type="range"].modern-slider {
+      height: 1.2em;
+      margin: 0.2em 0;
+    }
+    input[type="range"].modern-slider::-webkit-slider-thumb {
+      width: 16px;
+      height: 16px;
+    }
+    input[type="range"].modern-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+    }
+    input[type="range"].modern-slider::-ms-thumb {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  .section-header {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111e7f;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+    letter-spacing: 0.2px;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .value-badge {
+    min-width: 38px;
+    display: inline-block;
+    background: #f9a602;
+    color: #222;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 0.95em;
+    margin-left: 0.5rem;
+    text-align: center;
+  }
+  .current-values-box {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.98em;
+    color: #333;
+    margin-top: 0.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .modern-btn {
+    font-size: 1.08em;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.7em 1.2em;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(17,30,127,0.04);
+  }
+  .modern-btn:active {
+    box-shadow: 0 1px 2px rgba(17,30,127,0.10);
+  }
+  .btn-primary.modern-btn {
+    background: #111e7f;
+    border: none;
+    color: #fff;
+  }
+  .btn-primary.modern-btn:hover, .btn-primary.modern-btn:focus {
+    background: #222fbf;
+    color: #fff;
+  }
+  .btn-outline-secondary.modern-btn {
+    border: 2px solid #e0e0e0;
+    background: #fff;
+    color: #333;
+  }
+  .btn-outline-secondary.modern-btn:hover, .btn-outline-secondary.modern-btn:focus {
+    background: #f9a602;
+    color: #111e7f;
+    border-color: #f9a602;
+  }
+  /* Modern Sliders */
+  input[type="range"].modern-slider {
+    width: 100%;
+    height: 2.2em;
+    background: transparent;
+    margin: 0.5em 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="range"].modern-slider:focus {
+    outline: none;
+  }
+  input[type="range"].modern-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #111e7f;
+    border: 3px solid #f9a602;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+    transition: background 0.2s, border 0.2s;
+  }
+  input[type="range"].modern-slider:focus::-webkit-slider-thumb {
+    background: #222fbf;
+    border-color: #f9a602;
+  }
+  input[type="range"].modern-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
+  /* Firefox */
+  input[type="range"].modern-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #111e7f;
+    border: 3px solid #f9a602;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+    transition: background 0.2s, border 0.2s;
+  }
+  input[type="range"].modern-slider:focus::-moz-range-thumb {
+    background: #222fbf;
+    border-color: #f9a602;
+  }
+  input[type="range"].modern-slider::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
+  /* Remove outline on focus for Firefox */
+  input[type="range"].modern-slider:focus::-moz-range-thumb {
+    box-shadow: 0 0 0 3px rgba(17, 30, 127, 0.15);
+  }
+  /* Hide the outline for range in Edge/IE */
+  input[type="range"].modern-slider::-ms-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #111e7f;
+    border: 3px solid #f9a602;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+    transition: background 0.2s, border 0.2s;
+  }
+  input[type="range"].modern-slider:focus::-ms-thumb {
+    background: #222fbf;
+    border-color: #f9a602;
+  }
+  input[type="range"].modern-slider::-ms-fill-lower {
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
+  input[type="range"].modern-slider::-ms-fill-upper {
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
+  /* Remove default focus outline for all browsers */
+  input[type="range"].modern-slider:focus {
+    outline: none;
+  }
 </style>
 
 <!-- Load scripts in correct order -->

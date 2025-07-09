@@ -61,10 +61,10 @@ class EpisodeAdmin(admin.ModelAdmin):
     
     def preview_link(self, obj):
         if obj.pk:
-            return format_html('<a href="{}" target="_blank">Preview</a>', 
+            return format_html('<a href="{}" target="_blank">Preview/Edit</a>', 
                              reverse('episode_preview', args=[obj.season.id, obj.pk]))
         return "N/A"
-    preview_link.short_description = 'Preview'
+    preview_link.short_description = 'Preview/Edit'
 
 
 @admin.register(Character)

@@ -85,8 +85,8 @@ window.loadContent = function(url, button = null) {
         return;
       }
       
-      // If this is the 3D comics page, strip header and footer
-      if (url.includes('/3dcomics/')) {
+      // If this is the immersive comics page, strip header and footer
+      if (url.includes('/immersivecomics/')) {
         // Create a temporary div to parse the HTML
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
@@ -719,4 +719,321 @@ function loadDialogue(index) {
         // console.error('Error parsing POV data for dialogue', index, ':', error);
     }
 }
+
+// ================ EDITING FUNCTIONALITY ================
+let isEditMode = false;
+let currentEditingDialogue = null;
+let originalValues = {};
+
+// Initialize editing functionality
+document.addEventListener('DOMContentLoaded', () => {
+    initializeEditingControls();
+});
+
+function initializeEditingControls() {
+    const previewModeBtn = document.getElementById('previewModeBtn');
+    const editModeBtn = document.getElementById('editModeBtn');
+    const editControls = document.getElementById('editControls');
+    const editingOverlay = document.getElementById('editingOverlay');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    if (!previewModeBtn || !editModeBtn) return; // Not on preview page
+
+    // Mode toggle functionality
+    previewModeBtn.addEventListener('click', () => {
+        setEditMode(false);
+    });
+
+    editModeBtn.addEventListener('click', () => {
+        setEditMode(true);
+    });
+
+    // Save and reset functionality
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveCameraChanges);
+    }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetCameraChanges);
+    }
+
+    // Initialize sliders
+    initializeSliders();
+}
+
+function setEditMode(enabled) {
+    isEditMode = enabled;
+    const previewModeBtn = document.getElementById('previewModeBtn');
+    const editModeBtn = document.getElementById('editModeBtn');
+    const editControls = document.getElementById('editControls');
+    const editingOverlay = document.getElementById('editingOverlay');
+
+    if (enabled) {
+        previewModeBtn.classList.remove('active');
+        editModeBtn.classList.add('active');
+        editControls.style.display = 'block';
+        editingOverlay.style.display = 'block';
+        loadCurrentDialogueValues();
+    } else {
+        previewModeBtn.classList.add('active');
+        editModeBtn.classList.remove('active');
+        editControls.style.display = 'none';
+        editingOverlay.style.display = 'none';
+    }
+}
+
+function initializeSliders() {
+    // Camera Orbit Sliders
+    const orbitAzimuth = document.getElementById('orbitAzimuth');
+    const orbitPolar = document.getElementById('orbitPolar');
+    const orbitRadius = document.getElementById('orbitRadius');
+    
+    // Camera Target Sliders
+    const targetX = document.getElementById('targetX');
+    const targetY = document.getElementById('targetY');
+    const targetZ = document.getElementById('targetZ');
+    
+    // Camera Settings Sliders
+    const fieldOfView = document.getElementById('fieldOfView');
+    const zoomSpeed = document.getElementById('zoomSpeed');
+
+    // Add event listeners for real-time updates
+    [orbitAzimuth, orbitPolar, orbitRadius, targetX, targetY, targetZ, fieldOfView, zoomSpeed].forEach(slider => {
+        if (slider) {
+            slider.addEventListener('input', updateCameraInRealTime);
+        }
+    });
+}
+
+function loadCurrentDialogueValues() {
+    if (currentDialogueIndex >= 0 && currentDialogueIndex < dialogues.length) {
+        currentEditingDialogue = dialogues[currentDialogueIndex];
+        
+        // Parse camera orbit
+        const orbitMatch = currentEditingDialogue.camera_orbit.match(/(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)m/);
+        if (orbitMatch) {
+            const azimuth = parseFloat(orbitMatch[1]);
+            const polar = parseFloat(orbitMatch[2]);
+            const radius = parseFloat(orbitMatch[3]);
+            
+            setSliderValue('orbitAzimuth', azimuth, -180, 180);
+            setSliderValue('orbitPolar', polar, 0, 180);
+            setSliderValue('orbitRadius', radius, 1, 10);
+        }
+        
+        // Parse camera target
+        const targetMatch = currentEditingDialogue.camera_target.match(/(-?\d+(?:\.\d+)?)m\s+(-?\d+(?:\.\d+)?)m\s+(-?\d+(?:\.\d+)?)m/);
+        if (targetMatch) {
+            const x = parseFloat(targetMatch[1]);
+            const y = parseFloat(targetMatch[2]);
+            const z = parseFloat(targetMatch[3]);
+            
+            setSliderValue('targetX', x, -5, 5);
+            setSliderValue('targetY', y, 0, 3);
+            setSliderValue('targetZ', z, -5, 5);
+        }
+        
+        // Set other values
+        setSliderValue('fieldOfView', currentEditingDialogue.field_of_view, 10, 90);
+        setSliderValue('zoomSpeed', currentEditingDialogue.zoom_speed, 0.1, 3);
+        
+        // Store original values for reset
+        originalValues = {
+            camera_orbit: currentEditingDialogue.camera_orbit,
+            camera_target: currentEditingDialogue.camera_target,
+            field_of_view: currentEditingDialogue.field_of_view,
+            zoom_speed: currentEditingDialogue.zoom_speed
+        };
+        
+        updateCurrentValuesDisplay();
+    }
+}
+
+function setSliderValue(sliderId, value, min, max) {
+    const slider = document.getElementById(sliderId);
+    const valueDisplay = document.getElementById(sliderId + 'Value');
+    
+    if (slider) {
+        slider.value = value;
+        slider.min = min;
+        slider.max = max;
+    }
+    
+    if (valueDisplay) {
+        if (sliderId.includes('Azimuth') || sliderId.includes('Polar') || sliderId.includes('FOV')) {
+            valueDisplay.textContent = value + '°';
+        } else if (sliderId.includes('Radius') || sliderId.includes('target')) {
+            valueDisplay.textContent = value + 'm';
+        } else if (sliderId.includes('Speed')) {
+            valueDisplay.textContent = value + 'x';
+        }
+    }
+}
+
+function updateCameraInRealTime() {
+    if (!isEditMode || !currentEditingDialogue) return;
+    
+    // Get current slider values
+    const azimuth = parseFloat(document.getElementById('orbitAzimuth').value);
+    const polar = parseFloat(document.getElementById('orbitPolar').value);
+    const radius = parseFloat(document.getElementById('orbitRadius').value);
+    
+    const targetX = parseFloat(document.getElementById('targetX').value);
+    const targetY = parseFloat(document.getElementById('targetY').value);
+    const targetZ = parseFloat(document.getElementById('targetZ').value);
+    
+    const fieldOfView = parseFloat(document.getElementById('fieldOfView').value);
+    const zoomSpeed = parseFloat(document.getElementById('zoomSpeed').value);
+    
+    // Update dialogue object
+    currentEditingDialogue.camera_orbit = `${azimuth}deg ${polar}deg ${radius}m`;
+    currentEditingDialogue.camera_target = `${targetX}m ${targetY}m ${targetZ}m`;
+    currentEditingDialogue.field_of_view = fieldOfView;
+    currentEditingDialogue.zoom_speed = zoomSpeed;
+    
+    // Update model-viewer in real-time
+    const modelViewer = document.querySelector('model-viewer');
+    if (modelViewer && isModelReady) {
+        modelViewer.cameraTarget = currentEditingDialogue.camera_target;
+        modelViewer.cameraOrbit = currentEditingDialogue.camera_orbit;
+        modelViewer.fieldOfView = currentEditingDialogue.field_of_view + "deg";
+    }
+    
+    // Update display values
+    updateCurrentValuesDisplay();
+}
+
+function updateCurrentValuesDisplay() {
+    if (!currentEditingDialogue) return;
+    
+    const currentOrbit = document.getElementById('currentOrbit');
+    const currentTarget = document.getElementById('currentTarget');
+    const currentFOV = document.getElementById('currentFOV');
+    const currentZoom = document.getElementById('currentZoom');
+    
+    if (currentOrbit) currentOrbit.textContent = currentEditingDialogue.camera_orbit;
+    if (currentTarget) currentTarget.textContent = currentEditingDialogue.camera_target;
+    if (currentFOV) currentFOV.textContent = currentEditingDialogue.field_of_view + '°';
+    if (currentZoom) currentZoom.textContent = currentEditingDialogue.zoom_speed;
+}
+
+function saveCameraChanges() {
+    if (!currentEditingDialogue) return;
+    
+    const saveBtn = document.getElementById('saveBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    
+    // Prepare data for API
+    const data = {
+        camera_orbit: currentEditingDialogue.camera_orbit,
+        camera_target: currentEditingDialogue.camera_target,
+        field_of_view: currentEditingDialogue.field_of_view,
+        zoom_speed: currentEditingDialogue.zoom_speed
+    };
+    
+    // Send AJAX request
+    fetch(`/immersivecomics/api/dialogue/${currentEditingDialogue.dialogue_id}/update-camera/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showSaveMessage('success', 'Camera changes saved successfully!');
+            // Update original values
+            originalValues = { ...data };
+        } else {
+            showSaveMessage('error', 'Error saving changes: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving camera changes:', error);
+        showSaveMessage('error', 'Network error while saving changes');
+    })
+    .finally(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
+    });
+}
+
+function resetCameraChanges() {
+    if (!currentEditingDialogue || !originalValues) return;
+    
+    // Restore original values
+    currentEditingDialogue.camera_orbit = originalValues.camera_orbit;
+    currentEditingDialogue.camera_target = originalValues.camera_target;
+    currentEditingDialogue.field_of_view = originalValues.field_of_view;
+    currentEditingDialogue.zoom_speed = originalValues.zoom_speed;
+    
+    // Reload slider values
+    loadCurrentDialogueValues();
+    
+    // Update model-viewer
+    const modelViewer = document.querySelector('model-viewer');
+    if (modelViewer && isModelReady) {
+        modelViewer.cameraTarget = currentEditingDialogue.camera_target;
+        modelViewer.cameraOrbit = currentEditingDialogue.camera_orbit;
+        modelViewer.fieldOfView = currentEditingDialogue.field_of_view + "deg";
+    }
+    
+    showSaveMessage('info', 'Camera changes reset to original values');
+}
+
+function showSaveMessage(type, message) {
+    // Create temporary message display
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.top = '20px';
+    messageDiv.style.right = '20px';
+    messageDiv.style.zIndex = '9999';
+    messageDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(messageDiv);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.remove();
+        }
+    }, 3000);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Override the existing showDialogue function to support editing mode
+const originalShowDialogue = window.showDialogue || function(){};
+window.showDialogue = function(index) {
+    // Call original function
+    if (typeof originalShowDialogue === 'function') {
+        originalShowDialogue(index);
+    }
+    
+    // Update editing controls if in edit mode
+    if (isEditMode) {
+        loadCurrentDialogueValues();
+    }
+};
 

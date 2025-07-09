@@ -2,6 +2,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from .models import Comic, Season, Episode, Dialogue, POV, ComicComment
 from django.utils.safestring import mark_safe
 from snmov.forms import CommentForm
@@ -94,7 +97,7 @@ class EpisodeDetailView(DetailView):
             comment.user_name = request.user
             comment.episode = self.object
             comment.save()
-            return redirect('episode_detail', season_id=self.object.season.id, pk=self.object.pk)
+            return redirect('immersivecomics:episode_detail', season_id=self.object.season.id, pk=self.object.pk)
             
         return self.render_to_response(self.get_context_data(comment_form=comment_form))
 
@@ -105,7 +108,7 @@ def delete_comment(request, season_id, pk, comment_id):
     if request.user.is_authenticated and request.user == comment.user_name:
         comment.delete()
     
-    return redirect('episode_detail', season_id=season_id, pk=pk)
+    return redirect('immersivecomics:episode_detail', season_id=season_id, pk=pk)
 
 
 @method_decorator(staff_member_required, name='dispatch')
@@ -139,6 +142,7 @@ class EpisodePreviewView(DetailView):
         for dialogue in dialogues:
             try:
                 dialogues_data.append({
+                    'dialogue_id': dialogue.id,
                     'character': dialogue.pov.character.name if dialogue.pov and dialogue.pov.character else 'Unknown',
                     'camera_orbit': dialogue.camera_orbit or '0deg 75deg 3m',
                     'camera_target': dialogue.camera_target or '0m 1.6m 0m',
@@ -162,5 +166,57 @@ class EpisodePreviewView(DetailView):
         context['is_preview'] = True  # Flag to indicate this is a preview
         
         return context
+
+
+@csrf_exempt
+@staff_member_required
+@require_http_methods(["POST"])
+def update_camera_data(request, dialogue_id):
+    """
+    API endpoint to update camera data for a dialogue via AJAX
+    """
+    try:
+        # Parse JSON data from request
+        data = json.loads(request.body)
+        
+        # Get the dialogue object
+        dialogue = get_object_or_404(Dialogue, pk=dialogue_id)
+        
+        # Update camera fields if provided
+        if 'camera_orbit' in data:
+            dialogue.camera_orbit = data['camera_orbit']
+        if 'camera_target' in data:
+            dialogue.camera_target = data['camera_target']
+        if 'field_of_view' in data:
+            dialogue.field_of_view = float(data['field_of_view'])
+        if 'zoom_speed' in data:
+            dialogue.zoom_speed = float(data['zoom_speed'])
+        if 'rotation' in data:
+            dialogue.rotation = data['rotation']
+        
+        # Save the dialogue
+        dialogue.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Camera data updated successfully',
+            'dialogue_id': dialogue_id
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Invalid data format: {str(e)}'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error updating camera data: {str(e)}'
+        }, status=500)
 
 

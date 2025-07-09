@@ -45,7 +45,7 @@ urlpatterns = [
     path('home-list/', home_list, name="homelist"),
     path('new-article/', article_create_view, name='article_create'),
     path('article/', include('snmov.urls')),
-    path('3dcomics/', include('tilf.urls')),
+    path('immersivecomics/', include('tilf.urls')),
     path('about/', about_page, name='about'),
     path('categories/', get_craft_categories, name='categories_list'),
     path('crafts/', craft_list, name='craft_list'),

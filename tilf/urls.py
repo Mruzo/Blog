@@ -8,4 +8,5 @@ urlpatterns = [
     path('seasons/<int:season_id>/episodes/<int:pk>/add-comment/', views.EpisodeDetailView.as_view(), name='add_comment'),
     path('seasons/<int:season_id>/episodes/<int:pk>/delete-comment/<int:comment_id>/', views.delete_comment, name='delete_comment'),
     path('preview/seasons/<int:season_id>/episodes/<int:pk>/', views.EpisodePreviewView.as_view(), name='episode_preview'),
+    path('api/dialogue/<int:dialogue_id>/update-camera/', views.update_camera_data, name='update_camera_data'),
 ]

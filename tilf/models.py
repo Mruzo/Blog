@@ -52,7 +52,7 @@ class Episode(models.Model):
         return render_to_string('meta_tags.html', {'meta_tags': meta_tags})
 
     def get_absolute_url(self):
-        return f"/3dcomics/seasons/{self.season.id}/episodes/{self.id}/"
+        return f"/immersivecomics/seasons/{self.season.id}/episodes/{self.id}/"
     
     def approved_comments_count(self):
         return self.comments.filter(approved_comment=True).count()
@@ -308,7 +308,7 @@ class ComicComment(models.Model):
         return self.comment_cont
 
     def get_absolute_url(self):
-        return f"/3dcomics/seasons/{self.episode.season.id}/episodes/{self.episode.id}/"
+        return f"/immersivecomics/seasons/{self.episode.season.id}/episodes/{self.episode.id}/"
 
     def get_delete_url(self):
         return f"{self.get_absolute_url()}delete-comment/{self.pk}/"
