@@ -91,9 +91,24 @@
                 camera-controls>
 
                 <!-- Fixed Top Bubble -->
-                <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 1;">
+                <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 10;">
                     <div id="top-dialogue">Loading dialogue...</div>
                 </div>
+
+                <!-- Episode Summary Overlay (hidden by default) -->
+                <div id="summary-overlay" class="position-absolute top-0 start-0 w-100 h-100" style="display: none; z-index: 5; background: rgba(0, 0, 0, 0.4); pointer-events: none;"></div>
+                
+                <!-- Next Episode Button (hidden by default) -->
+                {% if next_episode %}
+                <div id="next-episode-button" class="position-absolute bottom-0 end-0 m-3" style="display: none; z-index: 10;">
+                    <a href="{% url 'episode_preview' season_id=next_episode.season.id pk=next_episode.id %}" 
+                       class="btn btn-success shadow-lg" 
+                       style="background: linear-gradient(45deg, #28a745, #20c997); border: none; border-radius: 8px; padding: 0.5rem 1rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; font-size: 0.875rem;">
+                        <i class="fas fa-play me-1" style="font-size: 0.75rem;"></i>
+                        Next Episode
+                    </a>
+                </div>
+                {% endif %}
 
                 <!-- SVG for Pointer Line -->
                 <svg id="pointer-svg" style="display: none;">
@@ -721,11 +736,49 @@
   input[type="range"].modern-slider:focus {
     outline: none;
   }
+  
+  /* Next Episode Button Styles */
+  #next-episode-button {
+    animation: slideInUp 0.5s ease-out;
+  }
+  
+  #next-episode-button .btn {
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  #next-episode-button .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(40, 167, 69, 0.4);
+    background: linear-gradient(45deg, #20c997, #17a2b8) !important;
+  }
+  
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 </style>
 
 <!-- Load scripts in correct order -->
 <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 <script src="{% static 'snmov/js/sm.js' %}"></script>
+
+<!-- Episode Summary Data for JavaScript -->
+<script>
+    window.episodeData = {
+        summary: "{{ episode_summary|default:''|escapejs }}",
+        hasNextEpisode: "{{ next_episode|yesno:'true,false' }}",
+        nextEpisodeUrl: "{% if next_episode %}{% url 'episode_preview' season_id=next_episode.season.id pk=next_episode.id %}{% endif %}",
+        summaryCameraOrbit: "{{ summary_camera_orbit|default:''|escapejs }}",
+        summaryFieldOfView: "{{ summary_field_of_view|default:60.0 }}"
+    };
+</script>
 
 {% block extra_js %}
 <script>

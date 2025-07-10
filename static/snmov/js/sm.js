@@ -209,11 +209,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize dialogues array from the dialogues container
     const dialogueElements = document.querySelectorAll('.dialogue');
     // console.log('Found dialogue elements:', dialogueElements.length);
-    dialogueElements.forEach(element => {
+    dialogueElements.forEach((element, index) => {
         try {
             const povData = JSON.parse(element.getAttribute('data-pov'));
-            dialogues.push(povData);
-            // console.log('Added dialogue:', povData);
+            // Ensure dialogue_id is included
+            const dialogueData = {
+                dialogue_id: povData.dialogue_id,
+                index: index,
+                character: povData.character,
+                text: povData.text,
+                camera_orbit: povData.camera_orbit,
+                camera_target: povData.camera_target,
+                field_of_view: povData.field_of_view || '45.0',
+                zoom_speed: povData.zoom_speed || 1.0,
+                head_x: povData.head_x || 0,
+                head_y: povData.head_y || 0,
+                head_z: povData.head_z || 0
+            };
+            dialogues.push(dialogueData);
+            // console.log('Added dialogue:', dialogueData);
         } catch (error) {
             // console.error('Error parsing dialogue data:', error);
         }
@@ -397,7 +411,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const nextButton = document.getElementById('nextButton');
             if (prevButton && nextButton) {
                 prevButton.disabled = index === 0;
-                nextButton.disabled = index === dialogues.length - 1;
+                // Enable Next button on last dialogue if there's a summary available
+                const hasSummary = window.episodeData && window.episodeData.summary && window.episodeData.summary.trim() !== '';
+                nextButton.disabled = index === dialogues.length - 1 && !hasSummary;
+            }
+            
+            // Check if this is the last dialogue and show next episode button (but not summary yet)
+            if (index === dialogues.length - 1) {
+                // Show next episode button on last dialogue, but don't show summary yet
+                const nextEpisodeButton = document.getElementById('next-episode-button');
+                if (window.episodeData && window.episodeData.hasNextEpisode === 'true' && nextEpisodeButton) {
+                    nextEpisodeButton.style.display = 'block';
+                }
+                // Don't hide summary if we're currently showing it
+                if (!isShowingSummary) {
+                    hideEpisodeSummary();
+                }
+            } else {
+                hideEpisodeSummary();
             }
             
             // console.log('=== Finished showDialogue ===', new Date().getTime());
@@ -523,7 +554,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (prevButton && nextButton) {
         prevButton.onclick = function() {
             // console.log('SET 1 - Previous button clicked. Current index:', currentDialogueIndex);
-        if (currentDialogueIndex > 0) {
+        if (isShowingSummary) {
+            // If showing summary, go back to last dialogue
+            isShowingSummary = false;
+            hideEpisodeSummary();
+            showDialogue(currentDialogueIndex); // Re-show the last dialogue
+        } else if (currentDialogueIndex > 0) {
             const newIndex = currentDialogueIndex - 1;
                 // console.log('SET 1 - Moving to previous dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
@@ -541,7 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadDialogue(newIndex);
             showDialogue(newIndex);
         } else {
-                // console.log('SET 1 - Already at last dialogue');
+                // console.log('SET 1 - At last dialogue - showing episode summary');
+                isShowingSummary = true;
+                showEpisodeSummary();
             }
         };
         }
@@ -668,7 +706,12 @@ window.startEpisode = function() {
         if (elements.prevButton && elements.nextButton) {
             elements.prevButton.onclick = function() {
                 // console.log('Button clicked - Previous. Current index:', currentDialogueIndex);
-                if (currentDialogueIndex > 0) {
+                if (isShowingSummary) {
+                    // If showing summary, go back to last dialogue
+                    isShowingSummary = false;
+                    hideEpisodeSummary();
+                    showDialogue(currentDialogueIndex); // Re-show the last dialogue
+                } else if (currentDialogueIndex > 0) {
                     const newIndex = currentDialogueIndex - 1;
                     // console.log('Moving to previous dialogue, new index:', newIndex);
                     loadDialogue(newIndex);
@@ -686,7 +729,9 @@ window.startEpisode = function() {
                     loadDialogue(newIndex);
                     showDialogue(newIndex);
                 } else {
-                    // console.log('Already at last dialogue');
+                    // console.log('At last dialogue - showing episode summary');
+                    isShowingSummary = true;
+                    showEpisodeSummary();
                 }
             };
         }
@@ -703,12 +748,14 @@ function loadDialogue(index) {
     try {
         const povData = JSON.parse(dialogueElement.getAttribute('data-pov'));
         dialogues[index] = {
+            dialogue_id: povData.dialogue_id, // Include dialogue_id for saving
             index: index,
             character: povData.character,
             text: povData.text,
             camera_orbit: povData.camera_orbit,
             camera_target: povData.camera_target,
             field_of_view: povData.field_of_view || '45.0',
+            zoom_speed: povData.zoom_speed || 1.0, // Include zoom_speed
             head_x: povData.head_x || 0,
             head_y: povData.head_y || 0,
             head_z: povData.head_z || 0
@@ -724,6 +771,7 @@ function loadDialogue(index) {
 let isEditMode = false;
 let currentEditingDialogue = null;
 let originalValues = {};
+let isShowingSummary = false;
 
 // Initialize editing functionality
 document.addEventListener('DOMContentLoaded', () => {
@@ -807,7 +855,10 @@ function initializeSliders() {
 
 function loadCurrentDialogueValues() {
     if (currentDialogueIndex >= 0 && currentDialogueIndex < dialogues.length) {
+        // Always get a fresh reference to the current dialogue
         currentEditingDialogue = dialogues[currentDialogueIndex];
+        
+
         
         // Parse camera orbit
         const orbitMatch = currentEditingDialogue.camera_orbit.match(/(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)m/);
@@ -891,6 +942,8 @@ function updateCameraInRealTime() {
     currentEditingDialogue.field_of_view = fieldOfView;
     currentEditingDialogue.zoom_speed = zoomSpeed;
     
+
+    
     // Update model-viewer in real-time
     const modelViewer = document.querySelector('model-viewer');
     if (modelViewer && isModelReady) {
@@ -918,7 +971,15 @@ function updateCurrentValuesDisplay() {
 }
 
 function saveCameraChanges() {
-    if (!currentEditingDialogue) return;
+    if (!currentEditingDialogue) {
+        console.error('No currentEditingDialogue found');
+        return;
+    }
+    
+    if (!currentEditingDialogue.dialogue_id) {
+        console.error('No dialogue_id found in currentEditingDialogue:', currentEditingDialogue);
+        return;
+    }
     
     const saveBtn = document.getElementById('saveBtn');
     const originalText = saveBtn.textContent;
@@ -932,6 +993,9 @@ function saveCameraChanges() {
         field_of_view: currentEditingDialogue.field_of_view,
         zoom_speed: currentEditingDialogue.zoom_speed
     };
+    
+    console.log('Saving dialogue_id:', currentEditingDialogue.dialogue_id);
+    console.log('Saving data:', data);
     
     // Send AJAX request
     fetch(`/immersivecomics/api/dialogue/${currentEditingDialogue.dialogue_id}/update-camera/`, {
@@ -948,6 +1012,14 @@ function saveCameraChanges() {
             showSaveMessage('success', 'Camera changes saved successfully!');
             // Update original values
             originalValues = { ...data };
+            
+            // Also update the dialogue in the dialogues array to keep it in sync
+            if (currentDialogueIndex >= 0 && currentDialogueIndex < dialogues.length) {
+                dialogues[currentDialogueIndex].camera_orbit = data.camera_orbit;
+                dialogues[currentDialogueIndex].camera_target = data.camera_target;
+                dialogues[currentDialogueIndex].field_of_view = data.field_of_view;
+                dialogues[currentDialogueIndex].zoom_speed = data.zoom_speed;
+            }
         } else {
             showSaveMessage('error', 'Error saving changes: ' + result.message);
         }
@@ -1021,6 +1093,105 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+function showEpisodeSummary() {
+    const topDialogue = document.getElementById('top-dialogue');
+    const nextEpisodeButton = document.getElementById('next-episode-button');
+    const summaryOverlay = document.getElementById('summary-overlay');
+    const modelViewer = document.querySelector('model-viewer');
+    const nextButton = document.getElementById('nextButton');
+    
+    // Disable Next button when showing summary
+    if (nextButton) {
+        nextButton.disabled = true;
+    }
+    
+    // Show dimming overlay
+    if (summaryOverlay) {
+        summaryOverlay.style.display = 'block';
+    }
+    
+    // Show episode summary in dialogue bubble if available
+    if (window.episodeData && window.episodeData.summary && window.episodeData.summary.trim() !== '') {
+        if (topDialogue) {
+            topDialogue.innerHTML = window.episodeData.summary;
+        }
+    }
+    
+    // Move camera to summary position if available
+    if (modelViewer && isModelReady && window.episodeData) {
+        let cameraOrbit = window.episodeData.summaryCameraOrbit;
+        let fieldOfView = window.episodeData.summaryFieldOfView;
+        
+        // If no summary camera orbit is set, use a default wide shot
+        if (!cameraOrbit || cameraOrbit.trim() === '') {
+            cameraOrbit = '0deg 75deg 5m'; // Default wide shot
+        }
+        
+        // If no summary field of view is set, use default
+        if (!fieldOfView || fieldOfView === '') {
+            fieldOfView = 60.0;
+        }
+        
+        // Parse field of view properly
+        const fovValue = parseFloat(fieldOfView);
+        if (isNaN(fovValue)) {
+            fieldOfView = 60.0;
+        } else {
+            fieldOfView = fovValue;
+        }
+        
+        // Animate to summary camera position
+        const animation = modelViewer.animate({
+            cameraOrbit: cameraOrbit
+        }, {
+            duration: 1000,  // 1 second animation
+            easing: 'ease-in-out'
+        });
+        
+        // Set field of view
+        modelViewer.fieldOfView = fieldOfView + "deg";
+    }
+    
+    // Show next episode button if available
+    if (window.episodeData && window.episodeData.hasNextEpisode === 'true' && nextEpisodeButton) {
+        nextEpisodeButton.style.display = 'block';
+    }
+}
+
+function hideEpisodeSummary() {
+    const nextEpisodeButton = document.getElementById('next-episode-button');
+    const summaryOverlay = document.getElementById('summary-overlay');
+    const topDialogue = document.getElementById('top-dialogue');
+    const nextButton = document.getElementById('nextButton');
+    
+    // Reset summary flag
+    isShowingSummary = false;
+    
+    // Re-enable Next button if we're on the last dialogue and there's a summary
+    if (nextButton && currentDialogueIndex === dialogues.length - 1) {
+        const hasSummary = window.episodeData && window.episodeData.summary && window.episodeData.summary.trim() !== '';
+        nextButton.disabled = !hasSummary;
+    }
+    
+    // Hide dimming overlay
+    if (summaryOverlay) {
+        summaryOverlay.style.display = 'none';
+    }
+    
+    // Hide next episode button
+    if (nextEpisodeButton) {
+        nextEpisodeButton.style.display = 'none';
+    }
+    
+    // Clear episode summary from dialogue bubble
+    if (topDialogue && window.episodeData && window.episodeData.summary) {
+        // Restore the last dialogue text if we're not at the end
+        if (currentDialogueIndex < dialogues.length - 1) {
+            showDialogue(currentDialogueIndex);
+        }
+    }
 }
 
 // Override the existing showDialogue function to support editing mode

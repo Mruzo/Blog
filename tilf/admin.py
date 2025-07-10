@@ -57,7 +57,7 @@ class EpisodeAdmin(admin.ModelAdmin):
     inlines = [DialogueInline]
     search_fields = ('title',)
     ordering = ('season', 'episode_number')
-    fields = ('title', 'season', 'episode_number', 'description', 'cover_image', 'is_published')
+    fields = ('title', 'season', 'episode_number', 'description', 'cover_image', 'is_published', 'summary', 'summary_camera_orbit', 'summary_field_of_view')
     
     def preview_link(self, obj):
         if obj.pk:

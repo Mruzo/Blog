@@ -51,14 +51,14 @@
             </div>
 
             {% if model_gltf %}
-            <model-viewer
-                id="model-viewer"
+        <model-viewer
+            id="model-viewer"
                 src="{{ model_gltf }}"
-                alt="3D Scene"
-                style="width: 100%; height: 100%;"
-                shadow-intensity="1"
-                exposure="1"
-                interaction-prompt="none"
+            alt="3D Scene"
+            style="width: 100%; height: 100%;"
+            shadow-intensity="1"
+            exposure="1"
+            interaction-prompt="none"
                 interpolation-decay="200"
                 interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
                 min-camera-orbit="auto auto 1m"
@@ -67,17 +67,32 @@
                 max-field-of-view="90deg"
                 >
 
-                <!-- Fixed Top Bubble -->
-                <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 1;">
-                    <div id="top-dialogue">Loading dialogue...</div>
-                </div>
+            <!-- Fixed Top Bubble -->
+            <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 10;">
+                <div id="top-dialogue">Loading dialogue...</div>
+            </div>
 
-                <!-- SVG for Pointer Line -->
-                <svg id="pointer-svg" style="display: none;">
-                    <path id="pointer-path" stroke="white" stroke-width="2" stroke-dasharray="5,5" fill="none"/>
-                </svg>
+            <!-- Episode Summary Overlay (hidden by default) -->
+            <div id="summary-overlay" class="position-absolute top-0 start-0 w-100 h-100" style="display: none; z-index: 5; background: rgba(0, 0, 0, 0.4); pointer-events: none;"></div>
+            
+            <!-- Next Episode Button (hidden by default) -->
+            {% if next_episode %}
+            <div id="next-episode-button" class="position-absolute bottom-0 end-0 m-3" style="display: none; z-index: 10;">
+                <a href="{% url 'episode_detail' season_id=next_episode.season.id pk=next_episode.id %}" 
+                   class="btn btn-success shadow-lg" 
+                   style="background: linear-gradient(45deg, #28a745, #20c997); border: none; border-radius: 8px; padding: 0.5rem 1rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; font-size: 0.875rem;">
+                    <i class="fas fa-play me-1" style="font-size: 0.75rem;"></i>
+                    Next Episode
+                </a>
+            </div>
+            {% endif %}
 
-                <!-- Hotspots will be dynamically created from POV data -->
+            <!-- SVG for Pointer Line -->
+            <svg id="pointer-svg" style="display: none;">
+                <path id="pointer-path" stroke="white" stroke-width="2" stroke-dasharray="5,5" fill="none"/>
+            </svg>
+
+            <!-- Hotspots will be dynamically created from POV data -->
             </model-viewer>
             {% else %}
             <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
@@ -88,7 +103,7 @@
     </div>
 
     <!-- Comic Navigation -->
-    <div class="comic-navigation border-dark pb-2" style="display: none;">
+    <div class="container comic-navigation border-dark pb-2" style="display: none;">
         <div class="row justify-content-between align-items-center">
             <div class="col-auto">
                 <button id="prevButton" class="btn btn-primary mx-1 p-1" style="font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; background-color: #111e7f; border: none; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -121,6 +136,7 @@
 <div class="dialogues-container" style="display: none;">
     {% for dialogue in dialogues_data %}
         <div class="dialogue" data-pov='{
+            "dialogue_id": {{ dialogue.dialogue_id }},
             "character": "{{dialogue.character}}",
             "camera_orbit": "{{ dialogue.camera_orbit|escapejs }}",
             "camera_target": "{{ dialogue.camera_target|escapejs }}",
@@ -150,7 +166,7 @@
             <!-- Comment Form -->
             {% if user.is_authenticated %}
             <div class="card my-2  rounded-0">
-                <div class="card-body p-1">
+                                <div class="card-body p-1">
                     <form method="POST" action="{% url 'add_comment' episode.season.id episode.id %}">
                         {% csrf_token %}
                         <div class="form-group">
@@ -162,12 +178,12 @@
                             </button>
                         </div>
                     </form>
-                </div>
-            </div>
+                                </div>
+                            </div>
             {% else %}
             <div class="alert alert-info">
                 Please <a href="{% url 'login_req' %}">login</a> to post a comment.
-            </div>
+                    </div>
             {% endif %}
             <div class="row">
                 <div class="col-12">
@@ -195,9 +211,9 @@
                     {% endif %}
                 {% empty %}
                     <p class="">No comments yet. Be the first to comment!</p>
-                {% endfor %}
-            </div>
-        </div>
+        {% endfor %}
+    </div>
+    </div>
     </div>
 </div>
 
@@ -313,11 +329,49 @@
         opacity: 0.5;
         transform: none;
     }
+    
+    /* Next Episode Button Styles */
+    #next-episode-button {
+        animation: slideInUp 0.5s ease-out;
+    }
+    
+    #next-episode-button .btn {
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    #next-episode-button .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 35px rgba(40, 167, 69, 0.4);
+        background: linear-gradient(45deg, #20c997, #17a2b8) !important;
+    }
+    
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
 <!-- Load scripts in correct order -->
 <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 <script src="{% static 'snmov/js/sm.js' %}"></script>
+
+<!-- Episode Summary Data for JavaScript -->
+<script>
+    window.episodeData = {
+        summary: "{{ episode_summary|default:''|escapejs }}",
+        hasNextEpisode: "{{ next_episode|yesno:'true,false' }}",
+        nextEpisodeUrl: "{% if next_episode %}{% url 'episode_detail' season_id=next_episode.season.id pk=next_episode.id %}{% endif %}",
+        summaryCameraOrbit: "{{ summary_camera_orbit|default:''|escapejs }}",
+        summaryFieldOfView: "{{ summary_field_of_view|default:60.0 }}"
+    };
+</script>
 
 {% block extra_js %}
 <script>

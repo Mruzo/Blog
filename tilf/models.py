@@ -38,6 +38,9 @@ class Episode(models.Model):
     episode_number = models.PositiveIntegerField()  # Order of episode in season
     cover_image = models.ImageField(upload_to='episode_covers/', null=True, blank=True)
     is_published = models.BooleanField(default=False, help_text="Check this to make the episode visible on the website")
+    summary = models.TextField(blank=True, help_text="Summary and lead-in for the next episode")
+    summary_camera_orbit = models.CharField(max_length=50, blank=True, help_text="Camera position for episode summary (e.g., '0deg 75deg 5m')")
+    summary_field_of_view = models.FloatField(default=60.0, help_text="Field of view for episode summary in degrees")
 
     def __str__(self):
         return f"S{self.season.season_number} - E{self.episode_number}"

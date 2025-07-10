@@ -65,6 +65,7 @@ class EpisodeDetailView(DetailView):
         for dialogue in dialogues:
             try:
                 dialogues_data.append({
+                    'dialogue_id': dialogue.id,
                     'character': dialogue.pov.character.name if dialogue.pov and dialogue.pov.character else 'Unknown',
                     'camera_orbit': dialogue.camera_orbit or '0deg 75deg 3m',
                     'camera_target': dialogue.camera_target or '0m 1.6m 0m',
@@ -81,6 +82,20 @@ class EpisodeDetailView(DetailView):
                 continue
         
         context['dialogues_data'] = dialogues_data
+        
+        # Add episode summary and next episode info
+        context['episode_summary'] = episode.summary
+        context['summary_camera_orbit'] = episode.summary_camera_orbit
+        context['summary_field_of_view'] = episode.summary_field_of_view
+        
+        # Find next episode in the same season
+        next_episode = Episode.objects.filter(
+            season=episode.season,
+            episode_number__gt=episode.episode_number,
+            is_published=True
+        ).order_by('episode_number').first()
+        
+        context['next_episode'] = next_episode
         
         # Add comment form and comments
         context['comment_form'] = ComicCommentForm()
@@ -159,6 +174,19 @@ class EpisodePreviewView(DetailView):
                 continue
         
         context['dialogues_data'] = dialogues_data
+        
+        # Add episode summary and next episode info
+        context['episode_summary'] = episode.summary
+        context['summary_camera_orbit'] = episode.summary_camera_orbit
+        context['summary_field_of_view'] = episode.summary_field_of_view
+        
+        # Find next episode in the same season (allow unpublished for preview)
+        next_episode = Episode.objects.filter(
+            season=episode.season,
+            episode_number__gt=episode.episode_number
+        ).order_by('episode_number').first()
+        
+        context['next_episode'] = next_episode
         
         # Add comment form and comments (but don't allow actual commenting in preview)
         context['comment_form'] = ComicCommentForm()
