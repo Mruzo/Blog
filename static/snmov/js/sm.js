@@ -855,10 +855,23 @@ function initializeSliders() {
 
 function loadCurrentDialogueValues() {
     if (currentDialogueIndex >= 0 && currentDialogueIndex < dialogues.length) {
-        // Always get a fresh reference to the current dialogue
-        currentEditingDialogue = dialogues[currentDialogueIndex];
+        // Get a fresh reference to the current dialogue from the main array
+        const dialogueFromArray = dialogues[currentDialogueIndex];
         
-
+        // Create a new object to avoid reference issues
+        currentEditingDialogue = {
+            dialogue_id: dialogueFromArray.dialogue_id,
+            index: dialogueFromArray.index,
+            character: dialogueFromArray.character,
+            text: dialogueFromArray.text,
+            camera_orbit: dialogueFromArray.camera_orbit,
+            camera_target: dialogueFromArray.camera_target,
+            field_of_view: dialogueFromArray.field_of_view,
+            zoom_speed: dialogueFromArray.zoom_speed,
+            head_x: dialogueFromArray.head_x,
+            head_y: dialogueFromArray.head_y,
+            head_z: dialogueFromArray.head_z
+        };
         
         // Parse camera orbit
         const orbitMatch = currentEditingDialogue.camera_orbit.match(/(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)m/);
@@ -987,12 +1000,24 @@ function saveCameraChanges() {
     saveBtn.textContent = 'Saving...';
     saveBtn.disabled = true;
     
-    // Prepare data for API
+    // Get current slider values to ensure we save the latest state
+    const azimuth = parseFloat(document.getElementById('orbitAzimuth').value);
+    const polar = parseFloat(document.getElementById('orbitPolar').value);
+    const radius = parseFloat(document.getElementById('orbitRadius').value);
+    
+    const targetX = parseFloat(document.getElementById('targetX').value);
+    const targetY = parseFloat(document.getElementById('targetY').value);
+    const targetZ = parseFloat(document.getElementById('targetZ').value);
+    
+    const fieldOfView = parseFloat(document.getElementById('fieldOfView').value);
+    const zoomSpeed = parseFloat(document.getElementById('zoomSpeed').value);
+    
+    // Prepare data for API with current slider values
     const data = {
-        camera_orbit: currentEditingDialogue.camera_orbit,
-        camera_target: currentEditingDialogue.camera_target,
-        field_of_view: currentEditingDialogue.field_of_view,
-        zoom_speed: currentEditingDialogue.zoom_speed
+        camera_orbit: `${azimuth}deg ${polar}deg ${radius}m`,
+        camera_target: `${targetX}m ${targetY}m ${targetZ}m`,
+        field_of_view: fieldOfView,
+        zoom_speed: zoomSpeed
     };
     
     console.log('Saving dialogue_id:', currentEditingDialogue.dialogue_id);
@@ -1011,16 +1036,26 @@ function saveCameraChanges() {
     .then(result => {
         if (result.success) {
             showSaveMessage('success', 'Camera changes saved successfully!');
-            // Update original values
+            
+            // Update all state sources consistently
             originalValues = { ...data };
             
-            // Also update the dialogue in the dialogues array to keep it in sync
+            // Update currentEditingDialogue
+            currentEditingDialogue.camera_orbit = data.camera_orbit;
+            currentEditingDialogue.camera_target = data.camera_target;
+            currentEditingDialogue.field_of_view = data.field_of_view;
+            currentEditingDialogue.zoom_speed = data.zoom_speed;
+            
+            // Update dialogues array
             if (currentDialogueIndex >= 0 && currentDialogueIndex < dialogues.length) {
                 dialogues[currentDialogueIndex].camera_orbit = data.camera_orbit;
                 dialogues[currentDialogueIndex].camera_target = data.camera_target;
                 dialogues[currentDialogueIndex].field_of_view = data.field_of_view;
                 dialogues[currentDialogueIndex].zoom_speed = data.zoom_speed;
             }
+            
+            // Update display to reflect saved state
+            updateCurrentValuesDisplay();
         } else {
             showSaveMessage('error', 'Error saving changes: ' + result.message);
         }
