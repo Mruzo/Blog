@@ -905,9 +905,10 @@ function setSliderValue(sliderId, value, min, max) {
     const valueDisplay = document.getElementById(sliderId + 'Value');
     
     if (slider) {
-        slider.value = value;
+        // Set min/max first, then value to avoid clamping
         slider.min = min;
         slider.max = max;
+        slider.value = value;
     }
     
     if (valueDisplay) {
