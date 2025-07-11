@@ -22,6 +22,7 @@ def home_page(request):
     else:
         qs = id_list
     context = {'article_list': qs}
+    # TEMP message removed after preview
     return render(request, "home.html", context)
 
 

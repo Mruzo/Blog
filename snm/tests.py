@@ -1,9 +1,11 @@
 from django.test import TestCase, Client
-from django.urls import reverse
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-from django.core import mail
-from django.conf import settings
+from django.core.mail import send_mail
+from django.urls import reverse
+from django.contrib.messages.storage.fallback import FallbackStorage
+from django.contrib.messages import Message
+from django.template.loader import render_to_string
 from unittest.mock import patch
 import re
 
@@ -327,3 +329,142 @@ class EmailValidationIntegrationTestCase(TestCase):
         
         # Should only have one user with that email
         self.assertEqual(User.objects.filter(email='integration@example.com').count(), 1) 
+
+
+class NavbarLayoutTest(TestCase):
+    """Test navbar layout to ensure logo and login stay on same row with message between them."""
+    
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+    
+    def test_navbar_structure_with_messages(self):
+        """Test that navbar has correct structure with messages."""
+        # Test with a message - use a simpler approach
+        context = {'messages': ['Test message']}
+        
+        # Get the rendered navbar
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Check that the main flex container exists
+        self.assertIn('d-flex align-items-center justify-content-between w-100', navbar_html)
+        
+        # Check that logo is present and positioned correctly
+        self.assertIn('navbar-brand d-flex align-items-center me-3', navbar_html)
+        self.assertIn('id="logo"', navbar_html)
+        
+        # Check that message container has correct classes
+        self.assertIn('flex-grow-1 text-center', navbar_html)
+        self.assertIn('id="message-container"', navbar_html)
+        
+        # Check that login/logout is present and positioned correctly
+        self.assertIn('ms-3', navbar_html)
+        self.assertIn('nav-link d-flex flex-column align-items-center', navbar_html)
+    
+    def test_navbar_without_messages(self):
+        """Test navbar structure when no messages are present."""
+        response = self.client.get('/')
+        
+        # Render navbar without messages
+        navbar_html = render_to_string('navbar.html', {'messages': []})
+        
+        # Should still have the same structure
+        self.assertIn('d-flex align-items-center justify-content-between w-100', navbar_html)
+        self.assertIn('navbar-brand d-flex align-items-center me-3', navbar_html)
+        self.assertIn('flex-grow-1 text-center', navbar_html)
+        self.assertIn('ms-3', navbar_html)
+    
+    def test_navbar_logged_in_user(self):
+        """Test navbar structure for logged-in user."""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/')
+        
+        # Create context with user
+        context = {'messages': [], 'user': self.user}
+        
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Should show logout instead of login
+        self.assertIn('logout', navbar_html)
+        self.assertIn('Lock Icon', navbar_html)  # Lock icon for logged in user
+    
+    def test_navbar_logged_out_user(self):
+        """Test navbar structure for logged-out user."""
+        response = self.client.get('/')
+        
+        # Create context
+        context = {'messages': []}
+        
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Should show login
+        self.assertIn('login', navbar_html)
+        self.assertIn('Unlock Icon', navbar_html)  # Unlock icon for logged out user
+    
+    def test_message_container_auto_hide(self):
+        """Test that message container has auto-hide JavaScript."""
+        response = self.client.get('/')
+        context = {'messages': []}
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Check for the auto-hide script
+        self.assertIn('setTimeout(function()', navbar_html)
+        self.assertIn('message-container', navbar_html)
+        self.assertIn('style.display = \'none\'', navbar_html)
+        self.assertIn('5000', navbar_html)  # 5 second timeout
+    
+    def test_navbar_responsive_classes(self):
+        """Test that navbar has proper responsive Bootstrap classes."""
+        response = self.client.get('/')
+        context = {'messages': []}
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Check for responsive navbar classes
+        self.assertIn('navbar-expand-lg', navbar_html)
+        self.assertIn('navbar-dark', navbar_html)
+        self.assertIn('d-flex', navbar_html)
+        self.assertIn('align-items-center', navbar_html)
+    
+    def test_navbar_logo_link(self):
+        """Test that logo links to homepage."""
+        response = self.client.get('/')
+        context = {'messages': []}
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Check logo link
+        self.assertIn('<a class="navbar-brand', navbar_html)
+        self.assertIn('href="/"', navbar_html)
+    
+    def test_navbar_login_logout_links(self):
+        """Test that login/logout links are correct."""
+        # Test logged out user
+        response = self.client.get('/')
+        context = {'messages': []}
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Should link to login with next parameter
+        self.assertIn('href="/login?next=', navbar_html)
+        
+        # Test logged in user
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/')
+        context = {'messages': [], 'user': self.user}
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Should link to logout
+        self.assertIn('href="/logout"', navbar_html)
+    
+    def test_navbar_message_styling(self):
+        """Test that message container has correct styling."""
+        response = self.client.get('/')
+        context = {'messages': []}
+        navbar_html = render_to_string('navbar.html', context)
+        
+        # Check for message styling
+        self.assertIn('color: #f9a602', navbar_html)
+        self.assertIn('min-width: 0', navbar_html)
+        self.assertIn('text-muted', navbar_html) 
