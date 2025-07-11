@@ -4,7 +4,7 @@
 <ul>
     {% for season in seasons %}
     <li>
-        <a href="{% url 'season_detail' pk=season.id %}">
+        <a href="{% url 'immersivecomics:season_detail' pk=season.id %}">
             <h1>{{ season.title }}</h1>
         </a> - Released on {{ season.release_date }}
     </li>

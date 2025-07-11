@@ -29,10 +29,10 @@
 <!-- Navigation Buttons -->
 <div class="scene-navigation">
     {% if previous_scene_id %}
-        <a href="{% url 'scene_detail' episode_id=scene.episode.id pk=previous_scene_id %}" class="btn btn-previous">Previous Scene</a>
+        <a href="{% url 'immersivecomics:scene_detail' episode_id=scene.episode.id pk=previous_scene_id %}" class="btn btn-previous">Previous Scene</a>
     {% endif %}
     {% if next_scene_id %}
-        <a href="{% url 'scene_detail' episode_id=scene.episode.id pk=next_scene_id %}" class="btn btn-next">Next Scene</a>
+        <a href="{% url 'immersivecomics:scene_detail' episode_id=scene.episode.id pk=next_scene_id %}" class="btn btn-next">Next Scene</a>
     {% endif %}
 </div>
 

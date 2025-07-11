@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Episode Analytics - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Episode Analytics
+                </h1>
+                <button onclick="history.back()" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to Preview
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Season Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-filter me-2"></i>Filter by Season</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'immersivecomics:episode_analytics' %}" 
+                           class="btn btn-outline-primary {% if not selected_season %}active{% endif %}">
+                            All Seasons
+                        </a>
+                        {% for season in seasons %}
+                        <a href="{% url 'immersivecomics:season_analytics' pk=season.id %}" 
+                           class="btn btn-outline-primary {% if selected_season.id == season.id %}active{% endif %}">
+                            {{ season.title }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3>{{ total_views }}</h3>
+                    <p class="mb-0">Total Views</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3>{{ episodes.count }}</h3>
+                    <p class="mb-0">Published Episodes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h3>{{ avg_views|floatformat:1 }}</h3>
+                    <p class="mb-0">Avg Views/Episode</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center align-items-center mb-1">
+                        <h3 class="mb-0 me-2">Episode {{ most_popular.0.episode_number|default:"-" }}</h3>
+                        <span class="badge bg-light text-dark">{{ most_popular.0.view_count|default:0 }} views</span>
+                    </div>
+                    <small>Most Popular</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Season Information (if viewing specific season) -->
+    {% if selected_season %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle me-2"></i>Season Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Title:</strong> {{ selected_season.title }}</p>
+                            <p><strong>Season Number:</strong> {{ selected_season.season_number }}</p>
+                            <p><strong>Release Date:</strong> {{ selected_season.release_date }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Total Episodes:</strong> {{ selected_season.episodes.count }}</p>
+                            <p><strong>Published Episodes:</strong> {{ selected_season.episodes.filter.is_published.count }}</p>
+                            <p><strong>Description:</strong> {{ selected_season.description|default:"No description available" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Views Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar me-2"></i>Episode Views Chart</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="viewsChart" width="400" height="200" 
+                            data-episodes='[
+                                {% for episode in episodes %}
+                                    {"title": "{{ episode.title|escapejs }}", "views": {{ episode.view_count }}, "rank": {{ forloop.counter }}}{% if not forloop.last %},{% endif %}
+                                {% endfor %}
+                            ]'></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Most Popular Episodes -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-fire me-2"></i>Most Popular Episodes</h5>
+                </div>
+                <div class="card-body">
+                    {% for episode in most_popular %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{{ episode.title }}</strong>
+                            <br>
+                            <small class="text-muted">{{ episode.season.title }} - Episode {{ episode.episode_number }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary">{{ episode.view_count }} views</span>
+                            <br>
+                            <small class="text-muted">{{ episode.last_viewed|timesince }} ago</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No episodes viewed yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-clock me-2"></i>Recently Viewed</h5>
+                </div>
+                <div class="card-body">
+                    {% for episode in recent_views %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{{ episode.title }}</strong>
+                            <br>
+                            <small class="text-muted">{{ episode.season.title }} - Episode {{ episode.episode_number }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-secondary">{{ episode.view_count }} views</span>
+                            <br>
+                            <small class="text-muted">{{ episode.last_viewed|timesince }} ago</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No recent activity.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Episodes Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list me-2"></i>All Episodes by Views</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Episode</th>
+                                    {% if not selected_season %}<th>Season</th>{% endif %}
+                                    <th>Views</th>
+                                    <th>Last Viewed</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for episode in episodes %}
+                                <tr>
+                                    <td>
+                                        {% if forloop.counter <= 3 %}
+                                        <span class="badge bg-warning">{{ forloop.counter }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ forloop.counter }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ episode.title }}</strong>
+                                        <br>
+                                        <small class="text-muted">Episode {{ episode.episode_number }}</small>
+                                    </td>
+                                    {% if not selected_season %}
+                                    <td>{{ episode.season.title }}</td>
+                                    {% endif %}
+                                    <td>
+                                        <span class="badge bg-primary">{{ episode.view_count }}</span>
+                                    </td>
+                                    <td>{{ episode.last_viewed|timesince }} ago</td>
+                                    <td>
+                                        {% if episode.is_published %}
+                                        <a href="{% url 'immersivecomics:episode_detail' season_id=episode.season.id pk=episode.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% else %}
+                                        <a href="{% url 'immersivecomics:episode_preview' season_id=episode.season.id pk=episode.id %}" 
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-eye"></i> Preview
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="{% if selected_season %}5{% else %}6{% endif %}" class="text-center text-muted">No episodes found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Chart JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('viewsChart');
+    const ctx = canvas.getContext('2d');
+    
+    // Get data from canvas data attribute
+    const episodesData = JSON.parse(canvas.dataset.episodes);
+    
+    const labels = episodesData.map(ep => ep.title);
+    const data = episodesData.map(ep => ep.views);
+    const backgroundColors = episodesData.map(ep => 
+        ep.rank <= 3 ? 'rgba(255, 193, 7, 0.8)' : 'rgba(13, 110, 253, 0.8)'
+    );
+    const borderColors = episodesData.map(ep => 
+        ep.rank <= 3 ? 'rgba(255, 193, 7, 1)' : 'rgba(13, 110, 253, 1)'
+    );
+
+    const chartData = {
+        labels: labels,
+        datasets: [{
+            label: 'Views',
+            data: data,
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
+            borderWidth: 2
+        }]
+    };
+
+    const config = {
+        type: 'bar',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Views: ' + context.parsed.y;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Views'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Episodes'
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 0
+                    }
+                }
+            }
+        }
+    };
+
+    new Chart(ctx, config);
+});
+</script>
+{% endblock %} 

@@ -9,7 +9,7 @@
 <ul>
     {% for episode in season.published_episodes %}
     <li>
-        <a href="{% url 'episode_detail' season_id=season.id pk=episode.id %}">
+        <a href="{% url 'immersivecomics:episode_detail' season_id=season.id pk=episode.id %}">
             {{ episode.title }}
         </a> - Episode {{ episode.episode_number }}
     </li>

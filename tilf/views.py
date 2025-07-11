@@ -44,6 +44,15 @@ class EpisodeDetailView(DetailView):
     def get_object(self):
         season_id = self.kwargs.get('season_id')
         return get_object_or_404(Episode, pk=self.kwargs['pk'], season_id=season_id, is_published=True)
+    
+    def get(self, request, *args, **kwargs):
+        episode = self.get_object()
+        
+        # Increment view count (only for published episodes)
+        if episode.is_published:
+            episode.increment_view()
+        
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -246,5 +255,55 @@ def update_camera_data(request, dialogue_id):
             'success': False,
             'message': f'Error updating camera data: {str(e)}'
         }, status=500)
+
+
+@method_decorator(staff_member_required, name='dispatch')
+class EpisodeAnalyticsView(ListView):
+    model = Episode
+    template_name = 'tilf/episode_analytics.html'
+    context_object_name = 'episodes'
+    
+    def get_queryset(self):
+        return Episode.objects.filter(is_published=True).order_by('-view_count')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        episodes = context['episodes']
+        
+        # Add seasons list for filtering
+        context['seasons'] = Season.objects.all().order_by('season_number')
+        context['selected_season'] = None
+        
+        context['total_views'] = sum(ep.view_count for ep in episodes)
+        context['avg_views'] = context['total_views'] / episodes.count() if episodes else 0
+        context['most_popular'] = episodes[:5]
+        context['recent_views'] = Episode.objects.filter(is_published=True).order_by('-last_viewed')[:5]
+        
+        return context
+
+
+@method_decorator(staff_member_required, name='dispatch')
+class SeasonAnalyticsView(DetailView):
+    model = Season
+    template_name = 'tilf/episode_analytics.html'  # Use the same template
+    context_object_name = 'season'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        season = self.object
+        episodes = season.episodes.filter(is_published=True).order_by('-view_count')
+        
+        # Add seasons list for filtering
+        context['seasons'] = Season.objects.all().order_by('season_number')
+        context['selected_season'] = season
+        
+        # Use the same context structure as EpisodeAnalyticsView
+        context['episodes'] = episodes
+        context['total_views'] = sum(ep.view_count for ep in episodes)
+        context['avg_views'] = context['total_views'] / episodes.count() if episodes else 0
+        context['most_popular'] = episodes[:5]
+        context['recent_views'] = episodes.order_by('-last_viewed')[:5]
+        
+        return context
 
 

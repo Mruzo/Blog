@@ -41,6 +41,8 @@ class Episode(models.Model):
     summary = models.TextField(blank=True, help_text="Summary and lead-in for the next episode")
     summary_camera_orbit = models.CharField(max_length=50, blank=True, help_text="Camera position for episode summary (e.g., '0deg 75deg 5m')")
     summary_field_of_view = models.FloatField(default=60.0, help_text="Field of view for episode summary in degrees")
+    view_count = models.PositiveIntegerField(default=0, help_text="Number of times this episode has been viewed")
+    last_viewed = models.DateTimeField(auto_now=True, help_text="Last time this episode was viewed")
 
     def __str__(self):
         return f"S{self.season.season_number} - E{self.episode_number}"
@@ -67,6 +69,11 @@ class Episode(models.Model):
     @property
     def is_public(self):
         return self.is_published
+    
+    def increment_view(self):
+        """Increment the view count for this episode"""
+        self.view_count += 1
+        self.save(update_fields=['view_count', 'last_viewed'])
 
 
 class Intersection(models.Model):

@@ -44,7 +44,7 @@
                 <div class="episodes-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.01rem; margin-left: 0.5rem;">
                     {% for episode in season.published_episodes %}
                     <div class="episode-item">
-                        <a href="{% url 'episode_detail' season_id=season.id pk=episode.id %}" 
+                        <a href="{% url 'immersivecomics:episode_detail' season_id=season.id pk=episode.id %}" 
                            style="color: #111e7f; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 500; transition: all 0.3s ease; font-size: 0.9rem;">
                             <span style="color: #f9a602; font-weight: bold;">E{{ episode.episode_number }}:</span>
                             {{ episode.title }}

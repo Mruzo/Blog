@@ -20,6 +20,7 @@ from .views import(
     register_view,
     verify_email,
     logout_request,
+    invalidlink_view,
 )
 from snmov.views import (
     article_create_view,
@@ -45,7 +46,7 @@ urlpatterns = [
     path('home-list/', home_list, name="homelist"),
     path('new-article/', article_create_view, name='article_create'),
     path('article/', include('snmov.urls')),
-    path('immersivecomics/', include('tilf.urls')),
+    path('immersivecomics/', include('tilf.urls', namespace='immersivecomics')),
     path('about/', about_page, name='about'),
     path('categories/', get_craft_categories, name='categories_list'),
     path('crafts/', craft_list, name='craft_list'),
@@ -59,6 +60,7 @@ urlpatterns = [
          name='login_req'),
     path('register/', register_view, name='register'),
     path('verify_email/<int:user_id>/<str:token>/', verify_email, name='verify_email'),
+    path('invalid-link/', invalidlink_view, name='invalid_link'),
     path('uno/', admin.site.urls),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     path('tinymce/', include('tinymce.urls')),
@@ -89,4 +91,6 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Only serve media files if MEDIA_URL is defined
+    if hasattr(settings, 'MEDIA_URL') and settings.MEDIA_URL:
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

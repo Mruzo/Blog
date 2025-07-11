@@ -14,16 +14,42 @@
     </div>
 </div>
 
-<!-- Edit Mode Toggle -->
-<div class="container mt-2 col-md-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <div class="btn-group" role="group">
-            <button type="button" id="previewModeBtn" class="btn btn-outline-primary active">Preview Mode</button>
-            <button type="button" id="editModeBtn" class="btn btn-outline-warning">Edit Mode</button>
-        </div>
-        <div id="editControls" style="display: none;">
-            <button id="saveBtn" class="btn btn-success btn-sm me-2">Save Changes</button>
-            <button id="resetBtn" class="btn btn-secondary btn-sm">Reset</button>
+<!-- Control Panel -->
+<div class="container mt-3 col-md-4">
+    <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+        <div class="card-body p-3">
+            <!-- Mode Toggle Row -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" id="previewModeBtn" class="btn btn-outline-primary active">
+                            <i class="fas fa-eye me-1"></i>Preview Mode
+                        </button>
+                        <button type="button" id="editModeBtn" class="btn btn-outline-warning">
+                            <i class="fas fa-edit me-1"></i>Edit Mode
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Edit Controls Row -->
+            <div id="editControls" class="row g-2" style="display: none;">
+                <div class="col-6">
+                    <button id="saveBtn" class="btn btn-success btn-sm w-100">
+                        <i class="fas fa-save me-1"></i>Save
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button id="resetBtn" class="btn btn-secondary btn-sm w-100">
+                        <i class="fas fa-undo me-1"></i>Reset
+                    </button>
+                </div>
+                <div class="col-12 mt-2">
+                    <a href="{% url 'immersivecomics:episode_analytics' %}" class="btn btn-outline-info btn-sm w-100">
+                        <i class="fas fa-chart-line me-1"></i>View Analytics
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -101,7 +127,7 @@
                 <!-- Next Episode Button (hidden by default) -->
                 {% if next_episode %}
                 <div id="next-episode-button" class="position-absolute bottom-0 end-0 m-3" style="display: none; z-index: 10;">
-                    <a href="{% url 'episode_preview' season_id=next_episode.season.id pk=next_episode.id %}" 
+                    <a href="{% url 'immersivecomics:episode_preview' season_id=next_episode.season.id pk=next_episode.id %}" 
                        class="btn btn-success shadow-lg" 
                        style="background: linear-gradient(45deg, #28a745, #20c997); border: none; border-radius: 8px; padding: 0.5rem 1rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; font-size: 0.875rem;">
                         <i class="fas fa-play me-1" style="font-size: 0.75rem;"></i>
@@ -137,7 +163,7 @@
             </div>
             <div class="col-auto">
                 <div class="col-auto d-flex justify-content-center align-items-center my-auto">
-                    <a href="{% url 'comic_list' %}" class="back-button mx-1 p-1" style="color: #f9a602; text-decoration: none; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 500; transition: all 0.3s ease;">
+                    <a href="{% url 'immersivecomics:comic_list' %}" class="back-button mx-1 p-1" style="color: #f9a602; text-decoration: none; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 500; transition: all 0.3s ease;">
                         <span>Back to Comics</span>
                 </a>
                 </div>
@@ -774,7 +800,7 @@
     window.episodeData = {
         summary: "{{ episode_summary|default:''|escapejs }}",
         hasNextEpisode: "{{ next_episode|yesno:'true,false' }}",
-        nextEpisodeUrl: "{% if next_episode %}{% url 'episode_preview' season_id=next_episode.season.id pk=next_episode.id %}{% endif %}",
+        nextEpisodeUrl: "{% if next_episode %}{% url 'immersivecomics:episode_preview' season_id=next_episode.season.id pk=next_episode.id %}{% endif %}",
         summaryCameraOrbit: "{{ summary_camera_orbit|default:''|escapejs }}",
         summaryFieldOfView: "{{ summary_field_of_view|default:60.0 }}"
     };

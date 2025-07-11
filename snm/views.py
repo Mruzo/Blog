@@ -79,36 +79,43 @@ def register_view(request):
         if form.is_valid():
             print("form is valid")
             
-            # Temporarily store user data in session or cache
-            user_data = form.cleaned_data
+            # Create the user but don't save yet
+            user = form.save(commit=False)
+            # Set user as inactive until email verification
+            user.is_active = False
+            # Save the user to get an ID
+            user.save()
             
-            # Generate the verification token
-            username = user_data.get('username')
-            email = user_data.get('email')
-            token = default_token_generator.make_token(user_data)  # Make token with user data
-            print(token)
+            # Generate the verification token for the actual user
+            token = default_token_generator.make_token(user)
+            print(f"Token for user {user.username}: {token}")
             
             # Get current site and build the full verification URL dynamically
             current_host = settings.ALLOWED_HOSTS[0]
             scheme = "https" if request.is_secure() else "http"
-            verification_link = reverse('verify_email', args=[user_data.get('username'), token])
+            verification_link = reverse('verify_email', args=[user.id, token])
             full_verification_url = f"{scheme}://{current_host}{verification_link}"
             
             # Send the email
             subject = "Verify Your Email"
             message = (
-                f"Hi {username},\n\n"
+                f"Hi {user.username},\n\n"
                 f"Thanks for signing up. Please verify your email address by clicking the link below:\n"
                 f"{full_verification_url}\n\n"
                 "Best regards,\nTeam Uzo"
             )
             from_email = settings.DEFAULT_FROM_EMAIL
-            to_email = email
+            to_email = user.email
 
-            send_mail(subject, message, from_email, [to_email])
-
-            # Show a success message
-            messages.success(request, "Registration successful. Please check your email to verify your account.")
+            try:
+                send_mail(subject, message, from_email, [to_email])
+                # Show a success message
+                messages.success(request, "Registration successful. Please check your email to verify your account.")
+            except Exception as e:
+                # If email fails, delete the user and show error
+                user.delete()
+                messages.error(request, "Registration failed. Please try again.")
+                print(f"Email sending failed: {e}")
 
             return redirect("homepage")
         else:
@@ -144,7 +151,7 @@ def verify_email(request, user_id, token):
             return redirect('homepage')  # Redirect to home or error page
     except get_user_model().DoesNotExist:
         messages.error(request, "User does not exist.")
-        return redirect('invalid_link')
+        return redirect('homepage')
 
 def invalidlink_view(request):
     return render(request, "invalid_link.html", {"message": "Invalid verification link"})
