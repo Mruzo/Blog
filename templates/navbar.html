@@ -28,13 +28,15 @@
         
         <!-- Message notification - can wrap to new line -->
         <div class="flex-grow-1 text-center" style="color: #f9a602; min-width: 0;">
-            <div class="fw-bold text-white px-2 py-1 rounded" id="message-container" style="background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px); border: 1px solid #f9a602; white-space: pre-line;">
-                {% if messages %}
+            {% if messages %}
+                <div class="fw-bold text-white px-2 py-1 rounded" id="message-container" style="background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px); border: 1px solid #f9a602; white-space: pre-line;">
                     {% for message in messages %}
                         {{ message }}
                     {% endfor %}
-                {% endif %}
-            </div>
+                </div>
+            {% else %}
+                <div id="message-container" style="display: none;"></div>
+            {% endif %}
         </div>
         
         <!-- Login/Logout - always on the right -->
@@ -62,42 +64,10 @@
 
 
 <script>
-  // TEMP: Cycle through all potential messages for preview
-  const demoMessages = [
-    "Please check your email\nto verify your account.",
-    "Account verified successfully!\nWelcome aboard!",
-    "Logged out successfully!",
-    "Invalid verification link.\nPlease try again.",
-    "Email verification failed.\nPlease contact support.",
-    "Registration successful!\nCheck your email.",
-    "Password reset email\nsent successfully.",
-    "Thanks for reaching out.\nWe'll get back to you soon!",
-    "Comment posted successfully!",
-    "Camera settings\nsaved successfully!"
-  ];
-  
-  let currentMessageIndex = 0;
-  const messageContainer = document.getElementById('message-container');
-  
-  function cycleMessages() {
-    if (messageContainer && demoMessages.length > 0) {
-      messageContainer.textContent = demoMessages[currentMessageIndex];
-      messageContainer.style.display = 'block';
-      
-      currentMessageIndex = (currentMessageIndex + 1) % demoMessages.length;
-    }
-  }
-  
-  // Show first message immediately
-  cycleMessages();
-  
-  // Cycle through messages every 3 seconds
-  setInterval(cycleMessages, 3000);
-  
-  // Original auto-hide functionality (disabled for demo)
-  // setTimeout(function() {
-  //     if (messageContainer) {
-  //         messageContainer.style.display = 'none';
-  //     }
-  // }, 5000);
+  setTimeout(function() {
+      let messageContainer = document.getElementById('message-container');
+      if (messageContainer) {
+          messageContainer.style.display = 'none';
+      }
+  }, 5000);
 </script>
