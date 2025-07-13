@@ -64,7 +64,8 @@ TINYMCE_DEFAULT_CONFIG = {
     'cleanup_on_startup': True,
     'custom_undo_redo_levels': 20,
     'selector': 'textarea',
-    'content_style': 'body {font-family: Cabin; }',
+    'content_style': 'body {font-family: Cabin; color: rgb(52, 73, 94);}',
+
     'theme': 'silver',
     'plugins': '''
             textcolor save link image media preview codesample contextmenu
