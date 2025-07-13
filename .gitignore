@@ -25,6 +25,8 @@ __pycache__/
 
 # System files
 Thumbs.db
+email_receive_diagnostic.py
+simple_email_diagnostic.py
 
 # Media and static files
 media/
