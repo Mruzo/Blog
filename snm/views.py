@@ -109,9 +109,9 @@ def register_view(request):
             to_email = user.email
 
             try:
-                send_mail(subject, message, from_email, [to_email])
-                # Show a success message
-                messages.success(request, "Registration successful. Please check your email to verify your account.")
+            send_mail(subject, message, from_email, [to_email])
+            # Show a success message
+            messages.success(request, "Registration successful. Please check your email to verify your account.")
             except Exception as e:
                 # If email fails, delete the user and show error
                 user.delete()
