@@ -665,43 +665,37 @@ button.neumorphic {
 	/* Remove container-type and aspect-ratio properties */
 	border: 0.5rem solid transparent;
 	border-radius: 0.5rem;
-	color: hsl(0 0% 10%);
+	color: #fff !important; /* White text for high contrast */
+	background: #111e7f !important; /* Deep blue for high contrast */
 	padding: 0px;
-	background: none;
-	
 	display: flex; /* Use flexbox instead of grid */
 	justify-content: center; /* Center content horizontally */
 	align-items: center; /* Center content vertically */
-	
-	/* Adjust shadow values */
 	--shadow: 
 	  -0.2rem -0.2rem 0.5rem rgba(255, 255, 255, 0.75),
 	  0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
 	box-shadow: var(--shadow);
 	outline: none;  
-	transition: all 0.1s;
-	
-	&:hover, &:focus-visible {
-	  color: #f9a602;
-	  transform: scale(1.0); /* Use transform for scaling */
-	}
-	&:active, &.active{
-	  box-shadow:
+	transition: all 0.1s, background 0.2s, color 0.2s;
+}
+button.neumorphic:hover, button.neumorphic:focus-visible {
+	color: #f9a602;
+	transform: scale(1.0); /* Use transform for scaling */
+}
+button.neumorphic:active, button.neumorphic.active{
+	box-shadow:
 		var(--shadow),
 		-0.1rem -0.1rem -0.5rem rgba(255, 255, 255, 0.75),
 	  0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
-	  color: #f9a602;
-	  > span { font-size: 1rem; font-weight: bold; text-underline-offset: 1px};
-	  
-	}
-  
-	> span {
-	  /* font-family: 'Cabin', sans-serif; */
-	  font-size: 0.8rem; /* Use 'px' instead of 'cqi' for font size */
-	  font-weight: bold;
-	  
-	}
-  }
+	background: #f9a602 !important;   /* Bright yellow for active */
+	color: #111e7f !important;        /* Deep blue text for contrast */
+	> span { font-size: 1rem; font-weight: bold; text-underline-offset: 1px};
+}
+
+button.neumorphic > span {
+	font-size: 0.8rem;
+	font-weight: bold;
+}
 
 
 /* Apply neumorphic styles to the link */
