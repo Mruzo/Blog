@@ -18,7 +18,7 @@
 	font-style: normal;
 	src: local('Cabin'), url('Cabin.ttf') format('truetype');
 	font-display: swap;
-}
+  }
 
 * {
     margin: 0;
@@ -679,23 +679,23 @@ button.neumorphic {
 	transition: all 0.1s, background 0.2s, color 0.2s;
 }
 button.neumorphic:hover, button.neumorphic:focus-visible {
-	color: #f9a602;
-	transform: scale(1.0); /* Use transform for scaling */
-}
+	  color: #f9a602;
+	  transform: scale(1.0); /* Use transform for scaling */
+	}
 button.neumorphic:active, button.neumorphic.active{
-	box-shadow:
+	  box-shadow:
 		var(--shadow),
 		-0.1rem -0.1rem -0.5rem rgba(255, 255, 255, 0.75),
 	  0.2rem 0.2rem 0.5rem rgba(0, 0, 0, 0.5);
 	background: #f9a602 !important;   /* Bright yellow for active */
 	color: #111e7f !important;        /* Deep blue text for contrast */
-	> span { font-size: 1rem; font-weight: bold; text-underline-offset: 1px};
-}
-
+	  > span { font-size: 1rem; font-weight: bold; text-underline-offset: 1px};
+	}
+  
 button.neumorphic > span {
 	font-size: 0.8rem;
-	font-weight: bold;
-}
+	  font-weight: bold;
+  }
 
 
 /* Apply neumorphic styles to the link */

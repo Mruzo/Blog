@@ -25,8 +25,8 @@ class ComicView(ListView):
         # Filter episodes to only show published ones
         for comic in context['comics']:
             for season in comic.seasons.all():
-                # Create a custom property to filter episodes
-                season.published_episodes = season.episodes.filter(is_published=True)
+                # Create a custom property to filter episodes and order by episode_number
+                season.published_episodes = season.episodes.filter(is_published=True).order_by('episode_number')
         return context
 
 
