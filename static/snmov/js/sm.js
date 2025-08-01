@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modelViewer.addEventListener('camera-change', () => {
         if (!isAnimating) {
-            updatePointerPosition();
+            updatePointer();
         }
     });
 
@@ -610,18 +610,32 @@ function initHomeSlider() {
     let currentSlide = 0;
     let slideInterval;
 
+    // Safety check - if no slides found, don't initialize slider
+    if (slides.length === 0) {
+        console.log('No slides found, skipping home slider initialization');
+        return;
+    }
+
     function goToSlide(index) {
-        slides[currentSlide].checked = false;
+        if (slides[currentSlide]) {
+            slides[currentSlide].checked = false;
+        }
         currentSlide = index;
-        slides[currentSlide].checked = true;
+        if (slides[currentSlide]) {
+            slides[currentSlide].checked = true;
+        }
     }
 
     function nextSlide() {
-        goToSlide((currentSlide + 1) % slides.length);
+        if (slides.length > 0) {
+            goToSlide((currentSlide + 1) % slides.length);
+        }
     }
 
     function prevSlide() {
-        goToSlide((currentSlide - 1 + slides.length) % slides.length);
+        if (slides.length > 0) {
+            goToSlide((currentSlide - 1 + slides.length) % slides.length);
+        }
     }
 
     // Handle arrow clicks
@@ -653,7 +667,9 @@ function initHomeSlider() {
     });
 
     function startAutoSlide() {
-        slideInterval = setInterval(nextSlide, 5000);
+        if (slides.length > 0) {
+            slideInterval = setInterval(nextSlide, 5000);
+        }
     }
 
     // Start auto-sliding

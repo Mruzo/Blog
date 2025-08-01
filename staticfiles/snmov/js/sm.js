@@ -85,8 +85,8 @@ window.loadContent = function(url, button = null) {
         return;
       }
       
-      // If this is the 3D comics page, strip header and footer
-      if (url.includes('/3dcomics/')) {
+      // If this is the immersive comics page, strip header and footer
+      if (url.includes('/immersivecomics/')) {
         // Create a temporary div to parse the HTML
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
@@ -209,11 +209,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize dialogues array from the dialogues container
     const dialogueElements = document.querySelectorAll('.dialogue');
     // console.log('Found dialogue elements:', dialogueElements.length);
-    dialogueElements.forEach(element => {
+    dialogueElements.forEach((element, index) => {
         try {
             const povData = JSON.parse(element.getAttribute('data-pov'));
-            dialogues.push(povData);
-            // console.log('Added dialogue:', povData);
+            // Ensure dialogue_id is included
+            const dialogueData = {
+                dialogue_id: povData.dialogue_id,
+                index: index,
+                character: povData.character,
+                text: povData.text,
+                camera_orbit: povData.camera_orbit,
+                camera_target: povData.camera_target,
+                field_of_view: povData.field_of_view || '45.0',
+                zoom_speed: povData.zoom_speed || 1.0,
+                head_x: povData.head_x || 0,
+                head_y: povData.head_y || 0,
+                head_z: povData.head_z || 0
+            };
+            dialogues.push(dialogueData);
+            // console.log('Added dialogue:', dialogueData);
         } catch (error) {
             // console.error('Error parsing dialogue data:', error);
         }
@@ -239,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modelViewer.addEventListener('camera-change', () => {
         if (!isAnimating) {
-            updatePointerPosition();
+            updatePointer();
         }
     });
 
@@ -345,25 +359,34 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update dialogue text
             const topDialogue = document.getElementById('top-dialogue');
             if (topDialogue) {
-                // Create a span for the character name to make it bold
-                const characterSpan = document.createElement('strong');
-                characterSpan.textContent = currentDialogue.character + ': ';
-                
-                // Clear the dialogue element and append the character span and text
-                topDialogue.innerHTML = '';
-                topDialogue.appendChild(characterSpan);
-                topDialogue.appendChild(document.createTextNode(currentDialogue.text));
+                topDialogue.innerHTML = `<strong>${currentDialogue.character}:</strong> ${currentDialogue.text}`;
             }
             
             // Animate camera position
             if (isModelReady) {
+                // console.log('=== CAMERA UPDATE DEBUG ===');
+                // console.log('Dialogue index:', index);
+                // console.log('Camera target before:', modelViewer.cameraTarget);
+                // console.log('Camera orbit before:', modelViewer.cameraOrbit);
+                // console.log('New camera target:', currentDialogue.camera_target);
+                // console.log('New camera orbit:', currentDialogue.camera_orbit);
+                // console.log('Field of view:', currentDialogue.field_of_view);
+                
                 // First set the target
                 modelViewer.cameraTarget = currentDialogue.camera_target;
+                // console.log('Camera target after setting:', modelViewer.cameraTarget);
                 
                 // Set field of view
                 modelViewer.fieldOfView = currentDialogue.field_of_view + "deg";
                 
                 // Use the animation system for smooth camera movement
+                // console.log('About to animate with orbit value:', currentDialogue.camera_orbit);
+                // console.log('Type of orbit value:', typeof currentDialogue.camera_orbit);
+                
+                // Try setting camera orbit directly first
+                modelViewer.cameraOrbit = currentDialogue.camera_orbit;
+                // console.log('Camera orbit after direct setting:', modelViewer.cameraOrbit);
+                
                 const animation = modelViewer.animate({
                     cameraOrbit: currentDialogue.camera_orbit
                 }, {
@@ -371,12 +394,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     easing: 'ease-in-out'
                 });
                 
+                // console.log('Animation started with orbit:', currentDialogue.camera_orbit);
+                
                 // Wait for animation to complete
                 animation.onfinish = () => {
                     // console.log('Camera animation complete');
                     if (!isUpdatingPointer) {
                         isUpdatingPointer = true;
-                        updatePointer();
+      updatePointer();
                     }
                 };
             }
@@ -386,7 +411,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const nextButton = document.getElementById('nextButton');
             if (prevButton && nextButton) {
                 prevButton.disabled = index === 0;
-                nextButton.disabled = index === dialogues.length - 1;
+                // Enable Next button on last dialogue if there's a summary available
+                const hasSummary = window.episodeData && window.episodeData.summary && window.episodeData.summary.trim() !== '';
+                nextButton.disabled = index === dialogues.length - 1 && !hasSummary;
+            }
+            
+            // Check if this is the last dialogue and show next episode button (but not summary yet)
+            if (index === dialogues.length - 1) {
+                // Show next episode button on last dialogue, but don't show summary yet
+                const nextEpisodeButton = document.getElementById('next-episode-button');
+                if (window.episodeData && window.episodeData.hasNextEpisode === 'true' && nextEpisodeButton) {
+                    nextEpisodeButton.style.display = 'block';
+                }
+                // Don't hide summary if we're currently showing it
+                if (!isShowingSummary) {
+                    hideEpisodeSummary();
+                }
+            } else {
+                hideEpisodeSummary();
             }
             
             // console.log('=== Finished showDialogue ===', new Date().getTime());
@@ -449,8 +491,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Find the hotspot using model-viewer's native syntax
         const hotspot = modelViewer.querySelector(`[slot="hotspot-${baseCharacterName}"]`);
-        
-        if (!hotspot) {
+      
+      if (!hotspot) {
             // console.log('No hotspot found for character:', baseCharacterName);
             const path = document.getElementById('pointer-path');
             if (path) {
@@ -460,9 +502,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
-        // Get positions
-        const bubbleRect = topBubble.getBoundingClientRect();
-        const hotspotRect = hotspot.getBoundingClientRect();
+      // Get positions
+      const bubbleRect = topBubble.getBoundingClientRect();
+      const hotspotRect = hotspot.getBoundingClientRect();
         const modelRect = modelViewer.getBoundingClientRect();
         
         // Calculate endpoints relative to model-viewer
@@ -470,8 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const bubbleBottomY = bubbleRect.bottom - modelRect.top;
         const hotspotCenterX = hotspotRect.left - modelRect.left + (hotspotRect.width / 2);
         const hotspotCenterY = hotspotRect.top - modelRect.top + (hotspotRect.height / 2);
-        
-        // Calculate line geometry
+      
+      // Calculate line geometry
         const dx = hotspotCenterX - bubbleCenterX;
         const dy = hotspotCenterY - bubbleBottomY;
         
@@ -511,26 +553,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set up navigation button handlers
     if (prevButton && nextButton) {
         prevButton.onclick = function() {
-            // console.log('Previous button clicked. Current index:', currentDialogueIndex);
-        if (currentDialogueIndex > 0) {
+            // console.log('SET 1 - Previous button clicked. Current index:', currentDialogueIndex);
+        if (isShowingSummary) {
+            // If showing summary, go back to last dialogue
+            isShowingSummary = false;
+            hideEpisodeSummary();
+            showDialogue(currentDialogueIndex); // Re-show the last dialogue
+        } else if (currentDialogueIndex > 0) {
             const newIndex = currentDialogueIndex - 1;
-                // console.log('Moving to previous dialogue, new index:', newIndex);
+                // console.log('SET 1 - Moving to previous dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
             showDialogue(newIndex);
         } else {
-                // console.log('Already at first dialogue');
+                // console.log('SET 1 - Already at first dialogue');
         }
         };
 
         nextButton.onclick = function() {
-            // console.log('Next button clicked. Current index:', currentDialogueIndex);
+            // console.log('SET 1 - Next button clicked. Current index:', currentDialogueIndex);
         if (currentDialogueIndex < dialogues.length - 1) {
             const newIndex = currentDialogueIndex + 1;
-                // console.log('Moving to next dialogue, new index:', newIndex);
+                // console.log('SET 1 - Moving to next dialogue, new index:', newIndex);
                 loadDialogue(newIndex);
             showDialogue(newIndex);
         } else {
-                // console.log('Already at last dialogue');
+                // console.log('SET 1 - At last dialogue - showing episode summary');
+                isShowingSummary = true;
+                showEpisodeSummary();
             }
         };
         }
@@ -561,18 +610,32 @@ function initHomeSlider() {
     let currentSlide = 0;
     let slideInterval;
 
+    // Safety check - if no slides found, don't initialize slider
+    if (slides.length === 0) {
+        console.log('No slides found, skipping home slider initialization');
+        return;
+    }
+
     function goToSlide(index) {
-        slides[currentSlide].checked = false;
+        if (slides[currentSlide]) {
+            slides[currentSlide].checked = false;
+        }
         currentSlide = index;
-        slides[currentSlide].checked = true;
+        if (slides[currentSlide]) {
+            slides[currentSlide].checked = true;
+        }
     }
 
     function nextSlide() {
-        goToSlide((currentSlide + 1) % slides.length);
+        if (slides.length > 0) {
+            goToSlide((currentSlide + 1) % slides.length);
+        }
     }
 
     function prevSlide() {
-        goToSlide((currentSlide - 1 + slides.length) % slides.length);
+        if (slides.length > 0) {
+            goToSlide((currentSlide - 1 + slides.length) % slides.length);
+        }
     }
 
     // Handle arrow clicks
@@ -604,7 +667,9 @@ function initHomeSlider() {
     });
 
     function startAutoSlide() {
-        slideInterval = setInterval(nextSlide, 5000);
+        if (slides.length > 0) {
+            slideInterval = setInterval(nextSlide, 5000);
+        }
     }
 
     // Start auto-sliding
@@ -653,11 +718,16 @@ window.startEpisode = function() {
         loadDialogue(0);
         showDialogue(0);
         
-        // Set up navigation button handlers
+        // Set up navigation button handlers (SET 2 - handles actual button clicks)
         if (elements.prevButton && elements.nextButton) {
             elements.prevButton.onclick = function() {
-                // console.log('Previous button clicked. Current index:', currentDialogueIndex);
-                if (currentDialogueIndex > 0) {
+                // console.log('Button clicked - Previous. Current index:', currentDialogueIndex);
+                if (isShowingSummary) {
+                    // If showing summary, go back to last dialogue
+                    isShowingSummary = false;
+                    hideEpisodeSummary();
+                    showDialogue(currentDialogueIndex); // Re-show the last dialogue
+                } else if (currentDialogueIndex > 0) {
                     const newIndex = currentDialogueIndex - 1;
                     // console.log('Moving to previous dialogue, new index:', newIndex);
                     loadDialogue(newIndex);
@@ -668,14 +738,16 @@ window.startEpisode = function() {
             };
             
             elements.nextButton.onclick = function() {
-                // console.log('Next button clicked. Current index:', currentDialogueIndex);
+                // console.log('Button clicked - Next. Current index:', currentDialogueIndex);
                 if (currentDialogueIndex < totalDialogues - 1) {
                     const newIndex = currentDialogueIndex + 1;
                     // console.log('Moving to next dialogue, new index:', newIndex);
                     loadDialogue(newIndex);
                     showDialogue(newIndex);
                 } else {
-                    // console.log('Already at last dialogue');
+                    // console.log('At last dialogue - showing episode summary');
+                    isShowingSummary = true;
+                    showEpisodeSummary();
                 }
             };
         }
@@ -692,19 +764,499 @@ function loadDialogue(index) {
     try {
         const povData = JSON.parse(dialogueElement.getAttribute('data-pov'));
         dialogues[index] = {
+            dialogue_id: povData.dialogue_id, // Include dialogue_id for saving
             index: index,
             character: povData.character,
             text: povData.text,
             camera_orbit: povData.camera_orbit,
             camera_target: povData.camera_target,
             field_of_view: povData.field_of_view || '45.0',
+            zoom_speed: povData.zoom_speed || 1.0, // Include zoom_speed
             head_x: povData.head_x || 0,
             head_y: povData.head_y || 0,
             head_z: povData.head_z || 0
         };
         // console.log(`Loaded dialogue ${index}:`, dialogues[index]);
+        // console.log(`Camera orbit value for dialogue ${index}:`, povData.camera_orbit);
     } catch (error) {
         // console.error('Error parsing POV data for dialogue', index, ':', error);
     }
 }
+
+// ================ EDITING FUNCTIONALITY ================
+let isEditMode = false;
+let currentEditingDialogue = null;
+let originalValues = {};
+let isShowingSummary = false;
+
+// Initialize editing functionality
+document.addEventListener('DOMContentLoaded', () => {
+    initializeEditingControls();
+});
+
+function initializeEditingControls() {
+    const previewModeBtn = document.getElementById('previewModeBtn');
+    const editModeBtn = document.getElementById('editModeBtn');
+    const editControls = document.getElementById('editControls');
+    const editingOverlay = document.getElementById('editingOverlay');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    if (!previewModeBtn || !editModeBtn) return; // Not on preview page
+
+    // Mode toggle functionality
+    previewModeBtn.addEventListener('click', () => {
+        setEditMode(false);
+    });
+
+    editModeBtn.addEventListener('click', () => {
+        setEditMode(true);
+    });
+
+    // Save and reset functionality
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveCameraChanges);
+    }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetCameraChanges);
+    }
+
+    // Initialize sliders
+    initializeSliders();
+}
+
+function setEditMode(enabled) {
+    isEditMode = enabled;
+    const previewModeBtn = document.getElementById('previewModeBtn');
+    const editModeBtn = document.getElementById('editModeBtn');
+    const editControls = document.getElementById('editControls');
+    const editingOverlay = document.getElementById('editingOverlay');
+
+    if (enabled) {
+        previewModeBtn.classList.remove('active');
+        editModeBtn.classList.add('active');
+        editControls.style.display = 'block';
+        editingOverlay.style.display = 'block';
+        loadCurrentDialogueValues();
+    } else {
+        previewModeBtn.classList.add('active');
+        editModeBtn.classList.remove('active');
+        editControls.style.display = 'none';
+        editingOverlay.style.display = 'none';
+    }
+}
+
+function initializeSliders() {
+    // Camera Orbit Sliders
+    const orbitAzimuth = document.getElementById('orbitAzimuth');
+    const orbitPolar = document.getElementById('orbitPolar');
+    const orbitRadius = document.getElementById('orbitRadius');
+    
+    // Camera Target Sliders
+    const targetX = document.getElementById('targetX');
+    const targetY = document.getElementById('targetY');
+    const targetZ = document.getElementById('targetZ');
+    
+    // Camera Settings Sliders
+    const fieldOfView = document.getElementById('fieldOfView');
+    const zoomSpeed = document.getElementById('zoomSpeed');
+
+    // Add event listeners for real-time updates
+    [orbitAzimuth, orbitPolar, orbitRadius, targetX, targetY, targetZ, fieldOfView, zoomSpeed].forEach(slider => {
+        if (slider) {
+            slider.addEventListener('input', updateCameraInRealTime);
+        }
+    });
+}
+
+function loadCurrentDialogueValues() {
+    if (currentDialogueIndex >= 0 && currentDialogueIndex < dialogues.length) {
+        // Get a fresh reference to the current dialogue from the main array
+        const dialogueFromArray = dialogues[currentDialogueIndex];
+        
+        // Create a new object to avoid reference issues
+        currentEditingDialogue = {
+            dialogue_id: dialogueFromArray.dialogue_id,
+            index: dialogueFromArray.index,
+            character: dialogueFromArray.character,
+            text: dialogueFromArray.text,
+            camera_orbit: dialogueFromArray.camera_orbit,
+            camera_target: dialogueFromArray.camera_target,
+            field_of_view: dialogueFromArray.field_of_view,
+            zoom_speed: dialogueFromArray.zoom_speed,
+            head_x: dialogueFromArray.head_x,
+            head_y: dialogueFromArray.head_y,
+            head_z: dialogueFromArray.head_z
+        };
+        
+        // Parse camera orbit
+        const orbitMatch = currentEditingDialogue.camera_orbit.match(/(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)m/);
+        if (orbitMatch) {
+            const azimuth = parseFloat(orbitMatch[1]);
+            const polar = parseFloat(orbitMatch[2]);
+            const radius = parseFloat(orbitMatch[3]);
+            
+            setSliderValue('orbitAzimuth', azimuth, -180, 180);
+            setSliderValue('orbitPolar', polar, 0, 180);
+            setSliderValue('orbitRadius', radius, 1, 10);
+        }
+        
+        // Parse camera target
+        const targetMatch = currentEditingDialogue.camera_target.match(/(-?\d+(?:\.\d+)?)m\s+(-?\d+(?:\.\d+)?)m\s+(-?\d+(?:\.\d+)?)m/);
+        if (targetMatch) {
+            const x = parseFloat(targetMatch[1]);
+            const y = parseFloat(targetMatch[2]);
+            const z = parseFloat(targetMatch[3]);
+            
+            setSliderValue('targetX', x, -5, 5);
+            setSliderValue('targetY', y, 0, 3);
+            setSliderValue('targetZ', z, -5, 5);
+        }
+        
+        // Set other values
+        setSliderValue('fieldOfView', currentEditingDialogue.field_of_view, 10, 90);
+        setSliderValue('zoomSpeed', currentEditingDialogue.zoom_speed, 0.1, 3);
+        
+        // Store original values for reset
+        originalValues = {
+            camera_orbit: currentEditingDialogue.camera_orbit,
+            camera_target: currentEditingDialogue.camera_target,
+            field_of_view: currentEditingDialogue.field_of_view,
+            zoom_speed: currentEditingDialogue.zoom_speed
+        };
+        
+        updateCurrentValuesDisplay();
+    }
+}
+
+function setSliderValue(sliderId, value, min, max) {
+    const slider = document.getElementById(sliderId);
+    const valueDisplay = document.getElementById(sliderId + 'Value');
+    
+    if (slider) {
+        // Set min/max first, then value to avoid clamping
+        slider.min = min;
+        slider.max = max;
+        slider.value = value;
+    }
+    
+    if (valueDisplay) {
+        if (sliderId.includes('Azimuth') || sliderId.includes('Polar') || sliderId.includes('FOV')) {
+            valueDisplay.textContent = value + '°';
+        } else if (sliderId.includes('Radius') || sliderId.includes('target')) {
+            valueDisplay.textContent = value + 'm';
+        } else if (sliderId.includes('Speed')) {
+            valueDisplay.textContent = value + 'x';
+        }
+    }
+}
+
+function updateCameraInRealTime() {
+    if (!isEditMode || !currentEditingDialogue) return;
+    
+    // Get current slider values
+    const azimuth = parseFloat(document.getElementById('orbitAzimuth').value);
+    const polar = parseFloat(document.getElementById('orbitPolar').value);
+    const radius = parseFloat(document.getElementById('orbitRadius').value);
+    
+    const targetX = parseFloat(document.getElementById('targetX').value);
+    const targetY = parseFloat(document.getElementById('targetY').value);
+    const targetZ = parseFloat(document.getElementById('targetZ').value);
+    
+    const fieldOfView = parseFloat(document.getElementById('fieldOfView').value);
+    const zoomSpeed = parseFloat(document.getElementById('zoomSpeed').value);
+    
+    // Update dialogue object
+    currentEditingDialogue.camera_orbit = `${azimuth}deg ${polar}deg ${radius}m`;
+    currentEditingDialogue.camera_target = `${targetX}m ${targetY}m ${targetZ}m`;
+    currentEditingDialogue.field_of_view = fieldOfView;
+    currentEditingDialogue.zoom_speed = zoomSpeed;
+    
+
+    
+    // Update model-viewer in real-time
+    const modelViewer = document.querySelector('model-viewer');
+    if (modelViewer && isModelReady) {
+        modelViewer.cameraTarget = currentEditingDialogue.camera_target;
+        modelViewer.cameraOrbit = currentEditingDialogue.camera_orbit;
+        modelViewer.fieldOfView = currentEditingDialogue.field_of_view + "deg";
+    }
+    
+    // Update display values
+    updateCurrentValuesDisplay();
+}
+
+function updateCurrentValuesDisplay() {
+    if (!currentEditingDialogue) return;
+    
+    const currentOrbit = document.getElementById('currentOrbit');
+    const currentTarget = document.getElementById('currentTarget');
+    const currentFOV = document.getElementById('currentFOV');
+    const currentZoom = document.getElementById('currentZoom');
+    
+    if (currentOrbit) currentOrbit.textContent = currentEditingDialogue.camera_orbit;
+    if (currentTarget) currentTarget.textContent = currentEditingDialogue.camera_target;
+    if (currentFOV) currentFOV.textContent = currentEditingDialogue.field_of_view + '°';
+    if (currentZoom) currentZoom.textContent = currentEditingDialogue.zoom_speed;
+}
+
+function saveCameraChanges() {
+    if (!currentEditingDialogue) {
+        console.error('No currentEditingDialogue found');
+        return;
+    }
+    
+    if (!currentEditingDialogue.dialogue_id) {
+        console.error('No dialogue_id found in currentEditingDialogue:', currentEditingDialogue);
+        return;
+    }
+    
+    const saveBtn = document.getElementById('saveBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    
+    // Get current slider values to ensure we save the latest state
+    const azimuth = parseFloat(document.getElementById('orbitAzimuth').value);
+    const polar = parseFloat(document.getElementById('orbitPolar').value);
+    const radius = parseFloat(document.getElementById('orbitRadius').value);
+    
+    const targetX = parseFloat(document.getElementById('targetX').value);
+    const targetY = parseFloat(document.getElementById('targetY').value);
+    const targetZ = parseFloat(document.getElementById('targetZ').value);
+    
+    const fieldOfView = parseFloat(document.getElementById('fieldOfView').value);
+    const zoomSpeed = parseFloat(document.getElementById('zoomSpeed').value);
+    
+    // Prepare data for API with current slider values
+    const data = {
+        camera_orbit: `${azimuth}deg ${polar}deg ${radius}m`,
+        camera_target: `${targetX}m ${targetY}m ${targetZ}m`,
+        field_of_view: fieldOfView,
+        zoom_speed: zoomSpeed
+    };
+    
+    console.log('Saving dialogue_id:', currentEditingDialogue.dialogue_id);
+    console.log('Saving data:', data);
+    
+    // Send AJAX request
+    fetch(`/immersivecomics/api/dialogue/${currentEditingDialogue.dialogue_id}/update-camera/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showSaveMessage('success', 'Camera changes saved successfully!');
+            
+            // Update all state sources consistently
+            originalValues = { ...data };
+            
+            // Update currentEditingDialogue
+            currentEditingDialogue.camera_orbit = data.camera_orbit;
+            currentEditingDialogue.camera_target = data.camera_target;
+            currentEditingDialogue.field_of_view = data.field_of_view;
+            currentEditingDialogue.zoom_speed = data.zoom_speed;
+            
+            // Update dialogues array
+            if (currentDialogueIndex >= 0 && currentDialogueIndex < dialogues.length) {
+                dialogues[currentDialogueIndex].camera_orbit = data.camera_orbit;
+                dialogues[currentDialogueIndex].camera_target = data.camera_target;
+                dialogues[currentDialogueIndex].field_of_view = data.field_of_view;
+                dialogues[currentDialogueIndex].zoom_speed = data.zoom_speed;
+            }
+            
+            // Update display to reflect saved state
+            updateCurrentValuesDisplay();
+        } else {
+            showSaveMessage('error', 'Error saving changes: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving camera changes:', error);
+        showSaveMessage('error', 'Network error while saving changes');
+    })
+    .finally(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
+    });
+}
+
+function resetCameraChanges() {
+    if (!currentEditingDialogue || !originalValues) return;
+    
+    // Restore original values
+    currentEditingDialogue.camera_orbit = originalValues.camera_orbit;
+    currentEditingDialogue.camera_target = originalValues.camera_target;
+    currentEditingDialogue.field_of_view = originalValues.field_of_view;
+    currentEditingDialogue.zoom_speed = originalValues.zoom_speed;
+    
+    // Reload slider values
+    loadCurrentDialogueValues();
+    
+    // Update model-viewer
+    const modelViewer = document.querySelector('model-viewer');
+    if (modelViewer && isModelReady) {
+        modelViewer.cameraTarget = currentEditingDialogue.camera_target;
+        modelViewer.cameraOrbit = currentEditingDialogue.camera_orbit;
+        modelViewer.fieldOfView = currentEditingDialogue.field_of_view + "deg";
+    }
+    
+    showSaveMessage('info', 'Camera changes reset to original values');
+}
+
+function showSaveMessage(type, message) {
+    // Create temporary message display
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.top = '20px';
+    messageDiv.style.right = '20px';
+    messageDiv.style.zIndex = '9999';
+    messageDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(messageDiv);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.remove();
+        }
+    }, 3000);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showEpisodeSummary() {
+    const topDialogue = document.getElementById('top-dialogue');
+    const nextEpisodeButton = document.getElementById('next-episode-button');
+    const summaryOverlay = document.getElementById('summary-overlay');
+    const modelViewer = document.querySelector('model-viewer');
+    const nextButton = document.getElementById('nextButton');
+    
+    // Disable Next button when showing summary
+    if (nextButton) {
+        nextButton.disabled = true;
+    }
+    
+    // Show dimming overlay
+    if (summaryOverlay) {
+        summaryOverlay.style.display = 'block';
+    }
+    
+    // Show episode summary in dialogue bubble if available
+    if (window.episodeData && window.episodeData.summary && window.episodeData.summary.trim() !== '') {
+        if (topDialogue) {
+            topDialogue.innerHTML = window.episodeData.summary;
+        }
+    }
+    
+    // Move camera to summary position if available
+    if (modelViewer && isModelReady && window.episodeData) {
+        let cameraOrbit = window.episodeData.summaryCameraOrbit;
+        let fieldOfView = window.episodeData.summaryFieldOfView;
+        
+        // If no summary camera orbit is set, use a default wide shot
+        if (!cameraOrbit || cameraOrbit.trim() === '') {
+            cameraOrbit = '0deg 75deg 5m'; // Default wide shot
+        }
+        
+        // If no summary field of view is set, use default
+        if (!fieldOfView || fieldOfView === '') {
+            fieldOfView = 60.0;
+        }
+        
+        // Parse field of view properly
+        const fovValue = parseFloat(fieldOfView);
+        if (isNaN(fovValue)) {
+            fieldOfView = 60.0;
+        } else {
+            fieldOfView = fovValue;
+        }
+        
+        // Animate to summary camera position
+        const animation = modelViewer.animate({
+            cameraOrbit: cameraOrbit
+        }, {
+            duration: 1000,  // 1 second animation
+            easing: 'ease-in-out'
+        });
+        
+        // Set field of view
+        modelViewer.fieldOfView = fieldOfView + "deg";
+    }
+    
+    // Show next episode button if available
+    if (window.episodeData && window.episodeData.hasNextEpisode === 'true' && nextEpisodeButton) {
+        nextEpisodeButton.style.display = 'block';
+    }
+}
+
+function hideEpisodeSummary() {
+    const nextEpisodeButton = document.getElementById('next-episode-button');
+    const summaryOverlay = document.getElementById('summary-overlay');
+    const topDialogue = document.getElementById('top-dialogue');
+    const nextButton = document.getElementById('nextButton');
+    
+    // Reset summary flag
+    isShowingSummary = false;
+    
+    // Re-enable Next button if we're on the last dialogue and there's a summary
+    if (nextButton && currentDialogueIndex === dialogues.length - 1) {
+        const hasSummary = window.episodeData && window.episodeData.summary && window.episodeData.summary.trim() !== '';
+        nextButton.disabled = !hasSummary;
+    }
+    
+    // Hide dimming overlay
+    if (summaryOverlay) {
+        summaryOverlay.style.display = 'none';
+    }
+    
+    // Hide next episode button
+    if (nextEpisodeButton) {
+        nextEpisodeButton.style.display = 'none';
+    }
+    
+    // Clear episode summary from dialogue bubble
+    if (topDialogue && window.episodeData && window.episodeData.summary) {
+        // Restore the last dialogue text if we're not at the end
+        if (currentDialogueIndex < dialogues.length - 1) {
+            showDialogue(currentDialogueIndex);
+        }
+    }
+}
+
+// Override the existing showDialogue function to support editing mode
+const originalShowDialogue = window.showDialogue || function(){};
+window.showDialogue = function(index) {
+    // Call original function
+    if (typeof originalShowDialogue === 'function') {
+        originalShowDialogue(index);
+    }
+    
+    // Update editing controls if in edit mode
+    if (isEditMode) {
+        loadCurrentDialogueValues();
+    }
+};
 
