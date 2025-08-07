@@ -249,6 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
     modelViewer.addEventListener('load', () => {
         // console.log('Model loaded');
         isModelReady = true;
+        
+        // Initialize animations if available
+        initializeAnimations();
     });
 
     modelViewer.addEventListener('camera-change', () => {
@@ -269,7 +272,167 @@ document.addEventListener('DOMContentLoaded', () => {
             // Don't show first dialogue here - that's handled by startEpisode
         }
     });
+    
+    // Animation event listeners
+    modelViewer.addEventListener('animation-start', (event) => {
+        // console.log('Animation started:', event.detail.animationName);
+    });
+    
+    modelViewer.addEventListener('animation-end', (event) => {
+        // console.log('Animation ended:', event.detail.animationName);
+    });
+    
+    // Initialize episode data from window object
+    if (window.episodeData) {
+        // console.log('Episode data loaded:', window.episodeData);
+    }
+    
+    // Global start episode function
+    window.startEpisode = function() {
+        // Hide overlay
+        const overlayContainer = document.getElementById('overlay-container');
+        if (overlayContainer) {
+            overlayContainer.style.display = 'none';
+        }
+        
+        // Show navigation
+        const navigation = document.querySelector('.comic-navigation');
+        if (navigation) {
+            navigation.style.display = 'block';
+        }
+        
+        // Show dialogues container
+        const dialoguesContainer = document.querySelector('.dialogues-container');
+        if (dialoguesContainer) {
+            dialoguesContainer.style.display = 'block';
+        }
+        
+        // Get first dialogue
+        const dialogues = document.querySelectorAll('.dialogue');
+        if (dialogues && dialogues.length > 0) {
+            const firstDialogue = dialogues[0];
+            const povData = JSON.parse(firstDialogue.getAttribute('data-pov'));
+            
+            // Update dialogue text
+            const dialogueText = document.getElementById('top-dialogue');
+            if (dialogueText) {
+                dialogueText.innerHTML = `<strong>${povData.character}:</strong> ${povData.text}`;
+            }
+            
+            // Animate camera
+            const modelViewer = document.querySelector('model-viewer');
+            if (modelViewer) {
+                modelViewer.cameraTarget = povData.camera_target;
+                modelViewer.cameraOrbit = povData.camera_orbit;
+                modelViewer.fieldOfView = povData.field_of_view + "deg";
+            }
+        }
+    };
+    
+    // Set up start button event listener
+    const episodeStartButton = document.getElementById('startButton');
+    if (episodeStartButton) {
+        episodeStartButton.addEventListener('click', window.startEpisode);
+    }
 
+    function initializeAnimations() {
+        // console.log('Initializing animations...');
+        
+        // Get available animations
+        const animations = modelViewer.availableAnimations;
+        // console.log('Available animations:', animations);
+        
+        if (animations && animations.length > 0) {
+            // Create animation controls only on preview page
+            const isPreviewPage = document.getElementById('previewModeBtn');
+            if (isPreviewPage) {
+                createAnimationControls(animations);
+            }
+            
+            // Start first animation by default (both pages)
+            modelViewer.play({ animationName: animations[0] });
+        }
+    }
+    
+    function createAnimationControls(animations) {
+        // Remove existing animation controls
+        const existingControls = document.getElementById('animation-controls');
+        if (existingControls) {
+            existingControls.remove();
+        }
+        
+        // Create animation control panel
+        const controlsDiv = document.createElement('div');
+        controlsDiv.id = 'animation-controls';
+        controlsDiv.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            color: white;
+            font-size: 12px;
+        `;
+        
+        // Add animation selector
+        const select = document.createElement('select');
+        select.style.cssText = 'margin-right: 10px; padding: 2px;';
+        select.addEventListener('change', (e) => {
+            if (e.target.value) {
+                modelViewer.play({ animationName: e.target.value });
+            }
+        });
+        
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select Animation';
+        select.appendChild(defaultOption);
+        
+        // Add animation options
+        animations.forEach(animation => {
+            const option = document.createElement('option');
+            option.value = animation;
+            option.textContent = animation;
+            select.appendChild(option);
+        });
+        
+        // Add play/pause button
+        const playButton = document.createElement('button');
+        playButton.textContent = 'Play';
+        playButton.style.cssText = 'margin-right: 5px; padding: 2px 8px;';
+        playButton.addEventListener('click', () => {
+            if (modelViewer.paused) {
+                modelViewer.play();
+                playButton.textContent = 'Pause';
+            } else {
+                modelViewer.pause();
+                playButton.textContent = 'Play';
+            }
+        });
+        
+        // Add loop toggle
+        const loopButton = document.createElement('button');
+        loopButton.textContent = 'Loop: Off';
+        loopButton.style.cssText = 'padding: 2px 8px;';
+        loopButton.addEventListener('click', () => {
+            modelViewer.loop = !modelViewer.loop;
+            loopButton.textContent = `Loop: ${modelViewer.loop ? 'On' : 'Off'}`;
+        });
+        
+        controlsDiv.appendChild(select);
+        controlsDiv.appendChild(playButton);
+        controlsDiv.appendChild(loopButton);
+        
+        // Add to model viewer container
+        const container = modelViewer.closest('.model-container');
+        if (container) {
+            container.appendChild(controlsDiv);
+        }
+    }
+    
     function createHotspots() {
         // console.log('Creating hotspots...');
         

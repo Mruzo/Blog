@@ -100,21 +100,25 @@
             </div>
 
             {% if model_gltf %}
-            <model-viewer
-                id="model-viewer"
-                src="{{ model_gltf }}"
-                alt="3D Scene"
-                style="width: 100%; height: 100%;"
-                shadow-intensity="1"
-                exposure="1"
-                interaction-prompt="none"
-                interpolation-decay="200"
-                interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
-                min-camera-orbit="auto auto 1m"
-                max-camera-orbit="auto auto 30m"
-                min-field-of-view="10deg"
-                max-field-of-view="90deg"
-                camera-controls>
+                    <model-viewer
+            id="model-viewer"
+            src="{{ model_gltf }}"
+            alt="3D Scene"
+            style="width: 100%; height: 100%;"
+            shadow-intensity="1"
+            exposure="1"
+            interaction-prompt="none"
+            interpolation-decay="200"
+            interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
+            min-camera-orbit="auto auto 1m"
+            max-camera-orbit="auto auto 30m"
+            min-field-of-view="10deg"
+            max-field-of-view="90deg"
+            animation-name=""
+            animation-crossfade-duration="0.5"
+            auto-rotate-delay="0"
+            camera-orbit="0deg 75deg 3m"
+            camera-controls>
 
                 <!-- Fixed Top Bubble -->
                 <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 10;">
@@ -806,39 +810,7 @@
 </script>
 
 {% block extra_js %}
-<script>
-    document.getElementById('startButton').addEventListener('click', function() {
-        // Hide overlay
-        document.getElementById('overlay-container').style.display = 'none';
-        
-        // Show navigation
-        document.querySelector('.comic-navigation').style.display = 'block';
-        
-        // Show dialogues container
-        document.querySelector('.dialogues-container').style.display = 'block';
-        
-        // Get first dialogue
-        const dialogues = document.querySelectorAll('.dialogue');
-        if (dialogues && dialogues.length > 0) {
-            const firstDialogue = dialogues[0];
-            const povData = JSON.parse(firstDialogue.getAttribute('data-pov'));
-            
-            // Update dialogue text
-            const dialogueText = document.getElementById('top-dialogue');
-            if (dialogueText) {
-                dialogueText.innerHTML = `<strong>${povData.character}:</strong> ${povData.text}`;
-            }
-            
-            // Animate camera
-            const modelViewer = document.querySelector('model-viewer');
-            if (modelViewer) {
-                modelViewer.cameraTarget = povData.camera_target;
-                modelViewer.cameraOrbit = povData.camera_orbit;
-                modelViewer.fieldOfView = povData.field_of_view + "deg";
-            }
-        }
-    });
-</script>
+<!-- Start button event listener is handled in sm.js -->
 {% endblock %}
 
 {% endblock %} 

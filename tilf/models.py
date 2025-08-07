@@ -49,9 +49,9 @@ class Episode(models.Model):
 
     def generate_meta_tags(self):
         meta_tags = {
-            'title': self.season.comic.title,
-            'description': self.season.comic.description,
-            'image': self.season.comic.comic_image.url if self.season.comic.comic_image else None,
+            'title': f"{self.season.comic.title} - Episode {self.episode_number}",
+            'description': self.description or self.season.comic.description,
+            'image': self.cover_image.url if self.cover_image else (self.season.comic.comic_image.url if self.season.comic.comic_image else None),
             'url': self.get_absolute_url()
         }
         return render_to_string('meta_tags.html', {'meta_tags': meta_tags})
@@ -326,3 +326,27 @@ class ComicComment(models.Model):
     def approve(self):
         self.approved_comment = True
         self.save()
+
+class TrafficSource(models.Model):
+    """Track where traffic is coming from"""
+    SOURCE_CHOICES = [
+        ('direct', 'Direct'),
+        ('google', 'Google Search'),
+        ('social', 'Social Media'),
+        ('referral', 'Referral'),
+        ('email', 'Email'),
+        ('other', 'Other'),
+    ]
+    
+    episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='traffic_sources')
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES)
+    referrer = models.URLField(blank=True, null=True)
+    user_agent = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"{self.episode.title} - {self.source} - {self.timestamp}"

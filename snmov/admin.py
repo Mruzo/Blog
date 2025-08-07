@@ -48,11 +48,20 @@ class CraftsImageAdmin(admin.ModelAdmin):
 
 
 class ReachOutAdmin(admin.ModelAdmin):
-    list_display = ('created_at', 'full_name','email', 'subject') 
-
-
-class ReachOutAdmin(admin.ModelAdmin):
-    list_display = ('created_at', 'full_name','email', 'subject') 
+    list_display = ('created_at', 'full_name','email', 'subject', 'is_verified')
+    list_filter = ('is_verified', 'created_at')
+    search_fields = ('full_name', 'email', 'subject', 'content')
+    readonly_fields = ('created_at', 'is_verified', 'verification_token')
+    ordering = ('-created_at',)
+    
+    actions = ['delete_selected_contacts']
+    
+    def delete_selected_contacts(self, request, queryset):
+        """Delete selected contact form submissions"""
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f"Successfully deleted {count} contact form submissions.")
+    delete_selected_contacts.short_description = "Delete selected contact submissions" 
 
 
 class CommentAdmin(admin.ModelAdmin):
@@ -79,9 +88,11 @@ class CustomAdmin(UserAdmin):
         'date_joined',
     ]
 
-    # custom action to mark multiple user as active
+    # custom actions
     actions = [
         'activate_users',
+        'export_user_data_gdpr',
+        'delete_user_data_gdpr',
     ]
 
     def activate_users(self, request, queryset):
@@ -89,15 +100,85 @@ class CustomAdmin(UserAdmin):
         self.message_user(request, 'Activated {} user.'.format(cnt))
     activate_users.short_description = 'Activate Users'
 
+    def export_user_data_gdpr(self, request, queryset):
+        """Export user data in compliance with GDPR right to access"""
+        from django.http import JsonResponse
+        from django.shortcuts import render
+        
+        if len(queryset) != 1:
+            self.message_user(request, 'Please select exactly one user to export data for.')
+            return
+        
+        user = queryset.first()
+        
+        # Collect all user data
+        from snmov.models import Comment, ReachOut
+        user_data = {
+            'user_info': {
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'date_joined': user.date_joined.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'is_active': user.is_active,
+                'is_staff': user.is_staff,
+            },
+            'comments': list(Comment.objects.filter(user_name=user).values(
+                'comment_cont', 'comment_date', 'comment_post__title'
+            )),
+            'contact_submissions': list(ReachOut.objects.filter(email=user.email).values(
+                'full_name', 'subject', 'content', 'created_at', 'is_verified'
+            )),
+        }
+        
+        # Create a simple HTML view to display the data
+        context = {
+            'user_data': user_data,
+            'user': user,
+            'title': f'User Data Export - {user.username}'
+        }
+        
+        return render(request, 'admin/user_data_export.html', context)
+    export_user_data_gdpr.short_description = 'Export User Data (GDPR)'
+
+    def delete_user_data_gdpr(self, request, queryset):
+        """Delete user data in compliance with GDPR"""
+        deleted_count = 0
+        
+        for user in queryset:
+            # Delete comments by this user
+            from snmov.models import Comment
+            comments_deleted = Comment.objects.filter(user_name=user).delete()[0]
+            
+            # Delete contact form submissions by this user's email
+            from snmov.models import ReachOut
+            contacts_deleted = ReachOut.objects.filter(email=user.email).delete()[0]
+            
+            # Delete the user account
+            user.delete()
+            
+            deleted_count += 1
+            
+            # Log the deletion
+            self.message_user(
+                request, 
+                f'Deleted user "{user.username}" and {comments_deleted} comments, {contacts_deleted} contact submissions'
+            )
+        
+        self.message_user(request, f'Successfully deleted {deleted_count} users and their associated data.')
+    delete_user_data_gdpr.short_description = 'Delete User Data (GDPR)'
+
     # To hide custom action from users without change permission
     def get_actions(self, request):
         actions = super().get_actions(request)
         if not request.user.has_perm('auth.change_user'):
             del actions['activate_users']
+            del actions['delete_user_data_gdpr']
         return actions
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return True  # Allow deletion through our custom action
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)

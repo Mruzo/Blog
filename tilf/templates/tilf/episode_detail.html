@@ -69,6 +69,10 @@
                 max-camera-orbit="auto auto 30m"
                 min-field-of-view="10deg"
                 max-field-of-view="90deg"
+                animation-name=""
+                animation-crossfade-duration="0.5"
+                auto-rotate-delay="0"
+                camera-orbit="0deg 75deg 3m"
                 >
 
             <!-- Fixed Top Bubble -->
@@ -155,8 +159,42 @@
     {% endfor %}
 </div>
 
+<!-- Social Media Share Buttons -->
+<div class="container mb-0 col-md-4">
+    <div class="card border-0 shadow-sm rounded-0">
+        <div class="card-body p-2">
+                            <div class="d-flex justify-content-center justify-content-md-end gap-3">
+                    <!-- Facebook Share -->
+                    <a href="#" onclick="shareToFacebook()" class="btn btn-outline-dark btn-sm rounded-circle share-btn" style="background-color: #ffffff; border: 1px solid #000000; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                        <i class="fab fa-facebook-f" style="color: #000000;"></i>
+                    </a>
+                    
+                    <!-- X (Twitter) Share -->
+                    <a href="#" onclick="shareToTwitter()" class="btn btn-outline-dark btn-sm rounded-circle share-btn" style="background-color: #ffffff; border: 1px solid #000000; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                        <i class="fab fa-x-twitter" style="color: #000000;"></i>
+                    </a>
+                    
+                    <!-- LinkedIn Share -->
+                    <a href="#" onclick="shareToLinkedIn()" class="btn btn-outline-dark btn-sm rounded-circle share-btn" style="background-color: #ffffff; border: 1px solid #000000; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                        <i class="fab fa-linkedin-in" style="color: #000000;"></i>
+                    </a>
+                    
+                    <!-- Reddit Share -->
+                    <a href="#" onclick="shareToReddit()" class="btn btn-outline-dark btn-sm rounded-circle share-btn" style="background-color: #ffffff; border: 1px solid #000000; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                        <i class="fab fa-reddit-alien" style="color: #000000;"></i>
+                    </a>
+                    
+                    <!-- Copy Link -->
+                                            <button onclick="copyLink(event)" class="btn btn-outline-dark btn-sm rounded-circle share-btn" style="background-color: #ffffff; border: 1px solid #000000; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                        <i class="fas fa-link" style="color: #000000;"></i>
+                    </button>
+                </div>
+        </div>
+    </div>
+</div>
+
 <!-- Comments Section -->
-<div class="container mt-3 col-md-4">
+<div class="container mt-0 col-md-4">
     <div class="row">
         <div class="col-12">
             
@@ -224,6 +262,18 @@
         z-index: 10;
         font-family: 'Comic';
         font-size: small;
+    }
+    
+    /* Monotone share button hover effects */
+    .share-btn:hover {
+        background-color: #000000 !important;
+        border-color: #000000 !important;
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .share-btn:hover i {
+        color: #ffffff !important;
     }
 
     .pointer {
@@ -371,39 +421,100 @@
 </script>
 
 {% block extra_js %}
-<script>
-    document.getElementById('startButton').addEventListener('click', function() {
-        // Hide overlay
-        document.getElementById('overlay-container').style.display = 'none';
-        
-        // Show navigation
-        document.querySelector('.comic-navigation').style.display = 'block';
-        
-        // Show dialogues container
-        document.querySelector('.dialogues-container').style.display = 'block';
-        
-        // Get first dialogue
-        const dialogues = document.querySelectorAll('.dialogue');
-        if (dialogues && dialogues.length > 0) {
-            const firstDialogue = dialogues[0];
-            const povData = JSON.parse(firstDialogue.getAttribute('data-pov'));
-            
-            // Update dialogue text
-            const dialogueText = document.getElementById('top-dialogue');
-            if (dialogueText) {
-                dialogueText.innerHTML = `<strong>${povData.character}:</strong> ${povData.text}`;
-            }
-            
-            // Animate camera
-            const modelViewer = document.querySelector('model-viewer');
-            if (modelViewer) {
-                modelViewer.cameraTarget = povData.camera_target;
-                modelViewer.cameraOrbit = povData.camera_orbit;
-                modelViewer.fieldOfView = povData.field_of_view + "deg";
-            }
-        }
-    });
-</script>
+<!-- Start button event listener is handled in sm.js -->
 {% endblock %}
+
+<!-- Social Media Share Functions -->
+<script>
+    // Add CSRF token for tracking
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+    // Get current page URL and title
+    const currentUrl = window.location.href;
+    const episodeTitle = "{{ episode.season.comic.title }} - Episode {{ episode.episode_number }}";
+    const episodeDescription = "{{ episode.description|striptags|escapejs }}";
+    const episodeImage = "{% if episode.cover_image %}{{ episode.cover_image.url }}{% endif %}";
+    
+    // Track share click function
+    function trackShareClick(platform) {
+        fetch('{% url "immersivecomics:track_share_click" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                platform: platform,
+                episode_id: {{ episode.id }}
+            })
+        }).catch(error => console.error('Error tracking share:', error));
+    }
+    
+    // Facebook Share
+    function shareToFacebook() {
+        trackShareClick('facebook');
+        const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
+        window.open(url, '_blank', 'width=600,height=400');
+    }
+    
+    // X (Twitter) Share
+    function shareToTwitter() {
+        trackShareClick('x_twitter');
+        const text = `${episodeTitle} - Check out this amazing 3D comic episode!`;
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`;
+        window.open(url, '_blank', 'width=600,height=400');
+    }
+    
+    // LinkedIn Share
+    function shareToLinkedIn() {
+        trackShareClick('linkedin');
+        const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`;
+        window.open(url, '_blank', 'width=600,height=400');
+    }
+    
+    // Reddit Share
+    function shareToReddit() {
+        trackShareClick('reddit');
+        const title = `${episodeTitle} - Amazing 3D Comic Episode`;
+        const url = `https://reddit.com/submit?url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent(title)}`;
+        window.open(url, '_blank', 'width=600,height=400');
+    }
+    
+    // Copy Link to Clipboard
+    function copyLink(event) {
+        trackShareClick('copy_link');
+        navigator.clipboard.writeText(currentUrl).then(function() {
+            // Show success message
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-copy" style="color: #ffffff;"></i>';
+            button.style.backgroundColor = '#28a745';
+            
+            setTimeout(function() {
+                button.innerHTML = originalText;
+                button.style.backgroundColor = '#6c757d';
+            }, 2000);
+        }).catch(function(err) {
+            console.error('Could not copy text: ', err);
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = currentUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            // Show success message
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-copy" style="color: #ffffff;"></i>';
+            button.style.backgroundColor = '#28a745';
+            
+            setTimeout(function() {
+                button.innerHTML = originalText;
+                button.style.backgroundColor = '#6c757d';
+            }, 2000);
+        });
+    }
+</script>
 
 {% endblock %}

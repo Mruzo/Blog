@@ -202,7 +202,7 @@ class Comment(models.Model):
     get_article.short_description = 'Article'
 
     def get_email(self):
-        return self.user_name.email
+        return self.user_name.email if self.user_name else 'No User'
     get_email.short_description = 'User Email'
 
 
@@ -212,6 +212,8 @@ class ReachOut(models.Model):
     subject = models.CharField(max_length=50, null=True)
     content = models.TextField(max_length=250)
     created_at = models.DateTimeField(default=timezone.now)
+    is_verified = models.BooleanField(default=False)
+    verification_token = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
         return self.subject

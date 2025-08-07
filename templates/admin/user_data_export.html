@@ -1,0 +1,168 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .user-data-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .user-data-section h3 {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #007cba;
+        padding-bottom: 5px;
+    }
+    .data-item {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: white;
+        border-left: 4px solid #007cba;
+        border-radius: 3px;
+    }
+    .data-label {
+        font-weight: bold;
+        color: #555;
+    }
+    .data-value {
+        margin-left: 10px;
+        color: #333;
+    }
+    .comment-item, .contact-item {
+        background-color: white;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 3px;
+        border-left: 3px solid #28a745;
+    }
+    .export-actions {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #e7f3ff;
+        border-radius: 5px;
+    }
+    .btn {
+        padding: 8px 16px;
+        margin: 5px;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-primary {
+        background-color: #007cba;
+        color: white;
+    }
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='auth' %}">{% trans 'Authentication and Authorization' %}</a>
+    &rsaquo; <a href="{% url 'admin:auth_user_changelist' %}">{% trans 'Users' %}</a>
+    &rsaquo; {% trans 'User Data Export' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="export-actions">
+        <h3>Actions</h3>
+        <a href="{% url 'admin:auth_user_changelist' %}" class="btn btn-secondary">← Back to Users</a>
+        <a href="{% url 'admin:auth_user_change' user.id %}" class="btn btn-primary">Edit User</a>
+        <button onclick="downloadData()" class="btn btn-primary">Download JSON</button>
+    </div>
+
+    <div class="user-data-section">
+        <h3>User Information</h3>
+        <div class="data-item">
+            <span class="data-label">Username:</span>
+            <span class="data-value">{{ user_data.user_info.username }}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Email:</span>
+            <span class="data-value">{{ user_data.user_info.email }}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Full Name:</span>
+            <span class="data-value">{{ user_data.user_info.first_name }} {{ user_data.user_info.last_name }}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Date Joined:</span>
+            <span class="data-value">{{ user_data.user_info.date_joined }}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Last Login:</span>
+            <span class="data-value">{{ user_data.user_info.last_login|default:"Never" }}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Status:</span>
+            <span class="data-value">
+                {% if user_data.user_info.is_active %}Active{% else %}Inactive{% endif %}
+                {% if user_data.user_info.is_staff %} (Staff){% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="user-data-section">
+        <h3>Comments ({{ user_data.comments|length }})</h3>
+        {% if user_data.comments %}
+            {% for comment in user_data.comments %}
+            <div class="comment-item">
+                <div><strong>Comment:</strong> {{ comment.comment_cont }}</div>
+                <div><strong>Article:</strong> {{ comment.comment_post__title }}</div>
+                <div><strong>Date:</strong> {{ comment.comment_date }}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No comments found.</p>
+        {% endif %}
+    </div>
+
+    <div class="user-data-section">
+        <h3>Contact Form Submissions ({{ user_data.contact_submissions|length }})</h3>
+        {% if user_data.contact_submissions %}
+            {% for contact in user_data.contact_submissions %}
+            <div class="contact-item">
+                <div><strong>Name:</strong> {{ contact.full_name }}</div>
+                <div><strong>Subject:</strong> {{ contact.subject }}</div>
+                <div><strong>Message:</strong> {{ contact.content }}</div>
+                <div><strong>Date:</strong> {{ contact.created_at }}</div>
+                <div><strong>Verified:</strong> {% if contact.is_verified %}Yes{% else %}No{% endif %}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No contact form submissions found.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function downloadData() {
+    const data = {{ user_data|safe }};
+    const dataStr = JSON.stringify(data, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'user_data_{{ user.username }}.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

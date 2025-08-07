@@ -1,74 +1,106 @@
-asgiref==3.8.1
-astroid==3.3.10
-boto3==1.38.36
-botocore==1.38.36
-branca==0.8.1
-certifi==2025.6.15
-chardet==5.2.0
-charset-normalizer==3.4.2
-click==8.2.1
-colorama==0.4.6
-contourpy==1.3.2
-crispy-bootstrap5==2025.6
-cycler==0.12.1
-dill==0.4.0
-dj-database-url==3.0.0
+# Django and Core Web Framework
 Django==5.2.3
-django-crispy-forms==2.4
-django-inline-svg==0.1.1
-django-meta==2.5.0
-django-storages==1.14.6
-django-tinymce==4.1.0
-docutils==0.21.2
-folium==0.19.7
-fonttools==4.58.4
-gunicorn==23.0.0
-httplib2==0.22.0
-idna==3.10
-isort==6.0.1
-Jinja2==3.1.6
-jmespath==1.0.1
-joblib==1.5.1
-jsmin==3.0.1
-kiwisolver==1.4.8
-lazy-object-proxy==1.11.0
-MarkupSafe==3.0.2
-matplotlib==3.10.3
-mccabe==0.7.0
-nltk==3.9.1
-numpy==2.3.0
-oauth2==1.9.0.post1
-oauthlib==3.2.2
-packaging==25.0
-pillow==11.2.1
-platformdirs==4.3.8
+asgiref==3.8.1
+sqlparse==0.5.3
+pytz==2025.2
+
+# Database
 psycopg2==2.9.10
 psycopg2-binary==2.9.10
+dj-database-url==3.0.0
+
+# Forms and UI
+django-crispy-forms==2.4
+crispy-bootstrap5==2025.6
+django-inline-svg==0.1.1
+
+# Content Management
+django-tinymce==4.1.0
+django-meta==2.5.0
+
+# File Storage and Media
+django-storages==1.14.6
+Pillow==11.2.1
+whitenoise==6.9.0
+
+# Data Analysis and Visualization
+numpy==2.3.0
+matplotlib==3.10.3
+scipy==1.15.3
+folium==0.19.7
+branca==0.8.1
+xyzservices==2025.4.0
+
+# Natural Language Processing
+nltk==3.9.1
+textblob==0.19.0
+regex==2024.11.6
+
+# AWS and Cloud Services
+boto3==1.38.36
+botocore==1.38.36
+s3transfer==0.13.0
+
+# HTTP and API
+requests==2.32.4
+httplib2==0.22.0
+urllib3==2.4.0
+PySocks==1.7.1
+
+# OAuth and Social Media
+oauth2==1.9.0.post1
+oauthlib==3.2.2
+requests-oauthlib==2.0.0
+tweepy==4.15.0
+
+# Development and Code Quality
 pylint==3.3.7
 pylint-django==2.6.1
 pylint-plugin-utils==0.8.2
-pyparsing==3.2.3
-PySocks==1.7.1
-python-dateutil==2.9.0.post0
-python-dotenv==1.1.0
-pytz==2025.2
-regex==2024.11.6
-requests==2.32.4
-requests-oauthlib==2.0.0
-s3transfer==0.13.0
-scipy==1.15.3
-singledispatch==4.1.2
-six==1.17.0
-sqlparse==0.5.3
-style==1.1.0
-textblob==0.19.0
-tomlkit==0.13.3
-tqdm==4.67.1
-tweepy==4.15.0
+astroid==3.3.10
+isort==6.0.1
+mccabe==0.7.0
+lazy-object-proxy==1.11.0
+wrapt==1.17.2
 typed-ast==1.5.5
+
+# Utilities
+python-dotenv==1.1.0
+python-dateutil==2.9.0.post0
+tqdm==4.67.1
+dill==0.4.0
+joblib==1.5.1
+singledispatch==4.1.2
+
+# Text Processing
+chardet==5.2.0
+charset-normalizer==3.4.2
+idna==3.10
+six==1.17.0
+
+# Web Server
+gunicorn==23.0.0
+
+# UI and Styling
+click==8.2.1
+colorama==0.4.6
+cycler==0.12.1
+fonttools==4.58.4
+kiwisolver==1.4.8
+MarkupSafe==3.0.2
+pyparsing==3.2.3
+style==1.1.0
+
+# Documentation and Configuration
+docutils==0.21.2
+Jinja2==3.1.6
+jmespath==1.0.1
+jsmin==3.0.1
+packaging==25.0
+platformdirs==4.3.8
+tomlkit==0.13.3
 typing_extensions==4.14.0
 update==0.0.1
-urllib3==2.4.0
-whitenoise==6.9.0
-wrapt==1.17.2
-xyzservices==2025.4.0
+
+# Security and Certificates
+certifi==2025.6.15

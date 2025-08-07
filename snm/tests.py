@@ -8,6 +8,8 @@ from django.contrib.messages import Message
 from django.template.loader import render_to_string
 from unittest.mock import patch
 import re
+from snmov.models import Article, Comment, ReachOut
+from tilf.models import Comic, Season, Episode
 
 
 class EmailValidationTestCase(TestCase):
@@ -468,3 +470,263 @@ class NavbarLayoutTest(TestCase):
         self.assertIn('color: #f9a602', navbar_html)
         self.assertIn('min-width: 0', navbar_html)
         self.assertIn('text-muted', navbar_html) 
+
+
+class ContactFormEmailVerificationTests(TestCase):
+    """Test contact form email verification functionality"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.client = Client()
+        self.contact_data = {
+            'full_name': 'Test Contact',
+            'email': 'test@example.com',
+            'subject': 'Test Subject',
+            'content': 'This is a test contact message'
+        }
+    
+    @patch('snm.views.send_mail')
+    def test_contact_form_submission_sends_verification_email(self, mock_send_mail):
+        """Test that contact form submission sends verification email"""
+        mock_send_mail.return_value = 1
+        
+        response = self.client.post('/reachout/', self.contact_data)
+        
+        # Check that verification email was sent
+        mock_send_mail.assert_called_once()
+        
+        # Check email content
+        call_args = mock_send_mail.call_args
+        self.assertEqual(call_args[0][0], 'Verify Your Contact Form Submission')  # subject
+        self.assertEqual(call_args[0][3], ['test@example.com'])  # recipient
+        self.assertIn('verify your email address', call_args[0][1])  # message contains verification text
+    
+    def test_contact_form_creates_unverified_record(self):
+        """Test that contact form creates unverified record"""
+        with patch('snm.views.send_mail') as mock_send_mail:
+            mock_send_mail.return_value = 1
+            
+            response = self.client.post('/reachout/', self.contact_data)
+            
+            # Check that contact record was created but not verified
+            from snmov.models import ReachOut
+            contact = ReachOut.objects.get(email='test@example.com')
+            self.assertFalse(contact.is_verified)
+            self.assertIsNotNone(contact.verification_token)
+    
+    def test_contact_email_verification_activates_record(self):
+        """Test that email verification activates the contact record"""
+        # Create a contact record
+        from snmov.models import ReachOut
+        contact = ReachOut.objects.create(
+            full_name='Test Contact',
+            email='test@example.com',
+            subject='Test Subject',
+            content='Test message',
+            is_verified=False,
+            verification_token='test-token-123'
+        )
+        
+        # Create a temporary user for token generation
+        user = User.objects.create_user(
+            username='contact_test@example.com',
+            email='test@example.com',
+            password='temp123'
+        )
+        
+        # Generate valid token
+        token = default_token_generator.make_token(user)
+        contact.verification_token = token
+        contact.save()
+        
+        # Verify the contact email
+        verify_url = reverse('verify_contact_email', args=[contact.id, token])
+        response = self.client.get(verify_url)
+        
+        # Check that contact is now verified
+        contact.refresh_from_db()
+        self.assertTrue(contact.is_verified)
+    
+    def test_invalid_contact_verification_token(self):
+        """Test that invalid tokens don't activate contact records"""
+        # Create a contact record
+        from snmov.models import ReachOut
+        contact = ReachOut.objects.create(
+            full_name='Test Contact',
+            email='test@example.com',
+            subject='Test Subject',
+            content='Test message',
+            is_verified=False,
+            verification_token='valid-token-123'
+        )
+        
+        # Try to verify with invalid token (different from stored token)
+        verify_url = reverse('verify_contact_email', args=[contact.id, 'invalid-token'])
+        response = self.client.get(verify_url)
+        
+        # Check that contact is still unverified
+        contact.refresh_from_db()
+        self.assertFalse(contact.is_verified) 
+
+
+class DataDeletionTests(TestCase):
+    """Test data deletion functionality for GDPR compliance"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
+        )
+        
+        # Create article for comments
+        self.article = Article.objects.create(
+            title='Test Article',
+            slug='test-article',
+            content='Test content'
+        )
+        
+        # Create contact form submission
+        self.contact = ReachOut.objects.create(
+            full_name='Test Contact',
+            email='test@example.com',
+            subject='Test Subject',
+            content='Test message'
+        )
+        
+        # Create comment
+        self.comment = Comment.objects.create(
+            comment_cont='Test comment',
+            user_name=self.user,
+            comment_post=self.article
+        )
+    
+    def test_delete_user_data_removes_all_user_data(self):
+        """Test that delete_user_data removes all user-related data"""
+        # Login as the user
+        self.client.force_login(self.user)
+        
+        # Delete user data
+        response = self.client.get(reverse('delete_user_data', args=[self.user.id]))
+        
+        # Check that user is deleted
+        self.assertFalse(User.objects.filter(id=self.user.id).exists())
+        
+        # Check that contact form submission is deleted
+        self.assertFalse(ReachOut.objects.filter(email='test@example.com').exists())
+        
+        # Check that comment is deleted
+        self.assertFalse(Comment.objects.filter(user_name=self.user).exists())
+        
+        # Check redirect
+        self.assertEqual(response.status_code, 302)
+    
+    def test_data_access_request_returns_user_data(self):
+        """Test that data_access_request returns all user data"""
+        # Login as the user
+        self.client.force_login(self.user)
+        
+        # Request user data
+        response = self.client.get(reverse('data_access_request', args=[self.user.id]))
+        
+        # Check response
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        # Check user info
+        self.assertEqual(data['user_info']['username'], 'testuser')
+        self.assertEqual(data['user_info']['email'], 'test@example.com')
+        
+        # Check comments
+        self.assertEqual(len(data['comments']), 1)
+        self.assertEqual(data['comments'][0]['comment_cont'], 'Test comment')
+        
+        # Check contact submissions
+        self.assertEqual(len(data['contact_submissions']), 1)
+        self.assertEqual(data['contact_submissions'][0]['full_name'], 'Test Contact')
+    
+    def test_delete_nonexistent_user_handled_gracefully(self):
+        """Test that deleting nonexistent user doesn't crash"""
+        response = self.client.get(reverse('delete_user_data', args=[99999]))
+        
+        # Should redirect with error message
+        self.assertEqual(response.status_code, 302)
+    
+    def test_analytics_deletion_command(self):
+        """Test the analytics deletion management command"""
+        from django.core.management import call_command
+        from django.test import override_settings
+        
+        # Create test analytics data
+        import json
+        from pathlib import Path
+        
+        logs_dir = Path('tilf/logs')
+        logs_dir.mkdir(exist_ok=True)
+        
+        test_data = [
+            {'ip_address': '192.168.1.1', 'timestamp': '2025-01-01T00:00:00'},
+            {'ip_address': '192.168.1.2', 'timestamp': '2025-01-01T00:00:00'},
+            {'ip_address': '192.168.1.1', 'timestamp': '2025-01-01T00:00:00'}
+        ]
+        
+        # Write test data
+        with open(logs_dir / 'traffic_sources_development.json', 'w') as f:
+            for entry in test_data:
+                f.write(json.dumps(entry) + '\n')
+        
+        # Run deletion command
+        call_command('delete_analytics_by_ip', '192.168.1.1', '--environment=development')
+        
+        # Check that only entries with IP 192.168.1.1 were deleted
+        with open(logs_dir / 'traffic_sources_development.json', 'r') as f:
+            remaining_data = [json.loads(line) for line in f if line.strip()]
+        
+        # Should only have one entry left (IP 192.168.1.2)
+        self.assertEqual(len(remaining_data), 1)
+        self.assertEqual(remaining_data[0]['ip_address'], '192.168.1.2')
+        
+        # Clean up
+        (logs_dir / 'traffic_sources_development.json').unlink() 
+
+
+class CommentModelTests(TestCase):
+    """Test Comment model methods"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        self.article = Article.objects.create(
+            title='Test Article',
+            slug='test-article',
+            content='Test content'
+        )
+    
+    def test_get_email_with_user(self):
+        """Test get_email method when user_name exists"""
+        comment = Comment.objects.create(
+            comment_cont='Test comment',
+            user_name=self.user,
+            comment_post=self.article
+        )
+        
+        self.assertEqual(comment.get_email(), 'test@example.com')
+    
+    def test_get_email_without_user(self):
+        """Test get_email method when user_name is None"""
+        comment = Comment.objects.create(
+            comment_cont='Test comment',
+            user_name=None,
+            comment_post=self.article
+        )
+        
+        self.assertEqual(comment.get_email(), 'No User') 

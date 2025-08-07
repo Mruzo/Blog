@@ -154,6 +154,38 @@ def verify_email(request, user_id, token):
         messages.error(request, "User does not exist.")
         return redirect('homepage')
 
+def verify_contact_email(request, contact_id, token):
+    try:
+        contact = ReachOut.objects.get(id=contact_id)
+        
+        # Check if token matches
+        if contact.verification_token == token:
+            # Token is valid, mark contact as verified
+            contact.is_verified = True
+            contact.save()
+            
+            # Send the actual contact email to admin
+            try:
+                send_mail(
+                    subject=f"New reachout: {contact.full_name}",
+                    message=f"{contact.full_name}\n\n{contact.email}\n\n{contact.content}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=['chrisuzoewulu@gmail.com'],
+                    fail_silently=False,
+                )
+                messages.success(request, "Your contact form has been verified and sent successfully!")
+            except Exception as e:
+                messages.error(request, "Contact form verified but there was an error sending the message. Please try again.")
+                print(f"Email sending failed: {e}")
+            
+            return redirect('homepage')  # Redirect to homepage
+        else:
+            messages.error(request, "Invalid or expired verification link.")
+            return redirect('homepage')  # Redirect to home or error page
+    except ReachOut.DoesNotExist:
+        messages.error(request, "Contact form does not exist.")
+        return redirect('homepage')
+
 def invalidlink_view(request):
     return render(request, "invalid_link.html", {"message": "Invalid verification link"})
 
@@ -184,31 +216,118 @@ def contact_page(request):
     if request.method == "POST":
         form = ContactModelForm(request.POST)
         if form.is_valid():
-            obj = form.save()
-            # Send mail
+            # Create the contact form but don't save yet
+            obj = form.save(commit=False)
+            # Set as unverified initially
+            obj.is_verified = False
+            # Generate a simple verification token
+            import uuid
+            obj.verification_token = str(uuid.uuid4())
+            # Save the contact form
+            obj.save()
+            
+            # Get current site and build the full verification URL dynamically
+            current_host = settings.ALLOWED_HOSTS[0]
+            scheme = "https" if request.is_secure() else "http"
+            verification_link = reverse('verify_contact_email', args=[obj.id, obj.verification_token])
+            full_verification_url = f"{scheme}://{current_host}{verification_link}"
+            
+            # Send verification email
+            subject = "Verify Your Contact Form Submission"
+            message = (
+                f"Hi {obj.full_name},\n\n"
+                f"Thanks for reaching out to us. Please verify your email address by clicking the link below:\n"
+                f"{full_verification_url}\n\n"
+                "Once verified, we'll receive your message and get back to you soon.\n\n"
+                "Best regards,\nTeam Uzo"
+            )
+            from_email = settings.DEFAULT_FROM_EMAIL
+            to_email = obj.email
+
             try:
-                send_mail(
-                    subject=f"New reachout: {obj.full_name}",
-                    message=f"{obj.full_name}\n\n{obj.email}\n\n{obj.content}",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=['chrisuzoewulu@gmail.com'],
-                    fail_silently=False,
-                )
-                response_data = {'success': True, 'message': "Thanks for reaching out. Tap logo to return home."}
+                send_mail(subject, message, from_email, [to_email])
+                # Show a success message
+                messages.success(request, "Contact form submitted successfully. Please check your email to verify your submission.")
+                response_data = {'success': True, 'message': "Thanks for reaching out. Please check your email to verify your submission."}
             except Exception as e:
-                response_data = {'success': False, 'message': "There was an error sending the email."}
+                # If email fails, delete the contact form and show error
+                obj.delete()
+                messages.error(request, "Contact form submission failed. Please try again.")
+                response_data = {'success': False, 'message': "There was an error sending the verification email. Please try again."}
+                print(f"Email sending failed: {e}")
 
             # Return JSON response for AJAX
-            if request.is_ajax():
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse(response_data)
             else:
-                return redirect('contact_page')  # Redirect to clear form data
+                return redirect('contact')  # Redirect to clear form data
 
         else:
             response_data = {'success': False, 'message': "There was an error with your submission. Please try again."}
-            if request.is_ajax():
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse(response_data)
 
     return render(request, "form.html", { "title":"Reach out", "form": form})
+
+
+def delete_user_data(request, user_id):
+    """Delete all user data in compliance with GDPR right to erasure"""
+    try:
+        user = User.objects.get(id=user_id)
+        
+        # Get user's email for contact form deletion
+        user_email = user.email
+        
+        # Delete comments by this user first
+        from snmov.models import Comment
+        Comment.objects.filter(user_name=user).delete()
+        
+        # Delete contact form submissions by this user's email
+        from snmov.models import ReachOut
+        ReachOut.objects.filter(email=user_email).delete()
+        
+        # Delete user account last (this cascades to related data)
+        user.delete()
+        
+        # Note: Analytics data (IP-based) would need manual deletion
+        # as it's stored in JSON files, not database
+        
+        messages.success(request, "All your personal data has been successfully deleted.")
+        return redirect('homepage')
+        
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('homepage')
+
+def data_access_request(request, user_id):
+    """Provide user data in compliance with GDPR right to access"""
+    try:
+        user = User.objects.get(id=user_id)
+        
+        # Collect all user data
+        user_data = {
+            'user_info': {
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'date_joined': user.date_joined.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+            },
+            'comments': list(Comment.objects.filter(user_name=user).values(
+                'comment_cont', 'comment_date', 'comment_post__title'
+            )),
+            'contact_submissions': list(ReachOut.objects.filter(email=user.email).values(
+                'full_name', 'subject', 'content', 'created_at'
+            )),
+        }
+        
+        # Return JSON response with user data
+        from django.http import JsonResponse
+        return JsonResponse(user_data, safe=False)
+        
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('homepage')
 
 

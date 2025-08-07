@@ -13,4 +13,5 @@ urlpatterns = [
     path('api/dialogue/<int:dialogue_id>/update-camera/', views.update_camera_data, name='update_camera_data'),
     path('analytics/', views.EpisodeAnalyticsView.as_view(), name='episode_analytics'),
     path('analytics/seasons/<int:pk>/', views.SeasonAnalyticsView.as_view(), name='season_analytics'),
+    path('api/track-share/', views.track_share_click, name='track_share_click'),
 ]
