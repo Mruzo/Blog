@@ -194,14 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const topDialogue = document.getElementById('top-dialogue');
     const prevButton = document.getElementById('prevButton');
     const nextButton = document.getElementById('nextButton');
+    const playButton = document.getElementById('playButton');
     
-    if (!modelViewer || !topBubble || !topDialogue || !prevButton || !nextButton) {
+    if (!modelViewer || !topBubble || !topDialogue || !prevButton || !nextButton || !playButton) {
         // console.error('Required elements not found:', {
         //     modelViewer: !!modelViewer,
         //     topBubble: !!topBubble,
         //     topDialogue: !!topDialogue,
         //     prevButton: !!prevButton,
-        //     nextButton: !!nextButton
+        //     nextButton: !!nextButton,
+        //     playButton: !!playButton
         // });
             return;
         }
@@ -233,6 +235,116 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     // console.log('Initialized dialogues array:', dialogues);
+    
+    // Auto-play functionality
+    let isPlaying = false;
+    let playInterval;
+    let playSpeed = 3000; // Default 3 seconds per dialogue
+    
+    // Get speed buttons
+    const speedButtons = document.querySelectorAll('.speed-btn');
+    speedButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            speedButtons.forEach(btn => btn.classList.remove('btn-primary'));
+            speedButtons.forEach(btn => btn.classList.add('btn-outline-secondary'));
+            
+            // Add active class to clicked button
+            this.classList.remove('btn-outline-secondary');
+            this.classList.add('btn-primary');
+            
+            // Update play speed
+            playSpeed = parseInt(this.getAttribute('data-speed'));
+            
+            // If currently playing, restart with new speed
+            if (isPlaying) {
+                pausePlayback();
+                startPlayback();
+            }
+        });
+    });
+    
+    // Set default active state for 1x speed
+    const defaultSpeedBtn = document.querySelector('[data-speed="3000"]');
+    if (defaultSpeedBtn) {
+        defaultSpeedBtn.classList.remove('btn-outline-secondary');
+        defaultSpeedBtn.classList.add('btn-primary');
+    }
+    
+    function togglePlay() {
+        if (isPlaying) {
+            pausePlayback();
+        } else {
+            startPlayback();
+        }
+    }
+    
+    function startPlayback() {
+        if (currentDialogueIndex >= dialogues.length - 1) {
+            // If at the end, restart from beginning
+            currentDialogueIndex = 0;
+        }
+        
+        isPlaying = true;
+        const playIcon = document.getElementById('playIcon');
+        if (playIcon) {
+            playIcon.className = 'fas fa-pause';
+        }
+        
+        // Show progress bar
+        const progressContainer = document.getElementById('progressContainer');
+        if (progressContainer) {
+            progressContainer.style.display = 'block';
+        }
+        
+        playInterval = setInterval(() => {
+            if (currentDialogueIndex < dialogues.length - 1) {
+                currentDialogueIndex++;
+                showDialogue(currentDialogueIndex);
+                updateProgress();
+            } else {
+                // End of episode
+                pausePlayback();
+                // Show summary if available
+                if (window.episodeData && window.episodeData.summary) {
+                    showEpisodeSummary();
+                }
+            }
+        }, playSpeed);
+        
+        // Update progress immediately
+        updateProgress();
+    }
+    
+    function updateProgress() {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        
+        if (progressBar && progressText) {
+            const progress = ((currentDialogueIndex + 1) / dialogues.length) * 100;
+            progressBar.style.width = progress + '%';
+            progressBar.setAttribute('aria-valuenow', progress);
+            progressText.textContent = `${currentDialogueIndex + 1} / ${dialogues.length}`;
+        }
+    }
+    
+    function pausePlayback() {
+        isPlaying = false;
+        const playIcon = document.getElementById('playIcon');
+        if (playIcon) {
+            playIcon.className = 'fas fa-play';
+        }
+        
+        if (playInterval) {
+            clearInterval(playInterval);
+            playInterval = null;
+        }
+    }
+    
+    // Add click event listener to play button
+    if (playButton) {
+        playButton.addEventListener('click', togglePlay);
+    }
     
     // console.log('Model viewer found:', modelViewer);
     // console.log('Model viewer attributes:', {
@@ -305,6 +417,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const dialoguesContainer = document.querySelector('.dialogues-container');
         if (dialoguesContainer) {
             dialoguesContainer.style.display = 'block';
+        }
+        
+        // Reset progress counter to start from 1
+        if (typeof updateProgress === 'function') {
+            updateProgress();
         }
         
         // Get first dialogue
@@ -594,6 +711,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 hideEpisodeSummary();
             }
             
+            // Update progress bar
+            updateProgress();
+            
+            // Update edit mode values if in edit mode
+            if (isEditMode) {
+                loadCurrentDialogueValues();
+            }
+            
             // console.log('=== Finished showDialogue ===', new Date().getTime());
         } else {
             // console.error('No dialogue found for index:', index);
@@ -716,6 +841,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set up navigation button handlers
     if (prevButton && nextButton) {
         prevButton.onclick = function() {
+            // Pause auto-play when manually navigating
+            if (isPlaying) {
+                pausePlayback();
+            }
+            
             // console.log('SET 1 - Previous button clicked. Current index:', currentDialogueIndex);
         if (isShowingSummary) {
             // If showing summary, go back to last dialogue
@@ -733,6 +863,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         nextButton.onclick = function() {
+            // Pause auto-play when manually navigating
+            if (isPlaying) {
+                pausePlayback();
+            }
+            
             // console.log('SET 1 - Next button clicked. Current index:', currentDialogueIndex);
         if (currentDialogueIndex < dialogues.length - 1) {
             const newIndex = currentDialogueIndex + 1;
@@ -881,6 +1016,11 @@ window.startEpisode = function() {
         loadDialogue(0);
         showDialogue(0);
         
+        // Reset progress counter to start from 1
+        if (typeof updateProgress === 'function') {
+            updateProgress();
+        }
+        
         // Set up navigation button handlers (SET 2 - handles actual button clicks)
         if (elements.prevButton && elements.nextButton) {
             elements.prevButton.onclick = function() {
@@ -1028,6 +1168,8 @@ function initializeSliders() {
     [orbitAzimuth, orbitPolar, orbitRadius, targetX, targetY, targetZ, fieldOfView, zoomSpeed].forEach(slider => {
         if (slider) {
             slider.addEventListener('input', updateCameraInRealTime);
+            // Add real-time badge updates
+            slider.addEventListener('input', updateValueBadge);
         }
     });
 }
@@ -1145,8 +1287,24 @@ function updateCameraInRealTime() {
         modelViewer.fieldOfView = currentEditingDialogue.field_of_view + "deg";
     }
     
-    // Update display values
-    updateCurrentValuesDisplay();
+    // Update display values - only live values, not current values
+}
+
+function updateValueBadge(event) {
+    const slider = event.target;
+    const sliderId = slider.id;
+    const value = parseFloat(slider.value);
+    const valueDisplay = document.getElementById(sliderId + 'Value');
+    
+    if (valueDisplay) {
+        if (sliderId.includes('Azimuth') || sliderId.includes('Polar') || sliderId.includes('FOV')) {
+            valueDisplay.textContent = value + '°';
+        } else if (sliderId.includes('Radius') || sliderId.includes('target')) {
+            valueDisplay.textContent = value + 'm';
+        } else if (sliderId.includes('Speed')) {
+            valueDisplay.textContent = value;
+        }
+    }
 }
 
 function updateCurrentValuesDisplay() {
@@ -1162,6 +1320,20 @@ function updateCurrentValuesDisplay() {
     if (currentFOV) currentFOV.textContent = currentEditingDialogue.field_of_view + '°';
     if (currentZoom) currentZoom.textContent = currentEditingDialogue.zoom_speed;
 }
+
+function updateSavedValuesDisplay(savedData) {
+    const currentOrbit = document.getElementById('currentOrbit');
+    const currentTarget = document.getElementById('currentTarget');
+    const currentFOV = document.getElementById('currentFOV');
+    const currentZoom = document.getElementById('currentZoom');
+    
+    if (currentOrbit) currentOrbit.textContent = savedData.camera_orbit;
+    if (currentTarget) currentTarget.textContent = savedData.camera_target;
+    if (currentFOV) currentFOV.textContent = savedData.field_of_view + '°';
+    if (currentZoom) currentZoom.textContent = savedData.zoom_speed;
+}
+
+
 
 function saveCameraChanges() {
     if (!currentEditingDialogue) {
@@ -1233,8 +1405,8 @@ function saveCameraChanges() {
                 dialogues[currentDialogueIndex].zoom_speed = data.zoom_speed;
             }
             
-            // Update display to reflect saved state
-            updateCurrentValuesDisplay();
+            // Update the current values to show the saved state
+            updateSavedValuesDisplay(data);
         } else {
             showSaveMessage('error', 'Error saving changes: ' + result.message);
         }

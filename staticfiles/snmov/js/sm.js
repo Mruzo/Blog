@@ -203,8 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
         //     prevButton: !!prevButton,
         //     nextButton: !!nextButton
         // });
-            return;
-        }
+        return;
+    }
         
     // Initialize dialogues array from the dialogues container
     const dialogueElements = document.querySelectorAll('.dialogue');
@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     // console.log('Initialized dialogues array:', dialogues);
-    
+
     // console.log('Model viewer found:', modelViewer);
     // console.log('Model viewer attributes:', {
     //     interpolationDecay: modelViewer.getAttribute('interpolation-decay'),
@@ -255,8 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     modelViewer.addEventListener('camera-change', () => {
-        if (!isAnimating) {
-            updatePointer();
+            if (!isAnimating) {
+                    updatePointer();
         }
     });
 
@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
             container.appendChild(controlsDiv);
         }
     }
-    
+
     function createHotspots() {
         // console.log('Creating hotspots...');
         
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only create hotspot if we haven't seen this character before
             if (!uniqueCharacters.has(baseCharacterName)) {
                 uniqueCharacters.add(baseCharacterName);
-            
+                
             const hotspot = document.createElement('div');
             hotspot.setAttribute('slot', `hotspot-${baseCharacterName}`);
             hotspot.className = 'hotspot';
@@ -561,11 +561,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Wait for animation to complete
                 animation.onfinish = () => {
-                    // console.log('Camera animation complete');
-                    if (!isUpdatingPointer) {
-                        isUpdatingPointer = true;
-      updatePointer();
-                    }
+                        // console.log('Camera animation complete');
+                        if (!isUpdatingPointer) {
+                            isUpdatingPointer = true;
+                            updatePointer();
+                        }
                 };
             }
             
@@ -633,8 +633,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isModelReady) {
             // console.log('Model not ready yet, skipping pointer update');
             isUpdatingPointer = false;
-                return;
-            }
+            return;
+        }
             
         // console.log('=== Starting updatePointer ===', new Date().getTime());
         const currentDialogue = dialogues[currentDialogueIndex];
@@ -642,8 +642,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentDialogue) {
             // console.log('No dialogue found');
             isUpdatingPointer = false;
-                return;
-            }
+            return;
+        }
             
         // Extract base character name (remove numbers)
         const baseCharacterName = currentDialogue.character.replace(/\s*\d+$/, '');
@@ -662,11 +662,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 path.style.display = 'none';
             }
             isUpdatingPointer = false;
-        return;
-      }
+            return;
+        }
       
       // Get positions
-      const bubbleRect = topBubble.getBoundingClientRect();
+        const bubbleRect = topBubble.getBoundingClientRect();
       const hotspotRect = hotspot.getBoundingClientRect();
         const modelRect = modelViewer.getBoundingClientRect();
         
@@ -676,21 +676,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const hotspotCenterX = hotspotRect.left - modelRect.left + (hotspotRect.width / 2);
         const hotspotCenterY = hotspotRect.top - modelRect.top + (hotspotRect.height / 2);
       
-      // Calculate line geometry
+        // Calculate line geometry
         const dx = hotspotCenterX - bubbleCenterX;
         const dy = hotspotCenterY - bubbleBottomY;
         
         // Create a more pronounced curve by offsetting the control point
-                    const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = Math.sqrt(dx * dx + dy * dy);
         const offset = distance * 0.3; // Adjust this value to control curve amount
                     
         // Calculate control point that's perpendicular to the line
-                    const controlX = bubbleCenterX + dx * 0.5;
-                    const controlY = bubbleBottomY + dy * 0.5 - offset;
+        const controlX = bubbleCenterX + dx * 0.5;
+        const controlY = bubbleBottomY + dy * 0.5 - offset;
                     
         // Create the path data for a curved line using quadratic Bezier curve
-                    const pathData = `M ${bubbleCenterX} ${bubbleBottomY} 
-                        Q ${controlX} ${controlY} ${hotspotCenterX} ${hotspotCenterY}`;
+        const pathData = `M ${bubbleCenterX} ${bubbleBottomY} 
+            Q ${controlX} ${controlY} ${hotspotCenterX} ${hotspotCenterY}`;
         
         // console.log('Creating path with data:', pathData);
         
@@ -781,23 +781,23 @@ function initHomeSlider() {
 
     function goToSlide(index) {
         if (slides[currentSlide]) {
-            slides[currentSlide].checked = false;
+        slides[currentSlide].checked = false;
         }
         currentSlide = index;
         if (slides[currentSlide]) {
-            slides[currentSlide].checked = true;
+        slides[currentSlide].checked = true;
         }
     }
 
     function nextSlide() {
         if (slides.length > 0) {
-            goToSlide((currentSlide + 1) % slides.length);
+        goToSlide((currentSlide + 1) % slides.length);
         }
     }
 
     function prevSlide() {
         if (slides.length > 0) {
-            goToSlide((currentSlide - 1 + slides.length) % slides.length);
+        goToSlide((currentSlide - 1 + slides.length) % slides.length);
         }
     }
 
@@ -831,7 +831,7 @@ function initHomeSlider() {
 
     function startAutoSlide() {
         if (slides.length > 0) {
-            slideInterval = setInterval(nextSlide, 5000);
+        slideInterval = setInterval(nextSlide, 5000);
         }
     }
 
