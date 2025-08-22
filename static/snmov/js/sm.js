@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto-play functionality
     let isPlaying = false;
     let playInterval;
-    let playSpeed = 3000; // Default 3 seconds per dialogue
+    let playSpeed = 5000; // Default 5 seconds per dialogue
     
     // Get speed buttons
     const speedButtons = document.querySelectorAll('.speed-btn');
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Set default active state for 1x speed
-    const defaultSpeedBtn = document.querySelector('[data-speed="3000"]');
+    const defaultSpeedBtn = document.querySelector('[data-speed="5000"]');
     if (defaultSpeedBtn) {
         defaultSpeedBtn.classList.remove('btn-outline-secondary');
         defaultSpeedBtn.classList.add('btn-primary');
@@ -299,6 +299,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         playInterval = setInterval(() => {
             if (currentDialogueIndex < dialogues.length - 1) {
+                // Save any unsaved changes before advancing
+                if (isEditMode && currentEditingDialogue) {
+                    saveUnsavedChanges();
+                }
+                
                 currentDialogueIndex++;
                 showDialogue(currentDialogueIndex);
                 updateProgress();
@@ -846,6 +851,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 pausePlayback();
             }
             
+            // Save any unsaved changes before navigating
+            if (isEditMode && currentEditingDialogue) {
+                saveUnsavedChanges();
+            }
+            
             // console.log('SET 1 - Previous button clicked. Current index:', currentDialogueIndex);
         if (isShowingSummary) {
             // If showing summary, go back to last dialogue
@@ -855,7 +865,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentDialogueIndex > 0) {
             const newIndex = currentDialogueIndex - 1;
                 // console.log('SET 1 - Moving to previous dialogue, new index:', newIndex);
-                loadDialogue(newIndex);
+                // Only load dialogue if we don't already have it in memory
+                if (!dialogues[newIndex] || !dialogues[newIndex].camera_orbit) {
+                    loadDialogue(newIndex);
+                }
             showDialogue(newIndex);
         } else {
                 // console.log('SET 1 - Already at first dialogue');
@@ -868,11 +881,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 pausePlayback();
             }
             
+            // Save any unsaved changes before navigating
+            if (isEditMode && currentEditingDialogue) {
+                saveUnsavedChanges();
+            }
+            
             // console.log('SET 1 - Next button clicked. Current index:', currentDialogueIndex);
         if (currentDialogueIndex < dialogues.length - 1) {
             const newIndex = currentDialogueIndex + 1;
                 // console.log('SET 1 - Moving to next dialogue, new index:', newIndex);
-                loadDialogue(newIndex);
+                // Only load dialogue if we don't already have it in memory
+                if (!dialogues[newIndex] || !dialogues[newIndex].camera_orbit) {
+                    loadDialogue(newIndex);
+                }
             showDialogue(newIndex);
         } else {
                 // console.log('SET 1 - At last dialogue - showing episode summary');
@@ -1179,6 +1200,18 @@ function loadCurrentDialogueValues() {
         // Get a fresh reference to the current dialogue from the main array
         const dialogueFromArray = dialogues[currentDialogueIndex];
         
+        // Check if we have unsaved changes for the previous dialogue
+        if (currentEditingDialogue && currentEditingDialogue.dialogue_id !== dialogueFromArray.dialogue_id) {
+            // Save unsaved changes to the previous dialogue in the array
+            const previousIndex = dialogues.findIndex(d => d.dialogue_id === currentEditingDialogue.dialogue_id);
+            if (previousIndex >= 0) {
+                dialogues[previousIndex].camera_orbit = currentEditingDialogue.camera_orbit;
+                dialogues[previousIndex].camera_target = currentEditingDialogue.camera_target;
+                dialogues[previousIndex].field_of_view = currentEditingDialogue.field_of_view;
+                dialogues[previousIndex].zoom_speed = currentEditingDialogue.zoom_speed;
+            }
+        }
+        
         // Create a new object to avoid reference issues
         currentEditingDialogue = {
             dialogue_id: dialogueFromArray.dialogue_id,
@@ -1331,6 +1364,36 @@ function updateSavedValuesDisplay(savedData) {
     if (currentTarget) currentTarget.textContent = savedData.camera_target;
     if (currentFOV) currentFOV.textContent = savedData.field_of_view + '°';
     if (currentZoom) currentZoom.textContent = savedData.zoom_speed;
+}
+
+function saveUnsavedChanges() {
+    if (!currentEditingDialogue) return;
+    
+    // Get current slider values
+    const azimuth = parseFloat(document.getElementById('orbitAzimuth').value);
+    const polar = parseFloat(document.getElementById('orbitPolar').value);
+    const radius = parseFloat(document.getElementById('orbitRadius').value);
+    
+    const targetX = parseFloat(document.getElementById('targetX').value);
+    const targetY = parseFloat(document.getElementById('targetY').value);
+    const targetZ = parseFloat(document.getElementById('targetZ').value);
+    
+    const fieldOfView = parseFloat(document.getElementById('fieldOfView').value);
+    const zoomSpeed = parseFloat(document.getElementById('zoomSpeed').value);
+    
+    // Update currentEditingDialogue with current slider values
+    currentEditingDialogue.camera_orbit = `${azimuth}deg ${polar}deg ${radius}m`;
+    currentEditingDialogue.camera_target = `${targetX}m ${targetY}m ${targetZ}m`;
+    currentEditingDialogue.field_of_view = fieldOfView;
+    currentEditingDialogue.zoom_speed = zoomSpeed;
+    
+    // Update the dialogues array to preserve changes
+    if (currentDialogueIndex >= 0 && currentDialogueIndex < dialogues.length) {
+        dialogues[currentDialogueIndex].camera_orbit = currentEditingDialogue.camera_orbit;
+        dialogues[currentDialogueIndex].camera_target = currentEditingDialogue.camera_target;
+        dialogues[currentDialogueIndex].field_of_view = currentEditingDialogue.field_of_view;
+        dialogues[currentDialogueIndex].zoom_speed = currentEditingDialogue.zoom_speed;
+    }
 }
 
 
