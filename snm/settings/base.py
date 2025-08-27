@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'snmov',
+    'icvybz',
     'crispy_forms',
     'storages',
     'django.contrib.sitemaps',

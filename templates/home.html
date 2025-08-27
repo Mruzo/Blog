@@ -11,34 +11,89 @@
   {% endif %}
 {% endblock %}
 
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Test smooth navigation functionality
+    var testBtn = document.getElementById('testSmoothNav');
+    if (testBtn) {
+        testBtn.addEventListener('click', function() {
+            console.log('Test button clicked - testing smooth navigation...');
+            
+            // Test loading spinner
+            var spinner = document.getElementById('loadingSpinner');
+            if (spinner) {
+                spinner.classList.add('show');
+                console.log('Loading spinner shown');
+                
+                // Hide after 2 seconds
+                setTimeout(function() {
+                    spinner.classList.remove('show');
+                    console.log('Loading spinner hidden');
+                }, 2000);
+            } else {
+                console.log('Loading spinner not found');
+            }
+            
+            // Test page transition
+            var pageContent = document.querySelector('.page-content');
+            if (pageContent) {
+                pageContent.classList.add('page-transitioning');
+                console.log('Page transition effect added');
+                
+                // Remove after 1 second
+                setTimeout(function() {
+                    pageContent.classList.remove('page-transitioning');
+                    console.log('Page transition effect removed');
+                }, 1000);
+            } else {
+                console.log('Page content wrapper not found');
+            }
+        });
+    }
+    
+    // Check if smooth navigation elements exist
+    console.log('=== Smooth Navigation Debug ===');
+    console.log('Page content wrapper:', document.querySelector('.page-content'));
+    console.log('Loading spinner:', document.getElementById('loadingSpinner'));
+    console.log('Spinner element:', document.querySelector('.spinner'));
+    console.log('Internal links found:', document.querySelectorAll('a[href^="/"]').length);
+    console.log('================================');
+    
+    // Add manual test function to global scope
+    window.testSmoothNav = function() {
+        console.log('=== Manual Smooth Navigation Test ===');
+        
+        // Test if the function exists
+        if (typeof window.initSmoothNavigation === 'function') {
+            console.log('initSmoothNavigation function found, calling it...');
+            window.initSmoothNavigation();
+        } else {
+            console.log('initSmoothNavigation function NOT found!');
+        }
+        
+        // Test finding links
+        var links = document.querySelectorAll('a[href^="/"]');
+        console.log('Found', links.length, 'internal links');
+        
+        links.forEach(function(link, index) {
+            console.log('Link', index + 1, ':', link.href, 'Text:', link.textContent.trim());
+            console.log('Has smooth nav attached:', link.hasAttribute('data-smooth-nav-attached'));
+        });
+        
+        console.log('=== End Manual Test ===');
+    };
+    
+    console.log('Manual test function available: window.testSmoothNav()');
+});
+</script>
+{% endblock %}
+
 
 {% block content %}
 
 
-<script type="text/javascript">
-    // Dictionary of product URLs dynamically inserted by Django
-    const productUrls = {
-        {% for product in available_products %}
-            '{{ product.slug }}': {
-                'gltf': '{{ product.gltf_model.url }}',
-                'usdz': '{{ product.usdz_model.url }}'
-            },
-        {% endfor %}
-    };
 
-    // Function to detect if the user is on an iPhone
-    function isIphone() {
-        return /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    }
-
-    // Function to get the correct URL based on device type
-    function getModelUrl(slug) {
-        const product = productUrls[slug];
-        if (!product) return null;
-
-        return isIphone() ? product.usdz : product.gltf;
-    }
-</script>
 
 
 <section class="row my-3 position-relative" style="background-color: inherit; display: flex; justify-content: center; align-items: center; min-height: 22vh;">
@@ -49,71 +104,20 @@
             <h2 class="landtext">
                     VIBRANT COMFORT FOR YOUR WORK OR PLAY SPACE
             </h2>
+            
+            <!-- Test button for smooth navigation -->
+            <div class="mt-3">
+                <button id="testSmoothNav" class="btn btn-primary">
+                    Test Smooth Navigation
+                </button>
+            </div>
 
         </div>
     </div>
 </section>
 
 
-<div class="row justify-content-center px-3">
-    
-    <div class="col-md-6 px-0">           
-        {% for product in available_products %}
-        <div class="card my-1 border-0">
-    
-            {% if product.product_images %}
-            <div id="availablePictureCarousel_{{ product.uuid }}" class="carousel slide carousel-fade" style="background-color: white;" data-ride="carousel" data-interval="5000">
-                <div class="carousel-inner">
-                    {% for picture in product.product_images %}
-                        <div class="carousel-item {% if forloop.first %}active{% endif %}" data-interval="5000">
-                            <img src="{{ picture.image.url }}" class="d-block w-100 border-2" alt="{{ picture.caption }}">
-                        </div>
-                    {% endfor %}
-                </div>
-                <a class="carousel-control-prev" href="#availablePictureCarousel_{{ product.uuid }}" role="button" data-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="sr-only">Previous</span>
-                </a>
-                <a class="carousel-control-next" href="#availablePictureCarousel_{{ product.uuid }}" role="button" data-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="sr-only">Next</span>
-                </a>
-            </div>
-            {% else %}
-            <div class="no-image text-center p-3 bg-light">
-                <p>No images available for this product</p>
-            </div>
-            {% endif %}
-    
-            <div class="card-body border-top">
-                {% if product.discount_percentage > 0 %}
-                <h5 class="card-title subtext-btn-sm">
-                    <p class="card-text">
-                        <span style="color: #DC2229;">
-                            <b> C${{ product.get_discounted_price|floatformat:2 }} </b>
-                        </span><br>
-                        <span class="subtext-sm text-dark">
-                            <b style="text-decoration: line-through;">C${{ product.price }}</b> 
-                            <b style="color: #DC2229;"> &nbsp; -{{ product.discount_percentage|floatformat:0 }}% </b>
-                            <b class="text-dark"> Original Price</b>
-                        </span>
-                    </p>
-                </h5>
-                {% else %}
-                <h5 class="card-title subtext-btn-sm text-right">
-                    C${{ product.price }}
-                </h5>
-                {% endif %}
-    
-                <h5 class="card-title subtext-btn-sm border-top pt-2 m-0">{{ product.title }}</h5>
-                <p class="card-text subtext-sm border-0">{{ product.description }}</p>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    
-  
-    </div>
+
 
     <!-- <div id="ar" class="row my-2">
         <div class="col-md-6 d-flex flex-column align-items-center justify-content-center mx-auto">
@@ -137,109 +141,14 @@
         </div>
     </div> -->
 
-    <div class="card mt-4 col-4 col-md-3 mx-auto bg-light border-0" >
-        <a class="btn shadow p-1 mb-5 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 my-auto" role="button" aria-disabled="true" style="background-color: #FFBC00;" href="{% url 'snmov:product_list' %}" target="_blank">
-            <h3 class="subtext-btn-sm m-0"><strong> BUY </strong></h3>
-        </a>
-    </div>
-
-    <div class="row border-top bd-light my-5 mx-auto">
-        <div class="container text-center test-border mt-2 mx-auto" id="" style="opacity: 1">
-
-            <h5 class="subtext my-2">
-                testimonials
-            </h5>
-        </div>
-        
-        <div class="container text-center my-3 mx-auto" id="" style="opacity: 1">
-
-            <div class="row justify-content-center">
-                {% for testimonial in testimonials %}
-                <div class="col-4 mb-4">
-                    <div class="card h-100">
-                        {% if testimonial.image %}
-                            <img src="{{ testimonial.image.url }}" class="card-img-top" alt="{{ testimonial.caption }}">
-                        {% endif %}
-                        <!-- <div class="card-body m-0">
-                            <p class="card-text">{{ testimonial.caption }}</p>
-                        </div> -->
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-        </div>
-
-    </div>
 
 
-    <div class="row border-top bd-light my-5 mx-auto">
-
-        <div class="container text-center test-border mt-2 mx-auto" id="" style="opacity: 1">
-
-            <h5 class="subtext my-2">
-                coming soon <br>
-            </h5>
-        </div>
-
-        <div class="row my-3">
-            {% for picture in unavailable_pictures %}
-                <div class="col-sm-6">           
-                    <div class="card my-1 border-0">
-                        <img src="{{ picture.image.url }}" class="card-img-top" alt="{{ picture.caption }}">
-                        <div class="card-body border-top">
-                            <h5 class="card-title subtext-btn-sm">{{ picture.product.title }}</h5>
-                            <p class="card-text subtext-sm border-top">{{ picture.caption }}</p>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-               
-    </div>
-
-    <div id="notification_form" class="container text-center">
-
-        <div class="card w-100 border-0">
-            <div class="card-header subtext-md text-center py-0" style="background-color: #343a40; color: #fcfbfb;">
-                get notified on stock availability
-            </div>
 
 
-        <!-- <h6 class="subtext-md my-2" style="background-color: #343a40; color: #fcfbfb;">
-            get notified on stock availability
-        </h6> -->
-        <div class="container text-center mt-1 mx-auto subtext-smm" id="" style="opacity: 1">
-            *select at least one
-        </div>
-        <form id="stock_notification" method="post" action="{% url 'homepage' %}#notification_form" class="text-center my-2">
-            {% csrf_token %}
-            
-            <div class="list-group list-group-flush form-group custom-checkbox">
-                {% for checkbox in form.products %}
-                    <div class=" mx-auto subtext-btn-sm">
-                    {{ checkbox }} 
-                    {% if form.is_bound and form.errors.products %}
-                        <p class="text-danger subtext-smm">{{ form.errors.products.0 }}</p>
-                    {% endif %}
-                    </div>
-                {% endfor %}
-            </div>
-        
-            <div class="form-group">
-                <div class="col-md-4 mx-auto">
-                    <input type="text" name="first_name" class="form-control text-center my-2 border-bottom custom-placeholder" placeholder="first name" required>
-                    <input type="text" name="last_name" class="form-control text-center my-2 custom-placeholder" placeholder="last name" required>
-                    <input type="email" name="email" class="form-control text-center my-1 custom-placeholder" placeholder="email@address.com" required>
-                </div>
-            </div>
-            
-            <button class="btn subtext-btn-sm shadow mb-0 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 mt-1 p-1" role="button" aria-disabled="true" style="background-color: #FFBC00;" type="submit">get notified</button>
-        </form>
 
-        </div>
 
-    </div>
+
+
 
     <div class="row border-top bd-light mt-5 mx-auto">
 

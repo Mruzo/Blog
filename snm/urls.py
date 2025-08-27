@@ -38,6 +38,7 @@ urlpatterns = [
     path('', HomePageView.as_view(), name='homepage'),
     path('new-article/', article_create_view, name='article_create'),
     path('product/', include(('snmov.urls', 'snmov'), namespace='product')),
+    path('immersivecomics/', include(('icvybz.urls', 'icvybz'), namespace='immersivecomics')),
     path('about/', about_page, name='about'),
     path('privacy/', privacy_page, name='privacy'),
     path('terms/', terms_page, name='terms'),

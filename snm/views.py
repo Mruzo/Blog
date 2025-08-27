@@ -40,69 +40,10 @@ class HomePageView(FormView, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Fetch testimonials and products
-        testimonials = Testimonials.objects.all()
-        available_products = Product.objects.filter(available=True)
-        unavailable_products = Product.objects.filter(available=False)
-
-        # Prefetch related SiteImage objects for available and unavailable products
-        image_prefetch = Prefetch(
-            'images',
-            queryset=SiteImage.objects.exclude(image__isnull=True).exclude(image=''),
-            to_attr='product_images'
-        )
-
-        available_products = available_products.prefetch_related(image_prefetch)
-        unavailable_products = unavailable_products.prefetch_related(image_prefetch)
-
-        # Create discounted_products list
-        discounted_products = [
-            {
-                'title': product.title,
-                'original_price': product.price,
-                'discounted_price': product.get_discounted_price(),
-                'discount_percentage': product.discount_percentage,
-                'images': product.product_images  # Include preloaded images
-            }
-            for product in available_products
-            if product.discount_percentage > 0
-        ]
-
-        # Create a dictionary with product slugs and their respective GLTF model file paths
-        product_urls = {
-            product.slug: {
-                'gltf': product.gltf_model.url if product.gltf_model else '',
-                'usdz': product.usdz_model.url if product.usdz_model else ''
-            }
-            for product in available_products
-        }
-
-        # Select a random picture for the meta tag
-        all_available_pictures = [img for product in available_products for img in product.product_images]
-        random_image_url = random.choice(all_available_pictures).image.url if all_available_pictures else 'https://justvybz.com/static/snmov/img/default-product.jpg'
-
-        # Get unavailable product images
-        unavailable_pictures = SiteImage.objects.filter(
-            product__in=unavailable_products
-        ).exclude(image__isnull=True).exclude(image='')
-
-        # Get testimonial images - Convert IDs to strings for proper comparison
-        testimonial_images = SiteImage.objects.filter(
-            content_type=ContentType.objects.get_for_model(Testimonials),
-            object_id__in=[str(t.id) for t in testimonials]  # Convert IDs to strings
-        ).exclude(image__isnull=True).exclude(image='')
-
-        # Add these to the context
+        # Only keep about section (testimonials moved to snmov list view)
         context.update({
-            'available_products': available_products,
-            'discounted_products': discounted_products,
-            'unavailable_products': unavailable_products,
-            'unavailable_pictures': unavailable_pictures,
-            'testimonials': testimonials,
             'about': About.objects.first(),
-            'product_urls': product_urls,
-            'random_image_url': random_image_url, 
-            'testimonial_images': testimonial_images,
+            'random_image_url': 'https://justvybz.com/static/snmov/img/default-product.jpg',  # Default image
         })
         
         return context

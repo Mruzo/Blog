@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}My Dashboard - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Top Action Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Welcome, {{ user.username }}!</h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'snmov:my_orders' %}" class="btn btn-outline-primary">
+                <i class="fas fa-shopping-bag me-1"></i>My Orders
+            </a>
+            <a href="{% url 'logout_req' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-sign-out-alt me-1"></i>Logout
+            </a>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <!-- Content Overview -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Content Overview</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Comics:</strong> {{ total_comics }}</p>
+                    <p><strong>Characters:</strong> {{ characters.count }}</p>
+                    <p><strong>Intersections:</strong> {{ intersections.count }}</p>
+                    <p><strong>Total Episodes:</strong> {{ total_episodes }}</p>
+                    <p><strong>Public Comics:</strong> {{ public_comics }}</p>
+                    <p><strong>Pending Review:</strong> {{ pending_comics }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- My Comics -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>My Comics</h5>
+                </div>
+                <div class="card-body">
+                    {% if comics %}
+                        <div class="row">
+                            {% for comic in comics %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ comic.title }}</h6>
+                                        <p class="card-text">{{ comic.description|truncatewords:20 }}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge {% if comic.is_public %}badge-success{% else %}badge-secondary{% endif %}">
+                                                {% if comic.is_public %}Public{% else %}Private{% endif %}
+                                            </span>
+                                            <span class="badge {% if comic.moderation_status == 'approved' %}badge-success{% elif comic.moderation_status == 'pending' %}badge-warning{% else %}badge-danger{% endif %}">
+                                                {{ comic.moderation_status|title }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">Created: {{ comic.created_at|date:"M d, Y" }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">You haven't created any comics yet.</p>
+                        <a href="#" class="btn btn-primary">Create Your First Comic</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- My Characters -->
+    {% if characters %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>My Characters</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for character in characters %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ character.name }}</h6>
+                                    <p class="card-text">{{ character.personality }}</p>
+                                    <span class="badge {% if character.is_public %}badge-success{% else %}badge-secondary{% endif %}">
+                                        {% if character.is_public %}Public{% else %}Private{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- My Intersections -->
+    {% if intersections %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>My Intersections</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for intersection in intersections %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ intersection.name }}</h6>
+                                    <p class="card-text">{{ intersection.description|truncatewords:15 }}</p>
+                                    <span class="badge {% if intersection.is_public %}badge-success{% else %}badge-secondary{% endif %}">
+                                        {% if intersection.is_public %}Public{% else %}Private{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

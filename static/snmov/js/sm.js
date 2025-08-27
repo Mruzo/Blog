@@ -462,3 +462,179 @@ function animate(timestamp, xrFrame) {
     renderer.render(scene, camera);
 
 }
+
+// ===== SMOOTH NAVIGATION & UX ENHANCEMENTS =====
+
+// Smooth page transitions and enhanced UX
+function initSmoothNavigation() {
+    console.log('Initializing smooth navigation...');
+    
+    // Get homepage URL for JavaScript
+    var homepage_url = window.location.origin + '/';
+    console.log('Homepage URL:', homepage_url);
+    
+    // Add smooth transitions to all internal links
+    var links = document.querySelectorAll('a[href^="/"], a[href^="' + homepage_url + '"]');
+    console.log('Found', links.length, 'internal links');
+    
+    // Debug: Log all found links
+    links.forEach(function(link, index) {
+        console.log('Link', index + 1, ':', link.href, 'Text:', link.textContent.trim());
+    });
+    
+    links.forEach(function(link, index) {
+        // Skip if it's a target="_blank" link
+        if (link.getAttribute('target') === '_blank') {
+            console.log('Skipping target="_blank" link:', link.href);
+            return;
+        }
+        
+        // Check if event listener is already attached
+        if (link.hasAttribute('data-smooth-nav-attached')) {
+            console.log('Event listener already attached to:', link.href);
+            return;
+        }
+        
+        console.log('Attaching event listener to link:', link.href);
+        
+        link.addEventListener('click', function(e) {
+            console.log('=== LINK CLICKED ===');
+            var href = this.getAttribute('href');
+            console.log('Link clicked:', href);
+            console.log('Link element:', this);
+            console.log('Event:', e);
+            
+            // Skip if it's a hash link or external link
+            if (href.startsWith('#') || (href.startsWith('http') && !href.startsWith(window.location.origin))) {
+                console.log('Skipping link:', href);
+                return;
+            }
+            
+            console.log('Processing navigation to:', href);
+            
+            // Prevent default navigation temporarily
+            e.preventDefault();
+            console.log('Default navigation prevented');
+            
+            // Show loading spinner
+            var spinner = document.getElementById('loadingSpinner');
+            if (spinner) {
+                spinner.classList.add('show');
+                console.log('Loading spinner shown');
+            } else {
+                console.log('Loading spinner not found');
+            }
+            
+            // Add transition effect
+            var pageContent = document.querySelector('.page-content');
+            if (pageContent) {
+                pageContent.classList.add('page-transitioning');
+                console.log('Page transition effect added');
+            } else {
+                console.log('Page content wrapper not found');
+            }
+            
+            // Small delay to show transition, then navigate
+            setTimeout(function() {
+                console.log('Navigating to:', href);
+                window.location.href = href;
+            }, 300);
+        });
+        
+        // Mark this link as having an event listener
+        link.setAttribute('data-smooth-nav-attached', 'true');
+    });
+    
+    // Remove transition class and hide spinner when page loads
+    window.addEventListener('load', function() {
+        console.log('Page loaded, cleaning up transitions');
+        var pageContent = document.querySelector('.page-content');
+        var spinner = document.getElementById('loadingSpinner');
+        
+        if (pageContent) {
+            pageContent.classList.remove('page-transitioning');
+        }
+        if (spinner) {
+            spinner.classList.remove('show');
+        }
+    });
+    
+    // Also remove on DOM ready as fallback
+    var pageContent = document.querySelector('.page-content');
+    var spinner = document.getElementById('loadingSpinner');
+    
+    if (pageContent) {
+        pageContent.classList.remove('page-transitioning');
+    }
+    if (spinner) {
+        spinner.classList.remove('show');
+    }
+    
+    // Add smooth scroll to top when navigating
+    if (window.jQuery) {
+        jQuery('html, body').animate({
+            scrollTop: 0
+        }, 300);
+    } else {
+        // Fallback for non-jQuery
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+    
+    console.log('Smooth navigation initialized successfully');
+}
+
+// Initialize smooth navigation immediately when this module loads
+console.log('SM.js module loaded, initializing smooth navigation...');
+initSmoothNavigation();
+
+// Also try to initialize when DOM is ready (in case this runs before DOM)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM ready, re-initializing smooth navigation...');
+        initSmoothNavigation();
+    });
+} else {
+    console.log('DOM already ready, smooth navigation should be working');
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSmoothNavigation);
+} else {
+    // DOM is already ready
+    initSmoothNavigation();
+}
+
+// Also try to initialize after jQuery loads (fallback)
+if (window.jQuery) {
+    jQuery(document).ready(initSmoothNavigation);
+} else {
+    // Wait for jQuery to load
+    window.addEventListener('load', function() {
+        if (window.jQuery) {
+            jQuery(document).ready(initSmoothNavigation);
+        }
+    });
+}
+
+// Retry initialization after a delay to catch dynamically loaded content
+setTimeout(function() {
+    console.log('Retrying smooth navigation initialization...');
+    initSmoothNavigation();
+}, 1000);
+
+// Also retry after window load
+window.addEventListener('load', function() {
+    console.log('Window loaded, retrying smooth navigation initialization...');
+    setTimeout(initSmoothNavigation, 100);
+});
+
+// Debug: Check if function is available globally
+window.initSmoothNavigation = initSmoothNavigation;
+console.log('Smooth navigation function available globally:', typeof window.initSmoothNavigation);
+
+// Export the function for module usage
+export { initSmoothNavigation };

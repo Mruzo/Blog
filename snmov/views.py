@@ -64,6 +64,38 @@ class ProductListView(generic.ListView):
             product.images_list = product.images.all()  # Fetch related images
 
         return products  # Return the list of products
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Add available products for the featured products section
+        available_products = Product.objects.filter(available=True)
+        
+        # Prefetch related SiteImage objects for available products
+        image_prefetch = Prefetch(
+            'images',
+            queryset=SiteImage.objects.exclude(image__isnull=True).exclude(image=''),
+            to_attr='product_images'
+        )
+        
+        available_products = available_products.prefetch_related(image_prefetch)
+        
+        # Add testimonials
+        from snmov.models import Testimonials
+        testimonials = Testimonials.objects.all()
+        
+        # Add unavailable products for coming soon section
+        unavailable_products = Product.objects.filter(available=False)
+        unavailable_pictures = SiteImage.objects.filter(
+            product__in=unavailable_products
+        ).exclude(image__isnull=True).exclude(image='')
+        
+        context.update({
+            'available_products': available_products,
+            'testimonials': testimonials,
+            'unavailable_pictures': unavailable_pictures,
+        })
+        return context
 
 
 

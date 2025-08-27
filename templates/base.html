@@ -36,126 +36,7 @@
     <link rel="stylesheet" href="{% static 'snmov/css/sm.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f8f9fa;
-        }
 
-        .container {
-            width: 100%;
-            padding-right: 15px;
-            padding-left: 15px;
-            margin-right: auto;
-            margin-left: auto;
-        }
-
-        /* Carousel animations */
-        .carousel-fade .carousel-item {
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-        }
-        
-        .carousel-fade .carousel-item.active {
-            opacity: 1;
-        }
-        
-        .carousel-item img {
-            transition: transform 0.5s ease-in-out;
-            max-width: 100%;
-            height: auto;
-        }
-        
-        .carousel-item:hover img {
-            transform: scale(1.02);
-        }
-        
-        .carousel-control-prev,
-        .carousel-control-next {
-            transition: opacity 0.3s ease-in-out;
-        }
-        
-        .carousel-control-prev:hover,
-        .carousel-control-next:hover {
-            opacity: 0.9;
-        }
-
-        /* Footer styles */
-        footer {
-            background-color: #fff;
-        }
-
-        .hover-underline {
-            position: relative;
-            transition: color 0.3s ease;
-        }
-
-        .hover-underline::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 1px;
-            bottom: -2px;
-            left: 0;
-            background-color: currentColor;
-            transition: width 0.3s ease;
-        }
-
-        .hover-underline:hover::after {
-            width: 100%;
-        }
-
-        .policy-links a {
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .policy-links a:hover {
-            color: #007bff !important;
-        }
-
-        .powered-by {
-            opacity: 0.8;
-            transition: opacity 0.3s ease;
-        }
-
-        .powered-by:hover {
-            opacity: 1;
-        }
-
-        /* Cookie policy styles */
-        .list-group-item-action {
-            transition: all 0.3s ease;
-        }
-
-        .list-group-item-action:hover {
-            background-color: rgba(0, 123, 255, 0.05);
-            transform: translateX(5px);
-        }
-
-        .table-hover tbody tr {
-            transition: background-color 0.3s ease;
-        }
-
-        .card {
-            transition: box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            box-shadow: 0 .5rem 1rem rgba(0,0,0,.1) !important;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                margin-bottom: 450px; /* Larger footer height for mobile */
-            }
-
-            footer {
-                height: 450px;
-            }
-        }
-    </style>
 
     {% block head %}{% endblock %}
 
@@ -175,8 +56,15 @@
     <div class="mx-auto">
         {% include 'toasts.html' %}
     </div>
+    
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+    </div>
     <main>
-        {% block content %}{% endblock %}
+        <div class="page-content">
+            {% block content %}{% endblock %}
+        </div>
         
         <div>
             {% include 'cookies_policy.html' %}
@@ -229,6 +117,70 @@
     <script type="module" src="{% static 'snmov/js/sm.js' %}"></script>
     <script src="{% static 'tinymce/js/prism.js' %}"></script>
     
+    <!-- Smooth Navigation Initialization (non-module) -->
+    <script>
+        // Bridge script to ensure smooth navigation works
+        console.log('Bridge script loaded, checking smooth navigation...');
+        
+        // Function to check and initialize smooth navigation
+        function checkAndInitSmoothNav() {
+            if (typeof window.initSmoothNavigation === 'function') {
+                console.log('✅ Smooth navigation function found, initializing...');
+                try {
+                    window.initSmoothNavigation();
+                    console.log('✅ Smooth navigation initialized successfully');
+                    return true;
+                } catch (error) {
+                    console.error('❌ Error initializing smooth navigation:', error);
+                    return false;
+                }
+            } else {
+                console.log('⏳ Smooth navigation function not yet available');
+                return false;
+            }
+        }
+        
+        // Try to initialize immediately
+        if (!checkAndInitSmoothNav()) {
+            console.log('⏳ Function not ready, setting up retry mechanism...');
+            
+            // Retry multiple times with increasing delays
+            const retryDelays = [100, 300, 500, 1000, 2000];
+            let retryCount = 0;
+            
+            function retryInit() {
+                if (retryCount >= retryDelays.length) {
+                    console.error('❌ Failed to initialize smooth navigation after all retries');
+                    return;
+                }
+                
+                console.log(`⏳ Retry ${retryCount + 1}/${retryDelays.length} in ${retryDelays[retryCount]}ms...`);
+                
+                setTimeout(function() {
+                    if (checkAndInitSmoothNav()) {
+                        console.log('✅ Smooth navigation initialized on retry');
+                    } else {
+                        retryCount++;
+                        retryInit();
+                    }
+                }, retryDelays[retryCount]);
+            }
+            
+            retryInit();
+        }
+        
+        // Also try on DOM ready and window load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM ready, checking smooth navigation...');
+            checkAndInitSmoothNav();
+        });
+        
+        window.addEventListener('load', function() {
+            console.log('Window loaded, checking smooth navigation...');
+            checkAndInitSmoothNav();
+        });
+    </script>
+    
     {% if messages %}
     <script>
         $(document).ready(function () {
@@ -236,6 +188,8 @@
         });
     </script>
     {% endif %}
+
+
 
     {% block javascript %}{% endblock %}
 </body>
