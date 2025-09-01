@@ -413,11 +413,11 @@ class SmoothNavigationTests(TestCase):
         client = Client()
         response = client.get(reverse('homepage'))
         
-        # Should load sm.js as module (since it contains ES6 imports)
-        self.assertContains(response, '<script type="module" src="/static/snmov/js/sm.js"></script>')
+        # Should load sm.js as regular script
+        self.assertContains(response, '<script src="/static/snmov/js/sm.js"></script>')
         
-        # Should be loaded as module
-        self.assertContains(response, 'type="module"')
+        # Should NOT be loaded as module anymore
+        self.assertNotContains(response, 'type="module"')
     
     def test_page_content_wrapper_exists(self):
         """Test that page content is wrapped for smooth transitions."""
@@ -464,8 +464,8 @@ class SmoothContentLoadingTests(TestCase):
         # Check that the JavaScript file is loaded
         self.assertContains(response, 'sm.js')
         
-        # Check that the script tag has type="module"
-        self.assertContains(response, 'type="module"')
+        # Check that the script tag does NOT have type="module" (since we removed ES6 imports)
+        self.assertNotContains(response, 'type="module"')
     
     def test_content_animation_classes_exist(self):
         """Test that content animation CSS classes are available."""
