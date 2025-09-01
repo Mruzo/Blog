@@ -586,36 +586,178 @@ function initSmoothNavigation() {
     console.log('Smooth navigation initialized successfully');
 }
 
-// Initialize smooth navigation immediately when this module loads
+// ===== SMOOTH CONTENT LOADING =====
+function initSmoothContentLoading() {
+    console.log('Initializing smooth content loading...');
+    
+    // Get all content elements that should animate in
+    var contentElements = document.querySelectorAll('.page-content > *:not(.skip-animation)');
+    console.log('Found', contentElements.length, 'content elements to animate');
+    
+    // Add initial hidden state and animation classes
+    contentElements.forEach(function(element, index) {
+        // Skip if already processed
+        if (element.hasAttribute('data-content-animated')) {
+            return;
+        }
+        
+        // Add initial hidden state
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(30px)';
+        element.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+        
+        // Mark as processed
+        element.setAttribute('data-content-animated', 'true');
+        
+        // Animate in with staggered delay
+        setTimeout(function() {
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+        }, 100 + (index * 150)); // Staggered animation: 100ms base + 150ms per element
+    });
+    
+    // Special handling for specific page types
+    var currentPath = window.location.pathname;
+    
+    if (currentPath === '/' || currentPath === '/home') {
+        // Homepage specific animations
+        animateHomepageContent();
+    } else if (currentPath.includes('immersivecomics')) {
+        // ICz page specific animations
+        animateICzContent();
+    } else if (currentPath.includes('product')) {
+        // Merch page specific animations
+        animateMerchContent();
+    }
+    
+    console.log('Smooth content loading initialized');
+}
+
+// Homepage specific content animations
+function animateHomepageContent() {
+    console.log('Animating homepage content...');
+    
+    // Animate main heading with special effect
+    var mainHeading = document.querySelector('.landtext');
+    if (mainHeading) {
+        mainHeading.style.opacity = '0';
+        mainHeading.style.transform = 'scale(0.8) translateY(50px)';
+        mainHeading.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+        
+        setTimeout(function() {
+            mainHeading.style.opacity = '1';
+            mainHeading.style.transform = 'scale(1) translateY(0)';
+        }, 200);
+    }
+    
+    // Animate about section with slide effect
+    var aboutSection = document.querySelector('.row.border-top');
+    if (aboutSection) {
+        aboutSection.style.opacity = '0';
+        aboutSection.style.transform = 'translateX(-50px)';
+        aboutSection.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+        
+        setTimeout(function() {
+            aboutSection.style.opacity = '1';
+            aboutSection.style.transform = 'translateX(0)';
+        }, 400);
+    }
+}
+
+// ICz page specific content animations
+function animateICzContent() {
+    console.log('Animating ICz content...');
+    
+    // Animate comic cards with staggered entrance
+    var comicCards = document.querySelectorAll('.card, .comic-item');
+    comicCards.forEach(function(card, index) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(40px) rotateX(10deg)';
+        card.style.transition = 'opacity 0.7s ease-out, transform 0.7s ease-out';
+        
+        setTimeout(function() {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0) rotateX(0deg)';
+        }, 300 + (index * 200));
+    });
+}
+
+// Merch page specific content animations
+function animateMerchContent() {
+    console.log('Animating Merch content...');
+    
+    // Animate product cards with bounce effect
+    var productCards = document.querySelectorAll('.card, .product-item');
+    productCards.forEach(function(card, index) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9) translateY(30px)';
+        card.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+        
+        setTimeout(function() {
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1) translateY(0)';
+        }, 200 + (index * 150));
+    });
+    
+    // Animate testimonials with slide effect
+    var testimonials = document.querySelectorAll('.testimonial, .testimonial-item');
+    testimonials.forEach(function(testimonial, index) {
+        testimonial.style.opacity = '0';
+        testimonial.style.transform = 'translateX(50px)';
+        testimonial.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+        
+        setTimeout(function() {
+            testimonial.style.opacity = '1';
+            testimonial.style.transform = 'translateX(0)';
+        }, 500 + (index * 300));
+    });
+}
+
+// Initialize smooth content loading immediately when this module loads
 console.log('SM.js module loaded, initializing smooth navigation...');
 initSmoothNavigation();
+
+// Initialize smooth content loading
+initSmoothContentLoading();
 
 // Also try to initialize when DOM is ready (in case this runs before DOM)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         console.log('DOM ready, re-initializing smooth navigation...');
         initSmoothNavigation();
+        initSmoothContentLoading();
     });
 } else {
     console.log('DOM already ready, smooth navigation should be working');
+    initSmoothContentLoading();
 }
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSmoothNavigation);
+    document.addEventListener('DOMContentLoaded', function() {
+        initSmoothNavigation();
+        initSmoothContentLoading();
+    });
 } else {
     // DOM is already ready
     initSmoothNavigation();
+    initSmoothContentLoading();
 }
 
 // Also try to initialize after jQuery loads (fallback)
 if (window.jQuery) {
-    jQuery(document).ready(initSmoothNavigation);
+    jQuery(document).ready(function() {
+        initSmoothNavigation();
+        initSmoothContentLoading();
+    });
 } else {
     // Wait for jQuery to load
     window.addEventListener('load', function() {
         if (window.jQuery) {
-            jQuery(document).ready(initSmoothNavigation);
+            jQuery(document).ready(function() {
+                initSmoothNavigation();
+                initSmoothContentLoading();
+            });
         }
     });
 }
@@ -624,17 +766,23 @@ if (window.jQuery) {
 setTimeout(function() {
     console.log('Retrying smooth navigation initialization...');
     initSmoothNavigation();
+    initSmoothContentLoading();
 }, 1000);
 
 // Also retry after window load
 window.addEventListener('load', function() {
     console.log('Window loaded, retrying smooth navigation initialization...');
-    setTimeout(initSmoothNavigation, 100);
+    setTimeout(function() {
+        initSmoothNavigation();
+        initSmoothContentLoading();
+    }, 100);
 });
 
-// Debug: Check if function is available globally
+// Debug: Check if functions are available globally
 window.initSmoothNavigation = initSmoothNavigation;
+window.initSmoothContentLoading = initSmoothContentLoading;
 console.log('Smooth navigation function available globally:', typeof window.initSmoothNavigation);
+console.log('Smooth content loading function available globally:', typeof window.initSmoothContentLoading);
 
-// Export the function for module usage
-export { initSmoothNavigation };
+// Export the functions for module usage
+export { initSmoothNavigation, initSmoothContentLoading };

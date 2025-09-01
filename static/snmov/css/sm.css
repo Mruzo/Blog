@@ -739,3 +739,78 @@ footer {
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(0,0,0,0.1);
 }
+
+/* ===== SMOOTH CONTENT LOADING ANIMATIONS ===== */
+
+/* Content animation base classes */
+.content-animate {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.content-animate.animate-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Staggered animation delays */
+.content-animate:nth-child(1) { transition-delay: 0.1s; }
+.content-animate:nth-child(2) { transition-delay: 0.25s; }
+.content-animate:nth-child(3) { transition-delay: 0.4s; }
+.content-animate:nth-child(4) { transition-delay: 0.55s; }
+.content-animate:nth-child(5) { transition-delay: 0.7s; }
+.content-animate:nth-child(6) { transition-delay: 0.85s; }
+
+/* Special animation effects */
+.scale-in {
+    transform: scale(0.8) translateY(50px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.scale-in.animate-in {
+    transform: scale(1) translateY(0);
+}
+
+.slide-left {
+    transform: translateX(-50px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.slide-left.animate-in {
+    transform: translateX(0);
+}
+
+.slide-right {
+    transform: translateX(50px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.slide-right.animate-in {
+    transform: translateX(0);
+}
+
+.bounce-in {
+    transform: scale(0.9) translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.bounce-in.animate-in {
+    transform: scale(1) translateY(0);
+}
+
+.rotate-in {
+    transform: translateY(40px) rotateX(10deg);
+    transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.rotate-in.animate-in {
+    transform: translateY(0) rotateX(0deg);
+}
+
+/* Skip animation class for elements that shouldn't animate */
+.skip-animation {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+}

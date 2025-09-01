@@ -27,10 +27,10 @@
                 <a href="{% url 'homepage' %}" class="btn btn-light btn-sm px-3 subtext-btn-sm nav-btn {% if request.path == '/' %}active{% endif %}" style="{% if request.path == '/' %}background-color: rgba(255, 188, 0, 0.1) !important; border: 2px solid #FFBC00 !important;{% endif %}">
               <i class="fas fa-home me-1"></i>Home
             </a>
-    <a href="{% url 'immersivecomics:comic_list' %}" class="btn btn-light btn-sm px-3 subtext-btn-sm ms-2 {% if 'immersivecomics' in request.path %}active{% endif %}" style="{% if 'immersivecomics' in request.path %}background-color: rgba(255, 188, 0, 0.1) !important; border: 2px solid #FFBC00 !important;{% endif %}">
+    <a href="{% url 'immersivecomics:comic_list' %}" class="btn btn-light btn-sm px-3 subtext-btn-sm ms-2 nav-btn {% if 'immersivecomics' in request.path %}active{% endif %}" style="{% if 'immersivecomics' in request.path %}background-color: rgba(255, 188, 0, 0.1) !important; border: 2px solid #FFBC00 !important;{% endif %}">
       <i class="fas fa-cube me-1"></i>ICz
     </a>
-    <a href="{% url 'snmov:product_list' %}" class="btn btn-light btn-sm px-3 subtext-btn-sm ms-2 {% if 'product' in request.path %}active{% endif %}" style="{% if 'product' in request.path %}background-color: rgba(255, 188, 0, 0.1) !important; border: 2px solid #FFBC00 !important;{% endif %}">
+    <a href="{% url 'snmov:product_list' %}" class="btn btn-light btn-sm px-3 subtext-btn-sm ms-2 nav-btn {% if 'product' in request.path %}active{% endif %}" style="{% if 'product' in request.path %}background-color: rgba(255, 188, 0, 0.1) !important; border: 2px solid #FFBC00 !important;{% endif %}">
       <i class="fas fa-store me-1"></i>Merch
     </a>
   </div>

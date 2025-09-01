@@ -174,7 +174,7 @@ class UIFixesTests(TestCase):
         client = Client()
         
         # Test products page - Merch should be active
-        response = client.get(reverse('product:product_list'))
+        response = client.get(reverse('snmov:product_list'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'active')
     
@@ -186,7 +186,7 @@ class UIFixesTests(TestCase):
         client = Client()
         
         # Test products page still works
-        response = client.get(reverse('product:product_list'))
+        response = client.get(reverse('snmov:product_list'))
         self.assertEqual(response.status_code, 200)
         
         # Should show products
@@ -215,7 +215,7 @@ class UIFixesTests(TestCase):
         
         client = Client()
         
-        response = client.get(reverse('product:product_list'))
+        response = client.get(reverse('snmov:product_list'))
         self.assertEqual(response.status_code, 200)
         
         # Should show products at the bottom
@@ -236,7 +236,7 @@ class UIFixesTests(TestCase):
         self.assertContains(response, 'active')
         
         # Test products page - Merch should be active
-        response = client.get(reverse('product:product_list'))
+        response = client.get(reverse('snmov:product_list'))
         self.assertContains(response, 'Merch')  # Updated from Products to Merch
         self.assertContains(response, 'active')
         
@@ -430,7 +430,7 @@ class SmoothNavigationTests(TestCase):
         self.assertContains(response, 'class="page-content"')
         
         # Test products page
-        response = client.get(reverse('product:product_list'))
+        response = client.get(reverse('snmov:product_list'))
         self.assertContains(response, 'class="page-content"')
         
         # Test Vybz page
@@ -451,3 +451,45 @@ class SmoothNavigationTests(TestCase):
         
         # Should have spinner element
         self.assertContains(response, 'class="spinner"')
+
+
+class SmoothContentLoadingTests(TestCase):
+    """Test smooth content loading functionality."""
+    
+    def test_smooth_content_loading_javascript_loaded(self):
+        """Test that smooth content loading JavaScript is properly loaded."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that the JavaScript file is loaded
+        self.assertContains(response, 'sm.js')
+        
+        # Check that the script tag has type="module"
+        self.assertContains(response, 'type="module"')
+    
+    def test_content_animation_classes_exist(self):
+        """Test that content animation CSS classes are available."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that the CSS file is loaded
+        self.assertContains(response, 'sm.css')
+    
+    def test_page_content_wrapper_for_animations(self):
+        """Test that page content wrapper exists for animations."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that page-content wrapper exists
+        self.assertContains(response, 'class="page-content"')
+    
+    def test_homepage_specific_animations(self):
+        """Test that homepage has elements that can be animated."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check for main heading that gets animated
+        self.assertContains(response, 'class="landtext"')
+        
+        # Check for about section that gets animated
+        self.assertContains(response, 'border-top')
