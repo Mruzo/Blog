@@ -332,7 +332,7 @@ class DashboardNavigationTests(TestCase):
         
         response = client.get(reverse('immersivecomics:user_dashboard'))
         self.assertEqual(response.status_code, 200)
-        
+
         # Should have welcome message and action buttons in top bar
         self.assertContains(response, 'Welcome, testuser')
         self.assertContains(response, 'My Orders')
