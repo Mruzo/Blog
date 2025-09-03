@@ -814,3 +814,138 @@ footer {
     transform: none !important;
     transition: none !important;
 }
+
+/* Navbar buttons layout - centered on desktop, full-width on mobile */
+.navbar-buttons-container {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.navbar-buttons-container .nav-btn {
+    white-space: nowrap !important;
+    min-width: fit-content !important;
+    max-width: none !important;
+    margin: 0 4px !important;
+    flex: 0 0 auto !important;
+}
+
+/* Mobile responsive navbar buttons - full width on mobile */
+@media (max-width: 768px) {
+    .navbar-buttons-container {
+        justify-content: space-between !important;
+        padding: 0 10px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn {
+        flex: 1 1 0% !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        font-size: 0.8rem !important;
+        margin: 0 2px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn i {
+        margin-right: 2px !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 576px) {
+    .navbar-buttons-container {
+        justify-content: space-between !important;
+        padding: 0 5px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn {
+        flex: 1 1 0% !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+        font-size: 0.75rem !important;
+        margin: 0 1px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn i {
+        margin-right: 1px !important;
+        font-size: 0.7rem !important;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 400px) {
+    .navbar-buttons-container {
+        justify-content: space-between !important;
+        padding: 0 2px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn {
+        flex: 1 1 0% !important;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+        font-size: 0.7rem !important;
+        margin: 0 1px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn i {
+        margin-right: 0 !important;
+        font-size: 0.65rem !important;
+    }
+}
+
+/* Force navbar buttons to never wrap - ultimate fallback */
+.navbar-buttons-container {
+    display: -webkit-box !important;
+    display: -ms-flexbox !important;
+    display: flex !important;
+    -webkit-box-orient: horizontal !important;
+    -webkit-box-direction: normal !important;
+    -ms-flex-direction: row !important;
+    flex-direction: row !important;
+    -ms-flex-wrap: nowrap !important;
+    flex-wrap: nowrap !important;
+    -webkit-box-pack: center !important;
+    -ms-flex-pack: center !important;
+    justify-content: center !important;
+    -webkit-box-align: center !important;
+    -ms-flex-align: center !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+.navbar-buttons-container .nav-btn {
+    -webkit-box-flex: 0 !important;
+    -ms-flex: 0 0 auto !important;
+    flex: 0 0 auto !important;
+    -ms-flex-negative: 0 !important;
+    flex-shrink: 0 !important;
+    -ms-flex-positive: 0 !important;
+    flex-grow: 0 !important;
+    -ms-flex-preferred-size: auto !important;
+    flex-basis: auto !important;
+}
+
+/* Mobile fallback - full width */
+@media (max-width: 768px) {
+    .navbar-buttons-container {
+        -webkit-box-pack: justify !important;
+        -ms-flex-pack: justify !important;
+        justify-content: space-between !important;
+    }
+    
+    .navbar-buttons-container .nav-btn {
+        -webkit-box-flex: 1 !important;
+        -ms-flex: 1 1 0% !important;
+        flex: 1 1 0% !important;
+        -ms-flex-negative: 1 !important;
+        flex-shrink: 1 !important;
+        -ms-flex-positive: 1 !important;
+        flex-grow: 1 !important;
+        -ms-flex-preferred-size: 0% !important;
+        flex-basis: 0% !important;
+    }
+}

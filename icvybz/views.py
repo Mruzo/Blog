@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, DetailView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.http import JsonResponse
@@ -7,13 +7,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import Comic, Season, Episode, Dialogue, POV, ComicComment, TrafficSource
 from django.utils.safestring import mark_safe
-from .forms import ComicCommentForm
+from .forms import ComicCommentForm, StoryForm, SeasonForm, EpisodeForm, CharacterForm, DialogueForm
 import json
 import os
 from datetime import datetime
 import re
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.urls import reverse
 from .models import Character, Intersection
 
 
@@ -805,5 +806,254 @@ class UserDashboardView(LoginRequiredMixin, ListView):
         context['pending_comics'] = Comic.objects.filter(user=user, moderation_status='pending').count()
         
         return context
+
+
+class StoryCreateView(LoginRequiredMixin, CreateView):
+    model = Comic
+    form_class = StoryForm
+    template_name = 'icvybz/story_create.html'
+    
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        form.instance.is_public = False  # Start as private
+        form.instance.moderation_status = 'pending'
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:story_manage', kwargs={'pk': self.object.pk})
+
+
+class StoryEditView(LoginRequiredMixin, UpdateView):
+    model = Comic
+    form_class = StoryForm
+    template_name = 'icvybz/story_edit.html'
+    
+    def get_queryset(self):
+        return Comic.objects.filter(user=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:story_manage', kwargs={'pk': self.object.pk})
+
+
+class StoryManageView(LoginRequiredMixin, DetailView):
+    model = Comic
+    template_name = 'icvybz/story_manage.html'
+    context_object_name = 'story'
+    
+    def get_queryset(self):
+        return Comic.objects.filter(user=self.request.user)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        story = self.object
+        
+        # Get seasons with episode counts
+        seasons = story.seasons.all().annotate(
+            episode_count=Count('episodes'),
+            published_episode_count=Count('episodes', filter=Q(episodes__is_published=True))
+        )
+        
+        context['seasons'] = seasons
+        context['total_episodes'] = sum(season.episode_count for season in seasons)
+        context['published_episodes'] = sum(season.published_episode_count for season in seasons)
+        
+        return context
+
+
+class StoryDeleteView(LoginRequiredMixin, DeleteView):
+    model = Comic
+    template_name = 'icvybz/story_confirm_delete.html'
+    
+    def get_queryset(self):
+        return Comic.objects.filter(user=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:user_dashboard')
+
+
+class SeasonCreateView(LoginRequiredMixin, CreateView):
+    model = Season
+    form_class = SeasonForm
+    template_name = 'icvybz/season_create.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.story = get_object_or_404(Comic, pk=kwargs['story_id'], user=request.user)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def form_valid(self, form):
+        form.instance.comic = self.story
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['story'] = self.story
+        return context
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:story_manage', kwargs={'pk': self.story.pk})
+
+
+class SeasonEditView(LoginRequiredMixin, UpdateView):
+    model = Season
+    form_class = SeasonForm
+    template_name = 'icvybz/season_edit.html'
+    
+    def get_queryset(self):
+        return Season.objects.filter(comic__user=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:story_manage', kwargs={'pk': self.object.comic.pk})
+
+
+class EpisodeCreateView(LoginRequiredMixin, CreateView):
+    model = Episode
+    form_class = EpisodeForm
+    template_name = 'icvybz/episode_create.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.season = get_object_or_404(Season, pk=kwargs['season_id'], comic__user=request.user)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def form_valid(self, form):
+        form.instance.season = self.season
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['season'] = self.season
+        context['story'] = self.season.comic
+        return context
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:episode_manage', kwargs={'pk': self.object.pk})
+
+
+class EpisodeEditView(LoginRequiredMixin, UpdateView):
+    model = Episode
+    form_class = EpisodeForm
+    template_name = 'icvybz/episode_edit.html'
+    
+    def get_queryset(self):
+        return Episode.objects.filter(season__comic__user=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:episode_manage', kwargs={'pk': self.object.pk})
+
+
+class EpisodeManageView(LoginRequiredMixin, DetailView):
+    model = Episode
+    template_name = 'icvybz/episode_manage.html'
+    context_object_name = 'episode'
+    
+    def get_queryset(self):
+        return Episode.objects.filter(season__comic__user=self.request.user)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        episode = self.object
+        
+        # Get dialogues ordered by order field
+        dialogues = episode.dialogues.all().order_by('order')
+        context['dialogues'] = dialogues
+        
+        # Get characters for this story
+        context['characters'] = Character.objects.filter(
+            Q(user=self.request.user) | Q(is_public=True)
+        ).distinct()
+        
+        return context
+
+
+class CharacterCreateView(LoginRequiredMixin, CreateView):
+    model = Character
+    form_class = CharacterForm
+    template_name = 'icvybz/character_create.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        story_id = self.kwargs.get('story_id')
+        if story_id:
+            context['story'] = get_object_or_404(Comic, pk=story_id, user=self.request.user)
+        return context
+    
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        form.instance.is_public = False  # Start as private
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        story_id = self.kwargs.get('story_id')
+        if story_id:
+            return reverse('immersivecomics:story_manage', kwargs={'pk': story_id})
+        return reverse('immersivecomics:user_dashboard')
+
+
+class DialogueCreateView(LoginRequiredMixin, CreateView):
+    model = Dialogue
+    form_class = DialogueForm
+    template_name = 'icvybz/dialogue_create.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.episode = get_object_or_404(Episode, pk=kwargs['episode_id'], season__comic__user=request.user)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Populate character queryset with user's characters
+        form.fields['character'].queryset = Character.objects.filter(user=self.request.user)
+        return form
+    
+    def form_valid(self, form):
+        form.instance.episode = self.episode
+        
+        # Create POV if character is selected
+        character_id = self.request.POST.get('character')
+        if character_id:
+            character = get_object_or_404(Character, pk=character_id)
+            pov, created = POV.objects.get_or_create(
+                character=character,
+                defaults={
+                    'head_x': 0,
+                    'head_y': 1.6,
+                    'head_z': 0
+                }
+            )
+            form.instance.pov = pov
+        
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['episode'] = self.episode
+        context['characters'] = Character.objects.filter(
+            Q(user=self.request.user) | Q(is_public=True)
+        ).distinct()
+        return context
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:episode_manage', kwargs={'pk': self.episode.pk})
+
+
+class DialogueEditView(LoginRequiredMixin, UpdateView):
+    model = Dialogue
+    form_class = DialogueForm
+    template_name = 'icvybz/dialogue_edit.html'
+    
+    def get_queryset(self):
+        return Dialogue.objects.filter(episode__season__comic__user=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:episode_manage', kwargs={'pk': self.object.episode.pk})
+
+
+class DialogueDeleteView(LoginRequiredMixin, DeleteView):
+    model = Dialogue
+    template_name = 'icvybz/dialogue_confirm_delete.html'
+    
+    def get_queryset(self):
+        return Dialogue.objects.filter(episode__season__comic__user=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:episode_manage', kwargs={'pk': self.object.episode.pk})
 
 

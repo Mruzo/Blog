@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from .models import Comic, Season, Episode, Character, Dialogue, POV
 
 
 class IcvybzAppRecognitionTests(TestCase):
@@ -493,3 +494,471 @@ class SmoothContentLoadingTests(TestCase):
         
         # Check for about section that gets animated
         self.assertContains(response, 'border-top')
+
+
+class StoryManagementSystemTests(TestCase):
+    """Test the complete story creation and management system"""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.login(username='testuser', password='testpass123')
+    
+    def test_story_creation_workflow(self):
+        """Test the complete story creation workflow"""
+        # Test story creation form access
+        response = self.client.get(reverse('immersivecomics:story_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Create New Story')
+        self.assertContains(response, 'Story Details')
+        self.assertContains(response, 'Story Title')
+        self.assertContains(response, 'Story Description')
+        self.assertContains(response, 'Cover Image')
+        
+        # Test story creation
+        response = self.client.post(reverse('immersivecomics:story_create'), {
+            'title': 'Test Story',
+            'description': 'A test story for testing'
+        })
+        
+        # Should redirect to story management
+        self.assertEqual(response.status_code, 302)
+        story = Comic.objects.get(title='Test Story')
+        self.assertEqual(story.user, self.user)
+        self.assertFalse(story.is_public)  # Should start as private
+        self.assertEqual(story.moderation_status, 'pending')
+    
+    def test_story_management_interface(self):
+        """Test the story management interface"""
+        # Create a test story
+        story = Comic.objects.create(
+            title='Test Story',
+            description='Test description',
+            user=self.user,
+            is_public=False,
+            moderation_status='pending'
+        )
+        
+        # Test story management page
+        response = self.client.get(reverse('immersivecomics:story_manage', kwargs={'pk': story.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Manage: Test Story')
+        self.assertContains(response, 'Story Overview')
+        self.assertContains(response, 'Seasons')
+        self.assertContains(response, 'Add Season')
+        self.assertContains(response, 'Edit Story')
+        self.assertContains(response, 'Back to Dashboard')
+        
+        # Test story statistics
+        self.assertContains(response, 'Statistics')
+        self.assertContains(response, 'Seasons')
+        self.assertContains(response, 'Episodes')
+        self.assertContains(response, 'Published')
+        self.assertContains(response, 'Drafts')
+    
+    def test_season_creation_workflow(self):
+        """Test season creation and management"""
+        # Create a test story
+        story = Comic.objects.create(
+            title='Test Story',
+            description='Test description',
+            user=self.user
+        )
+        
+        # Test season creation form access
+        response = self.client.get(reverse('immersivecomics:season_create', kwargs={'story_id': story.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Add Season to "Test Story"')
+        self.assertContains(response, 'Season Details')
+        self.assertContains(response, 'Season Number')
+        self.assertContains(response, 'Season Title')
+        self.assertContains(response, '3D Model (GLTF)')
+        self.assertContains(response, '3D Model (USDZ)')
+        
+        # Test season creation
+        response = self.client.post(reverse('immersivecomics:season_create', kwargs={'story_id': story.pk}), {
+            'season_number': 1,
+            'title': 'Season 1',
+            'description': 'First season of the story',
+            'release_date': '2024-01-01'
+        })
+        
+        # Should redirect to story management
+        self.assertEqual(response.status_code, 302)
+        season = Season.objects.get(title='Season 1')
+        self.assertEqual(season.comic, story)
+        self.assertEqual(season.season_number, 1)
+    
+    def test_episode_creation_workflow(self):
+        """Test episode creation and management"""
+        # Create test story and season
+        story = Comic.objects.create(title='Test Story', user=self.user)
+        season = Season.objects.create(
+            comic=story,
+            season_number=1,
+            title='Season 1',
+            release_date='2024-01-01'
+        )
+        
+        # Test episode creation form access
+        response = self.client.get(reverse('immersivecomics:episode_create', kwargs={'season_id': season.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Create Episode in "Season 1"')
+        self.assertContains(response, 'Episode Details')
+        self.assertContains(response, 'Episode Number')
+        self.assertContains(response, 'Episode Title')
+        self.assertContains(response, 'Publish Episode')
+        
+        # Test episode creation
+        response = self.client.post(reverse('immersivecomics:episode_create', kwargs={'season_id': season.pk}), {
+            'episode_number': 1,
+            'title': 'Episode 1',
+            'is_published': False
+        })
+        
+        # Should redirect to episode management
+        self.assertEqual(response.status_code, 302)
+        episode = Episode.objects.get(title='Episode 1')
+        self.assertEqual(episode.season, season)
+        self.assertEqual(episode.episode_number, 1)
+        self.assertFalse(episode.is_published)
+    
+    def test_episode_management_interface(self):
+        """Test the episode management interface"""
+        # Create test data
+        story = Comic.objects.create(title='Test Story', user=self.user)
+        season = Season.objects.create(
+            comic=story,
+            season_number=1,
+            title='Season 1',
+            release_date='2024-01-01'
+        )
+        episode = Episode.objects.create(
+            season=season,
+            episode_number=1,
+            title='Episode 1',
+            is_published=False
+        )
+        
+        # Test episode management page
+        response = self.client.get(reverse('immersivecomics:episode_manage', kwargs={'pk': episode.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Manage: Episode 1')
+        self.assertContains(response, 'Episode Overview')
+        self.assertContains(response, 'Dialogues')
+        self.assertContains(response, 'Add Dialogue')
+        self.assertContains(response, 'Create Character')
+        self.assertContains(response, 'Edit Episode')
+        self.assertContains(response, '3D Models')
+        
+        # Test episode statistics
+        self.assertContains(response, 'Status')
+        self.assertContains(response, 'Dialogues')
+        self.assertContains(response, 'Created')
+        self.assertContains(response, 'Views')
+    
+    def test_character_creation_workflow(self):
+        """Test character creation within a story"""
+        # Create test data
+        story = Comic.objects.create(title='Test Story', user=self.user)
+        
+        # Test character creation form access
+        response = self.client.get(reverse('immersivecomics:character_create', kwargs={'story_id': story.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Character Name')
+        self.assertContains(response, 'Character Bio')
+        self.assertContains(response, 'Add a new character to "Test Story"')
+        
+        # Test character creation
+        response = self.client.post(reverse('immersivecomics:character_create', kwargs={'story_id': story.pk}), {
+            'name': 'Test Character',
+            'bio': 'A test character bio'
+        })
+        
+        # Should redirect to story management
+        self.assertEqual(response.status_code, 302)
+        character = Character.objects.get(name='Test Character')
+        self.assertEqual(character.user, self.user)
+        self.assertFalse(character.is_public)  # Should start as private
+    
+    def test_dialogue_creation_workflow(self):
+        """Test dialogue creation with camera controls"""
+        # Create test data
+        story = Comic.objects.create(title='Test Story', user=self.user)
+        season = Season.objects.create(
+            comic=story,
+            season_number=1,
+            title='Season 1',
+            release_date='2024-01-01'
+        )
+        episode = Episode.objects.create(
+            season=season,
+            episode_number=1,
+            title='Episode 1',
+            is_published=False
+        )
+        character = Character.objects.create(
+            name='Test Character',
+            bio='A test character bio',
+            user=self.user
+        )
+        
+        # Test dialogue creation form access
+        response = self.client.get(reverse('immersivecomics:dialogue_create', kwargs={'episode_id': episode.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Add Dialogue to "Episode 1"')
+        self.assertContains(response, 'Dialogue Details')
+        self.assertContains(response, 'Dialogue Text')
+        self.assertContains(response, 'Order')
+        self.assertContains(response, 'Character')
+        self.assertContains(response, 'Camera Controls')
+        self.assertContains(response, 'Camera Orbit')
+        self.assertContains(response, 'Camera Target')
+        self.assertContains(response, 'Field of View')
+        self.assertContains(response, 'Zoom Speed')
+        self.assertContains(response, 'Rotation')
+        
+        # Test dialogue creation
+        response = self.client.post(reverse('immersivecomics:dialogue_create', kwargs={'episode_id': episode.pk}), {
+            'text': 'Hello, this is a test dialogue!',
+            'order': 1,
+            'character': character.pk,
+            'camera_orbit': '0deg 75deg 3m',
+            'camera_target': '0m 1.6m 0m',
+            'field_of_view': 45.0,
+            'zoom_speed': 1.0,
+            'rotation': '0deg 0deg 0deg'
+        })
+        
+        # Should redirect to episode management
+        self.assertEqual(response.status_code, 302)
+        dialogue = Dialogue.objects.get(text='Hello, this is a test dialogue!')
+        self.assertEqual(dialogue.episode, episode)
+        self.assertEqual(dialogue.order, 1)
+        self.assertEqual(dialogue.pov.character, character)
+        self.assertEqual(dialogue.camera_orbit, '0deg 75deg 3m')
+        self.assertEqual(dialogue.camera_target, '0m 1.6m 0m')
+    
+    def test_user_dashboard_enhancements(self):
+        """Test the enhanced user dashboard with story management"""
+        # Create test data
+        story = Comic.objects.create(
+            title='Test Story',
+            description='Test description',
+            user=self.user,
+            is_public=True
+        )
+        season = Season.objects.create(
+            comic=story,
+            season_number=1,
+            title='Season 1',
+            release_date='2024-01-01'
+        )
+        episode = Episode.objects.create(
+            season=season,
+            episode_number=1,
+            title='Episode 1',
+            is_published=True
+        )
+        
+        # Test enhanced dashboard
+        response = self.client.get(reverse('immersivecomics:user_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        
+        # Test new dashboard features
+        self.assertContains(response, 'Quick Actions')
+        self.assertContains(response, 'Create New Story')
+        self.assertContains(response, 'Create Character')
+        self.assertContains(response, 'Content Statistics')
+        self.assertContains(response, 'Publishing Status')
+        self.assertContains(response, 'My Stories')
+        
+        # Test story management buttons
+        self.assertContains(response, 'Manage')
+        self.assertContains(response, 'Edit')
+        self.assertContains(response, 'Delete')
+        
+        # Test statistics display
+        self.assertContains(response, 'Stories')
+        self.assertContains(response, 'Episodes')
+        self.assertContains(response, 'Characters')
+        self.assertContains(response, 'Published')
+    
+    def test_story_edit_functionality(self):
+        """Test story editing capabilities"""
+        # Create a test story
+        story = Comic.objects.create(
+            title='Original Title',
+            description='Original description',
+            user=self.user
+        )
+        
+        # Test story edit form access
+        response = self.client.get(reverse('immersivecomics:story_edit', kwargs={'pk': story.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Edit Story')
+        self.assertContains(response, 'Original Title')
+        self.assertContains(response, 'Original description')
+        
+        # Test story editing
+        response = self.client.post(reverse('immersivecomics:story_edit', kwargs={'pk': story.pk}), {
+            'title': 'Updated Title',
+            'description': 'Updated description'
+        })
+        
+        # Should redirect to story management
+        self.assertEqual(response.status_code, 302)
+        story.refresh_from_db()
+        self.assertEqual(story.title, 'Updated Title')
+        self.assertEqual(story.description, 'Updated description')
+    
+    def test_user_permissions_and_security(self):
+        """Test that users can only access their own content"""
+        # Create another user
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123'
+        )
+        
+        # Create content for other user
+        other_story = Comic.objects.create(
+            title='Other Story',
+            description='Other description',
+            user=other_user
+        )
+        
+        # Test that current user cannot access other user's content
+        response = self.client.get(reverse('immersivecomics:story_manage', kwargs={'pk': other_story.pk}))
+        self.assertEqual(response.status_code, 404)
+        
+        response = self.client.get(reverse('immersivecomics:story_edit', kwargs={'pk': other_story.pk}))
+        self.assertEqual(response.status_code, 404)
+        
+        response = self.client.get(reverse('immersivecomics:story_delete', kwargs={'pk': other_story.pk}))
+        self.assertEqual(response.status_code, 404)
+    
+    def test_forms_validation_and_error_handling(self):
+        """Test form validation and error handling"""
+        # Test story creation with invalid data
+        response = self.client.post(reverse('immersivecomics:story_create'), {
+            'title': '',  # Empty title should cause validation error
+            'description': 'Test description'
+        })
+        self.assertEqual(response.status_code, 200)  # Should return form with errors
+        self.assertContains(response, 'This field is required')
+        
+        # Test season creation with invalid data
+        story = Comic.objects.create(title='Test Story', user=self.user)
+        response = self.client.post(reverse('immersivecomics:season_create', kwargs={'story_id': story.pk}), {
+            'season_number': '',  # Empty season number should cause validation error
+            'title': 'Season 1'
+        })
+        self.assertEqual(response.status_code, 200)  # Should return form with errors
+        self.assertContains(response, 'This field is required')
+    
+    def test_desktop_optimized_ui_elements(self):
+        """Test that desktop-optimized UI elements are present"""
+        # Create test data
+        story = Comic.objects.create(
+            title='Test Story',
+            description='Test description',
+            user=self.user
+        )
+        
+        # Test story creation page UI
+        response = self.client.get(reverse('immersivecomics:story_create'))
+        self.assertContains(response, 'container-fluid')
+        self.assertContains(response, 'shadow-sm')
+        self.assertContains(response, 'card border-0')
+        self.assertContains(response, 'btn btn-primary')
+        self.assertContains(response, 'form-control')
+        
+        # Test story management page UI
+        response = self.client.get(reverse('immersivecomics:story_manage', kwargs={'pk': story.pk}))
+        self.assertContains(response, 'table-responsive')
+        self.assertContains(response, 'badge bg-')
+        self.assertContains(response, 'btn btn-sm')
+        self.assertContains(response, 'text-center')
+        
+        # Test dashboard UI
+        response = self.client.get(reverse('immersivecomics:user_dashboard'))
+        self.assertContains(response, 'row g-0')
+        self.assertContains(response, 'd-flex gap-2')
+        self.assertContains(response, 'border-0 shadow-sm')
+        self.assertContains(response, 'text-muted')
+    
+    def test_navbar_layout_consistency(self):
+        """Test that navbar buttons stay in one row across different pages"""
+        # Test homepage navbar
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'navbar-buttons-container')
+        self.assertContains(response, 'Home')
+        self.assertContains(response, 'ICz')
+        self.assertContains(response, 'Merch')
+        
+        # Test profile page navbar
+        test_user = User.objects.create_user(
+            username='navbar_test_user',
+            email='navbar_test@example.com',
+            password='testpass123'
+        )
+        self.client.login(username='navbar_test_user', password='testpass123')
+        
+        response = self.client.get(reverse('immersivecomics:user_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'navbar-buttons-container')
+        self.assertContains(response, 'Home')
+        self.assertContains(response, 'ICz')
+        self.assertContains(response, 'Merch')
+        
+        # Test ICz page navbar
+        response = self.client.get(reverse('immersivecomics:comic_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'navbar-buttons-container')
+        self.assertContains(response, 'Home')
+        self.assertContains(response, 'ICz')
+        self.assertContains(response, 'Merch')
+        
+        # Test Merch page navbar
+        response = self.client.get(reverse('snmov:product_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'navbar-buttons-container')
+        self.assertContains(response, 'Home')
+        self.assertContains(response, 'ICz')
+        self.assertContains(response, 'Merch')
+    
+    def test_navbar_mobile_responsiveness(self):
+        """Test that navbar buttons are properly configured for mobile"""
+        # Test that the navbar container has the correct classes
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that navbar-buttons-container exists
+        self.assertContains(response, 'navbar-buttons-container')
+        
+        # Check that buttons have proper mobile classes
+        self.assertContains(response, 'd-none d-sm-inline')
+        
+        # Check that flexbox properties are applied
+        self.assertContains(response, 'flex-wrap: nowrap')
+        
+        # Test profile page specifically
+        test_user = User.objects.create_user(
+            username='mobile_test_user',
+            email='mobile_test@example.com',
+            password='testpass123'
+        )
+        self.client.login(username='mobile_test_user', password='testpass123')
+        
+        response = self.client.get(reverse('immersivecomics:user_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify navbar structure is consistent on profile page
+        self.assertContains(response, 'navbar-buttons-container')
+        self.assertContains(response, 'd-none d-sm-inline')
+        self.assertContains(response, 'flex-wrap: nowrap')
