@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from tilf.models import Intersection
+from icvybz.models import Intersection
 import os
 
 class Command(BaseCommand):

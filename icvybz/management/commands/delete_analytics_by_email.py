@@ -29,7 +29,7 @@ class Command(BaseCommand):
             return
         
         # Path to analytics files
-        logs_dir = Path('tilf/logs')
+        logs_dir = Path('icvybz/logs')
         
         # Files to process
         files_to_check = [

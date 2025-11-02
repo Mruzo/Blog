@@ -1,2 +1,2 @@
-// Test file for tilf app
-console.log('Tilf app static file loaded'); 
+// Test file for icvybz app
+console.log('Icvybz app static file loaded'); 

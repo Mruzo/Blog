@@ -16,6 +16,9 @@ def get_cart_for_session(request):
 
     for product_id, details in cart.items():
         try:
+            # Validate UUID format first
+            import uuid
+            uuid.UUID(product_id)
             product = Product.objects.get(uuid=product_id)
             quantity = details.get('quantity', 1)
             unit_price = product.get_discounted_price()
@@ -25,10 +28,11 @@ def get_cart_for_session(request):
                 'title': product.title,
                 'price': round(unit_price,2),
                 'quantity': quantity,
-                'total': round(total,2),
+                'item_total': round(total,2),
             })
             total_price += total
-        except Product.DoesNotExist:
+        except (Product.DoesNotExist, ValueError):
+            # Skip invalid UUIDs or non-existent products
             continue
 
     return {

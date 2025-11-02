@@ -158,11 +158,30 @@
             }
         }
         
-        // Function to initialize both systems
+        // Function to check and initialize navbar state
+        function checkAndInitNavbarState() {
+            if (typeof window.initNavbarState === 'function') {
+                console.log('✅ Navbar state function found, initializing...');
+                try {
+                    window.initNavbarState();
+                    console.log('✅ Navbar state initialized successfully');
+                    return true;
+                } catch (error) {
+                    console.error('❌ Error initializing navbar state:', error);
+                    return false;
+                }
+            } else {
+                console.log('⏳ Navbar state function not yet available');
+                return false;
+            }
+        }
+        
+        // Function to initialize all systems
         function initializeSmoothSystems() {
             var navSuccess = checkAndInitSmoothNav();
             var contentSuccess = checkAndInitSmoothContent();
-            return navSuccess && contentSuccess;
+            var navbarSuccess = checkAndInitNavbarState();
+            return navSuccess && contentSuccess && navbarSuccess;
         }
         
         // Try to initialize immediately
@@ -178,7 +197,8 @@
                     console.error('❌ Failed to initialize smooth systems after all retries');
                     console.log('Final check - available functions:', {
                         'initSmoothNavigation': typeof window.initSmoothNavigation,
-                        'initSmoothContentLoading': typeof window.initSmoothContentLoading
+                        'initSmoothContentLoading': typeof window.initSmoothContentLoading,
+                        'initNavbarState': typeof window.initNavbarState
                     });
                     return;
                 }
@@ -218,7 +238,7 @@
                 return;
             }
             
-            if (typeof window.initSmoothNavigation === 'function' && typeof window.initSmoothContentLoading === 'function') {
+            if (typeof window.initSmoothNavigation === 'function' && typeof window.initSmoothContentLoading === 'function' && typeof window.initNavbarState === 'function') {
                 console.log('✅ Functions found via fallback interval, initializing...');
                 initializeSmoothSystems();
                 clearInterval(fallbackInterval);

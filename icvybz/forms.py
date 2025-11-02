@@ -53,6 +53,32 @@ class StoryForm(forms.ModelForm):
 
 
 class SeasonForm(forms.ModelForm):
+    def clean_model_gltf(self):
+        gltf_file = self.cleaned_data.get('model_gltf')
+        if gltf_file:
+            # Check file size (50MB limit)
+            if gltf_file.size > 50 * 1024 * 1024:
+                raise forms.ValidationError("GLB/GLTF file size cannot exceed 50MB. Please optimize your model.")
+            
+            # Check file extension
+            if not gltf_file.name.lower().endswith(('.glb', '.gltf')):
+                raise forms.ValidationError("Please upload a valid GLB or GLTF file.")
+        
+        return gltf_file
+    
+    def clean_model_usdz(self):
+        usdz_file = self.cleaned_data.get('model_usdz')
+        if usdz_file:
+            # Check file size (25MB limit for USDZ)
+            if usdz_file.size > 25 * 1024 * 1024:
+                raise forms.ValidationError("USDZ file size cannot exceed 25MB. Please optimize your model.")
+            
+            # Check file extension
+            if not usdz_file.name.lower().endswith('.usdz'):
+                raise forms.ValidationError("Please upload a valid USDZ file.")
+        
+        return usdz_file
+    
     class Meta:
         model = Season
         fields = ['season_number', 'title', 'description', 'release_date', 'model_gltf', 'model_usdz']

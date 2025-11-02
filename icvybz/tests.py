@@ -7,7 +7,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
-from .models import Comic, Season, Episode, Character, Dialogue, POV
+from .models import Comic, Season, Episode, Character, Dialogue, POV, Studio, StudioCollaborator, StoryCollaborator, AudioTrack
 
 
 class IcvybzAppRecognitionTests(TestCase):
@@ -767,7 +767,7 @@ class StoryManagementSystemTests(TestCase):
         # Test enhanced dashboard
         response = self.client.get(reverse('immersivecomics:user_dashboard'))
         self.assertEqual(response.status_code, 200)
-        
+
         # Test new dashboard features
         self.assertContains(response, 'Quick Actions')
         self.assertContains(response, 'Create New Story')
@@ -937,7 +937,7 @@ class StoryManagementSystemTests(TestCase):
         # Test that the navbar container has the correct classes
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        
+
         # Check that navbar-buttons-container exists
         self.assertContains(response, 'navbar-buttons-container')
         
@@ -957,8 +957,617 @@ class StoryManagementSystemTests(TestCase):
         
         response = self.client.get(reverse('immersivecomics:user_dashboard'))
         self.assertEqual(response.status_code, 200)
-        
+
         # Verify navbar structure is consistent on profile page
         self.assertContains(response, 'navbar-buttons-container')
         self.assertContains(response, 'd-none d-sm-inline')
         self.assertContains(response, 'flex-wrap: nowrap')
+
+
+class DynamicNavbarTests(TestCase):
+    """Test dynamic navbar functionality"""
+    
+    def setUp(self):
+        """Set up test user and data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.login(username='testuser', password='testpass123')
+    
+    def test_navbar_has_dynamic_states(self):
+        """Test that navbar has both default and profile states"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check for both navbar states
+        self.assertContains(response, 'id="default-navbar"')
+        self.assertContains(response, 'id="profile-navbar"')
+        
+        # Check default navbar is visible
+        self.assertContains(response, 'ICz')
+        self.assertContains(response, 'Merch')
+        
+        # Check profile navbar is hidden
+        self.assertContains(response, 'My Stuff')
+        self.assertContains(response, 'My Orders')
+    
+    def test_profile_button_has_click_handler(self):
+        """Test that profile button has onclick handler"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check profile button has onclick handler
+        self.assertContains(response, 'onclick="switchToProfileNavbar(event)"')
+        self.assertContains(response, 'id="profile-btn"')
+    
+    def test_home_button_in_profile_navbar_has_click_handler(self):
+        """Test that home button in profile navbar has onclick handler"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check home button in profile navbar has onclick handler
+        self.assertContains(response, 'onclick="switchToDefaultNavbar(event)"')
+    
+    def test_navbar_javascript_functions_available(self):
+        """Test that navbar switching JavaScript functions are loaded"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check that sm.js is loaded
+        self.assertContains(response, 'snmov/js/sm.js')
+        
+        # Check that navbar state initialization is included
+        self.assertContains(response, 'initNavbarState')
+    
+    def test_profile_navbar_buttons_have_correct_links(self):
+        """Test that profile navbar buttons link to correct URLs"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check profile navbar links
+        self.assertContains(response, 'href="' + reverse('homepage') + '"')
+        self.assertContains(response, 'href="' + reverse('immersivecomics:user_dashboard') + '"')
+        self.assertContains(response, 'href="' + reverse('snmov:my_orders') + '"')
+    
+    def test_navbar_state_initialization_on_dashboard(self):
+        """Test that navbar shows profile state when on dashboard"""
+        response = self.client.get(reverse('immersivecomics:user_dashboard'))
+        
+        # Check that profile navbar is shown (not hidden)
+        self.assertContains(response, 'id="profile-navbar"')
+        self.assertContains(response, 'My Stuff')
+        self.assertContains(response, 'My Orders')
+    
+    def test_navbar_state_initialization_on_my_orders(self):
+        """Test that navbar shows profile state when on my-orders page"""
+        response = self.client.get(reverse('snmov:my_orders'))
+        
+        # Check that profile navbar is shown (not hidden)
+        self.assertContains(response, 'id="profile-navbar"')
+        self.assertContains(response, 'My Stuff')
+        self.assertContains(response, 'My Orders')
+    
+    def test_my_orders_button_active_on_my_orders_page(self):
+        """Test that My Orders button shows as active when on my-orders page"""
+        response = self.client.get(reverse('snmov:my_orders'))
+        
+        # Check that My Orders button has active class and styling
+        self.assertContains(response, 'class="btn btn-light btn-sm px-3 subtext-btn-sm nav-btn active"')
+        self.assertContains(response, 'background-color: rgba(255, 188, 0, 0.1) !important; border: 2px solid #FFBC00 !important;')
+        # Check that it uses receipt icon
+        self.assertContains(response, 'fa-receipt')
+    
+    def test_my_stuff_button_not_active_on_my_orders_page(self):
+        """Test that My Stuff button is not active when on my-orders page"""
+        response = self.client.get(reverse('snmov:my_orders'))
+        
+        # Check that My Stuff button does not have active class
+        self.assertNotContains(response, 'My Stuff.*active')
+    
+    def test_my_orders_button_uses_receipt_icon(self):
+        """Test that My Orders button uses receipt icon instead of shopping cart"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check that My Orders button uses receipt icon
+        self.assertContains(response, 'fa-receipt')
+        # Check that the profile navbar My Orders button specifically uses receipt icon
+        self.assertContains(response, 'My Orders')
+        # Note: There's still a shopping cart icon in the top navbar for cart functionality
+    
+    def test_navbar_css_transitions_included(self):
+        """Test that CSS transitions for navbar are included"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check that sm.css is loaded
+        self.assertContains(response, 'snmov/css/sm.css')
+        
+        # Check for navbar transition elements
+        self.assertContains(response, 'id="default-navbar"')
+        self.assertContains(response, 'id="profile-navbar"')
+    
+    def test_navbar_responsive_design_maintained(self):
+        """Test that responsive design is maintained in both navbar states"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check for responsive classes in both navbar states
+        self.assertContains(response, 'd-none d-sm-inline')
+        self.assertContains(response, 'flex-wrap: nowrap')
+        
+        # Check for responsive styling classes
+        self.assertContains(response, 'justify-content-center')
+        self.assertContains(response, 'navbar-buttons-container')
+    
+    def test_login_button_shows_when_logged_out(self):
+        """Test that login button shows when user is not authenticated"""
+        # Make sure user is logged out
+        self.client.logout()
+        response = self.client.get(reverse('homepage'))
+        
+        # Check that login button is present
+        self.assertContains(response, 'id="login-btn"')
+        self.assertContains(response, 'fa-sign-in-alt')
+        self.assertContains(response, 'Login')
+        self.assertContains(response, 'href="' + reverse('login_req') + '"')
+        
+        # Check that profile button is not present
+        self.assertNotContains(response, 'id="profile-btn"')
+    
+    def test_profile_button_shows_when_logged_in(self):
+        """Test that profile button shows when user is authenticated"""
+        response = self.client.get(reverse('homepage'))
+        
+        # Check that profile button is present
+        self.assertContains(response, 'id="profile-btn"')
+        self.assertContains(response, 'fa-user')
+        self.assertContains(response, 'Profile')
+        self.assertContains(response, 'href="' + reverse('immersivecomics:user_dashboard') + '"')
+        
+        # Check that login button is not present
+        self.assertNotContains(response, 'id="login-btn"')
+
+
+# Studio and Audio Views Tests
+class StudioViewsTests(TestCase):
+    """Test studio-related views"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
+        )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123',
+            first_name='Other',
+            last_name='User'
+        )
+        
+        # Create studios
+        self.studio = Studio.objects.create(
+            name='Test Studio',
+            description='A test studio',
+            owner=self.user,
+            is_public=True
+        )
+        
+        self.private_studio = Studio.objects.create(
+            name='Private Studio',
+            description='A private studio',
+            owner=self.other_user,
+            is_public=False
+        )
+        
+        # Create collaborators
+        StudioCollaborator.objects.create(
+            studio=self.studio,
+            user=self.other_user,
+            role='writer',
+            is_active=True
+        )
+        
+        # Create stories
+        self.story = Comic.objects.create(
+            title='Test Story',
+            description='A test story',
+            user=self.user,
+            is_public=True,
+            moderation_status='approved'
+        )
+        
+        StoryCollaborator.objects.create(
+            story=self.story,
+            user=self.other_user,
+            role='3d_artist',
+            is_active=True
+        )
+    
+    def test_studio_list_view(self):
+        """Test studio list view"""
+        response = self.client.get(reverse('immersivecomics:studio_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test Studio')
+        self.assertNotContains(response, 'Private Studio')
+        self.assertContains(response, 'Collaborative Studios')
+    
+    def test_studio_detail_view(self):
+        """Test studio detail view"""
+        response = self.client.get(reverse('immersivecomics:studio_detail', kwargs={'pk': self.studio.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.studio.name)
+        self.assertContains(response, self.studio.description)
+    
+    def test_studio_detail_view_private_studio(self):
+        """Test that private studios are not accessible"""
+        response = self.client.get(reverse('immersivecomics:studio_detail', kwargs={'pk': self.private_studio.pk}))
+        self.assertEqual(response.status_code, 404)
+    
+    def test_my_studio_view_authenticated(self):
+        """Test my studio view for authenticated user"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:my_studio'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Studio')
+    
+    def test_my_studio_view_unauthenticated(self):
+        """Test my studio view redirects for unauthenticated user"""
+        response = self.client.get(reverse('immersivecomics:my_studio'))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_my_studio_creates_studio_if_nonexistent(self):
+        """Test that my studio view creates a studio if user doesn't have one"""
+        new_user = User.objects.create_user(
+            username='newuser',
+            email='new@example.com',
+            password='newpass123'
+        )
+        self.client.login(username='newuser', password='newpass123')
+        
+        # Check no studio exists
+        self.assertFalse(Studio.objects.filter(owner=new_user).exists())
+        
+        response = self.client.get(reverse('immersivecomics:my_studio'))
+        self.assertEqual(response.status_code, 200)
+        
+        # Check studio was created
+        self.assertTrue(Studio.objects.filter(owner=new_user).exists())
+        studio = Studio.objects.get(owner=new_user)
+        self.assertIn(new_user.username, studio.name)
+    
+    def test_studio_create_view_authenticated(self):
+        """Test studio create view for authenticated user"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:studio_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Create Studio')
+    
+    def test_studio_create_view_unauthenticated(self):
+        """Test studio create view redirects for unauthenticated user"""
+        response = self.client.get(reverse('immersivecomics:studio_create'))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_studio_create_post(self):
+        """Test creating a studio via POST"""
+        self.client.login(username='testuser', password='testpass123')
+        data = {
+            'name': 'New Studio',
+            'description': 'A new test studio',
+            'is_public': True,
+            'avatar_url': 'https://example.com/avatar.jpg'
+        }
+        response = self.client.post(reverse('immersivecomics:studio_create'), data)
+        self.assertEqual(response.status_code, 302)  # Redirect after success
+        
+        # Check studio was created
+        self.assertTrue(Studio.objects.filter(name='New Studio').exists())
+    
+    def test_studio_update_view(self):
+        """Test studio update view"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:studio_edit', kwargs={'pk': self.studio.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Edit Studio')
+    
+    def test_studio_update_view_other_user(self):
+        """Test that users can't edit other users' studios"""
+        self.client.login(username='otheruser', password='otherpass123')
+        response = self.client.get(reverse('immersivecomics:studio_edit', kwargs={'pk': self.studio.pk}))
+        self.assertEqual(response.status_code, 404)
+    
+    def test_studio_update_post(self):
+        """Test updating a studio via POST"""
+        self.client.login(username='testuser', password='testpass123')
+        data = {
+            'name': 'Updated Studio',
+            'description': 'An updated test studio',
+            'is_public': True,
+            'avatar_url': 'https://example.com/new-avatar.jpg'
+        }
+        response = self.client.post(reverse('immersivecomics:studio_edit', kwargs={'pk': self.studio.pk}), data)
+        self.assertEqual(response.status_code, 302)  # Redirect after success
+        
+        # Check studio was updated
+        self.studio.refresh_from_db()
+        self.assertEqual(self.studio.name, 'Updated Studio')
+        self.assertEqual(self.studio.description, 'An updated test studio')
+
+
+class AudioViewsTests(TestCase):
+    """Test audio-related views"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        # Create audio tracks
+        self.audio_track = AudioTrack.objects.create(
+            name='Test Audio',
+            audio_type='music',
+            audio_file=SimpleUploadedFile('test.mp3', b'fake audio content'),
+            duration=120.0,
+            volume=0.8,
+            created_by=self.user,
+            is_public=True
+        )
+    
+    def test_audio_track_list_view_authenticated(self):
+        """Test audio track list view for authenticated user"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:audio_track_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test Audio')
+    
+    def test_audio_track_list_view_unauthenticated(self):
+        """Test audio track list view redirects for unauthenticated user"""
+        response = self.client.get(reverse('immersivecomics:audio_track_list'))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_audio_track_create_view_authenticated(self):
+        """Test audio track create view for authenticated user"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:audio_track_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Create Audio Track')
+    
+    def test_audio_track_create_view_unauthenticated(self):
+        """Test audio track create view redirects for unauthenticated user"""
+        response = self.client.get(reverse('immersivecomics:audio_track_create'))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_audio_track_create_post(self):
+        """Test creating an audio track via POST"""
+        self.client.login(username='testuser', password='testpass123')
+        data = {
+            'name': 'New Audio Track',
+            'audio_type': 'sound_effect',
+            'audio_file': SimpleUploadedFile('new.mp3', b'fake audio content'),
+            'duration': 60.0,
+            'volume': 1.0,
+            'loop': False,
+            'fade_in': 0.0,
+            'fade_out': 0.0,
+            'is_public': False
+        }
+        response = self.client.post(reverse('immersivecomics:audio_track_create'), data)
+        self.assertEqual(response.status_code, 302)  # Redirect after success
+        
+        # Check audio track was created
+        self.assertTrue(AudioTrack.objects.filter(name='New Audio Track').exists())
+    
+    def test_audio_track_update_view(self):
+        """Test audio track update view"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:audio_track_edit', kwargs={'pk': self.audio_track.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Edit Audio Track')
+    
+    def test_audio_track_update_view_other_user(self):
+        """Test that users can't edit other users' audio tracks"""
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123'
+        )
+        self.client.login(username='otheruser', password='otherpass123')
+        response = self.client.get(reverse('immersivecomics:audio_track_edit', kwargs={'pk': self.audio_track.pk}))
+        self.assertEqual(response.status_code, 404)
+    
+    def test_audio_track_delete_view(self):
+        """Test audio track delete view"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:audio_track_delete', kwargs={'pk': self.audio_track.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Delete Audio Track')
+    
+    def test_audio_track_delete_post(self):
+        """Test deleting an audio track via POST"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.post(reverse('immersivecomics:audio_track_delete', kwargs={'pk': self.audio_track.pk}))
+        self.assertEqual(response.status_code, 302)  # Redirect after success
+        
+        # Check audio track was deleted
+        self.assertFalse(AudioTrack.objects.filter(pk=self.audio_track.pk).exists())
+
+
+class StudioAPITests(TestCase):
+    """Test studio API endpoints"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
+        )
+        
+        self.studio = Studio.objects.create(
+            name='Test Studio',
+            description='A test studio',
+            owner=self.user,
+            is_public=True
+        )
+        
+        # Create collaborators
+        StudioCollaborator.objects.create(
+            studio=self.studio,
+            user=self.user,
+            role='writer',
+            is_active=True
+        )
+        
+        # Create stories
+        self.story = Comic.objects.create(
+            title='Test Story',
+            description='A test story',
+            user=self.user,
+            is_public=True,
+            moderation_status='approved'
+        )
+    
+    def test_studio_list_api(self):
+        """Test studio list API endpoint"""
+        response = self.client.get(reverse('immersivecomics:studio_list_api'))
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        self.assertIn('studios', data)
+        self.assertEqual(len(data['studios']), 1)
+        
+        studio_data = data['studios'][0]
+        self.assertEqual(studio_data['name'], 'Test Studio')
+        self.assertEqual(studio_data['description'], 'A test studio')
+        self.assertEqual(studio_data['owner']['username'], 'testuser')
+        self.assertTrue(studio_data['is_public'])
+    
+    def test_my_studio_api_authenticated(self):
+        """Test my studio API endpoint for authenticated user"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:my_studio_api'))
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        self.assertIn('studio', data)
+        studio_data = data['studio']
+        self.assertEqual(studio_data['name'], 'Test Studio')
+        self.assertEqual(studio_data['description'], 'A test studio')
+        self.assertEqual(studio_data['owner']['username'], 'testuser')
+    
+    def test_my_studio_api_unauthenticated(self):
+        """Test my studio API endpoint for unauthenticated user"""
+        response = self.client.get(reverse('immersivecomics:my_studio_api'))
+        self.assertEqual(response.status_code, 401)
+        
+        data = response.json()
+        self.assertIn('error', data)
+        self.assertEqual(data['error'], 'Authentication required')
+    
+    def test_my_studio_api_creates_studio_if_nonexistent(self):
+        """Test that my studio API creates a studio if user doesn't have one"""
+        new_user = User.objects.create_user(
+            username='newuser',
+            email='new@example.com',
+            password='newpass123',
+            first_name='New',
+            last_name='User'
+        )
+        self.client.login(username='newuser', password='newpass123')
+        
+        # Check no studio exists
+        self.assertFalse(Studio.objects.filter(owner=new_user).exists())
+        
+        response = self.client.get(reverse('immersivecomics:my_studio_api'))
+        self.assertEqual(response.status_code, 200)
+        
+        # Check studio was created
+        self.assertTrue(Studio.objects.filter(owner=new_user).exists())
+        studio = Studio.objects.get(owner=new_user)
+        self.assertIn(new_user.username, studio.name)
+        
+        data = response.json()
+        self.assertIn('studio', data)
+        studio_data = data['studio']
+        self.assertIn(new_user.username, studio_data['name'])
+
+
+class UserDashboardIntegrationTests(TestCase):
+    """Test user dashboard integration with studio and audio data"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        # Create studio
+        self.studio = Studio.objects.create(
+            name='Test Studio',
+            description='A test studio',
+            owner=self.user,
+            is_public=True
+        )
+        
+        # Create audio tracks
+        AudioTrack.objects.create(
+            name='Test Audio 1',
+            audio_type='music',
+            audio_file=SimpleUploadedFile('test1.mp3', b'fake audio content'),
+            duration=120.0,
+            created_by=self.user
+        )
+        
+        AudioTrack.objects.create(
+            name='Test Audio 2',
+            audio_type='sound_effect',
+            audio_file=SimpleUploadedFile('test2.mp3', b'fake audio content'),
+            duration=60.0,
+            created_by=self.user
+        )
+        
+        # Create stories
+        self.story = Comic.objects.create(
+            title='Test Story',
+            description='A test story',
+            user=self.user,
+            is_public=True,
+            moderation_status='approved'
+        )
+    
+    def test_user_dashboard_includes_studio_data(self):
+        """Test that user dashboard includes studio information"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('immersivecomics:user_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        
+        # Check studio data is in context
+        self.assertIn('studio', response.context)
+        self.assertEqual(response.context['studio'], self.studio)
+        self.assertIn('studio_collaborators', response.context)
+        self.assertIn('audio_tracks', response.context)
+        self.assertIn('collaborated_stories', response.context)
+    
+    def test_user_dashboard_handles_no_studio(self):
+        """Test that user dashboard handles users without studios"""
+        new_user = User.objects.create_user(
+            username='newuser',
+            email='new@example.com',
+            password='newpass123'
+        )
+        self.client.login(username='newuser', password='newpass123')
+        response = self.client.get(reverse('immersivecomics:user_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        
+        # Check studio data is None for users without studios
+        self.assertIn('studio', response.context)
+        self.assertIsNone(response.context['studio'])
+        self.assertEqual(response.context['studio_collaborators'], 0)
+        self.assertEqual(response.context['audio_tracks'], 0)
+        self.assertEqual(response.context['collaborated_stories'], 0)

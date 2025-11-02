@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stories Component Visual Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-title {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .test-case {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 4px solid #3498db;
+            background-color: #f8f9fa;
+        }
+        .test-case h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        .test-case p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .character-badge {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .character-badge:hover {
+            background-color: #0056b3;
+        }
+        .overflow-badge {
+            background-color: #6c757d;
+        }
+        .empty-state {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🧪 Stories Component Visual Test</h1>
+        <p>This page demonstrates how the Stories component should display characters.</p>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">Test Case 1: Story with Characters</h2>
+        <div class="test-case">
+            <h4>Epic Adventure</h4>
+            <p>A thrilling tale of heroes and villains</p>
+            <div>
+                <strong>Characters (3):</strong>
+                <div style="margin-top: 8px;">
+                    <span class="character-badge" title="Hero - Courageous">Hero</span>
+                    <span class="character-badge" title="Villain - Devious">Villain</span>
+                    <span class="character-badge" title="Sidekick - Loyal">Sidekick</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">Test Case 2: Story with Many Characters (Overflow)</h2>
+        <div class="test-case">
+            <h4>Mystery Manor</h4>
+            <p>A dark mystery unfolds in an old mansion</p>
+            <div>
+                <strong>Characters (5):</strong>
+                <div style="margin-top: 8px;">
+                    <span class="character-badge" title="Detective - Observant">Detective</span>
+                    <span class="character-badge" title="Suspect - Mysterious">Suspect</span>
+                    <span class="character-badge" title="Witness - Nervous">Witness</span>
+                    <span class="character-badge overflow-badge">+2 more</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">Test Case 3: Story with No Characters</h2>
+        <div class="test-case">
+            <h4>Empty Story</h4>
+            <p>A story without characters yet</p>
+            <div>
+                <strong>Characters (0):</strong>
+                <div style="margin-top: 8px;">
+                    <span class="empty-state">👤 No characters yet</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">Test Case 4: Character Tooltips</h2>
+        <div class="test-case">
+            <h4>Hover over character badges to see tooltips:</h4>
+            <div style="margin-top: 8px;">
+                <span class="character-badge" title="Alice - Hero">Alice</span>
+                <span class="character-badge" title="Bob - Supporting">Bob</span>
+                <span class="character-badge" title="Charlie - Antagonist">Charlie</span>
+            </div>
+            <p><em>Hover over the badges above to see personality information in tooltips.</em></p>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">Test Case 5: Different Character Counts</h2>
+        <div class="test-case">
+            <h4>Story A - Single Character</h4>
+            <p>Characters (1): <span class="character-badge" title="Solo - Independent">Solo</span></p>
+        </div>
+        <div class="test-case">
+            <h4>Story B - Two Characters</h4>
+            <p>Characters (2): 
+                <span class="character-badge" title="Partner1 - Friendly">Partner1</span>
+                <span class="character-badge" title="Partner2 - Loyal">Partner2</span>
+            </p>
+        </div>
+        <div class="test-case">
+            <h4>Story C - Three Characters (Exact Limit)</h4>
+            <p>Characters (3): 
+                <span class="character-badge" title="Triad1 - Leader">Triad1</span>
+                <span class="character-badge" title="Triad2 - Follower">Triad2</span>
+                <span class="character-badge" title="Triad3 - Neutral">Triad3</span>
+            </p>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">Expected Behavior Verification</h2>
+        <div class="test-case">
+            <h4>✅ Character Display Requirements:</h4>
+            <p>• Character names are displayed as badges</p>
+            <p>• Character count is shown in parentheses</p>
+            <p>• Only first 3 characters are visible</p>
+            <p>• Overflow indicator shows "+X more" for additional characters</p>
+            <p>• Tooltips show character name and personality</p>
+            <p>• Empty state shows "No characters yet" with icon</p>
+            <p>• Badges have consistent styling (blue for characters, gray for overflow)</p>
+        </div>
+        <div class="test-case">
+            <h4>✅ API Integration Requirements:</h4>
+            <p>• getCharacters(storyId) is called for each story</p>
+            <p>• Characters are loaded asynchronously</p>
+            <p>• API errors are handled gracefully</p>
+            <p>• Loading states are shown during API calls</p>
+        </div>
+        <div class="test-case">
+            <h4>✅ User Experience Requirements:</h4>
+            <p>• Characters load without blocking the UI</p>
+            <p>• Error states don't break the page</p>
+            <p>• Empty states are informative</p>
+            <p>• Tooltips provide additional context</p>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">Test Instructions</h2>
+        <div class="test-case">
+            <h4>Manual Testing Steps:</h4>
+            <p>1. <strong>Open the React app</strong> at <code>http://localhost:3000</code></p>
+            <p>2. <strong>Navigate to Stories page</strong> (should be the default page)</p>
+            <p>3. <strong>Verify character display:</strong></p>
+            <ul>
+                <li>Each story card shows character count</li>
+                <li>Character names appear as blue badges</li>
+                <li>Hover over badges to see personality tooltips</li>
+                <li>Stories with 3+ characters show "+X more" indicator</li>
+                <li>Stories with no characters show "No characters yet"</li>
+            </ul>
+            <p>4. <strong>Check browser console</strong> for any errors</p>
+            <p>5. <strong>Verify API calls</strong> in Network tab (should see calls to /stories/{id}/characters/)</p>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive behavior for demonstration
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Stories Component Visual Test Loaded');
+            console.log('This page demonstrates the expected character display behavior.');
+            console.log('Check the React app at http://localhost:3000 to see the actual implementation.');
+            
+            // Add click handlers to demonstrate interactivity
+            const badges = document.querySelectorAll('.character-badge');
+            badges.forEach(badge => {
+                badge.addEventListener('click', function() {
+                    const title = this.getAttribute('title');
+                    alert(`Character clicked: ${title}`);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+
+

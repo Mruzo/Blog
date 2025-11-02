@@ -26,7 +26,7 @@
                         {% csrf_token %}
                         
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <div class="mb-4">
                                     <label for="{{ form.season_number.id_for_label }}" class="form-label fw-bold">
                                         {{ form.season_number.label }}
@@ -40,7 +40,7 @@
                                     <div class="form-text">Sequential number for this season</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-9">
                                 <div class="mb-4">
                                     <label for="{{ form.title.id_for_label }}" class="form-label fw-bold">
                                         {{ form.title.label }}
@@ -124,7 +124,8 @@
                             <li><i class="fas fa-check text-success me-1"></i>Web-compatible format</li>
                             <li><i class="fas fa-check text-success me-1"></i>Supports animations</li>
                             <li><i class="fas fa-check text-success me-1"></i>Optimized for performance</li>
-                            <li><i class="fas fa-check text-success me-1"></i>Maximum 50MB recommended</li>
+                            <li><i class="fas fa-check text-success me-1"></i>Maximum 50MB limit</li>
+                            <li><i class="fas fa-exclamation-triangle text-warning me-1"></i>Avoid Draco compression for iOS compatibility</li>
                         </ul>
                     </div>
                     
@@ -203,3 +204,4 @@
 }
 </style>
 {% endblock %}
+

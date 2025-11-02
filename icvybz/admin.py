@@ -91,9 +91,9 @@ class POVAdmin(admin.ModelAdmin):
 
 @admin.register(Dialogue)
 class DialogueAdmin(admin.ModelAdmin):
-    list_display = ('episode', 'pov', 'order', 'text', 'camera_target', 'camera_orbit','shot_type')
-    list_filter = ('episode', 'pov__character', 'shot_type')
-    search_fields = ('text', 'pov__character__name')
+    list_display = ('episode', 'character', 'order', 'text', 'camera_target', 'camera_orbit','shot_type')
+    list_filter = ('episode', 'character', 'shot_type')
+    search_fields = ('text', 'character__name')
     ordering = ('order','episode')
 
     formfield_overrides = {

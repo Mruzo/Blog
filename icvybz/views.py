@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from .models import Comic, Season, Episode, Dialogue, POV, ComicComment, TrafficSource
+from .models import Comic, Season, Episode, Dialogue, POV, ComicComment, TrafficSource, Studio, StudioCollaborator, StoryCollaborator, AudioTrack, DialogueAudio, EpisodeAudio, SceneAudio
 from django.utils.safestring import mark_safe
 from .forms import ComicCommentForm, StoryForm, SeasonForm, EpisodeForm, CharacterForm, DialogueForm
 import json
@@ -805,6 +805,23 @@ class UserDashboardView(LoginRequiredMixin, ListView):
         context['public_comics'] = Comic.objects.filter(user=user, is_public=True).count()
         context['pending_comics'] = Comic.objects.filter(user=user, moderation_status='pending').count()
         
+        # Get or create user's studio
+        try:
+            studio = Studio.objects.get(owner=user)
+            context['studio'] = studio
+            context['studio_collaborators'] = studio.collaborators.filter(is_active=True).count()
+        except Studio.DoesNotExist:
+            context['studio'] = None
+            context['studio_collaborators'] = 0
+        
+        # Get user's audio tracks
+        context['audio_tracks'] = AudioTrack.objects.filter(created_by=user).count()
+        
+        # Get collaboration stats
+        context['collaborated_stories'] = Comic.objects.filter(
+            collaborators__user=user
+        ).distinct().count()
+        
         return context
 
 
@@ -1055,5 +1072,325 @@ class DialogueDeleteView(LoginRequiredMixin, DeleteView):
     
     def get_success_url(self):
         return reverse('immersivecomics:episode_manage', kwargs={'pk': self.object.episode.pk})
+
+
+# Studio Views
+class StudioListView(ListView):
+    """List all public studios"""
+    model = Studio
+    template_name = 'icvybz/studio_list.html'
+    context_object_name = 'studios'
+    paginate_by = 12
+    
+    def get_queryset(self):
+        return Studio.objects.filter(is_public=True).prefetch_related('collaborators__user').annotate(
+            collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
+            stories_count=Count('stories', filter=Q(stories__is_public=True))
+        ).order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Collaborative Studios'
+        context['page_description'] = 'Discover creative studios where storytellers, 3D artists, voice actors, sound engineers, and cinematographers collaborate to bring stories to life.'
+        return context
+
+
+class StudioDetailView(DetailView):
+    """View a specific studio"""
+    model = Studio
+    template_name = 'icvybz/studio_detail.html'
+    context_object_name = 'studio'
+    
+    def get_queryset(self):
+        return Studio.objects.filter(is_public=True).prefetch_related(
+            'collaborators__user',
+            'stories__collaborators__user'
+        ).annotate(
+            collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
+            stories_count=Count('stories', filter=Q(stories__is_public=True))
+        )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        studio = self.object
+        
+        # Get public stories for this studio
+        context['studio_stories'] = Comic.objects.filter(
+            collaborators__studio=studio,
+            is_public=True
+        ).prefetch_related('collaborators__user').distinct()[:6]
+        
+        # Get active collaborators
+        context['active_collaborators'] = studio.collaborators.filter(is_active=True).select_related('user')
+        
+        return context
+
+
+class MyStudioView(LoginRequiredMixin, DetailView):
+    """User's personal studio dashboard"""
+    model = Studio
+    template_name = 'icvybz/my_studio.html'
+    context_object_name = 'studio'
+    
+    def get_object(self):
+        # Get or create user's studio
+        studio, created = Studio.objects.get_or_create(
+            owner=self.request.user,
+            defaults={
+                'name': f"{self.request.user.first_name or self.request.user.username}'s Studio",
+                'description': 'My collaborative storytelling workspace',
+                'is_public': True
+            }
+        )
+        return studio
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        studio = self.object
+        user = self.request.user
+        
+        # Get user's stories with all related data in optimized queries
+        user_stories = Comic.objects.filter(
+            Q(user=user) | Q(collaborators__user=user)
+        ).prefetch_related(
+            'collaborators__user',
+            'seasons__episodes'
+        ).annotate(
+            seasons_count=Count('seasons'),
+            episodes_count=Count('seasons__episodes')
+        ).distinct()
+        
+        # Get studio collaborators
+        studio_collaborators = studio.collaborators.filter(is_active=True).select_related('user')
+        
+        # Pre-load story collaborators using prefetch_related
+        user_stories = user_stories.prefetch_related(
+            'collaborators__user'
+        )
+        
+        # Calculate totals efficiently
+        total_episodes = sum(story.episodes_count for story in user_stories)
+        total_seasons = sum(story.seasons_count for story in user_stories)
+        
+        context['user_stories'] = user_stories
+        context['studio_collaborators'] = studio_collaborators
+        context['total_stories'] = user_stories.count()
+        context['total_collaborators'] = studio_collaborators.count()
+        context['total_episodes'] = total_episodes
+        context['total_seasons'] = total_seasons
+        
+        return context
+
+
+class StudioCreateView(LoginRequiredMixin, CreateView):
+    """Create a new studio"""
+    model = Studio
+    fields = ['name', 'description', 'is_public', 'avatar_url']
+    template_name = 'icvybz/studio_create.html'
+    
+    def form_valid(self, form):
+        form.instance.owner = self.request.user
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:my_studio')
+
+
+class StudioUpdateView(LoginRequiredMixin, UpdateView):
+    """Update studio settings"""
+    model = Studio
+    fields = ['name', 'description', 'is_public', 'avatar_url']
+    template_name = 'icvybz/studio_edit.html'
+    
+    def get_queryset(self):
+        return Studio.objects.filter(owner=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:my_studio')
+
+
+# Audio Views
+class AudioTrackListView(LoginRequiredMixin, ListView):
+    """List user's audio tracks"""
+    model = AudioTrack
+    template_name = 'icvybz/audio_track_list.html'
+    context_object_name = 'audio_tracks'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        return AudioTrack.objects.filter(created_by=self.request.user).order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['audio_types'] = AudioTrack.AUDIO_TYPES
+        return context
+
+
+class AudioTrackCreateView(LoginRequiredMixin, CreateView):
+    """Create a new audio track"""
+    model = AudioTrack
+    fields = ['name', 'audio_type', 'audio_file', 'duration', 'volume', 'loop', 'fade_in', 'fade_out', 'is_public']
+    template_name = 'icvybz/audio_track_create.html'
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:audio_track_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['audio_types'] = AudioTrack.AUDIO_TYPES
+        return context
+
+
+class AudioTrackUpdateView(LoginRequiredMixin, UpdateView):
+    """Update an audio track"""
+    model = AudioTrack
+    fields = ['name', 'audio_type', 'audio_file', 'duration', 'volume', 'loop', 'fade_in', 'fade_out', 'is_public']
+    template_name = 'icvybz/audio_track_edit.html'
+    
+    def get_queryset(self):
+        return AudioTrack.objects.filter(created_by=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:audio_track_list')
+
+
+class AudioTrackDeleteView(LoginRequiredMixin, DeleteView):
+    """Delete an audio track"""
+    model = AudioTrack
+    template_name = 'icvybz/audio_track_confirm_delete.html'
+    
+    def get_queryset(self):
+        return AudioTrack.objects.filter(created_by=self.request.user)
+    
+    def get_success_url(self):
+        return reverse('immersivecomics:audio_track_list')
+
+
+# API Views for React Integration
+@csrf_exempt
+@require_http_methods(["GET"])
+def studio_list_api(request):
+    """API endpoint for studio list"""
+    studios = Studio.objects.filter(is_public=True).prefetch_related('collaborators__user').annotate(
+        collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
+        stories_count=Count('stories', filter=Q(stories__is_public=True))
+    ).order_by('-created_at')
+    
+    studios_data = []
+    for studio in studios:
+        studios_data.append({
+            'id': studio.id,
+            'name': studio.name,
+            'description': studio.description,
+            'owner': {
+                'id': studio.owner.id,
+                'username': studio.owner.username,
+                'first_name': studio.owner.first_name,
+                'last_name': studio.owner.last_name
+            },
+            'collaborators': [
+                {
+                    'id': collab.id,
+                    'username': collab.user.username,
+                    'first_name': collab.user.first_name,
+                    'last_name': collab.user.last_name,
+                    'role': collab.role
+                }
+                for collab in studio.collaborators.filter(is_active=True)
+            ],
+            'stories_count': studio.stories_count,
+            'collaborators_count': studio.collaborators_count,
+            'created_at': studio.created_at.isoformat(),
+            'updated_at': studio.updated_at.isoformat(),
+            'is_public': studio.is_public,
+            'avatar_url': studio.avatar_url
+        })
+    
+    return JsonResponse({'studios': studios_data})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def my_studio_api(request):
+    """API endpoint for user's studio"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        studio = Studio.objects.get(owner=request.user)
+    except Studio.DoesNotExist:
+        # Create studio if it doesn't exist
+        studio = Studio.objects.create(
+            owner=request.user,
+            name=f"{request.user.first_name or request.user.username}'s Studio",
+            description='My collaborative storytelling workspace',
+            is_public=True
+        )
+    
+    # Get user's stories with optimized queries
+    user_stories = Comic.objects.filter(
+        Q(user=request.user) | Q(collaborators__user=request.user)
+    ).prefetch_related(
+        'collaborators__user',
+        'seasons__episodes'
+    ).annotate(
+        seasons_count=Count('seasons'),
+        episodes_count=Count('seasons__episodes')
+    ).distinct()
+    
+    stories_data = []
+    for story in user_stories:
+        stories_data.append({
+            'id': story.id,
+            'title': story.title,
+            'description': story.description,
+            'is_public': story.is_public,
+            'moderation_status': story.moderation_status,
+            'created_at': story.created_at.isoformat(),
+            'updated_at': story.updated_at.isoformat(),
+            'collaborators': [
+                {
+                    'id': collab.id,
+                    'username': collab.user.username,
+                    'first_name': collab.user.first_name,
+                    'last_name': collab.user.last_name,
+                    'role': collab.role
+                }
+                for collab in story.collaborators.filter(is_active=True)
+            ],
+            'seasons_count': story.seasons_count,
+            'episodes_count': story.episodes_count
+        })
+    
+    studio_data = {
+        'id': studio.id,
+        'name': studio.name,
+        'description': studio.description,
+        'owner': {
+            'id': studio.owner.id,
+            'username': studio.owner.username,
+            'first_name': studio.owner.first_name,
+            'last_name': studio.owner.last_name
+        },
+        'collaborators': [
+            {
+                'id': collab.id,
+                'username': collab.user.username,
+                'first_name': collab.user.first_name,
+                'last_name': collab.user.last_name,
+                'role': collab.role
+            }
+            for collab in studio.collaborators.filter(is_active=True)
+        ],
+        'stories': stories_data,
+        'created_at': studio.created_at.isoformat(),
+        'updated_at': studio.updated_at.isoformat()
+    }
+    
+    return JsonResponse({'studio': studio_data})
 
 

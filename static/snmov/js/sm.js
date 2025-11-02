@@ -400,10 +400,116 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ===== DYNAMIC NAVBAR FUNCTIONALITY =====
+
+// Switch to profile navbar when profile button is clicked
+function switchToProfileNavbar(event) {
+    console.log('Switching to profile navbar...');
+    
+    // Check if user is authenticated (profile button should only exist for authenticated users)
+    const profileBtn = document.getElementById('profile-btn');
+    if (!profileBtn) {
+        console.log('Profile button not found - user not authenticated');
+        return; // Let normal navigation proceed
+    }
+    
+    // Prevent default navigation temporarily
+    event.preventDefault();
+    
+    // Hide default navbar and show profile navbar
+    const defaultNavbar = document.getElementById('default-navbar');
+    const profileNavbar = document.getElementById('profile-navbar');
+    
+    if (defaultNavbar && profileNavbar) {
+        // Add hidden class to default navbar
+        defaultNavbar.classList.add('hidden');
+        // Add show class to profile navbar
+        profileNavbar.classList.add('show');
+        
+        console.log('Navbar switched to profile mode');
+        
+        // Navigate to dashboard after a brief delay for visual effect
+        setTimeout(function() {
+            window.location.href = event.target.closest('a').href;
+        }, 150);
+    } else {
+        console.error('Navbar elements not found');
+        // Fallback to normal navigation
+        window.location.href = event.target.closest('a').href;
+    }
+}
+
+// Switch back to default navbar when home button is clicked from profile navbar
+function switchToDefaultNavbar(event) {
+    console.log('Switching to default navbar...');
+    
+    // Prevent default navigation temporarily
+    event.preventDefault();
+    
+    // Hide profile navbar and show default navbar
+    const defaultNavbar = document.getElementById('default-navbar');
+    const profileNavbar = document.getElementById('profile-navbar');
+    
+    if (defaultNavbar && profileNavbar) {
+        // Remove show class from profile navbar
+        profileNavbar.classList.remove('show');
+        // Remove hidden class from default navbar
+        defaultNavbar.classList.remove('hidden');
+        
+        console.log('Navbar switched to default mode');
+        
+        // Navigate to homepage after a brief delay for visual effect
+        setTimeout(function() {
+            window.location.href = event.target.closest('a').href;
+        }, 150);
+    } else {
+        console.error('Navbar elements not found');
+        // Fallback to normal navigation
+        window.location.href = event.target.closest('a').href;
+    }
+}
+
+// Initialize navbar state based on current page
+function initNavbarState() {
+    console.log('Initializing navbar state...');
+    
+    const currentPath = window.location.pathname;
+    const defaultNavbar = document.getElementById('default-navbar');
+    const profileNavbar = document.getElementById('profile-navbar');
+    const profileBtn = document.getElementById('profile-btn');
+    
+    if (!defaultNavbar || !profileNavbar) {
+        console.log('Navbar elements not found, skipping state initialization');
+        return;
+    }
+
+    // Only show profile navbar if user is authenticated
+    if (profileBtn && (currentPath.includes('/immersivecomics/dashboard') || 
+        currentPath.includes('/immersivecomics/story') ||
+        currentPath.includes('/immersivecomics/season') ||
+        currentPath.includes('/immersivecomics/episode') ||
+        currentPath.includes('/immersivecomics/character') ||
+        currentPath.includes('/immersivecomics/dialogue') ||
+        currentPath.includes('/my-orders/'))) {
+        
+        console.log('On profile page, showing profile navbar');
+        defaultNavbar.classList.add('hidden');
+        profileNavbar.classList.add('show');
+        } else {
+        console.log('On regular page or user not authenticated, showing default navbar');
+        defaultNavbar.classList.remove('hidden');
+        profileNavbar.classList.remove('show');
+    }
+}
+
 // Make functions available globally immediately
 window.initSmoothNavigation = initSmoothNavigation;
 window.initSmoothContentLoading = initSmoothContentLoading;
+window.switchToProfileNavbar = switchToProfileNavbar;
+window.switchToDefaultNavbar = switchToDefaultNavbar;
+window.initNavbarState = initNavbarState;
 
 console.log('SM.js loaded, functions made globally available');
 console.log('Smooth navigation function available globally:', typeof window.initSmoothNavigation);
 console.log('Smooth content loading function available globally:', typeof window.initSmoothContentLoading);
+console.log('Navbar switching functions available globally');

@@ -85,7 +85,7 @@ class HomePageView(FormView, TemplateView):
             email_subject,
             email_message,
             settings.DEFAULT_FROM_EMAIL,  # From email
-            [settings.DEFAULT_TO_EMAIL],  # To email
+            [settings.SUPPORT_EMAIL],  # To email
             fail_silently=False,
         )
 

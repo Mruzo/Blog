@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from tilf.models import Season, Intersection
+from icvybz.models import Season, Intersection
 import os
 from django.conf import settings
 

@@ -351,7 +351,9 @@ footer {
   outline: 2px #414042;
 }
 
-.active {
+/* Only apply active styling to buttons, not navbar containers */
+.nav-btn.active,
+.btn.active {
     color: #414042;
     background: linear-gradient(0deg, #414042, rgba(0,0,0,0) 10% );
     transition: opacity 0.3s ease;
@@ -938,6 +940,104 @@ footer {
     }
     
     .navbar-buttons-container .nav-btn {
+        -webkit-box-flex: 1 !important;
+        -ms-flex: 1 1 0% !important;
+        flex: 1 1 0% !important;
+        -ms-flex-negative: 1 !important;
+        flex-shrink: 1 !important;
+        -ms-flex-positive: 1 !important;
+        flex-grow: 1 !important;
+        -ms-flex-preferred-size: 0% !important;
+        flex-basis: 0% !important;
+    }
+}
+
+/* ===== DYNAMIC NAVBAR TRANSITIONS ===== */
+
+/* Default navbar state - visible by default */
+#default-navbar.navbar-state-default {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+/* Profile navbar state - hidden by default */
+#profile-navbar.navbar-state-profile {
+    display: none !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+/* When profile navbar is shown */
+#profile-navbar.navbar-state-profile.show {
+    display: flex !important;
+}
+
+/* When default navbar is hidden */
+#default-navbar.navbar-state-default.hidden {
+    display: none !important;
+}
+
+/* Mobile responsive for both navbar states */
+@media (max-width: 768px) {
+    #default-navbar,
+    #profile-navbar {
+        justify-content: space-between !important;
+        padding: 0 10px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    #default-navbar,
+    #profile-navbar {
+        justify-content: space-between !important;
+        padding: 0 5px !important;
+    }
+}
+
+/* Smooth fade effect when switching navbar states */
+.navbar-transitioning {
+    opacity: 0.7;
+    transform: translateY(-2px);
+}
+
+/* Ensure profile navbar buttons have same styling as default */
+#profile-navbar .nav-btn {
+    white-space: nowrap !important;
+    min-width: fit-content !important;
+    max-width: none !important;
+    margin: 0 4px !important;
+    flex: 0 0 auto !important;
+}
+
+/* Mobile responsive for profile navbar buttons */
+@media (max-width: 768px) {
+    #profile-navbar .nav-btn {
+        flex: 1 1 0% !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        font-size: 0.8rem !important;
+        margin: 0 2px !important;
+    }
+    
+    #profile-navbar .nav-btn i {
+        margin-right: 2px !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    #profile-navbar .nav-btn {
         -webkit-box-flex: 1 !important;
         -ms-flex: 1 1 0% !important;
         flex: 1 1 0% !important;
