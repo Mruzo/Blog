@@ -1,0 +1,16 @@
+Studio Collaboration Invitation
+
+Hello {% if invitee_user %}{{ invitee_user.first_name|default:invitee_user.username }}{% else %}there{% endif %},
+
+{{ inviter.first_name|default:inviter.username }} has invited you to collaborate on their studio "{{ studio.name }}".
+
+Role: {{ role_display }}
+
+View studio: {{ studio_url }}
+
+You now have access to collaborate on all stories in this studio.
+
+If you have any questions, please contact our support team.
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.
+

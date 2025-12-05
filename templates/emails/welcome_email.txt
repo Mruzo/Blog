@@ -1,0 +1,28 @@
+Welcome to Justvybz!
+
+Hi {{ user.first_name|default:user.username }},
+
+Welcome to Justvybz! We're thrilled to have you join our community of innovative storytellers. You're now part of a platform that's revolutionizing how stories are told and experienced through immersive 3D technology.
+
+Here's what you can do now:
+- Create immersive 3D comic stories with interactive dialogues
+- Collaborate with other creators on shared narratives
+- Experience stories with dynamic camera controls and 3D models
+- Build your creative studio and invite collaborators
+- Share your stories with the community or keep them private
+
+Start Creating: {{ site_url }}/immersivecomics/story/create/
+
+Ready to bring your stories to life? Start by creating your first immersive comic story, or explore what other creators are building on the platform.
+
+If you have any questions about creating stories, collaboration features, or anything else, our support team is here to help. Just reply to this email or contact us at Justvybz@justvybz.com.
+
+---
+This email was sent to {{ user.email }}.
+You're receiving this email because you recently created an account on Justvybz.
+
+Privacy Policy: {{ site_url }}{% url 'privacy' %}
+Terms of Service: {{ site_url }}{% url 'terms' %}
+Cookie Policy: {{ site_url }}{% url 'cookie_policy' %}
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.

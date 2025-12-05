@@ -1,0 +1,28 @@
+Don't Forget Your Cart - You have items waiting for you
+
+Hi {{ user.first_name|default:user.username }},
+
+We noticed you added some items to your cart but haven't completed your purchase yet.
+
+Your Cart Items:
+---------------
+{% for item in cart_items %}
+  - {{ item.product.title }} - Quantity: {{ item.quantity }} - ${{ item.product.get_discounted_price|floatformat:2 }} each
+{% endfor %}
+
+Total: ${{ total_price|floatformat:2 }}
+
+Complete Your Purchase: {{ cart_url }}
+
+{% if days_abandoned == 1 %}
+Complete your purchase within the next 48 hours to secure these items!
+{% elif days_abandoned >= 3 %}
+These items are still available, but stock is limited. Complete your purchase soon!
+{% else %}
+Don't miss out! Complete your purchase to secure these items.
+{% endif %}
+
+Need help? If you have any questions about these items or need assistance, our support team is here to help.
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.
+

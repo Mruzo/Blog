@@ -1,18 +1,337 @@
-$(document).ready(function(){
-   $('.toast').toast('show');
-   });
+// ===== SMOOTH NAVIGATION & UX ENHANCEMENTS =====
 
-//scroll animation
-$(window).scroll(function(){
-    var scroll = $(window).scrollTop(),
-    dh = $(document).height(),
-    wh = $(window).height();
-    scrollPercent = (scroll / (dh-wh)) * 100;
-    $('#progressbar').css('height', scrollPercent + '%');
-});
+// Smooth page transitions and enhanced UX
+function initSmoothNavigation() {
+    console.log('Initializing smooth navigation...');
+    
+    // Get homepage URL for JavaScript
+    var homepage_url = window.location.origin + '/';
+    console.log('Homepage URL:', homepage_url);
+    
+    // Add smooth transitions to all internal links
+    var links = document.querySelectorAll('a[href^="/"], a[href^="' + homepage_url + '"]');
+    console.log('Found', links.length, 'internal links');
+    
+    // Debug: Log all found links
+    links.forEach(function(link, index) {
+        console.log('Link', index + 1, ':', link.href, 'Text:', link.textContent.trim());
+    });
+    
+    links.forEach(function(link, index) {
+        // Skip if it's a target="_blank" link
+        if (link.getAttribute('target') === '_blank') {
+            console.log('Skipping target="_blank" link:', link.href);
+            return;
+        }
+        
+        // Check if event listener is already attached
+        if (link.hasAttribute('data-smooth-nav-attached')) {
+            console.log('Event listener already attached to:', link.href);
+            return;
+        }
+        
+        console.log('Attaching event listener to link:', link.href);
+        
+        link.addEventListener('click', function(e) {
+            console.log('=== LINK CLICKED ===');
+            var href = this.getAttribute('href');
+            console.log('Link clicked:', href);
+            console.log('Link element:', this);
+            console.log('Event:', e);
+            
+            // Skip if it's a hash link or external link
+            if (href.startsWith('#') || (href.startsWith('http') && !href.startsWith(window.location.origin))) {
+                console.log('Skipping link:', href);
+                return;
+            }
+            
+            console.log('Processing navigation to:', href);
+            
+            // Prevent default navigation temporarily
+            e.preventDefault();
+            console.log('Default navigation prevented');
+            
+            // Show loading spinner
+            var spinner = document.getElementById('loadingSpinner');
+            if (spinner) {
+                spinner.classList.add('show');
+                console.log('Loading spinner shown');
+            } else {
+                console.log('Loading spinner not found');
+            }
+            
+            // Add transition effect
+            var pageContent = document.querySelector('.page-content');
+            if (pageContent) {
+                pageContent.classList.add('page-transitioning');
+                console.log('Page transition effect added');
+            } else {
+                console.log('Page content wrapper not found');
+            }
+            
+            // Small delay to show transition, then navigate
+            setTimeout(function() {
+                console.log('Navigating to:', href);
+                window.location.href = href;
+            }, 300);
+        });
+        
+        // Mark this link as having an event listener
+        link.setAttribute('data-smooth-nav-attached', 'true');
+    });
+    
+    // Remove transition class and hide spinner when page loads
+    window.addEventListener('load', function() {
+        console.log('Page loaded, cleaning up transitions');
+        var pageContent = document.querySelector('.page-content');
+        var spinner = document.getElementById('loadingSpinner');
+        
+        if (pageContent) {
+            pageContent.classList.remove('page-transitioning');
+        }
+        if (spinner) {
+            spinner.classList.remove('show');
+        }
+    });
+    
+    // Also remove on DOM ready as fallback
+    var pageContent = document.querySelector('.page-content');
+    var spinner = document.getElementById('loadingSpinner');
+    
+    if (pageContent) {
+        pageContent.classList.remove('page-transitioning');
+    }
+    if (spinner) {
+        spinner.classList.remove('show');
+    }
+    
+    // Add smooth scroll to top when navigating
+    if (window.jQuery) {
+        jQuery('html, body').animate({
+            scrollTop: 0
+        }, 300);
+    } else {
+        // Fallback for non-jQuery
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+    
+    console.log('Smooth navigation initialized successfully');
+}
 
-var scroll = window.requestAnimationFrame ||
-            function(callback){ window.setTimeout(callback, 1000/60)};
+// ===== SMOOTH CONTENT LOADING =====
+function initSmoothContentLoading() {
+    console.log('Initializing smooth content loading...');
+    
+    // Get all content elements that should animate in
+    var contentElements = document.querySelectorAll('.page-content > *:not(.skip-animation)');
+    console.log('Found', contentElements.length, 'content elements to animate');
+    
+    // Add initial hidden state and animation classes
+    contentElements.forEach(function(element, index) {
+        // Skip if already processed
+        if (element.hasAttribute('data-content-animated')) {
+            return;
+        }
+        
+        // Add initial hidden state
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(30px)';
+        element.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+        
+        // Mark as processed
+        element.setAttribute('data-content-animated', 'true');
+        
+        // Animate in with staggered delay
+        setTimeout(function() {
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+        }, 100 + (index * 150)); // Staggered animation: 100ms base + 150ms per element
+    });
+    
+    // Special handling for specific page types
+    var currentPath = window.location.pathname;
+    
+    if (currentPath === '/' || currentPath === '/home') {
+        // Homepage specific animations
+        animateHomepageContent();
+    } else if (currentPath.includes('immersivecomics')) {
+        // ICz page specific animations
+        animateICzContent();
+    } else if (currentPath.includes('product')) {
+        // Merch page specific animations
+        animateMerchContent();
+    }
+    
+    console.log('Smooth content loading initialized');
+}
+
+// Homepage specific content animations
+function animateHomepageContent() {
+    console.log('Animating homepage content...');
+    
+    // Animate main heading with special effect
+    var mainHeading = document.querySelector('.landtext');
+    if (mainHeading) {
+        mainHeading.style.opacity = '0';
+        mainHeading.style.transform = 'scale(0.8) translateY(50px)';
+        mainHeading.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+        
+        setTimeout(function() {
+            mainHeading.style.opacity = '1';
+            mainHeading.style.transform = 'scale(1) translateY(0)';
+        }, 200);
+    }
+    
+    // Animate about section with slide effect
+    var aboutSection = document.querySelector('.row.border-top');
+    if (aboutSection) {
+        aboutSection.style.opacity = '0';
+        aboutSection.style.transform = 'translateX(-50px)';
+        aboutSection.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+        
+        setTimeout(function() {
+            aboutSection.style.opacity = '1';
+            aboutSection.style.transform = 'translateX(0)';
+        }, 400);
+    }
+}
+
+// ICz page specific content animations
+function animateICzContent() {
+    console.log('Animating ICz content...');
+    
+    // Animate comic cards with staggered entrance
+    var comicCards = document.querySelectorAll('.card, .comic-item');
+    comicCards.forEach(function(card, index) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(40px) rotateX(10deg)';
+        card.style.transition = 'opacity 0.7s ease-out, transform 0.7s ease-out';
+        
+        setTimeout(function() {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0) rotateX(0deg)';
+        }, 300 + (index * 200));
+    });
+}
+
+// Merch page specific content animations
+function animateMerchContent() {
+    console.log('Animating Merch content...');
+    
+    // Animate product cards with bounce effect
+    var productCards = document.querySelectorAll('.card, .product-item');
+    productCards.forEach(function(card, index) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9) translateY(30px)';
+        card.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+        
+        setTimeout(function() {
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1) translateY(0)';
+        }, 200 + (index * 150));
+    });
+    
+    // Animate testimonials with slide effect
+    var testimonials = document.querySelectorAll('.testimonial, .testimonial-item');
+    testimonials.forEach(function(testimonial, index) {
+        testimonial.style.opacity = '0';
+        testimonial.style.transform = 'translateX(50px)';
+        testimonial.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+        
+        setTimeout(function() {
+            testimonial.style.opacity = '1';
+            testimonial.style.transform = 'translateX(0)';
+        }, 500 + (index * 300));
+    });
+}
+
+// jQuery-dependent features
+function initializeJQueryFeatures() {
+    if (typeof $ === 'undefined') {
+        console.log('jQuery not available, skipping jQuery features');
+        return;
+    }
+    
+    $('.toast').toast('show');
+    
+    // Enhanced carousel initialization
+    $('.carousel').each(function() {
+        $(this).carousel({
+            interval: 5000,
+            pause: 'hover',
+            keyboard: true,
+            touch: true
+        });
+        
+        // Add smooth sliding animation
+        $(this).on('slide.bs.carousel', function (e) {
+            $(this).find('.carousel-item').css({
+                'transition-duration': '.6s'
+            });
+        });
+        
+        // Pause on hover
+        $(this).hover(
+            function() {
+                $(this).carousel('pause');
+            },
+            function() {
+                $(this).carousel('cycle');
+            }
+        );
+        
+        // Touch swipe support
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        $(this).on('touchstart', function(e) {
+            touchStartX = e.originalEvent.touches[0].pageX;
+        });
+        
+        $(this).on('touchend', function(e) {
+            touchEndX = e.originalEvent.changedTouches[0].pageX;
+            handleSwipe($(this));
+        });
+        
+        function handleSwipe($carousel) {
+            const swipeThreshold = 50;
+            const swipeDistance = touchEndX - touchStartX;
+            
+            if (Math.abs(swipeDistance) > swipeThreshold) {
+                if (swipeDistance > 0) {
+                    $carousel.carousel('prev');
+                } else {
+                    $carousel.carousel('next');
+                }
+            }
+        }
+    });
+}
+
+// Initialize jQuery features when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeJQueryFeatures);
+} else {
+    // DOM is already ready
+    initializeJQueryFeatures();
+}
+
+// Also try after jQuery loads
+if (window.jQuery) {
+    jQuery(document).ready(initializeJQueryFeatures);
+} else {
+    window.addEventListener('load', function() {
+        if (window.jQuery) {
+            jQuery(document).ready(initializeJQueryFeatures);
+        }
+    });
+}
+
+// Scroll animations
+var scroll = window.requestAnimationFrame || function(callback){ window.setTimeout(callback, 1000/60)};
 
 var elementsToShow = document.querySelectorAll('.show-on-scroll');
 
@@ -20,7 +339,7 @@ function loop() {
     elementsToShow.forEach(function (element) {
         if (isElementInViewport(element)) {
             element.classList.add('is-visible');
-        }else{
+        } else {
             element.classList.remove('is-visible');
         }
     });
@@ -30,195 +349,167 @@ function loop() {
 
 loop();
 
-//helper function
 function isElementInViewport(el) {
-    //check to see if jquery is defined
     if (typeof jQuery === "function" && el instanceof jQuery) {
         el = el[0];
     }
-    //rectangle around the element we want to check
     var rect = el.getBoundingClientRect();
-    //returns True if element is on the page and on the screen
     return (
-        (rect.top <= 0 && rect.bottom >= 0)
-        ||
+        (rect.top <= 0 && rect.bottom >= 0) ||
         (rect.bottom >= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.top <= (window.innerHeight || document.documentElement.clientHeight))
-        ||
+        rect.top <= (window.innerHeight || document.documentElement.clientHeight)) ||
         (rect.top >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight))
     );
 }
 
-//front page animation
-var TextSlider = function(){
-  this.container = $('#home-animation-wrapper');
-  this.currentSlide = 1;
-  this.slidesLength = this.container.find('.slide').length - 1; // To start at 0
-  this.content = { text1: '', text2: '', text3: ''};
+// Cookie notification implementation
+function setCookie(name, value, days) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+}
 
-  this.allowChange = true;
+function getCookieValue(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
 
-  this.init();
-};
+// Check if cookie notification has been shown before
+const cookieAccepted = getCookieValue("cookie_accepted") === "true";
 
-TextSlider.prototype = {
-
-  init: function(){
-//    console.log('init');
-
-    this.bind();
-
-    this.initSvg();
-
-  },
-
-  bind: function(){
-//    console.log('bind');
-
-    var self = this;
-
-    // Bind interval
-    var timerDuration = 4000,
-        timer = setInterval(function(){
-          self.resetSlide();
-        }, timerDuration);
-
-    // Bind restart on click with next slide
-    this.container.on('click', function(){
-
-      // Do not allow to change slide until last transition is complete
-      if(!self.allowChange){ return; }
-      self.allowChange = false;
-      setTimeout(function(){
-        self.allowChange = true;
-      }, 3000);
-
-      self.resetSlide();
-
-      clearInterval(timer);
-      timer = setInterval(function(){
-          self.resetSlide();
-        }, timerDuration);
-
-
-    });
-
-
-  },
-
-  initSvg: function(){
-//    console.log('initSvg');
-
-    this.bubblesRandomColors();
-    this.setTexts();
-    this.bubblesMovement();
-
-    // Trigger First slide
-    this.triggerSlide();
-  },
-
-  setTexts: function(){
-//    console.log('setTexts');
-
-    var texts = this.container.find('#svg-texts');
-
-    // Get texts
-    this.content.text1 = this.container.find('.slide[count="'+this.currentSlide+'"]').attr('data-1');
-    this.content.text2 = this.container.find('.slide[count="'+this.currentSlide+'"]').attr('data-2');
-    this.content.text3 = this.container.find('.slide[count="'+this.currentSlide+'"]').attr('data-3');
-
-    // UpperCase Texts
-    this.content.text1 = this.content.text1.toUpperCase();
-    this.content.text2 = this.content.text2.toUpperCase();
-    this.content.text3 = this.content.text3.toUpperCase();
-
-    // Append Texts
-    texts.find('text:nth-child(1)').html(this.content.text1);
-    texts.find('text:nth-child(2)').html(this.content.text2);
-    texts.find('text:nth-child(3)').html(this.content.text3);
-  },
-
-  bubblesRandomColors: function(){
-//    console.log('bubblesRandomColors');
-
-    var bubblesGroup = this.container.find('#bubbles'),
-        // colors = ['#03ee93','#ff0700','#ffe700','#5306de'];
-        colors = ['#64AD60','#FFBC00','#DC2229','#000', '#OOO']
-
-    bubblesGroup.find('path').each(function(){
-      var rand = getRand(0,colors.length);
-      TweenMax.set(this, { fill: colors[rand], scale: 0, transformOrigin: 'top left' });
-    })
-  },
-
-  triggerSlide: function(){
-//    console.log('triggerSlide');
-
-    // Container loads invisible, needs this to be shown on the first iteration
-    TweenMax.set(this.container, { autoAlpha: 1 });
-
-    var bubbles =  this.container.find('#bubbles path');
-    bubbles.each(function(){
-      var rotateRand = getRand(-1,1);
-      TweenMax.to(this,1.5, { scale: 1.2, rotation: rotateRand, ease: Power2.easeInOut});
-    })
-  },
-
-  resetSlide: function(){
-//    console.log('hideSlide');
-
-    var self = this;
-
-    this.currentSlide++;
-    if(this.currentSlide > this.slidesLength){ this.currentSlide = 0; };
-
-    var bubbles = this.container.find('#bubbles path');
-    TweenMax.to(bubbles,1.5, { scale: 0, ease: Power2.easeInOut, onComplete: triggerContinue });
-
-    // Workaround gsap onComplete
-    function triggerContinue(){
-      self.initSvg();
+if (!cookieAccepted) {
+    const notification = document.getElementById("cookie-notification");
+    if (notification) {
+        notification.style.display = "block";
+        console.log('Cookie notification displayed');
     }
-  },
-
-  // non used function (performance) (remove the 'return' to enable)
-  bubblesMovement: function(){
-
-    return; // Yup, this one
-
-    var bubbles = this.container.find('#bubbles path'),
-        count = 500;
-
-    bubbles.each(function(index){
-      if(index > count ) { return; }
-      $(this).attr('data-rand', getRand(15, 55))
-    });
-
-    this.container.on('mousemove', function(e){
-      bubbles.each(function(){
-        if(!$(this).attr('data-rand')){ return; };
-
-        var rand = $(this).attr('data-rand'),
-            cy = e.pageY,
-            cx = e.pageX,
-            py = Math.round($(this).offset().top),
-            px = Math.round($(this).offset().left),
-            x = Math.round(-(cx + px) / rand),
-            y = Math.round(-(cy + py) / rand);
-
-        TweenMax.to($(this), 0.2, { x: x, y: y, transformOrigin: 'center' });
-      });
-    })
-  }
 }
 
-function getRand(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min)) + min;
+document.addEventListener('DOMContentLoaded', function() {
+    const acceptButton = document.getElementById("accept-cookie");
+    if (acceptButton) {
+        acceptButton.addEventListener("click", function () {
+            setCookie("cookie_accepted", "true", 365); // Cookie expires in 1 year
+            const notification = document.getElementById("cookie-notification");
+            if (notification) {
+                notification.style.display = "none";
+            }
+        });
+    }
+});
+
+// ===== DYNAMIC NAVBAR FUNCTIONALITY =====
+
+// Switch to profile navbar when profile button is clicked
+function switchToProfileNavbar(event) {
+    console.log('Switching to profile navbar...');
+    
+    // Check if user is authenticated (profile button should only exist for authenticated users)
+    const profileBtn = document.getElementById('profile-btn');
+    if (!profileBtn) {
+        console.log('Profile button not found - user not authenticated');
+        return; // Let normal navigation proceed
+    }
+    
+    // Prevent default navigation temporarily
+    event.preventDefault();
+    
+    // Hide default navbar and show profile navbar
+    const defaultNavbar = document.getElementById('default-navbar');
+    const profileNavbar = document.getElementById('profile-navbar');
+    
+    if (defaultNavbar && profileNavbar) {
+        // Add hidden class to default navbar
+        defaultNavbar.classList.add('hidden');
+        // Add show class to profile navbar
+        profileNavbar.classList.add('show');
+        
+        console.log('Navbar switched to profile mode');
+        
+        // Navigate to dashboard after a brief delay for visual effect
+        setTimeout(function() {
+            window.location.href = event.target.closest('a').href;
+        }, 150);
+    } else {
+        console.error('Navbar elements not found');
+        // Fallback to normal navigation
+        window.location.href = event.target.closest('a').href;
+    }
 }
 
-window.LLOS = window.LLOS || {};
-if($('#home-animation-wrapper').length){
-  window.LLOS.TextSlider = new TextSlider();
+// Switch back to default navbar when home button is clicked from profile navbar
+function switchToDefaultNavbar(event) {
+    console.log('Switching to default navbar...');
+    
+    // Prevent default navigation temporarily
+    event.preventDefault();
+    
+    // Hide profile navbar and show default navbar
+    const defaultNavbar = document.getElementById('default-navbar');
+    const profileNavbar = document.getElementById('profile-navbar');
+    
+    if (defaultNavbar && profileNavbar) {
+        // Remove show class from profile navbar
+        profileNavbar.classList.remove('show');
+        // Remove hidden class from default navbar
+        defaultNavbar.classList.remove('hidden');
+        
+        console.log('Navbar switched to default mode');
+        
+        // Navigate to homepage after a brief delay for visual effect
+        setTimeout(function() {
+            window.location.href = event.target.closest('a').href;
+        }, 150);
+    } else {
+        console.error('Navbar elements not found');
+        // Fallback to normal navigation
+        window.location.href = event.target.closest('a').href;
+    }
 }
+
+// Initialize navbar state based on current page
+function initNavbarState() {
+    console.log('Initializing navbar state...');
+    
+    const currentPath = window.location.pathname;
+    const defaultNavbar = document.getElementById('default-navbar');
+    const profileNavbar = document.getElementById('profile-navbar');
+    const profileBtn = document.getElementById('profile-btn');
+    
+    if (!defaultNavbar || !profileNavbar) {
+        console.log('Navbar elements not found, skipping state initialization');
+        return;
+    }
+
+    // Only show profile navbar if user is authenticated
+    if (profileBtn && (currentPath.includes('/immersivecomics/dashboard') || 
+        currentPath.includes('/immersivecomics/story') ||
+        currentPath.includes('/immersivecomics/season') ||
+        currentPath.includes('/immersivecomics/episode') ||
+        currentPath.includes('/immersivecomics/character') ||
+        currentPath.includes('/immersivecomics/dialogue') ||
+        currentPath.includes('/my-orders/'))) {
+        
+        console.log('On profile page, showing profile navbar');
+        defaultNavbar.classList.add('hidden');
+        profileNavbar.classList.add('show');
+        } else {
+        console.log('On regular page or user not authenticated, showing default navbar');
+        defaultNavbar.classList.remove('hidden');
+        profileNavbar.classList.remove('show');
+    }
+}
+
+// Make functions available globally immediately
+window.initSmoothNavigation = initSmoothNavigation;
+window.initSmoothContentLoading = initSmoothContentLoading;
+window.switchToProfileNavbar = switchToProfileNavbar;
+window.switchToDefaultNavbar = switchToDefaultNavbar;
+window.initNavbarState = initNavbarState;
+
+console.log('SM.js loaded, functions made globally available');
+console.log('Smooth navigation function available globally:', typeof window.initSmoothNavigation);
+console.log('Smooth content loading function available globally:', typeof window.initSmoothContentLoading);
+console.log('Navbar switching functions available globally');

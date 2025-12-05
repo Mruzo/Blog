@@ -1,0 +1,28 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>Collaboration Invitation Declined</h1>
+    <p>Invitation response</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <p>Hello {{ invite.inviter.first_name|default:invite.inviter.username }},</p>
+    
+    <p><strong>{{ invite.invitee_user.first_name|default:invite.invitee_user.username|default:invite.invitee_email }}</strong> has declined your invitation to collaborate on <strong>"{{ invite.story.title }}"</strong>.</p>
+    
+    <div class="message-box">
+        <p><strong>Role Offered:</strong> {{ invite.get_role_display }}</p>
+        <p><strong>Status:</strong> Declined</p>
+    </div>
+    
+    <p>Don't worry - you can always invite other collaborators or reach out to this person again in the future.</p>
+    
+    <div class="button-center">
+        <a href="{{ story_url }}" class="button">View Story</a>
+    </div>
+</div>
+{% endblock %}
+

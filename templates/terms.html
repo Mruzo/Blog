@@ -1,71 +1,103 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title h3 text-center mb-4">Terms of Service</h1>
+            <p class="text-muted small">Last updated: {% now "F j, Y" %}</p>
 
+            <div class="policy-content">
+                <p>Welcome to Justvybz Inc. These Terms of Service ("Terms") govern your use of www.justvybz.com (the "Platform") and all related services, including our immersive storytelling platform for creating and experiencing interactive 3D comic stories. By accessing or using our Platform, you agree to be bound by these Terms.</p>
 
+                <h2 class="h5 mt-4">1. Platform Overview</h2>
+                <p>Justvybz is an innovative storytelling platform that enables creators to build, share, and experience immersive 3D comic stories with interactive dialogues, dynamic camera controls, and collaborative features. Our Platform empowers storytellers to bring their narratives to life through cutting-edge 3D technology.</p>
 
+                <h2 class="h5 mt-4">2. Account Registration</h2>
+                <p>To use certain features of our Platform, you must:</p>
+                <ul class="list-unstyled">
+                    <li>✓ Be at least 13 years old (or have parental consent)</li>
+                    <li>✓ Register for an account with accurate information</li>
+                    <li>✓ Maintain the security of your account credentials</li>
+                    <li>✓ Notify us immediately of any unauthorized access</li>
+                    <li>✓ Be responsible for all activities under your account</li>
+                </ul>
 
+                <h2 class="h5 mt-4">3. User-Generated Content</h2>
+                <p>As a creator on our Platform, you may:</p>
+                <ul class="list-unstyled">
+                    <li>✓ Create and publish immersive 3D comic stories</li>
+                    <li>✓ Collaborate with other creators on stories</li>
+                    <li>✓ Share your stories publicly or keep them private</li>
+                    <li>✓ Upload 3D models, images, and other creative assets</li>
+                </ul>
+                <p><strong>You retain ownership of your content</strong>, but by publishing on our Platform, you grant us a license to host, display, and distribute your content as necessary to provide our services.</p>
 
+                <h2 class="h5 mt-4">4. Content Guidelines</h2>
+                <p>You agree that your content will:</p>
+                <ul class="list-unstyled">
+                    <li>✓ Be original or properly licensed</li>
+                    <li>✓ Not infringe on others' intellectual property rights</li>
+                    <li>✓ Not contain hate speech, harassment, or illegal content</li>
+                    <li>✓ Not violate any applicable laws or regulations</li>
+                    <li>✓ Respect the rights and dignity of others</li>
+                </ul>
+                <p>We reserve the right to remove content that violates these guidelines or our community standards.</p>
 
+                <h2 class="h5 mt-4">5. Collaboration Features</h2>
+                <p>Our Platform includes collaboration tools that allow multiple creators to work together on stories. When collaborating:</p>
+                <ul class="list-unstyled">
+                    <li>✓ Story owners control access and permissions</li>
+                    <li>✓ Collaborators must respect the story owner's creative vision</li>
+                    <li>✓ All contributors should be credited appropriately</li>
+                    <li>✓ Disputes between collaborators are the responsibility of the parties involved</li>
+                </ul>
 
+                <h2 class="h5 mt-4">6. E-Commerce Terms (If Applicable)</h2>
+                <p>If you purchase products through our Platform:</p>
+                <ul class="list-unstyled">
+                    <li>✓ All prices are in Canadian Dollars (CAD)</li>
+                    <li>✓ Payment is required at the time of order</li>
+                    <li>✓ Orders are subject to availability and acceptance</li>
+                    <li>✓ Shipping costs are calculated at checkout</li>
+                    <li>✓ Returns are accepted within 30 days of delivery (items must be unused)</li>
+                </ul>
 
-                            <div class="card" style="padding:5%;">
+                <h2 class="h5 mt-4">7. Intellectual Property</h2>
+                <p>You retain all rights to content you create. Our Platform's design, functionality, and proprietary features are protected by copyright and other intellectual property laws. You may not copy, modify, or distribute our Platform's code or design without permission.</p>
 
-                                <div class="center">
-                                    <h5 style="font-weight:bold;">
-                                        {{title}}
-                                    </h5>
-                                </div>
-                                <p class="row"><small> Last updated: November 28, 2019 </small></p>
+                <h2 class="h5 mt-4">8. Prohibited Activities</h2>
+                <p>You agree not to:</p>
+                <ul class="list-unstyled">
+                    <li>✓ Use the Platform for any illegal purpose</li>
+                    <li>✓ Attempt to gain unauthorized access to other users' stories or accounts</li>
+                    <li>✓ Interfere with the Platform's operation or other users' creative work</li>
+                    <li>✓ Upload malicious code, viruses, or harmful content</li>
+                    <li>✓ Impersonate others, provide false information, or misrepresent your identity</li>
+                    <li>✓ Violate intellectual property rights of others</li>
+                    <li>✓ Harass, abuse, or harm other creators or users</li>
+                </ul>
 
-                                <p>Welcome to SneakyMotivator.</p>
-                                <p>SneakyMotivator provides this Website and Services (located at sneakymotivator.com) to you subject to the notices, terms, and conditions set forth in these terms (the "Terms of Use"). In addition, when you use any of our Services, you will be subject to the rules, guidelines, policies, terms, and conditions applicable to such service, and they are incorporated into this Terms of Use by this reference.</p>
-                                <p>These Terms of Use are effective as of November 25, 2019.</p>
-                                <p>Your eligibility for use of the Website is contingent upon meeting the following conditions:</p>
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">You are at least 18 years of age</li>
-                                    <li style="list-style-type: initial;">You use the Website and Services according to these Terms of Use and all applicable laws and regulations determined by the state and country of residence</li>
-                                    <li style="list-style-type: initial;">You provide complete and accurate registration information and maintain accurate registration information on the Website</li>
-                                    <li style="list-style-type: initial;">ou agree and understand that SneakyMotivator may, at any time, and without prior notice, revoke and/or cancel your access if you fail to meet these criteria or violate any portion of these Terms of Use
-</li>
-                                </ul>
+                <h2 class="h5 mt-4">9. Content Moderation</h2>
+                <p>We reserve the right to review, moderate, and remove content that violates these Terms or our community guidelines. We may suspend or terminate accounts that repeatedly violate our policies.</p>
 
-                                <p style="font-weight:bold;padding-top:2%;">Use of this Website</p>
-                                <p>Sneaky Motivator does not come with a comment delete button at the moment, but in subsequent versions, this feature will be added. If you for any reason, need to delete a comment you made, contact us, and we’ll see that your comment is deleted.</p>
+                <h2 class="h5 mt-4">10. Limitation of Liability</h2>
+                <p>To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of our Platform, including but not limited to loss of creative content, collaboration disputes, or technical issues.</p>
 
-                                <p>In connection with your use of our Website, you must act responsibly and exercise good judgment. Without limiting the foregoing, you will not:</p>
-                                <ul style="margin-left: 5%;">
-                                    <li style="list-style-type: initial;">Violate any local, state, provincial, national, or other law or regulation, or any order of a court</li>
-                                    <li style="list-style-type: initial;">Infringe the rights of any person or entity, including without limitation, their intellectual property, privacy, publicity or contractual rights</li>
-                                    <li style="list-style-type: initial;">Interfere with or damage our Services, including, without limitation, through the use of viruses, cancel bots, Trojan horses, harmful code, flood pings, denial-of-service attacks, packet or IP spoofing, forged routing or electronic mail address information or similar methods or technology</li>
-                                    <li style="list-style-type: initial;">Use automated scripts to collect information or otherwise interact with the Services or the Website</li>
-                                    <li style="list-style-type: initial;">Enter into this agreement on behalf of another person or entity without consent or the legal capacity to make such agreements as a representative of an organization or entity</li>
-                                </ul>
+                <h2 class="h5 mt-4">11. Changes to Terms</h2>
+                <p>We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting to the Platform. Your continued use of the Platform after changes constitutes acceptance of the modified Terms.</p>
 
-                                <p style="font-weight:bold;padding-top:2%;">Intellectual Property</p>
-                                <p>All code, text, software, scripts, graphics, files, photos, images, logos, and materials contained on this Website, or within the Services, are the sole property of SneakyMotivator.</p>
+                <h2 class="h5 mt-4">12. Governing Law</h2>
+                <p>These Terms are governed by the laws of Canada. Any disputes shall be resolved exclusively in the courts of Canada.</p>
 
-                                <p>Unauthorized use of any materials contained on this Website or within the Service may violate copyright laws, trademark laws, the laws of privacy and publicity, and/or other regulations and statutes. If you believe that any of the materials infringe on any third party's rights, please contact SneakyMotivator immediately at the address provided below.</p>
-
-                                <p style="font-weight:bold;padding-top:2%;">Third Party Websites </p>
-                                <p>Our Website may link you to other sites on the Internet or otherwise include references to information, documents, software, materials and/or services provided by other parties. These websites may contain information or material that some people may find inappropriate or offensive.</p>
-                                <p>These other websites and parties are not under our control, and you acknowledge that we are not responsible for the accuracy, copyright compliance, legality, decency, or any other aspect of the content of such sites, nor are we responsible for errors or omissions in any references to other parties or their products and services. The inclusion of such a link or reference is provided merely as a convenience and does not imply endorsement of, or association with, the Website or party by us, or any warranty of any kind, either express or implied.</p>
-                                <p style="font-weight:bold;padding-top:2%;">Disclaimer of Warranty and Limitation of Liability </p>
-                                <p>The Website is provided "AS IS." appfigures, its suppliers, officers, directors, employees, and agents exclude and disclaim all representations and warranties, express or implied, related to this Website or in connection with the Services. You exclude Sneaky Motivator from all liability for damages related to or arising out of the use of this Website.</p>
-                                <p style="font-weight:bold;padding-top:2%;">Changes to these Terms of Use</p>
-                                <p>Sneaky Motivator retains the right to, at any time, modify or discontinue, any or all parts of the Website without notice.</p>
-                                <p>This Terms of Use was created by termsusetemplate.com for Sneaky Motivator</p>
-                                <p>Additionally, Sneaky Motivator reserves the right, in its sole discretion, to modify these Terms of Use at any time, effective by posting new terms on the Website with the date of modification. You are responsible for reading and understanding the terms of this agreement prior to registering with, or using the Service. Your use of the Website and/or Services after any such modification has been published constitutes your acceptance of the new terms as modified in these Terms of Use.</p>
-                                <p style="font-weight:bold;padding-top:2%;">Governing Law</p>
-                                <p>These Terms of Use and any dispute or claim arising out of, or related to them, shall be governed by and construed in accordance with the internal laws of the Canada without giving effect to any choice or conflict of law provision or rule.</p>
-                                <p>Any legal suit, action or proceeding arising out of, or related to, these Terms of Use or the Website shall be instituted exclusively in the federal courts of Canada.</p>
-                            </div>
-
-
-
-
-
-
-
-
+                <h2 class="h5 mt-4">13. Contact Information</h2>
+                <p>For questions about these Terms or our storytelling platform:</p>
+                <ul class="list-unstyled">
+                    <li>Email: <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a></li>
+                    <li>Website: <a href="https://www.justvybz.com/contact">www.justvybz.com/contact</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

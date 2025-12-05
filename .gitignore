@@ -8,6 +8,21 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.pyc
+*.pyo
+*.pyd
+
+/snmov/migrations/*.py
+/snmov/migrations/*.pyc
+/snmov/migrations/__pycache__/
+
+/snmov/__pycache__/
+/snm/__pycache__/
+
+.vscode/
+.idea/
+*submlime-workspace
+/media/
+snm/settings/local.py
 
 # C extensions
 *.so

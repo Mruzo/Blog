@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Manage: {{ story.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4" style="max-width: 1400px;">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">{{ story.title }}</h1>
+            <p class="text-muted mb-0">Manage your story content and publishing</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'immersivecomics:character_create' story_id=story.pk %}" class="btn btn-success">
+                <i class="fas fa-user-plus me-1"></i>Create Character
+            </a>
+            <a href="{% url 'immersivecomics:story_edit' pk=story.pk %}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i>Edit Story
+            </a>
+            <a href="{% url 'immersivecomics:user_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <!-- Story Overview -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Story Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 class="fw-bold">Description</h6>
+                            <p class="text-muted">{{ story.description|default:"No description provided" }}</p>
+                            
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <h6 class="fw-bold">Status</h6>
+                                    <span class="badge {% if story.is_public %}bg-success{% else %}bg-secondary{% endif %} fs-6">
+                                        {% if story.is_public %}Public{% else %}Private{% endif %}
+                                    </span>
+                                </div>
+                                <div class="col-6">
+                                    <h6 class="fw-bold">Moderation</h6>
+                                    <span class="badge {% if story.moderation_status == 'approved' %}bg-success{% elif story.moderation_status == 'pending' %}bg-warning{% else %}bg-danger{% endif %} fs-6">
+                                        {{ story.moderation_status|title }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            {% if story.comic_image %}
+                                <img src="{{ story.comic_image.url }}" alt="{{ story.title }}" 
+                                     class="img-fluid rounded shadow" style="max-height: 200px;">
+                            {% else %}
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <i class="fas fa-image fa-3x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <h4 class="text-primary mb-1">{{ seasons.count }}</h4>
+                            <small class="text-muted">Seasons</small>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h4 class="text-success mb-1">{{ total_episodes }}</h4>
+                            <small class="text-muted">Episodes</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-info mb-1">{{ published_episodes }}</h4>
+                            <small class="text-muted">Published</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning mb-1">{{ total_episodes|add:"-"|add:published_episodes }}</h4>
+                            <small class="text-muted">Drafts</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Seasons Management -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-layer-group me-2"></i>Seasons</h5>
+                        <a href="{% url 'immersivecomics:season_create' story_id=story.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Add Season
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if seasons %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Season</th>
+                                        <th>Title</th>
+                                        <th>Description</th>
+                                        <th>Episodes</th>
+                                        <th>Published</th>
+                                        <th>3D Models</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for season in seasons %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-primary">S{{ season.season_number }}</span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ season.title }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="text-muted">{{ season.description|truncatewords:8|default:"No description" }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ season.episode_count }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">{{ season.published_episode_count }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                {% if season.model_gltf %}
+                                                    <span class="badge bg-success" title="GLTF Model">GLTF</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary" title="No GLTF Model">GLTF</span>
+                                                {% endif %}
+                                                {% if season.model_usdz %}
+                                                    <span class="badge bg-success" title="USDZ Model">USDZ</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary" title="No USDZ Model">USDZ</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <a href="{% url 'immersivecomics:season_edit' pk=season.pk %}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'immersivecomics:episode_create' season_id=season.pk %}" class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-plus"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No seasons yet</h5>
+                            <p class="text-muted">Create your first season to start adding episodes</p>
+                            <a href="{% url 'immersivecomics:season_create' story_id=story.pk %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Create First Season
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Episodes List -->
+    {% if seasons %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="fas fa-play-circle me-2"></i>All Episodes</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Season</th>
+                                    <th>Episode</th>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for season in seasons %}
+                                    {% for episode in season.episodes.all %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-primary">S{{ season.season_number }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">E{{ episode.episode_number }}</span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ episode.title }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if episode.is_published %}
+                                                <span class="badge bg-success">Published</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Draft</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ episode.created_at|date:"M d, Y" }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <a href="{% url 'immersivecomics:episode_manage' pk=episode.pk %}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-cog"></i>
+                                                </a>
+                                                <a href="{% url 'immersivecomics:episode_edit' pk=episode.pk %}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .d-flex.gap-2 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+}
+</style>
+{% endblock %}

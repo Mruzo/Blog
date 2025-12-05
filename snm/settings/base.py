@@ -16,7 +16,8 @@ import mimetypes
 from configparser import RawConfigParser
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+BASE_DIR = os.path.dirname(os.path.dirname(
+    os.path.abspath(os.path.join(__file__, os.pardir))))
 
 
 # Quick-start development settings - unsuitable for production
@@ -24,13 +25,35 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__
 
 # SECURITY WARNING: keep the secret key used in production secret!
 config = RawConfigParser()
-config.read('/etc/snmov/settings.ini')
+config.read('/etc/vybz/settings.ini')
 #SECRET_KEY = os.environ.get('SNM_KEY')
-SECRET_KEY = config.get('section', 'SNM_KEY')
+SECRET_KEY = config.get('section', 'VYBZ_KEY')
+STRIPE_PUBLIC_KEY = config.get('section','STRIPE_PUBLIC_KEY')
+STRIPE_SECRET_KEY = config.get('section', 'STRIPE_SECRET_KEY')
+
+
+# Canada Post Developer Portal API Configuration
+# Key Number format: "username : password" or "Key Number (username : password)"
+# Base settings use DEVELOPMENT credentials by default
+CANADAPOST_DEVELOPMENT_KEY_NUMBER = config.get('section', 'CANADAPOST_DEV_KEY_NUMBER', fallback='')
+CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER = config.get('section', 'CANADAPOST_DEV_CUSTOMER_NUMBER', fallback='')
+
+CANADAPOST_PRODUCTION_KEY_NUMBER = config.get('section', 'CANADAPOST_PROD_KEY_NUMBER', fallback='')
+CANADAPOST_PRODUCTION_CUSTOMER_NUMBER = config.get('section', 'CANADAPOST_PROD_CUSTOMER_NUMBER', fallback='')
+
+# Base settings: Use DEVELOPMENT API by default
+# Production settings (pro.py) will override this to True
+CANADAPOST_USE_PRODUCTION = False
+
+# Set active credentials to development (base/local)
+CANADAPOST_KEY_NUMBER = CANADAPOST_DEVELOPMENT_KEY_NUMBER
+CANADAPOST_CUSTOMER_NUMBER = CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER
 
 
 META_SITE_PROTOCOL = 'http', 'https'
-META_SITE_DOMAIN = 'sneakymotivator.com'
+
+
+ROOT_URLCONF = 'snm.urls'
 
 LOGIN_REDIRECT_URL = 'homepage'
 
@@ -45,15 +68,31 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'snmov.apps.SnmovConfig',
+    'django.contrib.sites',
+    'corsheaders',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'snmov',
+    'icvybz',
     'crispy_forms',
     'storages',
     'django.contrib.sitemaps',
     'tinymce',
     'meta',
+    'crispy_bootstrap4',
+    'bootstrap4',
+    
 ]
 
+SITE_ID = 1
+SITE_DOMAIN = 'justvybz.com'
+SITE_NAME = 'Justvybz'
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
+
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 TINYMCE_DEFAULT_CONFIG = {
     'height': 360,
@@ -84,11 +123,12 @@ TINYMCE_DEFAULT_CONFIG = {
     'contextmenu': 'formats | link image',
     'menubar': True,
     'statusbar': True,
-    }
+}
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -99,8 +139,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-
-ROOT_URLCONF = 'snm.urls'
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
 TEMPLATES = [
     {
@@ -113,6 +152,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "snm.context_processors.cart_context",
+                "snm.context_processors.cart_count",
             ],
         },
     },
@@ -151,43 +192,100 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
-
-mimetypes.add_type("image/svg+xml", ".svg", True)
-mimetypes.add_type("image/svg+sml", ".svgz", True)
-
-
-
 
 db_from_env = dj_database_url.config(conn_max_age=500)
-#DATABASES['default'].update(db_from_env)
+# DATABASES['default'].update(db_from_env)
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-DEFAULT_FROM_EMAIL = 'admin@sneakymotivator'
+# Force HTTPS for password reset emails
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 
-EMAIL_HOST = 'smtp.mailgun.org'
+# Email configuration
+DEFAULT_FROM_EMAIL = 'justvybz@justvybz.com'
+SUPPORT_EMAIL = 'Justvybz@justvybz.com'
+
+EMAIL_HOST = 'mail.papamail.net'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = config.get('section','MG_USER')
-EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
+EMAIL_HOST_USER = config.get('section', 'VYBZ_FB_USER')
+EMAIL_HOST_PASSWORD = config.get('section', 'VYBZ_FB_PASS')
 EMAIL_USE_TLS = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'live-static', 'static-root') #live cdn AWS S3
+STATIC_ROOT = os.path.join(BASE_DIR, 'live-static',
+                           'static-root')  # live cdn AWS S3
 
 # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
+# File upload settings
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static')
+    os.path.join(BASE_DIR, 'static'),
+    os.path.join(BASE_DIR, 'frontend', 'build'),  # React build folder for production static files
 ]
 
+# Default Sender Address (fallback if admin user's address is not found)
+DEFAULT_SENDER_NAME = 'Justvybz Inc.'
+DEFAULT_SENDER_STREET1 = '206 Winston Blvd'
+DEFAULT_SENDER_STREET2 = ''
+DEFAULT_SENDER_CITY = 'Cambridge'
+DEFAULT_SENDER_STATE = 'ON'
+DEFAULT_SENDER_ZIP = 'N3C 1M3'
+DEFAULT_SENDER_COUNTRY = 'CA'
 
+# Debug settings - ensure error pages are shown in production
+DEBUG = False  # This should be True in local.py and False in pro.py
 
+# Allow hosts
+ALLOWED_HOSTS = [
+    'justvybz.com',
+    'www.justvybz.com',
+]
 
+# Django REST Framework configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    # Rate limiting for API endpoints (OWASP, NIST compliance)
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',  # Anonymous users: 100 requests per hour
+        'user': '1000/hour',  # Authenticated users: 1000 requests per hour
+    }
+}
 
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# Session settings - ensure session cookie is sent with cross-origin requests
+SESSION_COOKIE_SAMESITE = 'Lax'  # Allows session cookie to be sent with cross-origin requests
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request to keep it alive

@@ -1,0 +1,853 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block meta_tags %}
+{{ episode.generate_meta_tags|safe }}
+{% endblock %}
+
+{% block content %}
+
+<!-- Preview Notice -->
+<div class="container mt-3 col-md-4">
+    <div class="alert alert-warning" style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404;">
+        <strong>Preview Mode:</strong> This episode is not published yet. Comments are disabled in preview mode.
+    </div>
+</div>
+
+<!-- Control Panel -->
+<div class="container mt-3 col-md-4">
+    <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+        <div class="card-body p-3">
+            <!-- Mode Toggle Row -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" id="previewModeBtn" class="btn btn-outline-primary active">
+                            <i class="fas fa-eye me-1"></i>Preview Mode
+                        </button>
+                        <button type="button" id="editModeBtn" class="btn btn-outline-warning">
+                            <i class="fas fa-edit me-1"></i>Edit Mode
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Edit Controls Row -->
+            <div id="editControls" class="row g-2" style="display: none;">
+                <div class="col-6">
+                    <button id="saveBtn" class="btn btn-success btn-sm w-100">
+                        <i class="fas fa-save me-1"></i>Save
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button id="resetBtn" class="btn btn-secondary btn-sm w-100">
+                        <i class="fas fa-undo me-1"></i>Reset
+                    </button>
+                </div>
+                <div class="col-12 mt-2">
+                    <a href="{% url 'immersivecomics:episode_analytics' %}" class="btn btn-outline-info btn-sm w-100">
+                        <i class="fas fa-chart-line me-1"></i>View Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="container-fluid px-0 col-md-4">
+    <!-- Modern Comic Header -->
+    <div class="comic-header" style="background: #4d4d4d; color: white; padding-top: 1.5rem; padding-left: 0; padding-right: 0; padding-bottom: .5rem 0; position: relative;">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="episode-meta" style="margin-bottom: 0.2rem; display: flex; align-items: center;">
+                        <div style="background: #111e7f; padding: 0.2rem 0.5rem; border-radius: 0 4px 4px 0; display: flex; align-items: center;">
+                            <span class="season-badge" style="color: #f9a602; font-size: 0.7rem; margin-right: 0.5rem;">
+                                S{{ episode.season.season_number }}
+                            </span>
+                            <span class="episode-badge" style="color: white;font-size: 0.7rem;">
+                                E{{ episode.episode_number }}
+                            </span>
+                        </div>
+                    </div>
+                    <!-- <h1 class="episode-title" style="font-size: 1.6rem; font-weight: 800; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; color: #f9a602; text-shadow: 2px 2px 0 #111e7f;">
+                        {{ episode.title }}
+                    </h1> -->
+                    <!-- <div style="background-color: #111e7f; padding: 0rem;">
+                        <p class="episode-description m-0" style="font-size: 1.1rem; opacity: 0.9; max-width: 800px; font-style: italic; color: white;">
+                            {{ episode.description|striptags }}
+                        </p>
+                    </div> -->
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- 3D Model Container -->
+    <div class="container">
+        <div class="card model-container mb-2 position-relative" style="height: 400px; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <!-- Overlay Image with Start Button -->
+            <div id="overlay-container" class="overlay-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 2;">
+                {% if episode.cover_image %}
+                <img src="{{ episode.cover_image.url }}" alt="Episode Cover" style="width: 100%; height: 100%; object-fit: cover;">
+                {% endif %}
+                <button id="startButton" class="btn btn-primary py-1" style="position: absolute; top: 90%; left: 50%; transform: translate(-50%, -50%); z-index: 3; padding: 1rem 2rem; font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; background: #ff4d4d; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); opacity: 0.9;">
+                    Start Episode
+                </button>
+            </div>
+
+            {% if model_gltf %}
+                    <model-viewer
+            id="model-viewer"
+            src="{{ model_gltf }}"
+            alt="3D Scene"
+            style="width: 100%; height: 100%;"
+            shadow-intensity="1"
+            exposure="1"
+            interaction-prompt="none"
+            interpolation-decay="200"
+            interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
+            min-camera-orbit="auto auto 1m"
+            max-camera-orbit="auto auto 30m"
+            min-field-of-view="10deg"
+            max-field-of-view="90deg"
+            animation-name=""
+            animation-crossfade-duration="0.5"
+            auto-rotate-delay="0"
+            camera-orbit="0deg 75deg 3m"
+            camera-controls>
+
+                <!-- Fixed Top Bubble -->
+                <div id="top-bubble" class="speech-bubble position-absolute top-0 start-50 translate-middle-x bg-light p-1 rounded border border-dark" style="z-index: 10;">
+                    <div id="top-dialogue">Loading dialogue...</div>
+                </div>
+
+                <!-- Episode Summary Overlay (hidden by default) -->
+                <div id="summary-overlay" class="position-absolute top-0 start-0 w-100 h-100" style="display: none; z-index: 5; background: rgba(0, 0, 0, 0.4); pointer-events: none;"></div>
+                
+                <!-- Next Episode Button (hidden by default) -->
+                {% if next_episode %}
+                <div id="next-episode-button" class="position-absolute bottom-0 end-0 m-3" style="display: none; z-index: 10;">
+                    <a href="{% url 'immersivecomics:episode_preview' season_id=next_episode.season.id pk=next_episode.id %}" 
+                       class="btn btn-success shadow-lg" 
+                       style="background: linear-gradient(45deg, #28a745, #20c997); border: none; border-radius: 8px; padding: 0.5rem 1rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; font-size: 0.875rem;">
+                        <i class="fas fa-play me-1" style="font-size: 0.75rem;"></i>
+                        Next Episode
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- SVG for Pointer Line -->
+                <svg id="pointer-svg" style="display: none;">
+                    <path id="pointer-path" stroke="white" stroke-width="2" stroke-dasharray="5,5" fill="none"/>
+                </svg>
+
+                <!-- Hotspots will be dynamically created from POV data -->
+            </model-viewer>
+            {% else %}
+            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                <p class="text-muted">3D model not available</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="container mt-2" style="display: block;" id="progressContainer">
+        <div class="d-flex align-items-center gap-3">
+            <div class="progress flex-grow-1" style="height: 8px; border-radius: 4px; background-color: #e9ecef;">
+                <div class="progress-bar bg-success" id="progressBar" role="progressbar" style="width: 0%; transition: width 0.3s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="text-end" style="font-size: 0.8rem; color: white; min-width: 40px;">
+                <span id="progressText">0 / 0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comic Navigation -->
+    <div class="container comic-navigation border-dark pb-2" style="display: none;">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-auto">
+                <button id="prevButton" class="btn btn-primary mx-1 p-1" style="font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; min-width: 80px; min-height: 40px; background-color: #111e7f; border: none; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="col-auto d-flex align-items-center">
+                <button id="playButton" class="btn btn-success mx-1 p-1" style="font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; background-color: #28a745; border: none; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                    <i class="fas fa-play" id="playIcon" style="color: white;"></i>
+                </button>
+                <div class="btn-group mx-1" role="group">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm speed-btn" data-speed="5000" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; border-radius: 4px 0 0 4px; border: 1px solid #dee2e6; color: white;">1x</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm speed-btn" data-speed="3333" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; border-radius: 0 4px 4px 0; border: 1px solid #dee2e6; color: white;">1.5x</button>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="col-auto d-flex justify-content-center align-items-center my-auto">
+                    <a href="{% url 'immersivecomics:comic_list' %}" class="back-button mx-1 p-1" style="color: #f9a602; text-decoration: none; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 500; transition: all 0.3s ease;">
+                        <span>Back to Comics</span>
+                </a>
+                </div>
+            </div>
+            <div class="col-auto">
+                <button id="nextButton" class="btn btn-primary mx-1 p-1" style="font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; min-width: 80px; min-height: 40px; background-color: #111e7f; border: none; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dialogues Container -->
+<div class="dialogues-container" style="display: none;">
+    {% for dialogue in dialogues_data %}
+        <div class="dialogue" data-pov='{
+            "dialogue_id": {{ dialogue.dialogue_id }},
+            "character": "{{dialogue.character}}",
+            "camera_orbit": "{{ dialogue.camera_orbit|escapejs }}",
+            "camera_target": "{{ dialogue.camera_target|escapejs }}",
+            "field_of_view": "{{ dialogue.field_of_view|escapejs }}",
+            "zoom_speed": "{{ dialogue.zoom_speed|escapejs }}",
+            "rotation": "{{ dialogue.rotation|escapejs }}",
+            "head_x": {{ dialogue.head_x|default:"0" }},
+            "head_y": {{ dialogue.head_y|default:"0" }},
+            "head_z": {{ dialogue.head_z|default:"0" }},
+            "text": "{{ dialogue.text|escapejs }}"
+        }'></div>
+    {% endfor %}
+</div>
+<div class="container col-md-4">
+    <div style="background-color: #111e7f; padding: 0rem;">
+        <p class="episode-description m-0" style="font-size: 1.1rem; opacity: 0.9; max-width: 800px; font-style: italic; color: white;">
+            {{ episode.description|striptags }}
+        </p>
+    </div>
+</div>
+
+<!-- Editing Controls Overlay - Modern UI/UX -->
+<div id="editingOverlay" class="container mt-3 col-md-6 px-0" style="display: none;">
+  <div class="modern-card">
+    <div class="modern-card-header">
+      <span class="modern-card-title">Camera Editing Controls</span>
+    </div>
+    <div class="modern-card-body row g-3">
+      <!-- Camera Orbit (Left Column) -->
+      <div class="col-md-6 mt-0">
+        <div class="section-header">Camera Orbit</div>
+        <div class="form-group mb-3">
+          <label for="orbitAzimuth" class="form-label">Azimuth</label>
+          <div class="slider-row">
+            <input type="range" id="orbitAzimuth" class="form-range modern-slider" min="-180" max="180" step="1">
+            <span class="value-badge" id="orbitAzimuthValue">0°</span>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label for="orbitPolar" class="form-label">Polar</label>
+          <div class="slider-row">
+            <input type="range" id="orbitPolar" class="form-range modern-slider" min="0" max="180" step="1">
+            <span class="value-badge" id="orbitPolarValue">75°</span>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label for="orbitRadius" class="form-label">Radius</label>
+          <div class="slider-row">
+            <input type="range" id="orbitRadius" class="form-range modern-slider" min="1" max="10" step="0.1">
+            <span class="value-badge" id="orbitRadiusValue">3m</span>
+          </div>
+        </div>
+      </div>
+      <!-- Camera Target (Right Column) -->
+      <div class="col-md-6 mt-0">
+        <div class="section-header">Camera Target</div>
+        <div class="form-group mb-3">
+          <label for="targetX" class="form-label">X</label>
+          <div class="slider-row">
+            <input type="range" id="targetX" class="form-range modern-slider" min="-5" max="5" step="0.1">
+            <span class="value-badge" id="targetXValue">0m</span>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label for="targetY" class="form-label">Y</label>
+          <div class="slider-row">
+            <input type="range" id="targetY" class="form-range modern-slider" min="0" max="3" step="0.1">
+            <span class="value-badge" id="targetYValue">1.6m</span>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label for="targetZ" class="form-label">Z</label>
+          <div class="slider-row">
+            <input type="range" id="targetZ" class="form-range modern-slider" min="-5" max="5" step="0.1">
+            <span class="value-badge" id="targetZValue">0m</span>
+          </div>
+        </div>
+      </div>
+      <!-- Field of View and Zoom Speed (Full Width) -->
+      <div class="col-12 mt-0">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="fieldOfView" class="form-label">Field of View</label>
+            <div class="slider-row">
+              <input type="range" id="fieldOfView" class="form-range modern-slider" min="10" max="90" step="1">
+              <span class="value-badge" id="fieldOfViewValue">45°</span>
+            </div>
+          </div>
+          <div class="col-md-6 mt-0">
+            <label for="zoomSpeed" class="form-label">Zoom Speed</label>
+            <div class="slider-row">
+              <input type="range" id="zoomSpeed" class="form-range modern-slider" min="0.1" max="3" step="0.1">
+              <span class="value-badge" id="zoomSpeedValue">1.0x</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Current Values (Full Width) -->
+      <div class="col-12 mt-2">
+        <div class="current-values-box">
+          <h6 class="text-primary mb-2">Current Values (Last Saved)</h6>
+          <div><strong>Camera Orbit:</strong> <span id="currentOrbit">0deg 75deg 3m</span></div>
+          <div><strong>Camera Target:</strong> <span id="currentTarget">0m 1.6m 0m</span></div>
+          <div><strong>Field of View:</strong> <span id="currentFOV">45°</span></div>
+          <div><strong>Zoom Speed:</strong> <span id="currentZoom">1.0</span></div>
+        </div>
+      </div>
+      
+      
+    </div>
+  </div>
+</div>
+
+<!-- Comments Section (Disabled in Preview) -->
+<div class="container mt-3 col-md-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <strong>Comments:</strong> Comments are disabled in preview mode. They will be available once the episode is published.
+            </div>
+            
+            <!-- Comments List (Read-only) -->
+            <div class="comments-list">
+                {% for comment in comments %}
+                    {% if comment.approved_comment %}
+                    <div class="card mb-3 rounded-0">
+                        <div class="card-body p-1" style="font-size: 0.85rem;">
+                            <div class="d-flex justify-content-between border-dark border-bottom pb-0">
+                                <span class="card-subtitle mb-0 text-muted">{{ comment.user_name.username }}</span>
+                                <small class="text-muted">{{ comment.comment_date|date:"F d, Y" }}</small>
+                            </div>
+                            <p class="card-text mb-1" style="font-size: 0.85rem;">{{ comment.comment_cont }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% empty %}
+                    <p class="">No comments yet. Comments will be available once the episode is published.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom CSS for speech bubbles */
+    .speech-bubble {
+        width: 100%;
+        max-width: none;
+        text-align: left;
+        z-index: 10;
+        font-family: 'Comic';
+        font-size: small;
+    }
+
+    .pointer {
+        pointer-events: none;
+    }
+
+    /* Modern Comic Styles */
+    .comic-header {
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .comic-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent 48%, #f9a602 49%, #f9a602 51%, transparent 52%);
+        background-size: 20px 20px;
+        opacity: 0.1;
+    }
+
+    .episode-title {
+        position: relative;
+        display: inline-block;
+    }
+
+    .episode-title::after {
+        content: '';
+        position: absolute;
+        bottom: -5px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: #f9a602;
+        transform: scaleX(0);
+        transform-origin: right;
+        transition: transform 0.3s ease;
+    }
+
+    .episode-title:hover::after {
+        transform: scaleX(1);
+        transform-origin: left;
+    }
+    
+    /* Speed button styles */
+    .speed-btn {
+        transition: all 0.2s ease;
+        border: 1px solid #dee2e6;
+    }
+    
+    .speed-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .speed-btn.btn-primary {
+        background-color: #111e7f;
+        border-color: #111e7f;
+        color: white;
+    }
+
+    .back-button {
+        color: #f9a602;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border: 1px solid #f9a602;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: #f9a602;
+        color: #111e7f;
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #111e7f;
+        color: white;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: 0.5s;
+    }
+
+    .btn-primary:hover {
+        background: #f9a602;
+        transform: translateY(-2px);
+    }
+
+    .btn-primary:hover::before {
+        left: 100%;
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.5;
+        transform: none;
+    }
+
+    /* Editing Controls Styles - Cross-browser, especially for Firefox */
+    input[type="range"].form-range {
+        display: block !important;
+        width: 100% !important;
+        min-height: 32px !important;
+        background: #ddd !important;
+        margin: 8px 0 !important;
+        opacity: 1 !important;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: auto;
+    }
+
+    /* Webkit (Chrome, Safari) */
+    input[type="range"].form-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        background: #111e7f;
+        cursor: pointer;
+        border: 2px solid #f9a602;
+    }
+    input[type="range"].form-range::-webkit-slider-track {
+        width: 100%;
+        height: 8px;
+        cursor: pointer;
+        background: #ddd;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+
+    /* Firefox */
+    input[type="range"].form-range::-moz-range-thumb {
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        background: #111e7f;
+        cursor: pointer;
+        border: 2px solid #f9a602;
+    }
+    input[type="range"].form-range::-moz-range-track {
+        width: 100%;
+        height: 8px;
+        background: #ddd;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+    input[type="range"].form-range:focus {
+        outline: none;
+    }
+
+    /* Remove outline on focus for Firefox */
+    input[type="range"].form-range:focus::-moz-range-thumb {
+        box-shadow: 0 0 0 3px rgba(17, 30, 127, 0.3);
+    }
+
+    /* Make sure editing overlay is visible */
+    #editingOverlay {
+        z-index: 1000;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    #editingOverlay .card {
+        border: 2px solid #f9a602;
+    }
+
+    #editingOverlay .card-header {
+        background: linear-gradient(45deg, #f9a602, #ff6b35);
+        color: white;
+        font-weight: bold;
+    }
+
+  /* Modern Card Styles */
+  .modern-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+    padding: 0;
+    margin-bottom: 1.5rem;
+  }
+  .modern-card-header {
+    background: linear-gradient(90deg, #f8f9fa 60%, #f9a602 100%);
+    border-radius: 18px 18px 0 0;
+    padding: 1rem 1.5rem 0.5rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .modern-card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: 0.5px;
+  }
+  .modern-card-body {
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem 1.5rem;
+  }
+  .col-md-6 {
+    grid-column: span 1;
+  }
+  .col-12 {
+    grid-column: 1 / span 2;
+  }
+  @media (max-width: 600px) {
+    .modern-card {
+      padding: 0.2rem;
+    }
+    .modern-card-header {
+      padding: 0.7rem 0.7rem 0.3rem 0.7rem;
+      font-size: 1em;
+    }
+    .modern-card-title {
+      font-size: 1em;
+    }
+    .modern-card-body {
+      padding: 0.7rem 0.7rem 0.5rem 0.7rem;
+      gap: 0.5rem 0.5rem;
+      font-size: 0.95em;
+      grid-template-columns: 1fr 1fr;
+    }
+    .section-header {
+      font-size: 0.95em;
+      margin-bottom: 0.2rem;
+      margin-top: 0.2rem;
+    }
+    .form-label {
+      font-size: 0.95em;
+      margin-bottom: 0.1rem;
+    }
+    .slider-row {
+      gap: 0.3rem;
+    }
+    .value-badge {
+      min-width: 28px;
+      font-size: 0.85em;
+      padding: 1px 5px;
+      margin-left: 0.2rem;
+    }
+    .current-values-box {
+      padding: 0.4rem 0.5rem;
+      font-size: 0.92em;
+      margin-top: 0.2rem;
+    }
+    .modern-btn {
+      font-size: 0.95em;
+      padding: 0.5em 0.7em;
+      border-radius: 6px;
+    }
+    input[type="range"].modern-slider {
+      height: 1.2em;
+      margin: 0.2em 0;
+    }
+    input[type="range"].modern-slider::-webkit-slider-thumb {
+      width: 16px;
+      height: 16px;
+    }
+    input[type="range"].modern-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+    }
+    input[type="range"].modern-slider::-ms-thumb {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  .section-header {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111e7f;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+    letter-spacing: 0.2px;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .value-badge {
+    min-width: 38px;
+    display: inline-block;
+    background: #f9a602;
+    color: #222;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 0.95em;
+    margin-left: 0.5rem;
+    text-align: center;
+  }
+  .current-values-box {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.98em;
+    color: #333;
+    margin-top: 0.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .modern-btn {
+    font-size: 1.08em;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.7em 1.2em;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(17,30,127,0.04);
+  }
+  .modern-btn:active {
+    box-shadow: 0 1px 2px rgba(17,30,127,0.10);
+  }
+  .btn-primary.modern-btn {
+    background: #111e7f;
+    border: none;
+    color: #fff;
+  }
+  .btn-primary.modern-btn:hover, .btn-primary.modern-btn:focus {
+    background: #222fbf;
+    color: #fff;
+  }
+  .btn-outline-secondary.modern-btn {
+    border: 2px solid #e0e0e0;
+    background: #fff;
+    color: #333;
+  }
+  .btn-outline-secondary.modern-btn:hover, .btn-outline-secondary.modern-btn:focus {
+    background: #f9a602;
+    color: #111e7f;
+    border-color: #f9a602;
+  }
+  /* Modern Sliders */
+  input[type="range"].modern-slider {
+    width: 100%;
+    height: 2.2em;
+    background: transparent;
+    margin: 0.5em 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="range"].modern-slider:focus {
+    outline: none;
+  }
+  input[type="range"].modern-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #111e7f;
+    border: 3px solid #f9a602;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+    transition: background 0.2s, border 0.2s;
+  }
+  input[type="range"].modern-slider:focus::-webkit-slider-thumb {
+    background: #222fbf;
+    border-color: #f9a602;
+  }
+  input[type="range"].modern-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
+  /* Firefox */
+  input[type="range"].modern-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #111e7f;
+    border: 3px solid #f9a602;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+    transition: background 0.2s, border 0.2s;
+  }
+  input[type="range"].modern-slider:focus::-moz-range-thumb {
+    background: #222fbf;
+    border-color: #f9a602;
+  }
+  input[type="range"].modern-slider::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
+  /* Remove outline on focus for Firefox */
+  input[type="range"].modern-slider:focus::-moz-range-thumb {
+    box-shadow: 0 0 0 3px rgba(17, 30, 127, 0.15);
+  }
+  /* Hide the outline for range in Edge/IE */
+  input[type="range"].modern-slider::-ms-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #111e7f;
+    border: 3px solid #f9a602;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+    transition: background 0.2s, border 0.2s;
+  }
+  input[type="range"].modern-slider:focus::-ms-thumb {
+    background: #222fbf;
+    border-color: #f9a602;
+  }
+  input[type="range"].modern-slider::-ms-fill-lower {
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
+  input[type="range"].modern-slider::-ms-fill-upper {
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
+  /* Remove default focus outline for all browsers */
+  input[type="range"].modern-slider:focus {
+    outline: none;
+  }
+  
+  /* Next Episode Button Styles */
+  #next-episode-button {
+    animation: slideInUp 0.5s ease-out;
+  }
+  
+  #next-episode-button .btn {
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  #next-episode-button .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(40, 167, 69, 0.4);
+    background: linear-gradient(45deg, #20c997, #17a2b8) !important;
+  }
+  
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+
+<!-- Load scripts in correct order -->
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+<!-- Episode Summary Data for JavaScript -->
+<script>
+    window.episodeData = {
+        summary: "{{ episode_summary|default:''|escapejs }}",
+        hasNextEpisode: "{{ next_episode|yesno:'true,false' }}",
+        nextEpisodeUrl: "{% if next_episode %}{% url 'immersivecomics:episode_preview' season_id=next_episode.season.id pk=next_episode.id %}{% endif %}",
+        summaryCameraOrbit: "{{ summary_camera_orbit|default:''|escapejs }}",
+        summaryFieldOfView: "{{ summary_field_of_view|default:60.0 }}"
+    };
+</script>
+
+{% block extra_js %}
+<!-- Start button event listener is handled in sm.js -->
+{% endblock %}
+
+{% endblock %} 
