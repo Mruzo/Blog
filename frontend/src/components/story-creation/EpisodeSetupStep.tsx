@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StoryCreationData } from '../StoryCreationWizard';
 import { useApi } from '../../contexts/ApiContext';
+import FormFieldWithLimit from '../FormFieldWithLimit';
 
 interface EpisodeSetupStepProps {
   data: StoryCreationData;
@@ -99,19 +100,20 @@ const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
     <div>
       <div className="row">
         <div className="col-12">
-          <h4 className="subtext-btn mb-4">First Episode</h4>
-          <p className="subtext-btn-sm text-muted mb-4">
+          <h4 className="subtext-btn mb-2">Create Episode</h4>
+          {/* <p className="subtext-btn-sm text-muted mb-4">
             Create the first episode of your story. This will be Episode 1 of Season {data.season.season_number}.
-          </p>
+          </p> */}
         </div>
       </div>
 
       <div className="row">
         <div className="col-md-8">
-          <div className="mb-3">
+          <div className="mb-2">
             <label htmlFor="title" className="form-label subtext-btn-sm">
-              Episode Title <span className="text-danger">*</span>
+              Title <span className="text-danger">*</span>
             </label>
+            <FormFieldWithLimit value={formData.title} maxLength={50}>
             <input
               type="text"
               className={`form-control ${errors.title ? 'is-invalid' : ''}`}
@@ -119,14 +121,15 @@ const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
               name="title"
               value={formData.title}
               onChange={handleInputChange}
-              placeholder="e.g., The Beginning, First Contact, etc."
+                
             />
+            </FormFieldWithLimit>
             {errors.title && <div className="invalid-feedback">{errors.title}</div>}
           </div>
         </div>
 
         <div className="col-md-4">
-          <div className="mb-3">
+          <div className="mb-2">
             <label htmlFor="episode_number" className="form-label subtext-btn-sm">
               Episode Number <span className="text-danger">*</span>
             </label>
@@ -150,21 +153,23 @@ const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
             <label htmlFor="description" className="form-label subtext-btn-sm">
               Episode Description <span className="text-danger">*</span>
             </label>
+            <FormFieldWithLimit value={formData.description} maxLength={150}>
             <textarea
               className={`form-control ${errors.description ? 'is-invalid' : ''}`}
               id="description"
               name="description"
-              rows={4}
+                rows={3}
               value={formData.description}
               onChange={handleInputChange}
               placeholder="Describe what happens in this episode, key events, character interactions, etc."
             />
+            </FormFieldWithLimit>
             {errors.description && <div className="invalid-feedback">{errors.description}</div>}
           </div>
         </div>
       </div>
 
-      <div className="row">
+      {/* <div className="row">
         <div className="col-12">
           <div className="card bg-light">
             <div className="card-body">
@@ -182,9 +187,9 @@ const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
-      <div className="row mt-4">
+      <div className="row mt-2">
         <div className="col-12">
           <div className="alert alert-info">
             <i className="fas fa-info-circle me-2"></i>

@@ -3,6 +3,7 @@ import { StoryCreationData } from '../StoryCreationWizard';
 import SmallButton from '../SmallButton';
 import CharacterCard from '../CharacterCard';
 import MessagePopup from '../MessagePopup';
+import FormFieldWithLimit from '../FormFieldWithLimit';
 import { useApi } from '../../contexts/ApiContext';
 
 interface CharactersStepProps {
@@ -20,6 +21,9 @@ interface Character {
   bio: string;
   personality: string;
   love_interest: string;
+  pov_head_x?: number;
+  pov_head_y?: number;
+  pov_head_z?: number;
   user?: number;
   created_at?: string;
   updated_at?: string;
@@ -39,7 +43,10 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
     name: '',
     bio: '',
     personality: '',
-    love_interest: ''
+    love_interest: '',
+    pov_head_x: 0.0,
+    pov_head_y: 1.6,
+    pov_head_z: 0.0
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -75,7 +82,14 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setCurrentCharacter(prev => ({ ...prev, [name]: value }));
+    
+    // Handle numeric fields for POV head positions
+    if (name === 'pov_head_x' || name === 'pov_head_y' || name === 'pov_head_z') {
+      const numValue = value === '' ? 0 : parseFloat(value);
+      setCurrentCharacter(prev => ({ ...prev, [name]: isNaN(numValue) ? 0 : numValue }));
+    } else {
+      setCurrentCharacter(prev => ({ ...prev, [name]: value }));
+    }
     
     // Clear error when user starts typing
     if (errors[name]) {
@@ -131,7 +145,10 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
                 name: '',
                 bio: '',
                 personality: '',
-                love_interest: ''
+                love_interest: '',
+                pov_head_x: 0.0,
+                pov_head_y: 1.6,
+                pov_head_z: 0.0
               });
         setErrors({});
       } catch (error) {
@@ -208,10 +225,23 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
             personality: character.personality,
             love_interest: character.love_interest,
           });
-          savedCharacters.push(savedCharacter);
+          // Preserve POV data for the complete story creation
+          const characterWithPOV = {
+            ...savedCharacter,
+            pov_head_x: character.pov_head_x,
+            pov_head_y: character.pov_head_y,
+            pov_head_z: character.pov_head_z
+          };
+          savedCharacters.push(characterWithPOV);
         } else {
-          // Character already exists in database
-          savedCharacters.push(character);
+          // Character already exists in database, preserve POV data
+          const characterWithPOV = {
+            ...character,
+            pov_head_x: character.pov_head_x,
+            pov_head_y: character.pov_head_y,
+            pov_head_z: character.pov_head_z
+          };
+          savedCharacters.push(characterWithPOV);
         }
       }
 
@@ -234,14 +264,14 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
         show={showMessage}
         onClose={handleCloseMessage}
       />
-      <div className="row">
+      {/* <div className="row">
         <div className="col-12">
-          <h4 className="subtext-btn mb-4">Characters</h4>
-          <p className="subtext-btn-sm text-muted mb-4">
-            Create the characters for your story. You can add, edit, and remove characters as needed.
+          <h4 className="subtext-btn mb-2">Characters</h4>
+          <p className="subtext-btn-sm text-muted mb-2">
+            Add, edit, and remove characters as needed.
           </p>
         </div>
-      </div>
+      </div> */}
 
       {errors.general && (
         <div className="alert alert-danger">
@@ -252,36 +282,85 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
 
       {/* Character Form */}
       <div className="card border-0 shadow-sm mb-4">
-        <div className="card-header bg-light">
-          <h6 className="subtext-btn-sm mb-0">
-            {editingIndex !== null ? 'Edit Character' : 'Add New Character'}
-          </h6>
+        <div className="card-header bg-light p-1">
+          <h4 className="subtext-btn mb-0">
+            {editingIndex !== null ? 'Edit Character' : 'New Character'}
+          </h4>
         </div>
-        <div className="card-body">
+        <div className="card-body pt-2 px-0">
+        <p className="subtext-btn-sm text-muted mb-2">
+            Add, edit, and remove characters as needed.
+          </p>
           <div className="row">
             <div className="col-md-6">
               <div className="mb-3">
                 <label htmlFor="name" className="form-label subtext-btn-sm">
                   Character Name <span className="text-danger">*</span>
                 </label>
-                <input
-                  type="text"
-                  className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                  id="name"
-                  name="name"
-                  value={currentCharacter.name}
-                  onChange={handleInputChange}
-                  placeholder="Enter character name"
-                />
+                <FormFieldWithLimit value={currentCharacter.name} maxLength={50}>
+                  <input
+                    type="text"
+                    className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                    id="name"
+                    name="name"
+                    value={currentCharacter.name}
+                    onChange={handleInputChange}
+                    placeholder="Enter character name"
+                  />
+                </FormFieldWithLimit>
                 {errors.name && <div className="invalid-feedback">{errors.name}</div>}
               </div>
 
-              <div className="mb-3">
+              
+            </div>
+
+            <div className="col-md-6">
+            <div className="mb-3">
+                <label htmlFor="bio" className="form-label subtext-btn-sm">
+                  Character Bio <span className="text-danger">*</span>
+                </label>
+                <FormFieldWithLimit value={currentCharacter.bio} maxLength={500}>
+                  <textarea
+                    className={`form-control ${errors.bio ? 'is-invalid' : ''}`}
+                    id="bio"
+                    name="bio"
+                    rows={4}
+                    value={currentCharacter.bio}
+                    onChange={handleInputChange}
+                    placeholder="Describe the character's personality, background, motivations, etc."
+                  />
+                </FormFieldWithLimit>
+                {errors.bio && <div className="invalid-feedback">{errors.bio}</div>}
+              </div>
+            
+              {/* <div className="mb-3">
+                <label htmlFor="love_interest" className="form-label subtext-btn-sm">
+                  Love Interest <span className="text-danger">*</span>
+                </label>
+                <FormFieldWithLimit value={currentCharacter.love_interest} maxLength={50}>
+                  <textarea
+                    className={`form-control ${errors.love_interest ? 'is-invalid' : ''}`}
+                    id="love_interest"
+                    name="love_interest"
+                    rows={3}
+                    value={currentCharacter.love_interest}
+                    onChange={handleInputChange}
+                    placeholder="Describe love interest, relationships, etc."
+                  />
+                </FormFieldWithLimit>
+                {errors.love_interest && <div className="invalid-feedback">{errors.love_interest}</div>}
+              </div> */}
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-12">
+            <div className="mb-3">
                 <label htmlFor="personality" className="form-label subtext-btn-sm">
                   Personality <span className="text-danger">*</span>
                 </label>
                 <select
-                  className={`form-select ${errors.personality ? 'is-invalid' : ''}`}
+                  className={`form-select ${errors.personality ? 'is-invalid' : ''} font-quicksand`}
                   id="personality"
                   name="personality"
                   value={currentCharacter.personality}
@@ -295,44 +374,88 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
                 {errors.personality && <div className="invalid-feedback">{errors.personality}</div>}
               </div>
             </div>
-
-            <div className="col-md-6">
-              <div className="mb-3">
-                <label htmlFor="love_interest" className="form-label subtext-btn-sm">
-                  Love Interest <span className="text-danger">*</span>
-                </label>
-                <textarea
-                  className={`form-control ${errors.love_interest ? 'is-invalid' : ''}`}
-                  id="love_interest"
-                  name="love_interest"
-                  rows={3}
-                  value={currentCharacter.love_interest}
-                  onChange={handleInputChange}
-                  placeholder="Describe love interest, relationships, etc."
-                />
-                {errors.love_interest && <div className="invalid-feedback">{errors.love_interest}</div>}
-              </div>
-            </div>
           </div>
 
+          {/* POV Head Position Fields */}
           <div className="row">
             <div className="col-12">
               <div className="mb-3">
-                <label htmlFor="bio" className="form-label subtext-btn-sm">
-                  Character Bio <span className="text-danger">*</span>
+                <label className="form-label subtext-btn-sm">
+                  <i className="fas fa-cube me-1"></i> Character Location (Can be set later)
                 </label>
-                <textarea
-                  className={`form-control ${errors.bio ? 'is-invalid' : ''}`}
-                  id="bio"
-                  name="bio"
-                  rows={4}
-                  value={currentCharacter.bio}
-                  onChange={handleInputChange}
-                  placeholder="Describe the character's personality, background, motivations, etc."
-                />
-                {errors.bio && <div className="invalid-feedback">{errors.bio}</div>}
+                <p className="subtext-btn-sm text-muted mb-2" style={{ fontSize: '0.75rem' }}>
+                  Set the character's head position in 3D space. These coordinates determine the camera targets.
+                </p>
               </div>
             </div>
+          </div>
+          
+          <div className="row">
+            <div className="col-4">
+              <div className="mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <label htmlFor="pov_head_x" className="form-label subtext-btn-sm mb-0" style={{ minWidth: '20px' }}>
+                    X:
+                  </label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    id="pov_head_x"
+                    name="pov_head_x"
+                    value={currentCharacter.pov_head_x ?? 0.0}
+                    onChange={handleInputChange}
+                    step="0.1"
+                    placeholder="0.0"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="col-4">
+              <div className="mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <label htmlFor="pov_head_y" className="form-label subtext-btn-sm mb-0" style={{ minWidth: '20px' }}>
+                    Y:
+                  </label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    id="pov_head_y"
+                    name="pov_head_y"
+                    value={currentCharacter.pov_head_y ?? 1.6}
+                    onChange={handleInputChange}
+                    step="0.1"
+                    placeholder="1.6"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="col-4">
+              <div className="mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <label htmlFor="pov_head_z" className="form-label subtext-btn-sm mb-0" style={{ minWidth: '20px' }}>
+                    Z:
+                  </label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    id="pov_head_z"
+                    name="pov_head_z"
+                    value={currentCharacter.pov_head_z ?? 0.0}
+                    onChange={handleInputChange}
+                    step="0.1"
+                    placeholder="0.0"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Help text row below */}
+          <div className="row">
+            <div className="col-12 mb-2">
+              <strong className="form-text text-muted m-0 font-quicksand" style={{ fontSize: '0.7rem' }}>3D Coordinates (default height: 1.6m)</strong>
+            </div>
+            
           </div>
 
           <div className="d-flex gap-2">
@@ -352,7 +475,10 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
                 name: '',
                 bio: '',
                 personality: '',
-                love_interest: ''
+                love_interest: '',
+                pov_head_x: 0.0,
+                pov_head_y: 1.6,
+                pov_head_z: 0.0
               });
                   setEditingIndex(null);
                   setErrors({});
@@ -399,7 +525,7 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
         </div>
       )}
 
-      <div className="row mt-4">
+      {/* <div className="row mt-4">
         <div className="col-12">
           <div className="alert alert-info">
             <i className="fas fa-info-circle me-2"></i>
@@ -407,7 +533,7 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
             Think about their motivations, flaws, and how they'll grow throughout your story.
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

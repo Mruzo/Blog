@@ -1,108 +1,50 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email - Justvybz</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            padding: 20px 0;
-        }
-        .logo {
-            max-width: 150px;
-            height: auto;
-        }
-        .content {
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #414042;
-            color: #ffffff !important;
-            text-decoration: none;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-        .footer {
-            text-align: center;
-            padding: 20px;
-            font-size: 12px;
-            color: #666;
-            border-top: 1px solid #eee;
-            margin-top: 20px;
-        }
-        .warning {
-            background-color: #fff3cd;
-            color: #856404;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="{{ logo_url }}" alt="Justvybz Logo" class="logo">
-        </div>
-        
-        <div class="content">
-            <h1>Welcome to Justvybz!</h1>
-            <p>Hi {{ user.first_name|default:user.username }},</p>
-            
-            <p>Thank you for creating an account with Justvybz. To start exploring our collection of beautiful desk mats, please verify your email address by clicking the button below:</p>
+{% extends "emails/base_email.html" %}
 
-            <center>
-                <a href="{{ verification_url }}" class="button">
-                    Verify Email Address
-                </a>
-            </center>
+{% block header %}
+<div class="header">
+    <h1>Verify Your Email</h1>
+    <p>Please confirm your email address</p>
+</div>
+{% endblock %}
 
-            <div class="warning">
-                <strong>Note:</strong> This verification link will expire in 24 hours for security reasons.
-            </div>
+{% block content %}
+<div class="content">
+    <p>Hi {{ user.first_name|default:user.username }},</p>
+    
+    <p>Thank you for creating an account with Justvybz. To start exploring our collection of beautiful desk mats, please verify your email address by clicking the button below:</p>
 
-            <p>If the button above doesn't work, copy and paste this link into your browser:</p>
-            <p style="word-break: break-all;">
-                {{ verification_url }}
-            </p>
-
-            <p>If you didn't create an account with Justvybz, please ignore this email.</p>
-        </div>
-
-        <div class="footer">
-            <p>
-                This email was sent to {{ user.email }}.<br>
-                You're receiving this email because you registered for an account at Justvybz.
-            </p>
-            
-            <p>
-                <a href="{{ site_url }}{% url 'privacy' %}">Privacy Policy</a> |
-                <a href="{{ site_url }}{% url 'terms' %}">Terms of Service</a>
-            </p>
-            
-            <p>
-                &copy; {% now "Y" %} Justvybz Inc.<br>
-                All rights reserved
-            </p>
-        </div>
+    <div class="button-center">
+        <a href="{{ verification_url }}" class="button button-dark">
+            Verify Email Address
+        </a>
     </div>
-</body>
-</html> 
+
+    <div class="warning">
+        <strong>Note:</strong> This verification link will expire in 24 hours for security reasons.
+    </div>
+
+    <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+    <p style="word-break: break-all;">
+        {{ verification_url }}
+    </p>
+
+    <p>If you didn't create an account with Justvybz, please ignore this email.</p>
+</div>
+{% endblock %}
+
+{% block footer %}
+<div class="footer">
+    <p>
+        This email was sent to {{ user.email }}.<br>
+        You're receiving this email because you registered for an account at Justvybz.
+    </p>
+    
+    <p>
+        <a href="{{ site_url }}{% url 'privacy' %}">Privacy Policy</a> |
+        <a href="{{ site_url }}{% url 'terms' %}">Terms of Service</a> |
+        <a href="{{ site_url }}{% url 'cookie_policy' %}">Cookie Policy</a>
+    </p>
+    
+    <p>© {% now "Y" %} Justvybz Inc. All rights reserved.</p>
+</div>
+{% endblock %}

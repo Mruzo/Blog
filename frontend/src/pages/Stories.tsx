@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Comic3DViewer from '../components/Comic3DViewer';
+import MetaTags from '../components/MetaTags';
 import { useApi } from '../contexts/ApiContext';
 import apiService from '../services/api';
 import { collaborationService } from '../services/collaborationService';
@@ -33,19 +34,49 @@ interface Comic {
 
 const Stories: React.FC = () => {
   const { stories, loadPublicStories, isLoading, error } = useApi();
+  const [searchParams] = useSearchParams();
+  const studioId = searchParams.get('studio');
+  const [studio, setStudio] = useState<any>(null);
+  const [filteredStories, setFilteredStories] = useState<any[]>([]);
   const [comics, setComics] = useState<Comic[]>([]);
   const [storyData, setStoryData] = useState<Map<number, {seasons: any[], episodes: any[], dialogues: any[], collaborators: any[]}>>(new Map());
   const [isLoadingStoryData, setIsLoadingStoryData] = useState(false);
+  const [loadedStoryIds, setLoadedStoryIds] = useState<Set<number>>(new Set());
+  const loadingRef = useRef<Map<number, boolean>>(new Map());
+  // Track selected episode for each story (for sharing)
+  const [selectedEpisodes, setSelectedEpisodes] = useState<Map<number, any>>(new Map());
 
-  // Check if user is authenticated
-  const isAuthenticated = () => {
+  // Track authentication state - update when component mounts or token changes
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const token = localStorage.getItem('authToken');
     return !!token;
-  };
+  });
 
-  // Handle create story button click
-  const handleCreateStoryClick = (e: React.MouseEvent) => {
-    if (!isAuthenticated()) {
+  // Listen for token changes (e.g., after login/logout)
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('authToken');
+      setIsAuthenticated(!!token);
+    };
+
+    // Check on mount
+    checkAuth();
+
+    // Listen for storage events (logout in other tabs)
+    window.addEventListener('storage', checkAuth);
+    
+    // Also check periodically (in case token is set/removed in same tab)
+    const interval = setInterval(checkAuth, 1000);
+
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Handle create story button click - memoized with useCallback
+  const handleCreateStoryClick = useCallback((e: React.MouseEvent) => {
+    if (!isAuthenticated) {
       e.preventDefault();
       // Store the intended destination in sessionStorage for post-login redirect
       sessionStorage.setItem('redirectAfterLogin', '/immersivecomics/story/create/');
@@ -53,7 +84,206 @@ const Stories: React.FC = () => {
       window.location.href = `/login/?next=${encodeURIComponent('/immersivecomics/story/create/')}`;
     }
     // If authenticated, let the Link component handle navigation normally
+  }, [isAuthenticated]);
+
+  // Track share click function - matches Django template pattern
+  const trackShareClick = async (platform: string, contentId: number, contentType: 'episode' | 'story' = 'story') => {
+    try {
+      // Get CSRF token from meta tag or cookies
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                       document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
+      
+      // Construct the full URL - endpoint is at /immersivecomics/api/track-share/
+      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/icvybz';
+      const serverBase = baseURL.replace('/api/icvybz', '');
+      const endpoint = `${serverBase}/immersivecomics/api/track-share/`;
+      
+      const payload: any = {
+        platform: platform,
+      };
+      
+      if (contentType === 'episode') {
+        payload.episode_id = contentId;
+      } else {
+        payload.story_id = contentId;
+      }
+      
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        credentials: 'include', // Include cookies for CSRF
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      // Silently fail - don't interrupt user experience
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error tracking share:', error);
+      }
+    }
   };
+
+  // Share functions - use selected episode if available
+  const handleShare = (platform: string, storyId: number) => {
+    const selectedEpisode = selectedEpisodes.get(storyId);
+    const story = comics.find(c => c.id === storyId);
+    const storyDataForStory = storyData.get(storyId);
+    
+    // Use episode data if available, otherwise fall back to story data
+    let shareTitle: string;
+    let shareDescription: string;
+    let shareUrl: string;
+    let contentId: number;
+    let contentType: 'episode' | 'story' = 'story';
+    
+    if (selectedEpisode) {
+      // Share the selected episode
+      // The episode's cover image will be used via Open Graph meta tags on the episode detail page
+      shareTitle = `${story?.title || 'Amazing 3D Comic Story'} - Episode ${selectedEpisode.episode_number}`;
+      shareDescription = selectedEpisode.description || story?.description || 'Check out this amazing 3D comic episode!';
+      
+      // Build episode URL if we have season info
+      const seasons = storyDataForStory?.seasons || [];
+      const season = seasons.find((s: any) => s.id === selectedEpisode.season);
+      if (season) {
+        shareUrl = `${window.location.origin}/immersivecomics/seasons/${season.id}/episodes/${selectedEpisode.id}/`;
+      } else {
+        shareUrl = window.location.href;
+      }
+      
+      contentId = selectedEpisode.id;
+      contentType = 'episode';
+    } else {
+      // Fall back to story sharing
+      shareTitle = story?.title || 'Amazing 3D Comic Story';
+      shareDescription = story?.description || 'Check out this amazing 3D comic story!';
+      shareUrl = window.location.href;
+      contentId = storyId;
+      contentType = 'story';
+    }
+    
+    // Track the share click
+    trackShareClick(platform, contentId, contentType);
+    
+    let shareUrlWithParams = '';
+    
+    switch (platform) {
+      case 'facebook':
+        // Facebook supports image via Open Graph meta tags, but we can include it in the URL
+        shareUrlWithParams = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        break;
+      case 'x_twitter':
+        const twitterText = `${shareTitle} - ${shareDescription}`;
+        shareUrlWithParams = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(shareUrl)}`;
+        break;
+      case 'reddit':
+        shareUrlWithParams = `https://reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}`;
+        break;
+      default:
+        return;
+    }
+    
+    if (shareUrlWithParams) {
+      window.open(shareUrlWithParams, '_blank', 'width=600,height=400');
+    }
+  };
+
+  // Copy link to clipboard - use selected episode URL if available
+  const handleCopyLink = async (e: React.MouseEvent<HTMLButtonElement>, storyId: number) => {
+    e.preventDefault();
+    
+    const selectedEpisode = selectedEpisodes.get(storyId);
+    const storyDataForStory = storyData.get(storyId);
+    
+    let urlToCopy: string;
+    let contentId: number;
+    let contentType: 'episode' | 'story' = 'story';
+    
+    if (selectedEpisode) {
+      // Use episode URL
+      const seasons = storyDataForStory?.seasons || [];
+      const season = seasons.find((s: any) => s.id === selectedEpisode.season);
+      if (season) {
+        urlToCopy = `${window.location.origin}/immersivecomics/seasons/${season.id}/episodes/${selectedEpisode.id}/`;
+      } else {
+        urlToCopy = window.location.href;
+      }
+      contentId = selectedEpisode.id;
+      contentType = 'episode';
+    } else {
+      // Fall back to current page URL
+      urlToCopy = window.location.href;
+      contentId = storyId;
+      contentType = 'story';
+    }
+    
+    // Track the share click
+    trackShareClick('copy_link', contentId, contentType);
+    
+    try {
+      await navigator.clipboard.writeText(urlToCopy);
+      
+      // Show success feedback
+      const button = e.currentTarget;
+      const originalHTML = button.innerHTML;
+      button.innerHTML = '<i class="fas fa-check" style="color: #ffffff; font-size: 0.8rem;"></i>';
+      button.style.backgroundColor = '#28a745';
+      
+      setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.style.backgroundColor = '#ffffff';
+      }, 2000);
+    } catch (err) {
+      console.error('Could not copy text: ', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = urlToCopy;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      // Show success feedback
+      const button = e.currentTarget;
+      const originalHTML = button.innerHTML;
+      button.innerHTML = '<i class="fas fa-check" style="color: #ffffff; font-size: 0.8rem;"></i>';
+      button.style.backgroundColor = '#28a745';
+      
+      setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.style.backgroundColor = '#ffffff';
+      }, 2000);
+    }
+  };
+  
+  // Handle episode selection from Comic3DViewer
+  const handleEpisodeSelect = useCallback((storyId: number, episode: any) => {
+    setSelectedEpisodes(prev => {
+      const newMap = new Map(prev);
+      newMap.set(storyId, episode);
+      return newMap;
+    });
+  }, []);
+
+  // Load studio if studio ID is provided
+  useEffect(() => {
+    const loadStudio = async () => {
+      if (studioId) {
+        try {
+          const studioData = await apiService.getStudio(parseInt(studioId));
+          setStudio(studioData);
+        } catch (err) {
+          console.error('Failed to load studio:', err);
+        }
+      } else {
+        setStudio(null);
+      }
+    };
+
+    loadStudio();
+  }, [studioId]);
 
   useEffect(() => {
     const fetchComics = async () => {
@@ -67,59 +297,55 @@ const Stories: React.FC = () => {
     fetchComics();
   }, [loadPublicStories]);
 
-  // Update comics when stories change
+  // Filter stories by studio if studio is provided
   useEffect(() => {
-    if (stories && Array.isArray(stories)) {
-      // Convert stories to comics format for display (all stories from API are already public)
-      const loadComicsWithCharacters = async () => {
-        const comicsData = await Promise.all(
-          stories.map(async (story) => {
-            try {
-              // Load characters for each story
-              const characters = await apiService.getCharacters(story.id);
-              
-              return {
-                id: story.id,
-                title: story.title,
-                description: story.description,
-                comic_image: story.comic_image || null,
-                is_public: story.is_public,
-                moderation_status: 'approved' as const, // Published stories are considered approved
-                created_at: story.created_at,
-                updated_at: story.updated_at,
-                user: story.user,
-                user_username: story.user_username || 'Unknown',
-                characters: characters || []
-              };
-            } catch (error) {
-              console.error(`Failed to load characters for story ${story.id}:`, error);
-              return {
-                id: story.id,
-                title: story.title,
-                description: story.description,
-                comic_image: story.comic_image || null,
-                is_public: story.is_public,
-                moderation_status: 'approved' as const,
-                created_at: story.created_at,
-                updated_at: story.updated_at,
-                user: story.user,
-                user_username: story.user_username || 'Unknown',
-                characters: []
-              };
-            }
-          })
-        );
-        setComics(comicsData);
-      };
-      
-      loadComicsWithCharacters();
-    } else {
-      // If stories is not an array, set empty array
-      setComics([]);
+    if (!stories || !Array.isArray(stories)) {
+      setFilteredStories([]);
+      return;
     }
-  }, [stories]);
 
-  // Load seasons, episodes, and dialogues for each story (deferred to improve initial load)
+    if (studio && studio.owner) {
+      // Get owner ID
+      const ownerId = typeof studio.owner === 'object' ? studio.owner.id : studio.owner;
+      
+      // Filter stories owned by the studio owner
+      const filtered = stories.filter((story) => story.user === ownerId);
+      setFilteredStories(filtered);
+    } else {
+      // No studio filter - show all stories
+      setFilteredStories(stories);
+    }
+  }, [stories, studio]);
+
+  // Update comics when filtered stories change - OPTIMIZED: Skip character loading for now (load on demand)
+  useEffect(() => {
+    if (!filteredStories || !Array.isArray(filteredStories)) {
+      setComics([]);
+      return;
+    }
+
+    // Convert stories to comics format - skip character loading for efficiency
+    // Characters will be loaded on demand if needed
+    const comicsData = filteredStories.map((story) => ({
+              id: story.id,
+              title: story.title,
+              description: story.description,
+              comic_image: story.comic_image || null,
+              is_public: story.is_public,
+              moderation_status: 'approved' as const, // Published stories are considered approved
+              created_at: story.created_at,
+              updated_at: story.updated_at,
+              user: story.user,
+              user_username: story.user_username || 'Unknown',
+      characters: [] // Load on demand if needed
+    }));
+    
+        setComics(comicsData);
+  }, [filteredStories]);
+
+  // Load detailed story data - OPTIMIZED: Load on demand when story card is visible
+  // This useEffect loads data for stories that haven't been loaded yet
+  // Allow loading for unauthenticated users so they can see 3D models on public stories
   useEffect(() => {
     const loadStoryData = async () => {
       if (!stories || !Array.isArray(stories)) {
@@ -127,55 +353,105 @@ const Stories: React.FC = () => {
         return;
       }
 
+      // Find stories that haven't been loaded yet (use filtered stories if studio filter is active)
+      const storiesToLoad = (studio && filteredStories.length > 0 ? filteredStories : stories).filter(story => !loadedStoryIds.has(story.id));
+      
+      if (storiesToLoad.length === 0) {
+        setIsLoadingStoryData(false);
+        return;
+      }
+
+      // Mark stories as loading to prevent duplicate requests
+      storiesToLoad.forEach(story => {
+        if (!loadingRef.current.get(story.id)) {
+          loadingRef.current.set(story.id, true);
+        }
+      });
+
       setIsLoadingStoryData(true);
       const newStoryData = new Map<number, {seasons: any[], episodes: any[], dialogues: any[], collaborators: any[]}>();
       
       // Use Promise.allSettled to handle individual failures gracefully
       const results = await Promise.allSettled(
-        stories.map(async (story) => {
+        storiesToLoad.map(async (story) => {
           try {
-            // Load seasons
-            const seasonsData = await apiService.getSeasons(story.id);
+            // Load seasons - may require auth, handle gracefully
+            let seasonsData: any[] = [];
+            try {
+              seasonsData = await apiService.getSeasons(story.id);
+            } catch (error: any) {
+              // If 403/401, it's expected for public stories when not authenticated
+              if (error?.response?.status === 403 || error?.response?.status === 401) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log(`[Stories] Seasons not available for public story ${story.id} (auth required)`);
+                }
+              } else {
+                console.error(`[Stories] Failed to load seasons for story ${story.id}:`, error);
+              }
+              // Continue with empty seasons - story will still display
+              return {
+                storyId: story.id,
+                data: {
+                  seasons: [],
+                  episodes: [],
+                  dialogues: [],
+                  collaborators: []
+                }
+              };
+            }
             
-            // Load episodes for all seasons in parallel
-            const episodePromises = seasonsData.map(season => apiService.getEpisodes(season.id));
-            const episodeResults = await Promise.all(episodePromises);
-            const allEpisodes = episodeResults.flat();
+            // Load episodes for all seasons in parallel - may require auth
+            let allEpisodes: any[] = [];
+            try {
+              const episodePromises = seasonsData.map(season => apiService.getEpisodes(season.id));
+              const episodeResults = await Promise.all(episodePromises);
+              allEpisodes = episodeResults.flat();
+            } catch (error: any) {
+              // If 403/401, it's expected for public stories when not authenticated
+              if (error?.response?.status === 403 || error?.response?.status === 401) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log(`[Stories] Episodes not available for public story ${story.id} (auth required)`);
+                }
+              } else {
+                console.error(`[Stories] Failed to load episodes for story ${story.id}:`, error);
+              }
+              // Continue with empty episodes
+            }
             
-            // Load dialogues for all episodes in parallel
-            const dialoguePromises = allEpisodes.map(episode => apiService.getDialogues(episode.id));
-            const dialogueResults = await Promise.all(dialoguePromises);
-            const allDialogues = dialogueResults.flat();
+            // Load dialogues for all episodes in parallel - may require auth
+            let allDialogues: any[] = [];
+            try {
+              const dialoguePromises = allEpisodes.map(episode => apiService.getDialogues(episode.id));
+              const dialogueResults = await Promise.all(dialoguePromises);
+              allDialogues = dialogueResults.flat();
+            } catch (error: any) {
+              // If 403/401, it's expected for public stories when not authenticated
+              if (error?.response?.status === 403 || error?.response?.status === 401) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log(`[Stories] Dialogues not available for public story ${story.id} (auth required)`);
+                }
+              } else {
+                console.error(`[Stories] Failed to load dialogues for story ${story.id}:`, error);
+              }
+              // Continue with empty dialogues
+            }
             
             // Load collaborators for this story
+            // Only show StoryCollaborator objects (those selected via checkbox system)
+            // Exclude CollaborationInvite objects entirely
             let collaboratorsData: any[] = [];
             try {
               // Try to load collaborators - might fail if story is private and user is not authenticated
               // This is okay, we'll just show no collaborators
               const allCollaborators = await collaborationService.getCollaborators(story.id);
               
-              // Filter collaborators - for public stories, show only active/accepted
-              // StoryCollaborator objects: always active (have user field directly)
-              // CollaborationInvite objects: show all if authenticated (like My Studio), or only accepted if not authenticated
-              const isAuthenticated = !!localStorage.getItem('authToken');
+              // Filter to show ONLY StoryCollaborator objects (those with user field and is_active === true)
+              // These are the collaborators selected through the checkbox system
               collaboratorsData = (allCollaborators || []).filter((collab: any) => {
-                // StoryCollaborator: has user field (nested with username) - always show active ones
-                if (collab.user && collab.user.username) {
+                // Only show StoryCollaborator objects: has user field (nested with username) and is_active
+                // Exclude all CollaborationInvite objects (those with invitee_user or invitee_email)
+                if (collab.user && collab.user.username && collab.is_active !== false) {
                   return true;
-                }
-                // CollaborationInvite: show based on authentication status
-                if (isAuthenticated) {
-                  // If authenticated, show ALL invites (like My Studio does) - pending, accepted, etc.
-                  if (collab.invitee_user?.username || collab.invitee_email) {
-                    return true;
-                  }
-                } else {
-                  // If not authenticated, only show accepted invites
-                  if (collab.status === 'accepted') {
-                    if (collab.invitee_user?.username || collab.invitee_email) {
-                      return true;
-                    }
-                  }
                 }
                 return false;
               });
@@ -216,9 +492,14 @@ const Stories: React.FC = () => {
       results.forEach((result, index) => {
         if (result.status === 'fulfilled') {
           newStoryData.set(result.value.storyId, result.value.data);
+          setLoadedStoryIds(prev => {
+            const newSet = new Set(prev);
+            newSet.add(result.value.storyId);
+            return newSet;
+          });
         } else {
           // Fallback for rejected promises
-          const story = stories[index];
+          const story = storiesToLoad[index];
           if (story) {
                   newStoryData.set(story.id, {
                     seasons: [],
@@ -226,16 +507,32 @@ const Stories: React.FC = () => {
                     dialogues: [],
                     collaborators: []
                   });
+            setLoadedStoryIds(prev => {
+              const newSet = new Set(prev);
+              newSet.add(story.id);
+              return newSet;
+            });
           }
+        }
+        // Clear loading flag
+        const story = storiesToLoad[index];
+        if (story) {
+          loadingRef.current.delete(story.id);
         }
       });
       
-      setStoryData(newStoryData);
+      // Merge new data with existing data
+      setStoryData(prev => {
+        const merged = new Map(prev);
+        newStoryData.forEach((value, key) => merged.set(key, value));
+        return merged;
+      });
+      
       setIsLoadingStoryData(false);
     };
     
     loadStoryData();
-  }, [stories]);
+  }, [stories, filteredStories, studio, loadedStoryIds]);
 
   if (isLoading || isLoadingStoryData) {
     return <LoadingSpinner />;
@@ -254,6 +551,11 @@ const Stories: React.FC = () => {
 
   return (
     <div className="container mt-4" style={{ maxWidth: '1200px' }}>
+      <MetaTags
+        title="Immersive Stories"
+        description="Browse all published interactive & immersive stories"
+        keywords="3D comics, published stories, interactive narratives, immersive comics"
+      />
       {/* <PageHeader
         title="Published Stories"
         description="Browse all published 3D comic stories"
@@ -305,7 +607,26 @@ const Stories: React.FC = () => {
                 
                 <div className="card-body p-1">
                   <div className="d-flex justify-content-between align-items-start mb-0">
-                    <h5 className="subtext-btn-sm mb-1">{comic.title}</h5>
+                    <h5 className="subtext-btn-sm mb-1">
+                      {comic.title}
+                      {storyData.has(comic.id) && (() => {
+                        const storySeasons = storyData.get(comic.id)?.seasons || [];
+                        const storyEpisodes = storyData.get(comic.id)?.episodes || [];
+                        // Find the season from the first episode (which Comic3DViewer auto-selects)
+                        const firstEpisode = storyEpisodes[0];
+                        if (firstEpisode && storySeasons.length > 0) {
+                          const season = storySeasons.find((s: any) => s.id === firstEpisode.season);
+                          if (season) {
+                            return <span className="text-muted"> - Season {season.season_number}</span>;
+                          }
+                        }
+                        // Fallback: show first season if available
+                        if (storySeasons.length > 0) {
+                          return <span className="text-muted"> - Season {storySeasons[0].season_number}</span>;
+                        }
+                        return null;
+                      })()}
+                    </h5>
                     <div className="dropdown">
                       {/* <button 
                         className="btn btn-sm btn-outline-secondary" 
@@ -329,53 +650,79 @@ const Stories: React.FC = () => {
                     </div>
                   </div>
                   
-                  <p className="subtext-btn-sm text-muted mb-3">
+                  <p className="subtext-btn-sm text-muted mb-2">
                     {comic.description}
                   </p>
                   
                   {/* 3D Comic Viewer - Read-only mode */}
                   {storyData.has(comic.id) && (
-                    <div className="mb-3">
+                    <div className="mb-2">
                       <Comic3DViewer
                         episodes={storyData.get(comic.id)?.episodes || []}
                         dialogues={storyData.get(comic.id)?.dialogues || []}
                         seasons={storyData.get(comic.id)?.seasons || []}
                         storyId={comic.id}
                         readOnly={true}
+                        onEpisodeSelect={(episode) => handleEpisodeSelect(comic.id, episode)}
                       />
                     </div>
                   )}
                   
+                  {/* Views Count Section - Above Collaborators */}
+                  {storyData.has(comic.id) && (() => {
+                    const episodes = storyData.get(comic.id)?.episodes || [];
+                    const totalViews = episodes.reduce((sum: number, episode: any) => {
+                      // Handle both view_count (from API) and viewCount (camelCase) for compatibility
+                      const views = episode.view_count || episode.viewCount || 0;
+                      return sum + (typeof views === 'number' ? views : 0);
+                    }, 0);
+                    // Always show the views count section, even if 0, to match the pattern
+                    return (
+                      <div className="mb-2">
+                        <div className="card border-0 shadow-sm">
+                          <div className="card-body p-1 border-top">
+                            <div className="d-flex justify-content-center align-items-center">
+                              <span className="badge" style={{ background: '#f9a602', color: '#111e7f', fontSize: '0.8rem' }}>
+                                <i className="fas fa-eye me-1"></i> {totalViews} 
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  
                   {/* Collaborators Section - Below 3D Viewer */}
                   {storyData.has(comic.id) && (
-                    <div className="mb-3">
+                    <div className="mb-2">
                       <div className="card border-0 shadow-sm">
                         <div className="card-header bg-transparent border-bottom p-2">
                           <h6 className="subtext-btn-sm mb-0">
                             <i className="fas fa-users me-2"></i>
-                            Collaborators ({storyData.get(comic.id)?.collaborators?.length || 0})
+                            &nbsp;Collaborators ({(() => {
+                              const collaborators = storyData.get(comic.id)?.collaborators || [];
+                              // Only count StoryCollaborator objects (selected via checkbox)
+                              const storyCollaborators = collaborators.filter((collab: any) => 
+                                collab.user && collab.user.username && collab.is_active !== false
+                              );
+                              return storyCollaborators.length;
+                            })()})
                           </h6>
                         </div>
                         <div className="card-body p-2">
                           {(() => {
                             const collaborators = storyData.get(comic.id)?.collaborators || [];
-                            return collaborators.length > 0 ? (
+                            // Only show StoryCollaborator objects (selected via checkbox)
+                            const storyCollaborators = collaborators.filter((collab: any) => 
+                              collab.user && collab.user.username && collab.is_active !== false
+                            );
+                            
+                            return storyCollaborators.length > 0 ? (
                               <div className="d-flex flex-wrap gap-2">
-                                {collaborators.map((collaborator: any) => {
-                                  // Handle both StoryCollaborator (user field) and CollaborationInvite (invitee_user field)
-                                  // Match the display logic from CollaboratorsList component
-                                  let displayName: string;
-                                  if (collaborator.user) {
-                                    // StoryCollaborator: has user field directly
-                                    displayName = `@${collaborator.user.username}`;
-                                  } else if (collaborator.invitee_user) {
-                                    // CollaborationInvite with user: show @username
-                                    displayName = `@${collaborator.invitee_user.username}`;
-                                  } else {
-                                    // CollaborationInvite without user: show email
-                                    displayName = collaborator.invitee_email || 'Unknown';
-                                  }
-                                  const key = collaborator.id || `${collaborator.user?.id || collaborator.invitee_user?.id || collaborator.invitee_email}-${collaborator.role || 'collaborator'}`;
+                                {storyCollaborators.map((collaborator: any) => {
+                                  // StoryCollaborator: has user field directly
+                                  const displayName = `@${collaborator.user.username}`;
+                                  const key = collaborator.id || `${collaborator.user?.id}-${collaborator.role || 'collaborator'}`;
                                   return (
                                     <span key={key} className="badge bg-primary subtext-btn-sm">
                                       {displayName}
@@ -389,6 +736,97 @@ const Stories: React.FC = () => {
                               </div>
                             );
                           })()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Social Media Sharing Section - After Collaborators */}
+                  {storyData.has(comic.id) && (
+                    <div className="mb-3">
+                      <div className="card border-0 shadow-sm">
+                        <div className="card-body p-2">
+                          <div className="d-flex justify-content-center justify-content-md-end gap-2 align-items-center">
+                            {/* Facebook Share */}
+                            <button 
+                              type="button"
+                              onClick={() => handleShare('facebook', comic.id)}
+                              className="btn btn-outline-dark btn-sm rounded-circle share-btn"
+                              style={{
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #000000',
+                                width: '35px',
+                                height: '35px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.3s ease'
+                              }}
+                              title="Share on Facebook"
+                            >
+                              <i className="fab fa-facebook-f" style={{ color: '#000000', fontSize: '0.8rem' }}></i>
+                            </button>
+                            
+                            {/* X (Twitter) Share */}
+                            <button 
+                              type="button"
+                              onClick={() => handleShare('x_twitter', comic.id)}
+                              className="btn btn-outline-dark btn-sm rounded-circle share-btn"
+                              style={{
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #000000',
+                                width: '35px',
+                                height: '35px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.3s ease'
+                              }}
+                              title="Share on X (Twitter)"
+                            >
+                              <i className="fab fa-x-twitter" style={{ color: '#000000', fontSize: '0.8rem' }}></i>
+                            </button>
+                            
+                            {/* Reddit Share */}
+                            <button 
+                              type="button"
+                              onClick={() => handleShare('reddit', comic.id)}
+                              className="btn btn-outline-dark btn-sm rounded-circle share-btn"
+                              style={{
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #000000',
+                                width: '35px',
+                                height: '35px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.3s ease'
+                              }}
+                              title="Share on Reddit"
+                            >
+                              <i className="fab fa-reddit-alien" style={{ color: '#000000', fontSize: '0.8rem' }}></i>
+                            </button>
+                            
+                            {/* Copy Link */}
+                            <button 
+                              type="button"
+                              onClick={(e) => handleCopyLink(e, comic.id)}
+                              className="btn btn-outline-dark btn-sm rounded-circle share-btn"
+                              style={{
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #000000',
+                                width: '35px',
+                                height: '35px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.3s ease'
+                              }}
+                              title="Copy link"
+                            >
+                              <i className="fas fa-link" style={{ color: '#000000', fontSize: '0.8rem' }}></i>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -439,7 +877,7 @@ const Stories: React.FC = () => {
 
       {/* Floating Action Button */}
       <Link 
-        to={isAuthenticated() ? "/immersivecomics/story/create/" : "#"}
+        to={isAuthenticated ? "/immersivecomics/story/create/" : "#"}
         className="btn btn-primary rounded-circle position-fixed"
         style={{ 
           bottom: '20px', 

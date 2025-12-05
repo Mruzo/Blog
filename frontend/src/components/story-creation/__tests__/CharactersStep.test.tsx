@@ -267,7 +267,122 @@ describe('CharactersStep Progressive Saving', () => {
     // Verify existing character was not re-created
     expect(mockApiContext.createCharacter).not.toHaveBeenCalledWith(1, existingCharacter);
   });
+
+  test('should save POV head position data when creating character', async () => {
+    render(
+      <ApiProvider>
+        <CharactersStep {...mockProps} />
+      </ApiProvider>
+    );
+
+    // Add a character with POV data
+    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: 'Test Character' } });
+    fireEvent.change(screen.getByLabelText(/character bio/i), { target: { value: 'Test bio' } });
+    fireEvent.change(screen.getByLabelText(/personality/i), { target: { value: 'Brave' } });
+    fireEvent.change(screen.getByLabelText(/love interest/i), { target: { value: 'Test love interest' } });
+    
+    // Add POV head position data
+    const headXInput = screen.getByLabelText(/head x position/i);
+    const headYInput = screen.getByLabelText(/head y position/i);
+    const headZInput = screen.getByLabelText(/head z position/i);
+    
+    fireEvent.change(headXInput, { target: { value: '2.5' } });
+    fireEvent.change(headYInput, { target: { value: '1.8' } });
+    fireEvent.change(headZInput, { target: { value: '-1.2' } });
+    
+    fireEvent.click(screen.getByText(/add character/i));
+
+    // Wait for character to be added
+    await waitFor(() => {
+      expect(screen.getByText('Test Character')).toBeInTheDocument();
+    });
+
+    // Mock the Next button click
+    const { onNext } = mockProps;
+    onNext();
+
+    // Wait for API calls to complete
+    await waitFor(() => {
+      expect(mockApiContext.createCharacter).toHaveBeenCalledWith(1, {
+        name: 'Test Character',
+        bio: 'Test bio',
+        personality: 'Brave',
+        love_interest: 'Test love interest',
+      });
+    });
+
+    // Verify POV data is preserved in onDataUpdate
+    await waitFor(() => {
+      expect(mockProps.onDataUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          characters: expect.arrayContaining([
+            expect.objectContaining({
+              pov_head_x: 2.5,
+              pov_head_y: 1.8,
+              pov_head_z: -1.2
+            })
+          ])
+        })
+      );
+    });
+  });
+
+  test('should handle POV data when editing existing character', async () => {
+    const existingCharacter = {
+      id: 1,
+      name: 'Existing Character',
+      bio: 'Existing bio',
+      personality: 'Brave',
+      love_interest: 'Existing love interest',
+      pov_head_x: 1.0,
+      pov_head_y: 1.6,
+      pov_head_z: 0.0
+    };
+
+    const propsWithExistingCharacter = {
+      ...mockProps,
+      data: {
+        ...mockStoryData,
+        characters: [existingCharacter],
+      },
+    };
+
+    render(
+      <ApiProvider>
+        <CharactersStep {...propsWithExistingCharacter} />
+      </ApiProvider>
+    );
+
+    // Click edit on the existing character
+    const editButtons = screen.getAllByText(/edit/i);
+    fireEvent.click(editButtons[0]);
+
+    // Update POV data
+    const headXInput = screen.getByLabelText(/head x position/i);
+    fireEvent.change(headXInput, { target: { value: '3.0' } });
+
+    // Update character
+    fireEvent.click(screen.getByText(/update character/i));
+
+    // Wait for character to be updated
+    await waitFor(() => {
+      expect(mockProps.onDataUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          characters: expect.arrayContaining([
+            expect.objectContaining({
+              pov_head_x: 3.0,
+              pov_head_y: 1.6, // Should remain unchanged
+              pov_head_z: 0.0  // Should remain unchanged
+            })
+          ])
+        })
+      );
+    });
+  });
 });
+
+
+
 
 
 

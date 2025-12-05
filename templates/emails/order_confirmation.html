@@ -1,62 +1,57 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { text-align: center; padding: 20px 0; }
-        .order-details { background: #f9f9f9; padding: 20px; margin: 20px 0; }
-        .button { display: inline-block; padding: 10px 20px; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px; }
-        .cancel-button { background: #f44336; }
-        .footer { text-align: center; padding: 20px 0; font-size: 12px; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Order Confirmation</h1>
-            <p>Thank you for your order!</p>
-        </div>
+{% extends "emails/base_email.html" %}
 
-        <div class="order-details">
-            <h2>Order #{{ order.id }}</h2>
-            <p><strong>Order Date:</strong> {{ order.order_date|date:"F j, Y" }}</p>
-            <p><strong>Status:</strong> {{ order.get_status_display }}</p>
-            
-            <h3>Items:</h3>
-            <ul>
-            {% for item in order.orderitem_set.all %}
-                <li>{{ item.quantity }}x {{ item.product.title }} - ${{ item.product.get_discounted_price }}</li>
-            {% endfor %}
-            </ul>
+{% block header %}
+<div class="header">
+    <h1>Order Confirmation</h1>
+    <p>Thank you for your order!</p>
+</div>
+{% endblock %}
 
-            <p><strong>Subtotal:</strong> ${{ order.calculate_total_value }}</p>
-            <p><strong>Shipping:</strong> ${{ order.shipping_cost }}</p>
-            <p><strong>Total:</strong> ${{ order.calculate_grand_total }}</p>
+{% block content %}
+<div class="content">
+    <div class="order-details">
+        <h2>Order #{{ order.id }}</h2>
+        <p><strong>Order Date:</strong> {{ order.order_date|date:"F j, Y" }}</p>
+        <p><strong>Status:</strong> {{ order.get_status_display }}</p>
+        
+        <h3>Items:</h3>
+        <ul>
+        {% for item in order.orderitem_set.all %}
+            <li>{{ item.quantity }}x {{ item.product.title }} - ${{ item.product.get_discounted_price|floatformat:2 }}</li>
+        {% endfor %}
+        </ul>
 
-            <h3>Shipping Address:</h3>
-            <p>
-                {{ order.shipping_address.full_name }}<br>
-                {{ order.shipping_address.address_line_1 }}<br>
-                {% if order.shipping_address.address_line_2 %}
-                    {{ order.shipping_address.address_line_2 }}<br>
-                {% endif %}
-                {{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}<br>
-                {{ order.shipping_address.country_code }}
-            </p>
-        </div>
+        <p><strong>Subtotal:</strong> ${{ order.calculate_total_value|floatformat:2 }}</p>
+        <p><strong>Shipping:</strong> ${{ order.shipping_cost|floatformat:2 }}</p>
+        <p><strong>Total:</strong> ${{ order.calculate_grand_total|floatformat:2 }}</p>
 
-        <div style="text-align: center; margin: 20px 0;">
-            <a href="{{ order_url }}" class="button">View Order Details</a>
-            {% if order.status == 'PENDING' or order.status == 'ORDERED' %}
-                <a href="{{ cancel_url }}" class="button cancel-button">Cancel Order</a>
+        <h3>Shipping Address:</h3>
+        <p>
+            {{ order.shipping_address.full_name }}<br>
+            {{ order.shipping_address.address_line_1 }}<br>
+            {% if order.shipping_address.address_line_2 %}
+                {{ order.shipping_address.address_line_2 }}<br>
             {% endif %}
-        </div>
-
-        <div class="footer">
-            <p>If you have any questions, please contact our support team.</p>
-            <p>© {% now "Y" %} Vybz. All rights reserved.</p>
-        </div>
+            {{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}<br>
+            {{ order.shipping_address.country_code }}
+        </p>
     </div>
-</body>
-</html> 
+
+    <div class="button-center">
+        <a href="{{ order_url }}" class="button">View Order Details</a>
+        {% if order.status == 'PENDING' or order.status == 'ORDERED' %}
+            <a href="{{ cancel_url }}" class="button cancel-button">Cancel Order</a>
+        {% endif %}
+    </div>
+    
+    {% if order.tracking_number %}
+    <div class="message-box">
+        <p><strong>Tracking Information:</strong></p>
+        <p>Tracking Number: {{ order.tracking_number }}</p>
+        {% if order.shipping_provider %}
+        <p>Carrier: {{ order.shipping_provider }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

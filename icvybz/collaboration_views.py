@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
-from .models import Comic, CollaborationInvite, StoryCollaborator
+from .models import Comic, CollaborationInvite, StoryCollaborator, Studio, StudioCollaborator
 from .serializers import (
     CollaborationInviteSerializer, StoryCollaboratorSerializer,
     InviteUserSerializer, InviteEmailSerializer, UpdateRoleSerializer,
@@ -23,11 +23,13 @@ def search_users(request):
     if not query or len(query) < 2:
         return Response({'results': []})
     
+    # Search for active users only (exclude inactive/deactivated accounts)
     users = User.objects.filter(
         Q(username__icontains=query) |
         Q(email__icontains=query) |
         Q(first_name__icontains=query) |
-        Q(last_name__icontains=query)
+        Q(last_name__icontains=query),
+        is_active=True  # Only show active registered users
     ).exclude(id=request.user.id)[:10]  # Exclude current user, limit to 10 results
     
     serializer = UserSerializer(users, many=True)
@@ -54,14 +56,20 @@ def get_collaborators(request, story_id):
     # For unauthenticated users on public stories, only show accepted invites
     if story.is_public and not request.user.is_authenticated:
         # For public stories when not authenticated, only show accepted invites
-        invites = CollaborationInvite.objects.filter(story=story, status='accepted').order_by('-created_at')
+        invites = CollaborationInvite.objects.filter(story=story, status='accepted').select_related(
+            'inviter', 'invitee_user', 'story', 'story__user'
+        ).order_by('-created_at')
     else:
         # For authenticated users or private stories, show all invites (including pending)
-        invites = CollaborationInvite.objects.filter(story=story).order_by('-created_at')
+        invites = CollaborationInvite.objects.filter(story=story).select_related(
+            'inviter', 'invitee_user', 'story', 'story__user'
+        ).order_by('-created_at')
     invites_serializer = CollaborationInviteSerializer(invites, many=True)
     
     # Get all active collaborators (StoryCollaborator) - always show for public stories
-    active_collaborators = StoryCollaborator.objects.filter(story=story, is_active=True).order_by('joined_at')
+    active_collaborators = StoryCollaborator.objects.filter(story=story, is_active=True).select_related(
+        'user', 'story', 'story__user', 'invited_by'
+    ).order_by('joined_at')
     collaborators_serializer = StoryCollaboratorSerializer(active_collaborators, many=True)
     
     # Combine both types of collaborators
@@ -254,7 +262,7 @@ def get_pending_invitations(request):
     invites = CollaborationInvite.objects.filter(
         invitee_user=request.user,
         status='pending'
-    ).order_by('-created_at')
+    ).select_related('inviter', 'invitee_user', 'story', 'story__user').order_by('-created_at')
     
     serializer = CollaborationInviteSerializer(invites, many=True)
     return Response({'results': serializer.data})
@@ -328,3 +336,117 @@ def decline_invitation(request, invite_id):
         return Response(serializer.data)
     
     return Response({'detail': 'Failed to decline invitation'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_studio_collaborators_for_story(request, story_id):
+    """Get studio collaborators for a story (based on story owner's studio)"""
+    story = get_object_or_404(Comic, id=story_id)
+    
+    # Check if user is the story owner
+    if story.user != request.user:
+        return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+    
+    # Get the studio for the story owner
+    try:
+        studio = Studio.objects.get(owner=story.user)
+    except Studio.DoesNotExist:
+        return Response({'results': []})
+    
+    # Get active studio collaborators (excluding the owner)
+    studio_collaborators = StudioCollaborator.objects.filter(
+        studio=studio,
+        is_active=True
+    ).select_related('user').exclude(user=studio.owner)
+    
+    # Get current story collaborators
+    story_collaborators = StoryCollaborator.objects.filter(
+        story=story,
+        is_active=True
+    ).values_list('user_id', flat=True)
+    
+    # Serialize studio collaborators and mark which ones are already story collaborators
+    results = []
+    for collab in studio_collaborators:
+        user_data = UserSerializer(collab.user).data
+        results.append({
+            'id': collab.id,
+            'user': user_data,
+            'role': collab.role,
+            'is_story_collaborator': collab.user.id in story_collaborators
+        })
+    
+    return Response({'results': results})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_assign_story_collaborators(request, story_id):
+    """Bulk assign/remove story collaborators from studio collaborators"""
+    story = get_object_or_404(Comic, id=story_id)
+    
+    # Check if user is the story owner
+    if story.user != request.user:
+        return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+    
+    # Get the studio for the story owner
+    try:
+        studio = Studio.objects.get(owner=story.user)
+    except Studio.DoesNotExist:
+        return Response({'detail': 'Studio not found for story owner'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Get selected user IDs from request
+    selected_user_ids = request.data.get('user_ids', [])
+    if not isinstance(selected_user_ids, list):
+        return Response({'detail': 'user_ids must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get all active studio collaborators
+    studio_collaborators = StudioCollaborator.objects.filter(
+        studio=studio,
+        is_active=True
+    ).select_related('user')
+    
+    # Get current story collaborators
+    current_story_collaborators = StoryCollaborator.objects.filter(
+        story=story,
+        is_active=True
+    )
+    
+    # Get IDs of users who should be story collaborators
+    selected_user_ids_set = set(selected_user_ids)
+    
+    # Remove story collaborators that are not selected
+    for story_collab in current_story_collaborators:
+        if story_collab.user.id not in selected_user_ids_set:
+            # Check if user is a studio collaborator (only remove if they are)
+            if studio_collaborators.filter(user=story_collab.user).exists():
+                story_collab.is_active = False
+                story_collab.save()
+    
+    # Add new story collaborators from selected studio collaborators
+    for studio_collab in studio_collaborators:
+        if studio_collab.user.id in selected_user_ids_set:
+            # Create or update story collaborator
+            story_collaborator, created = StoryCollaborator.objects.get_or_create(
+                story=story,
+                user=studio_collab.user,
+                defaults={
+                    'role': studio_collab.role,
+                    'is_active': True
+                }
+            )
+            if not created:
+                # Update if already exists
+                story_collaborator.role = studio_collab.role
+                story_collaborator.is_active = True
+                story_collaborator.save()
+    
+    # Return updated list of story collaborators
+    updated_collaborators = StoryCollaborator.objects.filter(
+        story=story,
+        is_active=True
+    ).select_related('user')
+    
+    serializer = StoryCollaboratorSerializer(updated_collaborators, many=True)
+    return Response({'results': serializer.data})

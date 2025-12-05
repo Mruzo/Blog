@@ -62,4 +62,8 @@ urlpatterns = [
     # Studio API URLs
     path('api/studios/', views.studio_list_api, name='studio_list_api'),
     path('api/my-studio/', views.my_studio_api, name='my_studio_api'),
+    
+    # Email Preview URLs (for development/testing)
+    path('preview/email/collaboration/', views.preview_collaboration_email, name='preview_collaboration_email'),
+    path('preview/email/all/', views.preview_all_emails, name='preview_all_emails'),
 ]

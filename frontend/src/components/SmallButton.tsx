@@ -10,6 +10,7 @@ interface SmallButtonProps {
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
   size?: 'sm' | 'md' | 'lg';
+  title?: string;
 }
 
 const SmallButton: React.FC<SmallButtonProps> = ({ 
@@ -20,7 +21,8 @@ const SmallButton: React.FC<SmallButtonProps> = ({
   className = '', 
   disabled = false,
   type = 'button',
-  size = 'sm'
+  size = 'sm',
+  title
 }) => {
   const baseClasses = `btn btn-${variant} btn-${size} subtext-btn-sm small-button-icon`;
   const customStyles = { 
@@ -32,7 +34,7 @@ const SmallButton: React.FC<SmallButtonProps> = ({
   
   if (to) {
     return (
-      <Link to={to} className={`${baseClasses} ${className}`} style={customStyles}>
+      <Link to={to} className={`${baseClasses} ${className}`} style={customStyles} title={title}>
         {children}
       </Link>
     );
@@ -45,6 +47,7 @@ const SmallButton: React.FC<SmallButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       type={type}
+      title={title}
     >
       {children}
     </button>

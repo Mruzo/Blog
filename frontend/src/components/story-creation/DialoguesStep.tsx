@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StoryCreationData } from '../StoryCreationWizard';
 import SmallButton from '../SmallButton';
 import { useApi } from '../../contexts/ApiContext';
+import SimpleRichTextEditor from '../SimpleRichTextEditor';
 
 interface DialoguesStepProps {
   data: StoryCreationData;
@@ -221,7 +222,7 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
           <h4 className="subtext-btn mb-4">Dialogues</h4>
           <p className="subtext-btn-sm text-muted mb-4">
             Add dialogues for Episode {data.episode.episode_number}: "{data.episode.title}".
-            Set camera angles, scene information, and dialogue order for each speaking part.
+            Set camera angles, and dialogue order for each speaking part.
           </p>
         </div>
       </div>
@@ -240,30 +241,10 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
             {editingIndex !== null ? 'Edit Dialogue' : 'Add New Dialogue'}
           </h6>
         </div>
-        <div className="card-body">
+        <div className="card-body px-1">
           <div className="row">
-            <div className="col-md-6">
-              <div className="mb-3">
-            <label htmlFor="character" className="form-label subtext-btn-sm">
-              Character <span className="text-danger">*</span>
-            </label>
-            <select
-              className={`form-select ${errors.character ? 'is-invalid' : ''}`}
-              id="character"
-              name="character"
-              value={currentDialogue.character || ''}
-              onChange={handleInputChange}
-            >
-              <option value="">Select character</option>
-              {data.characters.map((character) => (
-                <option key={character.id} value={character.id}>{character.name}</option>
-              ))}
-            </select>
-            {errors.character && <div className="invalid-feedback">{errors.character}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-6">
+            {/* Left Column: Order and Character */}
+            <div className="col-md-2">
               <div className="mb-3">
                 <label htmlFor="order" className="form-label subtext-btn-sm">
                   Order <span className="text-danger">*</span>
@@ -279,23 +260,45 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
                 />
                 {errors.order && <div className="invalid-feedback">{errors.order}</div>}
               </div>
-            </div>
-          </div>
 
-          <div className="row">
-            <div className="col-12">
+              <div className="mb-3">
+                <label htmlFor="character" className="form-label subtext-btn-sm">
+                  Character <span className="text-danger">*</span>
+                </label>
+                <select
+                  className={`form-select ${errors.character ? 'is-invalid' : ''} font-quicksand`}
+                  id="character"
+                  name="character"
+                  value={currentDialogue.character || ''}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select character</option>
+                  {data.characters.map((character) => (
+                    <option key={character.id} value={character.id}>{character.name}</option>
+                  ))}
+                </select>
+                {errors.character && <div className="invalid-feedback">{errors.character}</div>}
+              </div>
+            </div>
+
+            {/* Right Column: Dialogue Text */}
+            <div className="col-md-10">
               <div className="mb-3">
                 <label htmlFor="text" className="form-label subtext-btn-sm">
                   Dialogue Text <span className="text-danger">*</span>
                 </label>
-                <textarea
-                  className={`form-control ${errors.text ? 'is-invalid' : ''}`}
-                  id="text"
-                  name="text"
-                  rows={3}
+                <SimpleRichTextEditor
                   value={currentDialogue.text}
-                  onChange={handleInputChange}
+                  onChange={(content) => {
+                    setCurrentDialogue(prev => ({ ...prev, text: content }));
+                    if (errors.text) {
+                      setErrors(prev => ({ ...prev, text: '' }));
+                    }
+                  }}
+                  maxLength={500}
                   placeholder="Enter the dialogue text..."
+                  className={errors.text ? 'is-invalid' : ''}
+                  rows={3}
                 />
                 {errors.text && <div className="invalid-feedback">{errors.text}</div>}
               </div>
@@ -303,21 +306,23 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
           </div>
 
           {/* Scene Information */}
-          <div className="row">
+          {/* <div className="row">
             <div className="col-md-6">
               <div className="mb-3">
                 <label htmlFor="scene_title" className="form-label subtext-btn-sm">
                   Scene Title
                 </label>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="scene_title"
-                  name="scene_title"
-                  value={currentDialogue.scene_title}
-                  onChange={handleInputChange}
-                  placeholder="Optional scene title"
-                />
+                <FormFieldWithLimit value={currentDialogue.scene_title} maxLength={100}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="scene_title"
+                    name="scene_title"
+                    value={currentDialogue.scene_title}
+                    onChange={handleInputChange}
+                    placeholder="Optional scene title"
+                  />
+                </FormFieldWithLimit>
               </div>
             </div>
             <div className="col-md-6">
@@ -350,18 +355,20 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
                 <label htmlFor="scene_description" className="form-label subtext-btn-sm">
                   Scene Description
                 </label>
-                <textarea
-                  className="form-control"
-                  id="scene_description"
-                  name="scene_description"
-                  rows={2}
-                  value={currentDialogue.scene_description}
-                  onChange={handleInputChange}
-                  placeholder="Optional scene description"
-                />
+                <FormFieldWithLimit value={currentDialogue.scene_description} maxLength={250}>
+                  <textarea
+                    className="form-control"
+                    id="scene_description"
+                    name="scene_description"
+                    rows={2}
+                    value={currentDialogue.scene_description}
+                    onChange={handleInputChange}
+                    placeholder="Optional scene description"
+                  />
+                </FormFieldWithLimit>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Camera Settings */}
           <div className="card bg-light mb-3">
@@ -577,7 +584,7 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
           <div className="alert alert-info">
             <i className="fas fa-info-circle me-2"></i>
             <strong>Tip:</strong> Good dialogue drives the story forward and reveals character. 
-            Make sure each dialogue serves a purpose and sounds natural for the character speaking.
+            <br />Camera settings dictate the camera angle and movement for each dialogue.
           </div>
         </div>
       </div>

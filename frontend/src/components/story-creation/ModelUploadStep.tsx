@@ -74,7 +74,7 @@ const ModelUploadStep: React.FC<ModelUploadStepProps> = ({
         <div className="col-12">
           <h4 className="subtext-btn mb-4">3D Model Upload & Preview</h4>
           <p className="subtext-btn-sm text-muted mb-4">
-            Upload a 3D model for your story and configure camera settings. This will be used in the preview and final story.
+            Upload the 3D model for your story. This is the model that will be used for the current season.
           </p>
         </div>
       </div>

@@ -1,0 +1,32 @@
+Refund Processed - Order #{{ order.id }}
+
+Hi {{ order.customer.first_name|default:order.customer.username }},
+
+This email confirms that your refund for the cancelled order has been successfully processed.
+
+Order Details:
+---------------
+Order #{{ order.id }}
+Order Date: {{ order.order_date|date:"F j, Y" }}
+Status: Cancelled
+
+Refund Details:
+---------------
+Refund Amount: ${{ refund_amount|floatformat:2 }}
+Refund Method: {{ refund_method|default:"Original payment method" }}
+Processing Time: 5-10 business days
+
+Items Refunded:
+--------------
+{% for item in order.orderitem_set.all %}
+  - {{ item.quantity }}x {{ item.product.title }} - ${{ item.product.get_discounted_price|floatformat:2 }}
+{% endfor %}
+
+Important: The refund will appear in your account within 5-10 business days, depending on your financial institution.
+
+If you have any questions about this refund, please contact our support team.
+
+View all orders: {{ site_url }}/product/orders/
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.
+

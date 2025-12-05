@@ -1,0 +1,20 @@
+New Collaboration Request
+
+Hello {{ studio.owner.first_name|default:studio.owner.username }},
+
+{{ request.requester.first_name|default:request.requester.username }} ({{ request.requester.email }}) has requested to collaborate on your studio "{{ studio.name }}".
+
+Requested Role: {{ request.get_role_display }}
+{% if request.message %}
+Message: {{ request.message }}
+{% endif %}
+
+Accept request: {{ accept_url }}
+Decline request: {{ decline_url }}
+
+You can also manage all collaboration requests from your studio dashboard.
+
+If you have any questions, please contact our support team.
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.
+

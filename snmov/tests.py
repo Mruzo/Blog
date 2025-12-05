@@ -219,10 +219,16 @@ class CartAPITestCase(TestCase):
         self.assertEqual(data['total_price'], 0)
 
     def test_add_item_to_cart(self):
-        """Test adding an item to cart via API"""
+        """Test adding an item to cart via API - should add 1 item when cart is empty"""
+        # Ensure cart is empty first
+        response = self.client.get('/api/cart/')
+        initial_data = response.json()
+        self.assertEqual(len(initial_data['cart_items']), 0, "Cart should be empty at start")
+        
+        # Add 1 item to empty cart
         response = self.client.post('/api/cart/add/', {
             'product_id': str(self.product1.uuid),
-            'quantity': 2
+            'quantity': 1
         }, content_type='application/json')
         
         self.assertEqual(response.status_code, 200)
@@ -230,12 +236,12 @@ class CartAPITestCase(TestCase):
         self.assertTrue(data['success'])
         self.assertIn('Added Test Product 1 to cart', data['message'])
         
-        # Verify cart data
+        # Verify cart data - should have exactly 1 item
         cart_data = data['cart']
         self.assertEqual(len(cart_data['cart_items']), 1)
         self.assertEqual(cart_data['cart_items'][0]['title'], 'Test Product 1')
-        self.assertEqual(cart_data['cart_items'][0]['quantity'], 2)
-        self.assertEqual(cart_data['total_price'], 20.00)
+        self.assertEqual(cart_data['cart_items'][0]['quantity'], 1, "Should add exactly 1 item when cart is empty")
+        self.assertEqual(cart_data['total_price'], 10.00)
 
     def test_add_unavailable_product_to_cart(self):
         """Test adding an unavailable product to cart"""
@@ -303,6 +309,60 @@ class CartAPITestCase(TestCase):
         self.assertEqual(len(data['cart_items']), 1)
         self.assertEqual(data['cart_items'][0]['quantity'], 3)  # 1 + 2
         self.assertEqual(data['total_price'], 30.00)  # 10 * 3
+
+    def test_add_one_item_at_a_time(self):
+        """Test adding 1 item at a time multiple times"""
+        # Add 1 item
+        response = self.client.post('/api/cart/add/', {
+            'product_id': str(self.product1.uuid),
+            'quantity': 1
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['cart']['cart_items'][0]['quantity'], 1)
+        
+        # Add 1 more item
+        response = self.client.post('/api/cart/add/', {
+            'product_id': str(self.product1.uuid),
+            'quantity': 1
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['cart']['cart_items'][0]['quantity'], 2)
+        
+        # Add 1 more item
+        response = self.client.post('/api/cart/add/', {
+            'product_id': str(self.product1.uuid),
+            'quantity': 1
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['cart']['cart_items'][0]['quantity'], 3)
+        
+        # Add 1 more item (should reach max of 4)
+        response = self.client.post('/api/cart/add/', {
+            'product_id': str(self.product1.uuid),
+            'quantity': 1
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['cart']['cart_items'][0]['quantity'], 4)
+        
+        # Try to add 1 more item (should fail - exceeds 4-item limit)
+        response = self.client.post('/api/cart/add/', {
+            'product_id': str(self.product1.uuid),
+            'quantity': 1
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data['success'])
+        self.assertIn('Maximum of 4 items', data['error'])
+        
+        # Verify cart still has 4 items
+        response = self.client.get('/api/cart/')
+        data = response.json()
+        self.assertEqual(len(data['cart_items']), 1)
+        self.assertEqual(data['cart_items'][0]['quantity'], 4)
 
     def test_update_cart_item_quantity(self):
         """Test updating cart item quantity"""

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StoryCreationData } from '../StoryCreationWizard';
+import FormFieldWithLimit from '../FormFieldWithLimit';
 
 interface StoryDetailsStepProps {
   data: StoryCreationData;
@@ -83,31 +84,54 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
 
   return (
     <div>
-      <div className="row">
-        <div className="col-12">
-          <h4 className="subtext-btn mb-4">Story Information</h4>
-        </div>
-      </div>
-
+ 
       <div className="row">
         <div className="col-md-6">
           <div className="mb-3">
             <label htmlFor="title" className="form-label subtext-btn-sm">
-              Story Title <span className="text-danger">*</span>
+              Title <span className="text-danger">*</span>
             </label>
-            <input
-              type="text"
-              className={`form-control ${errors.title ? 'is-invalid' : ''}`}
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              placeholder="Enter your story title"
-            />
+            <FormFieldWithLimit value={formData.title} maxLength={50}>
+              <input
+                type="text"
+                className={`form-control ${errors.title ? 'is-invalid' : ''}`}
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                placeholder="Story title"
+              />
+            </FormFieldWithLimit>
             {errors.title && <div className="invalid-feedback">{errors.title}</div>}
           </div>
 
-          <div className="mb-3">
+          
+        </div>
+
+        <div className="col-md-6">
+        <div className="mb-2">
+            <label htmlFor="description" className="form-label subtext-btn-sm">
+              Description <span className="text-danger">*</span>
+            </label>
+            <FormFieldWithLimit value={formData.description} maxLength={200}>
+              <textarea
+                className={`form-control ${errors.description ? 'is-invalid' : ''}`}
+                id="description"
+                name="description"
+                rows={6}
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Story plot, theme, and key elements"
+              />
+            </FormFieldWithLimit>
+            {errors.description && <div className="invalid-feedback">{errors.description}</div>}
+          </div>
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-12">
+        <div className="mb-2">
             <div className="form-check">
               <input
                 className="form-check-input"
@@ -127,32 +151,9 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
             </div>
           </div>
         </div>
-
-        <div className="col-md-6">
-        </div>
       </div>
 
-      <div className="row">
-        <div className="col-12">
-          <div className="mb-3">
-            <label htmlFor="description" className="form-label subtext-btn-sm">
-              Story Description <span className="text-danger">*</span>
-            </label>
-            <textarea
-              className={`form-control ${errors.description ? 'is-invalid' : ''}`}
-              id="description"
-              name="description"
-              rows={6}
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Detailed description of your story, including plot, themes, and key elements"
-            />
-            {errors.description && <div className="invalid-feedback">{errors.description}</div>}
-          </div>
-        </div>
-      </div>
-
-      <div className="row">
+      {/* <div className="row">
         <div className="col-12">
           <div className="alert alert-info">
             <i className="fas fa-info-circle me-2"></i>
@@ -160,7 +161,7 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
             Make sure to clearly define your target audience and genre to help with story categorization.
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import PageHeader from '../components/PageHeader';
@@ -67,66 +67,101 @@ const OrderDetail: React.FC = () => {
       
       setLoading(true);
       try {
-        // Replace with actual API call
-        const response = await new Promise<Order>((resolve) => 
-          setTimeout(() => resolve({
-            id: parseInt(orderId),
-            order_number: `ORD-2024-${orderId.padStart(3, '0')}`,
-            status: 'shipped',
-            total: 99.99,
-            subtotal: 89.99,
-            shipping_cost: 5.99,
-            tax: 4.01,
-            created_at: '2024-01-15T10:30:00Z',
-            updated_at: '2024-01-16T14:20:00Z',
-            tracking_number: '1Z999AA1234567890',
-            estimated_delivery: '2024-01-20T00:00:00Z',
-            shipping_address: {
-              first_name: 'Chris',
-              last_name: 'Creator',
-              address_line_1: '123 Main St',
-              address_line_2: 'Apt 4B',
-              city: 'New York',
-              state: 'NY',
-              postal_code: '10001',
-              country: 'USA',
-              phone: '+1 (555) 123-4567'
-            },
-            billing_address: {
-              first_name: 'Chris',
-              last_name: 'Creator',
-              address_line_1: '123 Main St',
-              address_line_2: 'Apt 4B',
-              city: 'New York',
-              state: 'NY',
-              postal_code: '10001',
-              country: 'USA',
-              phone: '+1 (555) 123-4567'
-            },
-            items: [
-              {
-                id: 1,
-                product_name: '3D Comic Model Pack',
-                quantity: 1,
-                price: 49.99,
-                total: 49.99,
-                product_image: '/api/placeholder/100/100'
-              },
-              {
-                id: 2,
-                product_name: 'Premium Sound Effects',
-                quantity: 2,
-                price: 25.00,
-                total: 50.00,
-                product_image: '/api/placeholder/100/100'
-              }
-            ]
-          }), 1000)
-        );
-        setOrder(response);
+        const token = localStorage.getItem('authToken');
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (token) {
+          headers['Authorization'] = `Token ${token}`;
+        }
+
+        const response = await fetch(`http://localhost:8000/api/orders/${orderId}/`, {
+          headers,
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('Order not found');
+          }
+          throw new Error(`Failed to load order: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        // Map backend response to frontend Order interface
+        const shippingAddress = data.shipping_address || {};
+        const items = (data.items || []).map((item: any) => ({
+          id: item.id,
+          product_name: item.product?.title || 'Unknown Product',
+          quantity: item.quantity,
+          price: parseFloat(item.price) || 0,
+          total: (parseFloat(item.price) || 0) * item.quantity,
+          product_image: item.product?.images?.[0]?.image || undefined,
+        }));
+
+        // Calculate totals
+        const subtotal = items.reduce((sum: number, item: OrderItem) => sum + item.total, 0);
+        const shipping_cost = parseFloat(data.shipping_cost) || 0;
+        // Tax calculation (if needed, otherwise 0)
+        const tax = 0; // Backend doesn't provide tax separately
+        const total = subtotal + shipping_cost + tax;
+
+        // Parse shipping address name if it's a single field
+        let first_name = '';
+        let last_name = '';
+        if (shippingAddress.full_name) {
+          const nameParts = shippingAddress.full_name.split(' ');
+          first_name = nameParts[0] || '';
+          last_name = nameParts.slice(1).join(' ') || '';
+        } else {
+          first_name = shippingAddress.first_name || '';
+          last_name = shippingAddress.last_name || '';
+        }
+
+        const mappedOrder: Order = {
+          id: data.id,
+          order_number: data.ref_code || `ORD-${data.id}`,
+          status: data.status?.toLowerCase() || 'pending',
+          total: total,
+          subtotal: subtotal,
+          shipping_cost: shipping_cost,
+          tax: tax,
+          created_at: data.ordered_date || data.start_date || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString(),
+          tracking_number: data.tracking_number || undefined,
+          estimated_delivery: undefined, // Backend doesn't provide this
+          shipping_address: {
+            first_name: first_name,
+            last_name: last_name,
+            address_line_1: shippingAddress.address_line_1 || shippingAddress.street_address || '',
+            address_line_2: shippingAddress.address_line_2 || shippingAddress.apartment_address || undefined,
+            city: shippingAddress.city || '',
+            state: shippingAddress.state || '',
+            postal_code: shippingAddress.postal_code || shippingAddress.zip || '',
+            country: shippingAddress.country || shippingAddress.country_code || '',
+            phone: shippingAddress.phone || undefined,
+          },
+          billing_address: {
+            // Use shipping address as billing address if no separate billing address
+            first_name: first_name,
+            last_name: last_name,
+            address_line_1: shippingAddress.address_line_1 || shippingAddress.street_address || '',
+            address_line_2: shippingAddress.address_line_2 || shippingAddress.apartment_address || undefined,
+            city: shippingAddress.city || '',
+            state: shippingAddress.state || '',
+            postal_code: shippingAddress.postal_code || shippingAddress.zip || '',
+            country: shippingAddress.country || shippingAddress.country_code || '',
+            phone: shippingAddress.phone || undefined,
+          },
+          items: items,
+        };
+
+        setOrder(mappedOrder);
       } catch (err) {
-        setError('Failed to load order details.');
-        setMessage('Failed to load order details.');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load order details.';
+        setError(errorMessage);
+        setMessage(errorMessage);
         setMessageType('danger');
         setShowMessage(true);
       } finally {
@@ -359,6 +394,11 @@ const OrderDetail: React.FC = () => {
 };
 
 export default OrderDetail;
+
+
+
+
+
 
 
 

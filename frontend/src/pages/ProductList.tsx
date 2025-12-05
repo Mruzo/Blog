@@ -34,7 +34,7 @@ const ProductList: React.FC<ProductListProps> = () => {
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
 
   useEffect(() => {
     fetchProducts();
@@ -57,13 +57,38 @@ const ProductList: React.FC<ProductListProps> = () => {
 
   const handleAddToCart = async (productId: string, quantity: number = 1) => {
     try {
+      // Check current cart quantity for this product
+      const existingItem = cartItems.find(item => item.uuid === productId);
+      const currentQuantity = existingItem ? existingItem.quantity : 0;
+      const newQuantity = currentQuantity + quantity;
+      
+      // Enforce maximum of 4 items per product
+      if (newQuantity > 4) {
+        const maxAllowed = 4 - currentQuantity;
+        if (maxAllowed <= 0) {
+          setMessage('Maximum of 4 items per product allowed. You already have 4 in your cart.');
+        } else {
+          setMessage(`Maximum of 4 items per product allowed. You can add ${maxAllowed} more.`);
+        }
+        setMessageType('warning');
+        setShowMessage(true);
+        return;
+      }
+      
       await addToCart(productId, quantity);
       setMessage('Product added to cart successfully!');
       setMessageType('success');
       setShowMessage(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error adding to cart:', err);
-      setMessage('Failed to add product to cart');
+      // Extract error message from API response
+      let errorMessage = 'Failed to add product to cart';
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+      setMessage(errorMessage);
       setMessageType('danger');
       setShowMessage(true);
     }
@@ -215,16 +240,40 @@ const ProductList: React.FC<ProductListProps> = () => {
                             </div>
 
                             <div className="col-auto">
-                            <button
-                              className="btn subtext-btn-sm shadow mb-0 bg-body-tertiary justify-content-center text-dark rounded-5 mt-1 p-1 add-to-cart-btn my-auto"
-                              data-product-id={product.uuid}
-                              data-quantity="1"
-                              style={{ backgroundColor: '#FFBC00' }}
-                              type="button"
-                              onClick={() => handleAddToCart(product.uuid, 1)}
-                            >
-                              Add to cart
-                            </button>
+                            {(() => {
+                              const existingItem = cartItems.find(item => item.uuid === product.uuid);
+                              const currentQuantity = existingItem ? existingItem.quantity : 0;
+                              const isMaxReached = currentQuantity >= 4;
+                              return (
+                                <button
+                                  className="btn subtext-btn-sm shadow mb-0 bg-body-tertiary justify-content-center text-dark rounded-5 mt-1 p-1 add-to-cart-btn my-auto"
+                                  data-product-id={product.uuid}
+                                  data-quantity="1"
+                                  style={{ 
+                                    backgroundColor: isMaxReached ? '#cccccc' : '#FFBC00', 
+                                    position: 'relative', 
+                                    zIndex: 10, 
+                                    touchAction: 'manipulation',
+                                    cursor: isMaxReached ? 'not-allowed' : 'pointer'
+                                  }}
+                                  type="button"
+                                  disabled={isMaxReached}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (!isMaxReached) {
+                                      handleAddToCart(product.uuid, 1);
+                                    }
+                                  }}
+                                  onTouchStart={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                  title={isMaxReached ? 'Maximum of 4 items per product' : 'Add to cart'}
+                                >
+                                  {isMaxReached ? 'Max (4)' : 'Add to cart'}
+                                </button>
+                              );
+                            })()}
                             </div>
                           </div>
                         </div>

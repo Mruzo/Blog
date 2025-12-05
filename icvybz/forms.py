@@ -60,9 +60,9 @@ class SeasonForm(forms.ModelForm):
             if gltf_file.size > 50 * 1024 * 1024:
                 raise forms.ValidationError("GLB/GLTF file size cannot exceed 50MB. Please optimize your model.")
             
-            # Check file extension
-            if not gltf_file.name.lower().endswith(('.glb', '.gltf')):
-                raise forms.ValidationError("Please upload a valid GLB or GLTF file.")
+            # Check file extension - only GLB files allowed
+            if not gltf_file.name.lower().endswith('.glb'):
+                raise forms.ValidationError("Please upload a valid GLB file (.glb only).")
         
         return gltf_file
     

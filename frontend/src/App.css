@@ -11,6 +11,12 @@
   font-style: italic;
 }
 
+/* GillSans font */
+@font-face {
+  font-family: 'gillsans';
+  src: local('Gill Sans'), url('./fonts/gillsansmt.ttf') format("truetype");
+}
+
 /* CSS Custom Properties for efficiency */
 :root {
   --font-primary: 'quicksand', sans-serif;
@@ -55,7 +61,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'varela', sans-serif;
   font-weight: 800;
   color: #414042;
-  letter-spacing: 1px;
+  letter-spacing: 0.6px;
 }
 
 h2 {
@@ -66,8 +72,8 @@ h2 {
 
 .landtext {
   font-family: 'gillsans', sans-serif;
-  font-size: 2rem;
-  font-weight: 960;
+  font-size: 4.5rem;
+  font-weight: 800; /* Normal weight - most fonts support this */
 }
 
 /* Removed unused font classes: .subtext, .subtext-md, .subtext-28 */
@@ -113,6 +119,29 @@ h2 {
   font-weight: 400;
 }
 
+/* Font family utility classes */
+.font-gillsans {
+  font-family: 'gillsans', sans-serif;
+}
+
+.font-quicksand {
+  font-family: 'quicksand', sans-serif;
+}
+
+.font-quicksand-italic {
+  font-family: 'quicksand', sans-serif;
+  font-style: italic;
+}
+
+/* Utility classes for common inline styles */
+.bg-inherit {
+  background-color: inherit;
+}
+
+.opacity-full {
+  opacity: 1;
+}
+
 /* Custom button styles */
 .btn-primary {
   background-color: #ffbc00;
@@ -131,12 +160,7 @@ h2 {
   box-shadow: 0 0 0 0.2rem rgba(255, 188, 0, 0.25);
 }
 
-/* Active navigation styles */
-.nav-btn.active {
-  color: #414042;
-  background: linear-gradient(0deg, #414042, rgba(0,0,0,0) 10%);
-  transition: opacity 0.3s ease;
-}
+/* Active navigation styles - consolidated below with enhanced transitions */
 
 /* Card styles */
 .card {
@@ -188,19 +212,8 @@ h2 {
   color: #0d6efd;
 }
 
-/* Ensure spinner text is properly hidden */
-.sr-only {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  padding: 0 !important;
-  margin: -1px !important;
-  overflow: hidden !important;
-  clip: rect(0, 0, 0, 0) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
-}
-
+/* Screen reader only / visually hidden utility - consolidated */
+.sr-only,
 .visually-hidden {
   position: absolute !important;
   width: 1px !important;
@@ -219,20 +232,9 @@ h2 {
   border-radius: 0.5rem;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .subtext-btn-sm {
-    font-size: 1rem;
-  }
-  
-  .landtext {
-    font-size: 1.5rem;
-  }
-  
-  .subtext {
-    font-size: 1.5rem;
-  }
-}
+/* ============================================
+   RESPONSIVE STYLES - MOBILE (max-width: 768px)
+   ============================================ */
 
 /* Custom border styles matching Django */
 .land-border {
@@ -270,86 +272,9 @@ h2 {
   max-width: none !important;
   margin: 0 4px !important;
   flex: 0 0 auto !important;
-}
-
-/* Mobile responsive navbar buttons - full width on mobile */
-@media (max-width: 768px) {
-  .navbar-buttons-container {
-    justify-content: space-between !important;
-    padding: 0 10px !important;
-  }
-
-  .navbar-buttons-container .nav-btn {
-    flex: 1 1 0% !important;
-    padding-left: 6px !important;
-    padding-right: 6px !important;
-    font-size: 1rem !important;
-    margin: 0 2px !important;
-  }
-
-  .navbar-buttons-container .nav-btn i {
-    margin-right: 2px !important;
-    font-size: 0.75rem !important;
-  }
-}
-
-@media (max-width: 576px) {
-  .navbar-buttons-container {
-    justify-content: space-between !important;
-    padding: 0 5px !important;
-  }
-
-  .navbar-buttons-container .nav-btn {
-    flex: 1 1 0% !important;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    font-size: 1rem !important;
-    margin: 0 1px !important;
-  }
-
-  .navbar-buttons-container .nav-btn i {
-    margin-right: 1px !important;
-    font-size: 0.7rem !important;
-  }
-}
-
-@media (max-width: 400px) {
-  .navbar-buttons-container {
-    justify-content: space-between !important;
-    padding: 0 2px !important;
-  }
-
-  .navbar-buttons-container .nav-btn {
-    flex: 1 1 0% !important;
-    padding-left: 2px !important;
-    padding-right: 2px !important;
-    font-size: 1rem !important;
-    margin: 0 1px !important;
-  }
-
-  .navbar-buttons-container .nav-btn i {
-    margin-right: 0 !important;
-    font-size: 0.65rem !important;
-  }
-}
-
-/* Force navbar buttons to never wrap - ultimate fallback */
-.navbar-buttons-container {
-  display: -webkit-box !important;
-  display: -ms-flexbox !important;
-  display: flex !important;
-  -webkit-box-orient: horizontal !important;
-  -webkit-box-direction: normal !important;
-  -ms-flex-direction: row !important;
-  flex-direction: row !important;
-  -ms-flex-wrap: nowrap !important;
-  flex-wrap: nowrap !important;
-  -webkit-box-pack: center !important;
-  -ms-flex-pack: center !important;
-  justify-content: center !important;
-  -webkit-box-align: center !important;
-  -ms-flex-align: center !important;
-  align-items: center !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  flex-basis: auto !important;
 }
 
 /* Product carousel styles */
@@ -383,38 +308,6 @@ h2 {
   border-color: #6c757d !important;
 }
 
-.navbar-buttons-container .nav-btn {
-  -webkit-box-flex: 0 !important;
-  -ms-flex: 0 0 auto !important;
-  flex: 0 0 auto !important;
-  -ms-flex-negative: 0 !important;
-  flex-shrink: 0 !important;
-  -ms-flex-positive: 0 !important;
-  flex-grow: 0 !important;
-  -ms-flex-preferred-size: auto !important;
-  flex-basis: auto !important;
-}
-
-@media (max-width: 768px) {
-  .navbar-buttons-container {
-    -webkit-box-pack: justify !important;
-    -ms-flex-pack: justify !important;
-    justify-content: space-between !important;
-  }
-
-  .navbar-buttons-container .nav-btn {
-    -webkit-box-flex: 1 !important;
-    -ms-flex: 1 1 0% !important;
-    flex: 1 1 0% !important;
-    -ms-flex-negative: 1 !important;
-    flex-shrink: 1 !important;
-    -ms-flex-positive: 1 !important;
-    flex-grow: 1 !important;
-    -ms-flex-preferred-size: 0% !important;
-    flex-basis: 0% !important;
-  }
-}
-
 /* Enhanced navbar button transitions */
 .nav-btn {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -445,9 +338,10 @@ h2 {
   box-shadow: 0 6px 12px rgba(255, 188, 0, 0.2);
 }
 
+/* Active navigation styles */
 .nav-btn.active {
   color: #414042;
-  background: linear-gradient(0deg, #414042, rgba(0,0,0,0) 10% );
+  background: linear-gradient(0deg, #414042, rgba(0,0,0,0) 10%);
   transition: opacity 0.3s ease;
 }
 
@@ -473,7 +367,7 @@ h2 {
   paint-order: stroke fill;
 }
 
-/* Profile navbar state visibility */
+/* Navbar state visibility controls - consolidated */
 #profile-navbar.navbar-state-profile {
   display: none !important;
   justify-content: center !important;
@@ -488,66 +382,10 @@ h2 {
   display: flex !important;
 }
 
-/* When default navbar is hidden */
 #default-navbar.navbar-state-default.hidden {
   display: none !important;
 }
 
-/* Profile navbar responsive styles */
-@media (max-width: 768px) {
-  #profile-navbar {
-    justify-content: space-between !important;
-    padding: 0 10px !important;
-  }
-}
-
-@media (max-width: 576px) {
-  #profile-navbar {
-    justify-content: space-between !important;
-    padding: 0 5px !important;
-  }
-}
-
-/* Ensure profile navbar buttons have same styling as default */
-#profile-navbar .nav-btn {
-  white-space: nowrap !important;
-  min-width: fit-content !important;
-  max-width: none !important;
-  margin: 0 4px !important;
-  flex: 0 0 auto !important;
-}
-
-/* Mobile responsive for profile navbar buttons */
-@media (max-width: 768px) {
-  #profile-navbar .nav-btn {
-    flex: 1 1 0% !important;
-    padding-left: 6px !important;
-    padding-right: 6px !important;
-    font-size: 1rem !important;
-    margin: 0 2px !important;
-  }
-
-  #profile-navbar .nav-btn i {
-    margin-right: 2px !important;
-    font-size: 0.75rem !important;
-  }
-}
-
-@media (max-width: 576px) {
-  #profile-navbar .nav-btn {
-    -webkit-box-flex: 1 !important;
-    -ms-flex: 1 1 0% !important;
-    flex: 1 1 0% !important;
-    -ms-flex-negative: 1 !important;
-    flex-shrink: 1 !important;
-    -ms-flex-positive: 1 !important;
-    flex-grow: 1 !important;
-    -ms-flex-preferred-size: 0% !important;
-    flex-basis: 0% !important;
-  }
-}
-
-/* Navbar state visibility controls */
 .navbar-state-default.hidden {
   display: none !important;
 }
@@ -562,6 +400,15 @@ h2 {
 
 .navbar-state-profile.show {
   display: flex !important;
+}
+
+/* Ensure profile navbar buttons have same styling as default */
+#profile-navbar .nav-btn {
+  white-space: nowrap !important;
+  min-width: fit-content !important;
+  max-width: none !important;
+  margin: 0 4px !important;
+  flex: 0 0 auto !important;
 }
 
 .bd-light {
@@ -823,69 +670,7 @@ input[type="range"].modern-slider:focus {
   outline: none;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .modern-card {
-    padding: 0.2rem;
-  }
-  
-  .modern-card-header {
-    padding: 0.7rem 0.7rem 0.3rem 0.7rem;
-    font-size: 1em;
-  }
-  
-  .modern-card-title {
-    font-size: 1em;
-  }
-  
-  .modern-card-body {
-    padding: 0.7rem 0.7rem 0.5rem 0.7rem;
-    gap: 0.5rem 0.5rem;
-    font-size: 0.95em;
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  .section-header {
-    font-size: 0.9em;
-    margin-bottom: 0.8rem;
-  }
-  
-  .slider-row {
-    gap: 0.3rem;
-  }
-  
-  .value-badge {
-    min-width: 28px;
-    font-size: 0.85em;
-    padding: 1px 5px;
-    margin-left: 0.2rem;
-  }
-  
-  .current-values-box {
-    padding: 0.7rem;
-    font-size: 0.85em;
-  }
-  
-  input[type="range"].modern-slider {
-    height: 1.2em;
-    margin: 0.2em 0;
-  }
-  
-  input[type="range"].modern-slider::-webkit-slider-thumb {
-    width: 16px;
-    height: 16px;
-  }
-  
-  input[type="range"].modern-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-  }
-  
-  input[type="range"].modern-slider::-ms-thumb {
-    width: 16px;
-    height: 16px;
-  }
-}
+/* Modern card mobile styles moved to consolidated section below */
 
 /* Story Preview Editor Styles */
 .story-preview-editor {
@@ -973,8 +758,115 @@ input[type="range"].modern-slider:focus {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-/* Responsive Design for Preview Editor */
+/* Preview editor mobile styles moved to consolidated section below */
+
+/* ============================================
+   CONSOLIDATED MOBILE STYLES (max-width: 768px)
+   ============================================ */
+
 @media (max-width: 768px) {
+  /* Typography */
+  .subtext-btn-sm {
+    font-size: 1rem;
+  }
+  
+  .landtext {
+    font-size: 2.5rem;
+  }
+  
+  .subtext {
+    font-size: 1.4rem;
+  }
+
+  .subtext-sm {
+    font-size: 1rem;
+  }
+
+  /* Navbar Buttons Container - Default and Profile */
+  .navbar-buttons-container,
+  #profile-navbar {
+    justify-content: space-between !important;
+    padding: 0 10px !important;
+  }
+
+  .navbar-buttons-container .nav-btn,
+  #profile-navbar .nav-btn {
+    flex: 1 1 0% !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    font-size: 1rem !important;
+    margin: 0 2px !important;
+  }
+
+  .navbar-buttons-container .nav-btn i,
+  #profile-navbar .nav-btn i {
+    margin-right: 2px !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Modern Card Styles */
+  .modern-card {
+    padding: 0.2rem;
+  }
+  
+  .modern-card-header {
+    padding: 0.7rem 0.7rem 0.3rem 0.7rem;
+    font-size: 1em;
+  }
+  
+  .modern-card-title {
+    font-size: 1em;
+  }
+  
+  .modern-card-body {
+    padding: 0.7rem 0.7rem 0.5rem 0.7rem;
+    gap: 0.5rem 0.5rem;
+    font-size: 0.95em;
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .section-header {
+    font-size: 0.9em;
+    margin-bottom: 0.8rem;
+  }
+  
+  .slider-row {
+    gap: 0.3rem;
+  }
+  
+  .value-badge {
+    min-width: 28px;
+    font-size: 0.85em;
+    padding: 1px 5px;
+    margin-left: 0.2rem;
+  }
+  
+  .current-values-box {
+    padding: 0.7rem;
+    font-size: 0.85em;
+  }
+  
+  input[type="range"].modern-slider {
+    height: 1.2em;
+    margin: 0.2em 0;
+  }
+  
+  input[type="range"].modern-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  input[type="range"].modern-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  input[type="range"].modern-slider::-ms-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Story Preview Editor */
   .comic-navigation {
     padding: 0.5rem;
   }
@@ -996,4 +888,116 @@ input[type="range"].modern-slider:focus {
   .dialogue-display .dialogue-text {
     font-size: 1rem;
   }
+}
+
+/* ============================================
+   SMALL MOBILE STYLES (max-width: 576px)
+   ============================================ */
+
+@media (max-width: 576px) {
+  /* Navbar Buttons - Smaller padding for very small screens */
+  .navbar-buttons-container,
+  #profile-navbar {
+    padding: 0 5px !important;
+  }
+
+  .navbar-buttons-container .nav-btn,
+  #profile-navbar .nav-btn {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    margin: 0 1px !important;
+  }
+
+  .navbar-buttons-container .nav-btn i,
+  #profile-navbar .nav-btn i {
+    margin-right: 1px !important;
+    font-size: 0.7rem !important;
+  }
+}
+
+/* ============================================
+   EXTRA SMALL MOBILE STYLES (max-width: 400px)
+   ============================================ */
+
+@media (max-width: 400px) {
+  /* Navbar Buttons - Minimal padding for smallest screens */
+  .navbar-buttons-container,
+  #profile-navbar {
+    padding: 0 2px !important;
+  }
+
+  .navbar-buttons-container .nav-btn,
+  #profile-navbar .nav-btn {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    margin: 0 1px !important;
+  }
+
+  .navbar-buttons-container .nav-btn i,
+  #profile-navbar .nav-btn i {
+    margin-right: 0 !important;
+    font-size: 0.65rem !important;
+  }
+}
+
+/* ============================================
+   STEP INDICATOR RESPONSIVE STYLES
+   ============================================ */
+
+/* Mobile: 40% smaller step circles */
+@media (max-width: 768px) {
+  .step-circle {
+    width: 30px !important; /* 50px * 0.6 = 30px */
+    height: 30px !important;
+    font-size: 11px !important; /* 18px * 0.6 = 10.8px, rounded to 11px */
+    border-width: 2px !important; /* 3px * 0.6 = 1.8px, rounded to 2px */
+  }
+  
+  .step-circle-icon {
+    font-size: 12px !important; /* 20px * 0.6 = 12px */
+  }
+  
+  /* Adjust connecting lines for smaller circles */
+  .step-line {
+    top: 15px !important; /* 30px / 2 = 15px (half of circle height) */
+    left: calc(50% + 15px) !important; /* Adjusted for 30px circle */
+    width: calc(100% - 30px) !important; /* Adjusted for 30px circle */
+    height: 2px !important; /* 3px * 0.6 = 1.8px, rounded to 2px */
+  }
+  
+  /* Adjust progress bar background */
+  .step-progress-bg {
+    top: 15px !important;
+    left: 15px !important;
+    right: 15px !important;
+    height: 2px !important;
+  }
+  
+  /* Step label font size for mobile/tablet */
+  .step-label {
+    font-size: 10px !important;
+  }
+}
+
+/* ============================================
+   DESKTOP STYLES (min-width: 992px)
+   ============================================ */
+
+@media (min-width: 992px) {
+  /* Step label font size for desktop */
+  .step-label {
+    font-size: 14px !important;
+  }
+}
+
+/* Share Button Hover Effects - Match Django template */
+.share-btn:hover {
+  background-color: #000000 !important;
+  border-color: #000000 !important;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.share-btn:hover i {
+  color: #ffffff !important;
 }

@@ -62,7 +62,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
     <div
       className={`toast show position-fixed ${isVisible ? 'show' : ''}`}
       style={{
-        top: '20px',
+        top: '120px', // Position below navbar (navbar ~60px + nav buttons ~50px = ~110px, add small margin)
         right: '20px',
         zIndex: 9999,
         minWidth: '300px',

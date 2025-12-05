@@ -3,7 +3,10 @@ from .api_views import (
     ProductListView, ProductDetailView, get_cart, add_to_cart,
     update_cart_item, remove_from_cart, clear_cart,
     OrderListView, OrderDetailView, user_profile, check_auth,
-    checkout, get_shipping_rates, select_shipping_rate, payment_success
+    checkout, get_shipping_rates, select_shipping_rate, payment_success,
+    contact_form, get_saved_addresses, save_address, delete_saved_address,
+    set_default_address, subscribe_newsletter, unsubscribe_newsletter,
+    get_newsletter_subscription, export_user_data, delete_user_data
 )
 
 app_name = 'api'
@@ -33,4 +36,22 @@ urlpatterns = [
     path('orders/<int:order_id>/shipping/', get_shipping_rates, name='shipping-rates'),
     path('orders/<int:order_id>/select-shipping/', select_shipping_rate, name='select-shipping'),
     path('payment/success/', payment_success, name='payment-success'),
+    
+    # Contact form endpoint
+    path('contact/', contact_form, name='contact-form'),
+    
+    # High Priority: Saved addresses endpoints
+    path('addresses/', get_saved_addresses, name='saved-addresses'),
+    path('addresses/save/', save_address, name='save-address'),
+    path('addresses/<int:address_id>/delete/', delete_saved_address, name='delete-address'),
+    path('addresses/<int:address_id>/set-default/', set_default_address, name='set-default-address'),
+    
+    # Newsletter subscription endpoints
+    path('newsletter/subscribe/', subscribe_newsletter, name='newsletter-subscribe'),
+    path('newsletter/unsubscribe/<str:token>/', unsubscribe_newsletter, name='newsletter-unsubscribe'),
+    path('newsletter/status/', get_newsletter_subscription, name='newsletter-status'),
+    
+    # GDPR endpoints
+    path('gdpr/export/', export_user_data, name='gdpr-export'),
+    path('gdpr/delete/', delete_user_data, name='gdpr-delete'),
 ]

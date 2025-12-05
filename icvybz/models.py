@@ -40,6 +40,7 @@ class Season(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     release_date = models.DateField()
+    is_public = models.BooleanField(default=False, help_text="Make this season visible to other users (requires story to also be public)")
     model_gltf = models.FileField(upload_to='models/', null=True, blank=True)
     model_usdz = models.FileField(upload_to='models/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="Timestamp when record was created. Nullable for imports from other Django apps.")
@@ -186,6 +187,7 @@ class Dialogue(models.Model):
     ]
 
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='dialogues')  # Link to Episode
+    pov = models.ForeignKey(POV, on_delete=models.CASCADE, related_name='dialogues', null=True, blank=True)
     character = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='dialogues', null=True, blank=True)
     text = models.TextField()
     order = models.PositiveIntegerField()  # Order in which dialogue appears within the episode
@@ -213,7 +215,13 @@ class Dialogue(models.Model):
         # Only apply camera preset if shot_type is selected AND no manual camera settings exist
         if self.shot_type and not (self.camera_orbit and self.camera_target and self.rotation):
             # Get the speaking character's position
-            speaking_char = self.character.name
+            # Prefer POV character, fallback to character field
+            if self.pov and self.pov.character:
+                speaking_char = self.pov.character.name
+            elif self.character:
+                speaking_char = self.character.name
+            else:
+                speaking_char = 'Unknown'
             
             # Define character positions and their corresponding camera orbits
             char_positions = {
@@ -287,11 +295,19 @@ class Dialogue(models.Model):
             })
             
             # Use POV head position for camera target
-            head_pos = {
-                'x': self.pov.head_x,
-                'y': self.pov.head_y,
-                'z': self.pov.head_z
-            }
+            if self.pov:
+                head_pos = {
+                    'x': self.pov.head_x,
+                    'y': self.pov.head_y,
+                    'z': self.pov.head_z
+                }
+            else:
+                # Fallback to default head position if POV is not set
+                head_pos = {
+                    'x': 0.0,
+                    'y': 1.6,
+                    'z': 0.0
+                }
             
             # Calculate camera position based on shot type and character position
             presets = {
@@ -444,6 +460,7 @@ class StudioCollaborator(models.Model):
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
     joined_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    removed_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when collaborator was removed")
 
     class Meta:
         app_label = 'icvybz'
@@ -452,6 +469,108 @@ class StudioCollaborator(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.role} in {self.studio.name}"
+
+
+class StudioCollaborationRequest(models.Model):
+    """Requests from users to collaborate on a studio"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+    ]
+    
+    studio = models.ForeignKey(Studio, on_delete=models.CASCADE, related_name='collaboration_requests')
+    requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='studio_collaboration_requests')
+    role = models.CharField(max_length=50, choices=StudioCollaborator.ROLE_CHOICES, default='writer')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    message = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        app_label = 'icvybz'
+        unique_together = ['studio', 'requester']
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['studio', 'status']),
+            models.Index(fields=['requester', 'status']),
+        ]
+    
+    def accept(self):
+        """Accept the collaboration request and create a StudioCollaborator"""
+        if self.status == 'pending':
+            # Check if collaborator already exists
+            collaborator, created = StudioCollaborator.objects.get_or_create(
+                studio=self.studio,
+                user=self.requester,
+                defaults={
+                    'role': self.role,
+                    'is_active': True
+                }
+            )
+            
+            # Update if already exists
+            if not created:
+                collaborator.role = self.role
+                collaborator.is_active = True
+                collaborator.save()
+            
+            self.status = 'accepted'
+            self.save()
+            return True
+        return False
+    
+    def decline(self):
+        """Decline the collaboration request"""
+        if self.status == 'pending':
+            self.status = 'declined'
+            self.save()
+            return True
+        return False
+    
+    def send_notification_email(self):
+        """Send email notification to studio owner about the collaboration request"""
+        from django.contrib.sites.models import Site
+        
+        subject = f"New Collaboration Request for {self.studio.name}"
+        
+        # Get site URL
+        current_site = Site.objects.get_current()
+        site_url = f"https://{current_site.domain}"
+        frontend_url = getattr(settings, 'FRONTEND_URL', site_url)
+        
+        # Generate URLs
+        accept_url = f"{frontend_url}/immersivecomics/studio/{self.studio.id}/?request_id={self.id}&action=accept"
+        decline_url = f"{frontend_url}/immersivecomics/studio/{self.studio.id}/?request_id={self.id}&action=decline"
+        
+        context = {
+            'request': self,
+            'studio': self.studio,
+            'site_url': site_url,
+            'frontend_url': frontend_url,
+            'accept_url': accept_url,
+            'decline_url': decline_url,
+        }
+        
+        try:
+            html_message = render_to_string('emails/studio_collaboration_request.html', context)
+            plain_message = render_to_string('emails/studio_collaboration_request.txt', context)
+            
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[self.studio.owner.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            return True
+        except Exception as e:
+            print(f"Failed to send collaboration request notification email: {e}")
+            return False
+    
+    def __str__(self):
+        return f"{self.requester.username} -> {self.studio.name} ({self.status})"
 
 
 class StoryCollaborator(models.Model):
@@ -636,46 +755,40 @@ class CollaborationInvite(models.Model):
         return timezone.now() > self.expires_at
     
     def send_invitation_email(self):
-        """Send invitation email to the invitee"""
-        if self.invitee_user:
-            # User exists on platform
-            subject = f"Collaboration Invitation: {self.story.title}"
-            message = f"""
-            Hello {self.invitee_user.first_name or self.invitee_user.username},
-            
-            {self.inviter.first_name or self.inviter.username} has invited you to collaborate on "{self.story.title}".
-            
-            Role: {self.get_role_display()}
-            {f'Message: {self.message}' if self.message else ''}
-            
-            Click here to accept: {getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/immersivecomics/story/{self.story.id}/collaborators/
-            
-            This invitation expires on {self.expires_at.strftime('%B %d, %Y at %I:%M %p')}.
-            """
-        else:
-            # External user
-            subject = f"Join {getattr(settings, 'SITE_NAME', 'VYBZ Platform')} - Collaboration Invitation"
-            message = f"""
-            Hello,
-            
-            {self.inviter.first_name or self.inviter.username} has invited you to collaborate on "{self.story.title}" on {getattr(settings, 'SITE_NAME', 'VYBZ Platform')}.
-            
-            Role: {self.get_role_display()}
-            {f'Message: {self.message}' if self.message else ''}
-            
-            To accept this invitation, please:
-            1. Create an account at {getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/register/
-            2. Then visit: {getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/immersivecomics/story/{self.story.id}/collaborators/
-            
-            This invitation expires on {self.expires_at.strftime('%B %d, %Y at %I:%M %p')}.
-            """
+        """Send invitation email to the invitee using email templates"""
+        from django.template.loader import render_to_string
+        from django.urls import reverse
+        
+        subject = f"Collaboration Invitation: {self.story.title}"
+        
+        # Get site URL
+        from django.contrib.sites.models import Site
+        current_site = Site.objects.get_current()
+        site_url = f"https://{current_site.domain}"
+        frontend_url = getattr(settings, 'FRONTEND_URL', site_url)
+        
+        # Generate URLs
+        accept_url = f"{frontend_url}/immersivecomics/story/{self.story.id}/collaborators/?invite_id={self.id}&action=accept"
+        decline_url = f"{frontend_url}/immersivecomics/story/{self.story.id}/collaborators/?invite_id={self.id}&action=decline"
+        
+        context = {
+            'invite': self,
+            'site_url': site_url,
+            'frontend_url': frontend_url,
+            'accept_url': accept_url,
+            'decline_url': decline_url,
+        }
         
         try:
+            html_message = render_to_string('emails/collaboration_invitation.html', context)
+            plain_message = render_to_string('emails/collaboration_invitation.txt', context)
+            
             send_mail(
                 subject=subject,
-                message=message,
+                message=plain_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[self.invitee_email],
+                html_message=html_message,
                 fail_silently=False,
             )
             return True
@@ -688,6 +801,8 @@ class CollaborationInvite(models.Model):
         if self.status == 'pending' and not self.is_expired():
             self.status = 'accepted'
             self.save()
+            # Send notification email to inviter
+            self.send_acceptance_notification()
             return True
         return False
     
@@ -696,8 +811,88 @@ class CollaborationInvite(models.Model):
         if self.status == 'pending':
             self.status = 'declined'
             self.save()
+            # Send notification email to inviter
+            self.send_decline_notification()
             return True
         return False
+    
+    def send_acceptance_notification(self):
+        """Send email notification to inviter when invitation is accepted"""
+        from django.template.loader import render_to_string
+        from django.contrib.sites.models import Site
+        
+        subject = f"Collaboration Invitation Accepted - {self.story.title}"
+        
+        # Get site URL
+        current_site = Site.objects.get_current()
+        site_url = f"https://{current_site.domain}"
+        frontend_url = getattr(settings, 'FRONTEND_URL', site_url)
+        
+        # Generate story URL
+        story_url = f"{frontend_url}/immersivecomics/story/{self.story.id}/"
+        
+        context = {
+            'invite': self,
+            'site_url': site_url,
+            'frontend_url': frontend_url,
+            'story_url': story_url,
+        }
+        
+        try:
+            html_message = render_to_string('emails/collaboration_accepted.html', context)
+            plain_message = render_to_string('emails/collaboration_accepted.txt', context)
+            
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[self.inviter.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            return True
+        except Exception as e:
+            print(f"Failed to send acceptance notification email: {e}")
+            return False
+    
+    def send_decline_notification(self):
+        """Send email notification to inviter when invitation is declined"""
+        from django.template.loader import render_to_string
+        from django.contrib.sites.models import Site
+        
+        subject = f"Collaboration Invitation Declined - {self.story.title}"
+        
+        # Get site URL
+        current_site = Site.objects.get_current()
+        site_url = f"https://{current_site.domain}"
+        frontend_url = getattr(settings, 'FRONTEND_URL', site_url)
+        
+        # Generate story URL
+        story_url = f"{frontend_url}/immersivecomics/story/{self.story.id}/"
+        
+        context = {
+            'invite': self,
+            'site_url': site_url,
+            'frontend_url': frontend_url,
+            'story_url': story_url,
+        }
+        
+        try:
+            html_message = render_to_string('emails/collaboration_declined.html', context)
+            plain_message = render_to_string('emails/collaboration_declined.txt', context)
+            
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[self.inviter.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            return True
+        except Exception as e:
+            print(f"Failed to send decline notification email: {e}")
+            return False
     
     def __str__(self):
         return f"{self.inviter.username} -> {self.invitee_email} ({self.story.title})"

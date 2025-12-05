@@ -13,9 +13,12 @@ import os
 from datetime import datetime
 import re
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.urls import reverse
 from .models import Character, Intersection
+from django.utils import timezone
+from django.contrib.sites.models import Site
+from django.conf import settings
 
 
 class ComicView(ListView):
@@ -62,6 +65,15 @@ class EpisodeDetailView(DetailView):
             episode.increment_view()
             # Log traffic source
             log_traffic_source(request, episode)
+            # Clear cache for episodes list to reflect updated view count
+            from django.core.cache import cache
+            season_id = episode.season.id
+            cache.delete(f"episodes_public_{season_id}")
+            # Also clear private cache for story owner
+            if episode.season.comic.user:
+                cache.delete(f"episodes_{season_id}_{episode.season.comic.user.id}")
+                # Clear user stories cache so total_views updates in My Studio
+                cache.delete(f"user_comics_{episode.season.comic.user.id}")
         
         return super().get(request, *args, **kwargs)
 
@@ -616,7 +628,7 @@ def detect_environment(request):
     
     return 'development' if any(dev_indicators) else 'production'
 
-def log_share_click(request, platform, episode_id):
+def log_share_click(request, platform, content_id, content_type='episode'):
     """Log share button clicks to JSON file with environment detection"""
     environment = detect_environment(request)
     log_dir = os.path.join(os.path.dirname(__file__), 'logs')
@@ -640,7 +652,9 @@ def log_share_click(request, platform, episode_id):
         'timestamp': datetime.now().isoformat(),
         'environment': environment,
         'platform': platform,
-        'episode_id': episode_id,
+        'content_type': content_type,
+        'episode_id': content_id if content_type == 'episode' else None,
+        'story_id': content_id if content_type == 'story' else None,
         'ip_address': get_client_ip(request),
         'user_agent': request.META.get('HTTP_USER_AGENT', ''),
         'referrer': request.META.get('HTTP_REFERER', ''),
@@ -771,11 +785,19 @@ def track_share_click(request):
         data = json.loads(request.body)
         platform = data.get('platform')
         episode_id = data.get('episode_id')
+        story_id = data.get('story_id')
         
-        if not platform or not episode_id:
-            return JsonResponse({'error': 'Missing platform or episode_id'}, status=400)
+        if not platform:
+            return JsonResponse({'error': 'Missing platform'}, status=400)
         
-        log_share_click(request, platform, episode_id)
+        # Accept either episode_id or story_id
+        if not episode_id and not story_id:
+            return JsonResponse({'error': 'Missing episode_id or story_id'}, status=400)
+        
+        # Use episode_id if provided, otherwise use story_id (for story-level tracking)
+        content_id = episode_id if episode_id else story_id
+        content_type = 'episode' if episode_id else 'story'
+        log_share_click(request, platform, content_id, content_type)
         return JsonResponse({'success': True})
         
     except json.JSONDecodeError:
@@ -1084,8 +1106,8 @@ class StudioListView(ListView):
     
     def get_queryset(self):
         return Studio.objects.filter(is_public=True).prefetch_related('collaborators__user').annotate(
-            collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
-            stories_count=Count('stories', filter=Q(stories__is_public=True))
+            annotated_collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
+            annotated_stories_count=Count('owner__comics', filter=Q(owner__comics__is_public=True))
         ).order_by('-created_at')
     
     def get_context_data(self, **kwargs):
@@ -1104,10 +1126,10 @@ class StudioDetailView(DetailView):
     def get_queryset(self):
         return Studio.objects.filter(is_public=True).prefetch_related(
             'collaborators__user',
-            'stories__collaborators__user'
+            'owner__comics__collaborators__user'
         ).annotate(
-            collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
-            stories_count=Count('stories', filter=Q(stories__is_public=True))
+            annotated_collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
+            annotated_stories_count=Count('owner__comics', filter=Q(owner__comics__is_public=True))
         )
     
     def get_context_data(self, **kwargs):
@@ -1275,39 +1297,70 @@ class AudioTrackDeleteView(LoginRequiredMixin, DeleteView):
 @require_http_methods(["GET"])
 def studio_list_api(request):
     """API endpoint for studio list"""
-    studios = Studio.objects.filter(is_public=True).prefetch_related('collaborators__user').annotate(
-        collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
-        stories_count=Count('stories', filter=Q(stories__is_public=True))
+    from django.db.models import Prefetch
+    
+    # Prefetch active collaborators with user data
+    active_collaborators_prefetch = Prefetch(
+        'collaborators',
+        queryset=StudioCollaborator.objects.filter(is_active=True).select_related('user'),
+        to_attr='prefetched_active_collaborators'
+    )
+    
+    # Get studios with optimized queries - use annotation to count stories per owner (avoids N+1)
+    # Access comics through owner relationship: owner__comics (related_name='comics' on Comic.user)
+    # Use different annotation names to avoid conflict with model properties
+    studios = Studio.objects.filter(is_public=True).select_related('owner').prefetch_related(active_collaborators_prefetch).annotate(
+        annotated_collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
+        annotated_stories_count=Count('owner__comics', filter=Q(owner__comics__is_public=True))
     ).order_by('-created_at')
     
     studios_data = []
     for studio in studios:
+        # Get active collaborators from prefetched data
+        collaborators_data = []
+        if hasattr(studio, 'prefetched_active_collaborators'):
+            for collab in studio.prefetched_active_collaborators:
+                if collab.user:  # Ensure user exists
+                    collaborators_data.append({
+                        'id': collab.id,
+                        'username': collab.user.username,
+                        'first_name': collab.user.first_name or '',
+                        'last_name': collab.user.last_name or '',
+                        'role': collab.role
+                    })
+        else:
+            # Fallback if prefetch didn't work
+            for collab in studio.collaborators.filter(is_active=True).select_related('user'):
+                if collab.user:
+                    collaborators_data.append({
+                        'id': collab.id,
+                        'username': collab.user.username,
+                        'first_name': collab.user.first_name or '',
+                        'last_name': collab.user.last_name or '',
+                        'role': collab.role
+                    })
+        
+        # Use annotated counts (no additional query needed)
+        stories_count = getattr(studio, 'annotated_stories_count', 0) or 0
+        collaborators_count = getattr(studio, 'annotated_collaborators_count', len(collaborators_data)) or 0
+        
         studios_data.append({
             'id': studio.id,
             'name': studio.name,
-            'description': studio.description,
+            'description': studio.description or '',
             'owner': {
                 'id': studio.owner.id,
                 'username': studio.owner.username,
-                'first_name': studio.owner.first_name,
-                'last_name': studio.owner.last_name
+                'first_name': studio.owner.first_name or '',
+                'last_name': studio.owner.last_name or ''
             },
-            'collaborators': [
-                {
-                    'id': collab.id,
-                    'username': collab.user.username,
-                    'first_name': collab.user.first_name,
-                    'last_name': collab.user.last_name,
-                    'role': collab.role
-                }
-                for collab in studio.collaborators.filter(is_active=True)
-            ],
-            'stories_count': studio.stories_count,
-            'collaborators_count': studio.collaborators_count,
-            'created_at': studio.created_at.isoformat(),
-            'updated_at': studio.updated_at.isoformat(),
+            'collaborators': collaborators_data,
+            'stories_count': stories_count,
+            'collaborators_count': collaborators_count,
+            'created_at': studio.created_at.isoformat() if studio.created_at else '',
+            'updated_at': studio.updated_at.isoformat() if studio.updated_at else '',
             'is_public': studio.is_public,
-            'avatar_url': studio.avatar_url
+            'avatar_url': studio.avatar_url or ''
         })
     
     return JsonResponse({'studios': studios_data})
@@ -1339,7 +1392,8 @@ def my_studio_api(request):
         'seasons__episodes'
     ).annotate(
         seasons_count=Count('seasons'),
-        episodes_count=Count('seasons__episodes')
+        episodes_count=Count('seasons__episodes'),
+        total_views=Sum('seasons__episodes__view_count', default=0)
     ).distinct()
     
     stories_data = []
@@ -1363,7 +1417,8 @@ def my_studio_api(request):
                 for collab in story.collaborators.filter(is_active=True)
             ],
             'seasons_count': story.seasons_count,
-            'episodes_count': story.episodes_count
+            'episodes_count': story.episodes_count,
+            'total_views': story.total_views or 0
         })
     
     studio_data = {
@@ -1392,5 +1447,756 @@ def my_studio_api(request):
     }
     
     return JsonResponse({'studio': studio_data})
+
+
+def preview_collaboration_email(request):
+    """Preview the collaboration invitation email template with sample data"""
+    from django.contrib.auth.models import User
+    from .models import CollaborationInvite, Comic
+    
+    # Create mock data for preview
+    class MockInvite:
+        def __init__(self):
+            self.id = '12345678-1234-1234-1234-123456789012'
+            self.invitee_user = type('obj', (object,), {
+                'first_name': 'Jane',
+                'username': 'jane_doe'
+            })()
+            self.inviter = type('obj', (object,), {
+                'first_name': 'John',
+                'username': 'john_smith'
+            })()
+            self.story = type('obj', (object,), {
+                'title': 'The Amazing Adventure',
+                'id': 1
+            })()
+            self.role = 'editor'
+            self.message = 'I would love to have you collaborate on this story! Your expertise would be invaluable.'
+            self.expires_at = timezone.now() + timezone.timedelta(days=7)
+        
+        def get_role_display(self):
+            return 'Editor'
+    
+    # Get site URL
+    current_site = Site.objects.get_current()
+    site_url = f"https://{current_site.domain}"
+    frontend_url = getattr(settings, 'FRONTEND_URL', site_url)
+    
+    # Generate URLs
+    mock_invite = MockInvite()
+    accept_url = f"{frontend_url}/immersivecomics/story/{mock_invite.story.id}/collaborators/?invite_id={mock_invite.id}&action=accept"
+    decline_url = f"{frontend_url}/immersivecomics/story/{mock_invite.story.id}/collaborators/?invite_id={mock_invite.id}&action=decline"
+    
+    context = {
+        'invite': mock_invite,
+        'site_url': site_url,
+        'frontend_url': frontend_url,
+        'accept_url': accept_url,
+        'decline_url': decline_url,
+    }
+    
+    return render(request, 'emails/collaboration_invitation.html', context)
+
+
+@staff_member_required
+def preview_all_emails(request):
+    """
+    Development-only view to preview all email templates in a carousel.
+    Only accessible when DEBUG=True or in development environment.
+    """
+    # Check if in development mode
+    if not settings.DEBUG:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Email preview is only available in development mode.")
+    
+    from django.contrib.auth.models import User
+    from django.template.loader import render_to_string
+    from decimal import Decimal
+    from snmov.models import Product, Order, OrderItem, ShippingAddress, ProductNotification
+    
+    current_site = Site.objects.get_current()
+    site_url = f"https://{current_site.domain}"
+    frontend_url = getattr(settings, 'FRONTEND_URL', site_url)
+    
+    # Create mock user
+    mock_user = type('obj', (object,), {
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'johndoe',
+        'email': 'john.doe@example.com'
+    })()
+    
+    # Create proper product class with method
+    class MockProduct:
+        def __init__(self):
+            self.title = 'Sample Product'
+            self.description = 'This is a sample product description'
+            self.price = Decimal('29.99')
+            self.discount_percentage = Decimal('10.00')
+            self.stock = 5
+            self.uuid = '12345678-1234-1234-1234-123456789012'
+        
+        def get_discounted_price(self):
+            return self.price * (1 - self.discount_percentage / 100)
+    
+    mock_product = MockProduct()
+    
+    # Create mock order item with proper product
+    mock_order_item = type('obj', (object,), {
+        'product': mock_product,
+        'quantity': 2,
+        'price': Decimal('26.99')  # discounted price
+    })()
+    
+    # Create a proper queryset-like object for orderitem_set
+    class MockOrderItemSet:
+        def __init__(self, items):
+            self.items = items
+        
+        def all(self):
+            return self.items
+    
+    mock_shipping_address = type('obj', (object,), {
+        'full_name': 'John Doe',
+        'address_line_1': '123 Main Street',
+        'address_line_2': 'Apt 4B',
+        'city': 'Toronto',
+        'state': 'ON',
+        'postal_code': 'M5H 2N2',
+        'country_code': 'CA'
+    })()
+    
+    # Create proper methods for order calculations
+    class MockOrder:
+        def __init__(self):
+            self.id = 101
+            self.customer = mock_user
+            self.order_date = timezone.now()
+            self.status = 'PROCESSING'
+            self.shipping_cost = Decimal('5.00')
+            self.tracking_number = 'CP123456789CA'
+            self.shipping_provider = 'Canada Post'
+            self.shipping_service = 'Regular Parcel'
+            self.shipping_address = mock_shipping_address
+            self.orderitem_set = MockOrderItemSet([mock_order_item])
+        
+        def calculate_total_value(self):
+            return Decimal('59.98')
+        
+        def calculate_grand_total(self):
+            return Decimal('64.98')
+        
+        def get_status_display(self):
+            return 'Processing'
+    
+    mock_order = MockOrder()
+    
+    # Create mock notification (ProductNotification model)
+    mock_notification = type('obj', (object,), {
+        'first_name': 'Jane',
+        'last_name': 'Smith',
+        'email': 'jane.smith@example.com',
+        'product': mock_product
+    })()
+    
+    # Create mock collaboration invite with proper class
+    class MockCollaborationInvite:
+        def __init__(self):
+            self.id = '12345678-1234-1234-1234-123456789012'
+            self.invitee_user = type('obj', (object,), {
+                'first_name': 'Jane',
+                'username': 'jane_doe'
+            })()
+            self.inviter = type('obj', (object,), {
+                'first_name': 'John',
+                'username': 'john_smith'
+            })()
+            self.story = type('obj', (object,), {
+                'title': 'The Amazing Adventure',
+                'id': 1
+            })()
+            self.role = 'editor'
+            self.message = 'I would love to have you collaborate on this story! Your expertise would be invaluable.'
+            self.expires_at = timezone.now() + timezone.timedelta(days=7)
+        
+        def get_role_display(self):
+            return 'Editor'
+    
+    mock_invite = MockCollaborationInvite()
+    
+    # Create mock studio collaboration request
+    class MockStudioCollaborationRequest:
+        def __init__(self):
+            self.id = 1
+            self.requester = type('obj', (object,), {
+                'first_name': 'Alice',
+                'username': 'alice_writer',
+                'email': 'alice@example.com'
+            })()
+            self.studio = type('obj', (object,), {
+                'name': 'Creative Studio',
+                'id': 1,
+                'owner': type('obj', (object,), {
+                    'first_name': 'Studio',
+                    'username': 'studio_owner'
+                })()
+            })()
+            self.role = 'writer'
+            self.message = 'I would love to join your studio!'
+        
+        def get_role_display(self):
+            return 'Writer'
+    
+    mock_studio_request = MockStudioCollaborationRequest()
+    
+    # Create mock studio with owner (needed for template)
+    mock_studio = type('obj', (object,), {
+        'name': 'Creative Studio',
+        'id': 1,
+        'owner': type('obj', (object,), {
+            'first_name': 'Studio',
+            'username': 'studio_owner'
+        })()
+    })()
+    
+    # Prepare all email contexts
+    email_previews = []
+    
+    # 1. Welcome Email
+    try:
+        welcome_context = {
+            'user': mock_user,
+            'site_url': site_url
+        }
+        welcome_html = render_to_string('emails/welcome_email.html', welcome_context)
+        email_previews.append({
+            'name': 'Welcome Email',
+            'template': 'welcome_email.html',
+            'html': welcome_html,
+            'description': 'Sent when a new user registers'
+        })
+    except Exception as e:
+        email_previews.append({
+            'name': 'Welcome Email',
+            'template': 'welcome_email.html',
+            'html': f'<p>Error rendering: {str(e)}</p>',
+            'description': 'Sent when a new user registers'
+        })
+    
+    # 2. Verification Email
+    try:
+        verification_context = {
+            'user': mock_user,
+            'verification_url': f"{site_url}/product/verify-email/1/token123/",
+            'site_url': site_url
+        }
+        verification_html = render_to_string('emails/verification_email.html', verification_context)
+        email_previews.append({
+            'name': 'Email Verification',
+            'template': 'verification_email.html',
+            'html': verification_html,
+            'description': 'Sent for email verification'
+        })
+    except Exception as e:
+        email_previews.append({
+            'name': 'Email Verification',
+            'template': 'verification_email.html',
+            'html': f'<p>Error rendering: {str(e)}</p>',
+            'description': 'Sent for email verification'
+        })
+    
+    # 3. Password Reset Email
+    try:
+        # Generate mock uid and token for preview
+        import base64
+        from django.utils.http import urlsafe_base64_encode
+        # Mock uidb64 (base64 encoded user ID)
+        mock_uidb64 = urlsafe_base64_encode(str(1).encode())
+        # Mock token (password reset token is typically 20 characters)
+        mock_token = 'mock-token-1234567890'
+        
+        password_reset_context = {
+            'user': mock_user,
+            'protocol': 'https',
+            'domain': current_site.domain,
+            'uid': mock_uidb64,
+            'token': mock_token,
+            'site_url': site_url
+        }
+        password_reset_html = render_to_string('emails/password_reset_email.html', password_reset_context)
+        email_previews.append({
+            'name': 'Password Reset',
+            'template': 'password_reset_email.html',
+            'html': password_reset_html,
+            'description': 'Sent when user requests password reset'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Password Reset',
+            'template': 'password_reset_email.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent when user requests password reset'
+        })
+    
+    # 4. Order Confirmation
+    try:
+        order_confirmation_context = {
+            'order': mock_order,
+            'order_url': f"{site_url}/product/order/101/",
+            'cancel_url': f"{site_url}/product/order/101/cancel/",
+            'site_url': site_url
+        }
+        order_confirmation_html = render_to_string('emails/order_confirmation.html', order_confirmation_context)
+        email_previews.append({
+            'name': 'Order Confirmation',
+            'template': 'order_confirmation.html',
+            'html': order_confirmation_html,
+            'description': 'Sent after successful order payment'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Order Confirmation',
+            'template': 'order_confirmation.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent after successful order payment'
+        })
+    
+    # 5. Order Status Update
+    try:
+        order_status_context = {
+            'order': mock_order,
+            'order_url': f"{site_url}/product/order/101/",
+            'site_url': site_url
+        }
+        order_status_html = render_to_string('emails/order_status_update.html', order_status_context)
+        email_previews.append({
+            'name': 'Order Status Update',
+            'template': 'order_status_update.html',
+            'html': order_status_html,
+            'description': 'Sent when order status changes (processing, shipped, delivered)'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Order Status Update',
+            'template': 'order_status_update.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent when order status changes'
+        })
+    
+    # 6. Order Cancellation
+    try:
+        # Create a cancelled order mock for better preview
+        class MockCancelledOrder:
+            def __init__(self):
+                self.id = 101
+                self.customer = mock_user
+                self.order_date = timezone.now()
+                self.status = 'CANCELLED'  # Set to cancelled for preview
+                self.shipping_cost = Decimal('5.00')
+                self.tracking_number = None  # Cancelled orders don't have tracking
+                self.shipping_provider = None
+                self.shipping_service = None
+                self.shipping_address = mock_shipping_address
+                self.orderitem_set = MockOrderItemSet([mock_order_item])
+            
+            def calculate_total_value(self):
+                return Decimal('59.98')
+            
+            def calculate_grand_total(self):
+                return Decimal('64.98')
+            
+            def get_status_display(self):
+                return 'Cancelled'
+        
+        cancelled_order = MockCancelledOrder()
+        
+        order_cancellation_context = {
+            'order': cancelled_order,
+            'site_url': site_url
+        }
+        order_cancellation_html = render_to_string('emails/order_cancellation.html', order_cancellation_context)
+        email_previews.append({
+            'name': 'Order Cancellation',
+            'template': 'order_cancellation.html',
+            'html': order_cancellation_html,
+            'description': 'Sent when order is cancelled'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Order Cancellation',
+            'template': 'order_cancellation.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent when order is cancelled'
+        })
+    
+    # 7. Collaboration Invitation
+    try:
+        collaboration_context = {
+            'invite': mock_invite,
+            'site_url': site_url,
+            'frontend_url': frontend_url,
+            'accept_url': f"{frontend_url}/immersivecomics/story/1/collaborators/?invite_id={mock_invite.id}&action=accept",
+            'decline_url': f"{frontend_url}/immersivecomics/story/1/collaborators/?invite_id={mock_invite.id}&action=decline"
+        }
+        collaboration_html = render_to_string('emails/collaboration_invitation.html', collaboration_context)
+        email_previews.append({
+            'name': 'Story Collaboration Invitation',
+            'template': 'collaboration_invitation.html',
+            'html': collaboration_html,
+            'description': 'Sent when inviting someone to collaborate on a story'
+        })
+    except Exception as e:
+        email_previews.append({
+            'name': 'Story Collaboration Invitation',
+            'template': 'collaboration_invitation.html',
+            'html': f'<p>Error rendering: {str(e)}</p>',
+            'description': 'Sent when inviting someone to collaborate on a story'
+        })
+    
+    # 8. Studio Invitation
+    try:
+        class MockStudioInviteContext:
+            def __init__(self):
+                self.inviter = type('obj', (object,), {
+                    'first_name': 'John',
+                    'username': 'john_smith'
+                })()
+                self.invitee = type('obj', (object,), {
+                    'first_name': 'Jane',
+                    'username': 'jane_doe'
+                })()
+                self.studio = mock_studio
+                self.role = 'writer'
+                self.site_url = site_url
+                self.studio_url = f"{frontend_url}/immersivecomics/studio/1/"
+            
+            def get_role_display(self):
+                return 'Writer'
+        
+        studio_invite_context_obj = MockStudioInviteContext()
+        studio_invite_context = {
+            'inviter': studio_invite_context_obj.inviter,
+            'invitee_user': studio_invite_context_obj.invitee,
+            'invitee': studio_invite_context_obj.invitee,
+            'studio': studio_invite_context_obj.studio,
+            'role_display': 'Writer',  # Template uses role_display, not get_role_display
+            'site_url': studio_invite_context_obj.site_url,
+            'studio_url': studio_invite_context_obj.studio_url
+        }
+        studio_invite_html = render_to_string('emails/studio_invitation.html', studio_invite_context)
+        email_previews.append({
+            'name': 'Studio Invitation',
+            'template': 'studio_invitation.html',
+            'html': studio_invite_html,
+            'description': 'Sent when inviting someone to join a studio'
+        })
+    except Exception as e:
+        email_previews.append({
+            'name': 'Studio Invitation',
+            'template': 'studio_invitation.html',
+            'html': f'<p>Error rendering: {str(e)}</p>',
+            'description': 'Sent when inviting someone to join a studio'
+        })
+    
+    # 9. Studio Collaboration Request
+    try:
+        studio_request_context = {
+            'request': mock_studio_request,
+            'studio': mock_studio,
+            'site_url': site_url,
+            'frontend_url': frontend_url,
+            'accept_url': f"{frontend_url}/immersivecomics/studio/1/?request_id=1&action=accept",
+            'decline_url': f"{frontend_url}/immersivecomics/studio/1/?request_id=1&action=decline"
+        }
+        studio_request_html = render_to_string('emails/studio_collaboration_request.html', studio_request_context)
+        email_previews.append({
+            'name': 'Studio Collaboration Request',
+            'template': 'studio_collaboration_request.html',
+            'html': studio_request_html,
+            'description': 'Sent to studio owner when someone requests to collaborate'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Studio Collaboration Request',
+            'template': 'studio_collaboration_request.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent to studio owner when someone requests to collaborate'
+        })
+    
+    # 10. Product Back in Stock
+    try:
+        product_stock_context = {
+            'notification': mock_notification,
+            'product_url': f"{site_url}/product/{mock_product.uuid}/",
+            'site_url': site_url
+        }
+        product_stock_html = render_to_string('emails/product_back_in_stock.html', product_stock_context)
+        email_previews.append({
+            'name': 'Product Back in Stock',
+            'template': 'product_back_in_stock.html',
+            'html': product_stock_html,
+            'description': 'Sent when a product comes back in stock'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Product Back in Stock',
+            'template': 'product_back_in_stock.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent when a product comes back in stock'
+        })
+    
+    # 11. Abandoned Cart Reminder
+    try:
+        # Create cart items with proper product objects
+        cart_item = type('obj', (object,), {
+            'product': mock_product,
+            'quantity': 2
+        })()
+        cart_reminder_context = {
+            'user': mock_user,
+            'cart_items': [cart_item],
+            'total_price': Decimal('59.98'),
+            'days_abandoned': 1,
+            'cart_url': f"{site_url}/product/cart/",
+            'site_url': site_url
+        }
+        cart_reminder_html = render_to_string('emails/abandoned_cart_reminder.html', cart_reminder_context)
+        email_previews.append({
+            'name': 'Abandoned Cart Reminder',
+            'template': 'abandoned_cart_reminder.html',
+            'html': cart_reminder_html,
+            'description': 'Sent as reminder for abandoned shopping carts'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Abandoned Cart Reminder',
+            'template': 'abandoned_cart_reminder.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent as reminder for abandoned shopping carts'
+        })
+    
+    # 12. Order Refund Processed
+    try:
+        refund_context = {
+            'order': mock_order,
+            'refund_amount': Decimal('64.98'),
+            'refund_method': 'Original payment method',
+            'site_url': site_url
+        }
+        refund_html = render_to_string('emails/order_refund_processed.html', refund_context)
+        email_previews.append({
+            'name': 'Order Refund Processed',
+            'template': 'order_refund_processed.html',
+            'html': refund_html,
+            'description': 'Sent when order refund is processed'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Order Refund Processed',
+            'template': 'order_refund_processed.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent when order refund is processed'
+        })
+    
+    # 13. Feedback Confirmation
+    try:
+        mock_feedback = type('obj', (object,), {
+            'full_name': 'John Doe',
+            'email': 'john.doe@example.com',
+            'subject': 'Question about Product',
+            'content': 'I have a question about one of your products. Can you help me?'
+        })()
+        
+        feedback_context = {
+            'feedback': mock_feedback,
+            'site_url': site_url
+        }
+        feedback_html = render_to_string('emails/feedback_confirmation.html', feedback_context)
+        email_previews.append({
+            'name': 'Feedback Confirmation',
+            'template': 'feedback_confirmation.html',
+            'html': feedback_html,
+            'description': 'Sent when user submits feedback form'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Feedback Confirmation',
+            'template': 'feedback_confirmation.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent when user submits feedback form'
+        })
+    
+    # 14. Collaboration Accepted
+    try:
+        # Create a separate mock invite for accepted email
+        class MockAcceptedInvite:
+            def __init__(self):
+                self.id = '12345678-1234-1234-1234-123456789012'
+                self.invitee_user = type('obj', (object,), {
+                    'first_name': 'Jane',
+                    'username': 'jane_doe'
+                })()
+                self.invitee_email = 'jane.doe@example.com'  # Add email for fallback
+                self.inviter = type('obj', (object,), {
+                    'first_name': 'John',
+                    'username': 'john_smith'
+                })()
+                self.story = type('obj', (object,), {
+                    'title': 'The Amazing Adventure',
+                    'id': 1
+                })()
+                self.role = 'editor'
+                self.status = 'accepted'
+            
+            def get_role_display(self):
+                return 'Editor'
+        
+        mock_accepted_invite = MockAcceptedInvite()
+        collaboration_accepted_context = {
+            'invite': mock_accepted_invite,
+            'site_url': site_url,
+            'frontend_url': frontend_url,
+            'story_url': f"{frontend_url}/immersivecomics/story/{mock_accepted_invite.story.id}/"
+        }
+        collaboration_accepted_html = render_to_string('emails/collaboration_accepted.html', collaboration_accepted_context)
+        email_previews.append({
+            'name': 'Collaboration Accepted',
+            'template': 'collaboration_accepted.html',
+            'html': collaboration_accepted_html,
+            'description': 'Sent to inviter when collaboration invitation is accepted'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Collaboration Accepted',
+            'template': 'collaboration_accepted.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent to inviter when collaboration invitation is accepted'
+        })
+    
+    # 15. Collaboration Declined
+    try:
+        # Create a separate mock invite for declined email
+        class MockDeclinedInvite:
+            def __init__(self):
+                self.id = '12345678-1234-1234-1234-123456789012'
+                self.invitee_user = type('obj', (object,), {
+                    'first_name': 'Jane',
+                    'username': 'jane_doe'
+                })()
+                self.invitee_email = 'jane.doe@example.com'  # Add email for fallback
+                self.inviter = type('obj', (object,), {
+                    'first_name': 'John',
+                    'username': 'john_smith'
+                })()
+                self.story = type('obj', (object,), {
+                    'title': 'The Amazing Adventure',
+                    'id': 1
+                })()
+                self.role = 'editor'
+                self.status = 'declined'
+            
+            def get_role_display(self):
+                return 'Editor'
+        
+        mock_declined_invite = MockDeclinedInvite()
+        collaboration_declined_context = {
+            'invite': mock_declined_invite,
+            'site_url': site_url,
+            'frontend_url': frontend_url,
+            'story_url': f"{frontend_url}/immersivecomics/story/{mock_declined_invite.story.id}/"
+        }
+        collaboration_declined_html = render_to_string('emails/collaboration_declined.html', collaboration_declined_context)
+        email_previews.append({
+            'name': 'Collaboration Declined',
+            'template': 'collaboration_declined.html',
+            'html': collaboration_declined_html,
+            'description': 'Sent to inviter when collaboration invitation is declined'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Collaboration Declined',
+            'template': 'collaboration_declined.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent to inviter when collaboration invitation is declined'
+        })
+    
+    # 16. Newsletter Welcome
+    try:
+        mock_subscription = type('obj', (object,), {
+            'email': 'subscriber@example.com',
+            'unsubscribe_token': 'mock-token-1234567890'
+        })()
+        
+        newsletter_welcome_context = {
+            'subscription': mock_subscription,
+            'unsubscribe_url': f"{site_url}/api/newsletter/unsubscribe/{mock_subscription.unsubscribe_token}/",
+            'site_url': site_url
+        }
+        newsletter_welcome_html = render_to_string('emails/newsletter_welcome.html', newsletter_welcome_context)
+        email_previews.append({
+            'name': 'Newsletter Welcome',
+            'template': 'newsletter_welcome.html',
+            'html': newsletter_welcome_html,
+            'description': 'Sent when user subscribes to newsletter'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Newsletter Welcome',
+            'template': 'newsletter_welcome.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Sent when user subscribes to newsletter'
+        })
+    
+    # 17. Newsletter Blast (Sample)
+    try:
+        sample_content = """
+        <h2>Latest Updates from Justvybz</h2>
+        <p>Here's what's new this month:</p>
+        <ul>
+            <li>New immersive comic stories available</li>
+            <li>Special discount on premium products</li>
+            <li>Platform improvements and new features</li>
+        </ul>
+        <p>Don't miss out on our latest releases!</p>
+        """
+        
+        newsletter_blast_context = {
+            'subscription': mock_subscription,
+            'content': sample_content,
+            'unsubscribe_url': f"{site_url}/api/newsletter/unsubscribe/{mock_subscription.unsubscribe_token}/",
+            'site_url': site_url
+        }
+        newsletter_blast_html = render_to_string('emails/newsletter_blast.html', newsletter_blast_context)
+        email_previews.append({
+            'name': 'Newsletter Blast (Sample)',
+            'template': 'newsletter_blast.html',
+            'html': newsletter_blast_html,
+            'description': 'Periodic newsletter email blasts to subscribers'
+        })
+    except Exception as e:
+        import traceback
+        email_previews.append({
+            'name': 'Newsletter Blast (Sample)',
+            'template': 'newsletter_blast.html',
+            'html': f'<p>Error rendering: {str(e)}</p><pre>{traceback.format_exc()}</pre>',
+            'description': 'Periodic newsletter email blasts to subscribers'
+        })
+    
+    return render(request, 'icvybz/email_preview_all.html', {
+        'email_previews': email_previews,
+        'total_emails': len(email_previews)
+    })
 
 

@@ -15,10 +15,28 @@ const api: AxiosInstance = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Token ${token}`;
+    // Don't send auth token for public endpoints
+    // Public endpoints don't require auth and sending an invalid token can cause 403 errors
+    const url = config.url || '';
+    const method = config.method?.toUpperCase() || '';
+    
+    // Only exclude auth token for truly public endpoints:
+    // - /stories/public/ (public stories list)
+    // - /studios/ (public studios list - GET only, no path after /studios/)
+    // But NOT for authenticated endpoints like:
+    // - /studios/{id}/collaboration-requests/ (requires auth)
+    // - /studios/{id}/collaborators/ (requires auth)
+    const isPublicStoriesEndpoint = url.includes('/stories/public/');
+    const isPublicStudiosListEndpoint = url.match(/\/studios\/$/) && method === 'GET';
+    const isPublicEndpoint = isPublicStoriesEndpoint || isPublicStudiosListEndpoint;
+    
+    if (!isPublicEndpoint) {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers.Authorization = `Token ${token}`;
+      }
     }
+    
     // Don't set Content-Type for FormData - let browser set it with boundary
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
@@ -46,12 +64,75 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('API Response Error:', error.response?.status, error.message, error.config?.url);
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('authToken');
-      window.location.href = '/login/';
+    const status = error.response?.status;
+    const url = error.config?.url;
+    const method = error.config?.method?.toUpperCase();
+    
+    // Categorize the error
+    const isLogoutEndpoint = url?.includes('/auth/logout/');
+    const isPublicStoriesEndpoint = url?.includes('/stories/public/');
+    const isPublicStudiosListEndpoint = url?.match(/\/studios\/$/) && method === 'GET';
+    const isPublicEndpoint = isPublicStoriesEndpoint || isPublicStudiosListEndpoint;
+    const isAuthEndpoint = url?.includes('/auth/');
+    const is403Or401 = status === 403 || status === 401;
+    
+    // Check if this is an authenticated endpoint being called without auth
+    // These are expected to fail for unauthenticated users on public pages
+    const isAuthenticatedEndpoint = url?.includes('/characters/') || 
+                                    url?.includes('/seasons/') || 
+                                    url?.includes('/episodes/') || 
+                                    url?.includes('/dialogues/');
+    const hasToken = !!localStorage.getItem('authToken');
+    const isPublicPage = window.location.pathname.includes('/immersivecomics/') && 
+                       !window.location.pathname.includes('/my-studio/') &&
+                       !window.location.pathname.includes('/story/create/');
+    
+    // Log errors appropriately based on context
+    if (isLogoutEndpoint && is403Or401) {
+      // Expected error for logout - just log at debug level
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[API] Logout endpoint auth error (expected):', status, url);
+      }
+    } else if (isPublicEndpoint && is403Or401) {
+      // Auth error on public endpoint - might be expected if user is not logged in
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[API] Auth error on public endpoint (may be expected):', status, method, url);
+      }
+    } else if (isAuthenticatedEndpoint && is403Or401 && !hasToken && isPublicPage) {
+      // Expected: Authenticated endpoint called without token on public page
+      // Suppress these errors - they're expected when viewing public stories without login
+      // Only log in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[API] Auth required endpoint called without token on public page (expected):', status, method, url);
+      }
+    } else if (isAuthEndpoint && is403Or401) {
+      // Auth errors on auth endpoints - important to log
+      console.warn('[API] Authentication error on auth endpoint:', status, method, url, error.response?.data);
+    } else if (is403Or401) {
+      // Other 403/401 errors - log as warning (might indicate token issues)
+      console.warn('[API] Authentication failed:', status, method, url, {
+        message: error.response?.data?.detail || error.message,
+        hasToken: !!localStorage.getItem('authToken')
+      });
+    } else {
+      // Other errors - log as error
+      console.error('[API] Request failed:', status, method, url, {
+        message: error.message,
+        data: error.response?.data
+      });
     }
+    
+    // Handle 401 errors
+    if (status === 401 && !isLogoutEndpoint && !isPublicEndpoint) {
+      // Clear invalid token
+      localStorage.removeItem('authToken');
+      // Only redirect on protected pages
+      if (!window.location.pathname.includes('/immersivecomics/') && 
+          !window.location.pathname.includes('/product/')) {
+        window.location.href = '/login/';
+      }
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -68,6 +149,7 @@ export interface Story {
   user: number;
   user_username?: string; // Username of the story owner
   moderation_status: string;
+  total_views?: number; // Total view count across all episodes
 }
 
 export interface Season {
@@ -76,6 +158,7 @@ export interface Season {
   season_number: number;
   description: string;
   release_date: string;
+  is_public: boolean;
   comic: number;
   model_gltf?: string;
   model_usdz?: string;
@@ -88,6 +171,7 @@ export interface SeasonCreateData {
   season_number: number;
   description: string;
   release_date: string;
+  is_public?: boolean;
   model_gltf?: File;
   model_usdz?: File;
 }
@@ -100,6 +184,14 @@ export interface Character {
   love_interest: string;
   user: number;
   story: number;
+  pov_data?: {
+    id: number;
+    head_x: number;
+    head_y: number;
+    head_z: number;
+    default_camera_target: string;
+    character: number;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -120,6 +212,15 @@ export interface Episode {
 
 export interface Dialogue {
   id: number;
+  pov?: number; // POV ID
+  pov_data?: {
+    id: number;
+    head_x: number;
+    head_y: number;
+    head_z: number;
+    default_camera_target: string;
+    character: number;
+  };
   character: number; // Character ID (who is speaking)
   character_name?: string; // Character name (for display)
   text: string;
@@ -152,9 +253,24 @@ export interface Studio {
   name: string;
   description: string;
   is_public: boolean;
-  owner: number;
+  owner: {
+    id: number;
+    username: string;
+    first_name: string;
+    last_name: string;
+  } | number; // Can be object or just owner ID (for backward compatibility)
+  collaborators?: Array<{
+    id: number;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+    role?: string;
+  }>;
+  stories_count?: number;
+  collaborators_count?: number;
   created_at: string;
   updated_at: string;
+  avatar_url?: string;
 }
 
 // API Service Class
@@ -165,7 +281,7 @@ class ApiService {
     return response.data;
   }
 
-  async register(userData: any): Promise<{ token: string; user: any }> {
+  async register(userData: any): Promise<{ token: string; user: any; message: string; email_verification_required: boolean }> {
     const response = await api.post('/auth/register/', userData);
     return response.data;
   }
@@ -173,6 +289,42 @@ class ApiService {
   async getCurrentUser(): Promise<any> {
     const response = await api.get('/auth/user/');
     return response.data;
+  }
+
+  async updateUser(userData: { first_name?: string; last_name?: string }): Promise<any> {
+    const response = await api.patch('/auth/user/', userData);
+    return response.data;
+  }
+
+  async passwordReset(email: string): Promise<{ message: string }> {
+    const response = await api.post('/auth/password-reset/', { email });
+    return response.data;
+  }
+
+  async submitContactForm(contactData: { full_name: string; email: string; subject: string; content: string; _honeypot?: string; _form_time?: string }): Promise<{ success: boolean; message?: string; errors?: any }> {
+    // Contact form is in the snmov API namespace, not icvybz
+    const response = await axios.post('http://localhost:8000/api/contact/', contactData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  }
+
+  async logout(): Promise<void> {
+    try {
+      // Try to call logout API while we still have the token
+      await api.post('/auth/logout/');
+    } catch (error: any) {
+      // Ignore errors - token will be cleared anyway
+      // This prevents 403 errors from blocking logout
+      if (error?.response?.status !== 403) {
+        console.log('Logout API error:', error);
+      }
+    } finally {
+      // Always clear token, even if API call failed
+      localStorage.removeItem('authToken');
+    }
   }
 
   // Stories
@@ -265,6 +417,11 @@ class ApiService {
     return response.data.results || response.data;
   }
 
+  async getSeason(id: number): Promise<Season> {
+    const response = await api.get(`/seasons/${id}/`);
+    return response.data;
+  }
+
   async createSeason(storyId: number, seasonData: SeasonCreateData): Promise<Season> {
     const formData = new FormData();
     
@@ -273,6 +430,9 @@ class ApiService {
     formData.append('description', seasonData.description);
     formData.append('season_number', seasonData.season_number.toString());
     formData.append('release_date', seasonData.release_date);
+    if (seasonData.is_public !== undefined) {
+      formData.append('is_public', seasonData.is_public.toString());
+    }
     
     // Add file uploads
     if (seasonData.model_gltf) {
@@ -298,6 +458,7 @@ class ApiService {
     if (seasonData.description) formData.append('description', seasonData.description);
     if (seasonData.season_number) formData.append('season_number', seasonData.season_number.toString());
     if (seasonData.release_date) formData.append('release_date', seasonData.release_date);
+    if (seasonData.is_public !== undefined) formData.append('is_public', seasonData.is_public.toString());
     
     // Add file uploads
     if (seasonData.model_gltf) {
@@ -391,6 +552,11 @@ class ApiService {
     await api.delete(`/episodes/${id}/`);
   }
 
+  async incrementEpisodeView(episodeId: number): Promise<{ success: boolean; view_count: number }> {
+    const response = await api.post(`/episodes/${episodeId}/increment-view/`);
+    return response.data;
+  }
+
   // Dialogues
   async getDialogues(episodeId: number): Promise<Dialogue[]> {
     const response = await api.get(`/episodes/${episodeId}/dialogues/`);
@@ -461,12 +627,71 @@ class ApiService {
 
   // Studios
   async getStudios(): Promise<Studio[]> {
-    const response = await api.get('/studios/');
-    return response.data.results || response.data;
+    // Use the detailed studio_list_api endpoint which includes owner and collaborators info
+    // This endpoint is at /immersivecomics/api/studios/ which is outside the /api/icvybz namespace
+    try {
+      // Get base URL and construct full path
+      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/icvybz';
+      const serverBase = baseURL.replace('/api/icvybz', '');
+      // Don't add token for public studios endpoint
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Use axios directly with full URL since this endpoint is outside the /api/icvybz namespace
+      const axiosInstance = axios.create({
+        baseURL: serverBase,
+        headers
+      });
+      
+      console.log('getStudios: Calling /immersivecomics/api/studios/');
+      const response = await axiosInstance.get('/immersivecomics/api/studios/');
+      console.log('getStudios: Response received:', response.status, response.data);
+      if (response.data && response.data.studios) {
+        console.log('getStudios: Returning studios array with', response.data.studios.length, 'studios');
+        return response.data.studios;
+      }
+      // If response doesn't have studios array, return empty array
+      console.warn('getStudios: Response does not have studios array:', response.data);
+      return [];
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Unknown error';
+      const errorData = error?.response?.data;
+      console.error('getStudios: Studio list API endpoint failed:', {
+        status,
+        errorMessage,
+        errorData,
+        url: '/immersivecomics/api/studios/',
+        hasResponse: !!error?.response
+      });
+      // Re-throw the error so loadStudios can handle it properly
+      throw error;
+    }
   }
 
   async getStudio(id: number): Promise<Studio> {
     const response = await api.get(`/studios/${id}/`);
+    return response.data;
+  }
+
+  async getStudioCollaborationRequests(studioId: number): Promise<any[]> {
+    const response = await api.get(`/studios/${studioId}/collaboration-requests/`);
+    return response.data.results || response.data;
+  }
+
+  async createStudioCollaborationRequest(studioId: number, data: { role?: string; message?: string }): Promise<any> {
+    const response = await api.post(`/studios/${studioId}/collaboration-requests/create/`, data);
+    return response.data;
+  }
+
+  async acceptStudioCollaborationRequest(studioId: number, requestId: number): Promise<any> {
+    const response = await api.post(`/studios/${studioId}/collaboration-requests/${requestId}/accept/`);
+    return response.data;
+  }
+
+  async declineStudioCollaborationRequest(studioId: number, requestId: number): Promise<any> {
+    const response = await api.post(`/studios/${studioId}/collaboration-requests/${requestId}/decline/`);
     return response.data;
   }
 

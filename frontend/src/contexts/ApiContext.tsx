@@ -1,6 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { apiService, Story, Season, SeasonCreateData, Character, Episode, Dialogue, Studio, AudioTrack } from '../services/api';
 
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  is_active?: boolean;
+  is_email_verified?: boolean;
+  avatar?: string;
+}
+
 interface ApiContextType {
   // State
   stories: Story[];
@@ -14,6 +25,7 @@ interface ApiContextType {
   currentSeason: Season | null;
   currentEpisode: Episode | null;
   myStudio: Studio | null;
+  currentUser: User | null;
   
   // Loading states
   isLoading: boolean;
@@ -58,6 +70,13 @@ interface ApiContextType {
   updateAudioTrack: (id: number, audioData: Partial<AudioTrack>) => Promise<AudioTrack>;
   deleteAudioTrack: (id: number) => Promise<void>;
   
+  // Auth
+  loadCurrentUser: () => Promise<void>;
+  clearUser: () => void;
+  login: (username: string, password: string) => Promise<{ token: string; user: User }>;
+  register: (userData: { username: string; email: string; password: string; password2: string; first_name?: string; last_name?: string; accept_terms: boolean }) => Promise<{ token: string; user: User; message: string; email_verification_required: boolean }>;
+  logout: () => Promise<void>;
+  
   // Utility
   clearError: () => void;
   clearStories: () => void;
@@ -94,6 +113,7 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
   const [currentSeason, setCurrentSeason] = useState<Season | null>(null);
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
   const [myStudio, setMyStudio] = useState<Studio | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
@@ -268,9 +288,24 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
 
   // Studios
   const loadStudios = useCallback(async () => {
-    const studios = await handleApiCall(() => apiService.getStudios());
-    setStudios(studios);
-  }, [handleApiCall]);
+    try {
+      const studios = await apiService.getStudios();
+      console.log('ApiContext: loadStudios returned', studios);
+      console.log('ApiContext: Studios count:', studios?.length || 0);
+      setStudios(studios || []);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const errorMessage = err?.response?.data?.detail || err?.message || 'Unknown error';
+      if (status === 403 || status === 401) {
+        console.warn('[ApiContext] Auth error loading studios (may be expected for public endpoint):', status, errorMessage);
+      } else {
+        console.error('[ApiContext] Failed to load studios:', status, errorMessage, err);
+      }
+      // Don't throw - return empty array instead
+      setStudios([]);
+      throw err; // Re-throw so components can handle it
+    }
+  }, []);
 
   const loadMyStudio = useCallback(async () => {
     const studio = await handleApiCall(() => apiService.getMyStudio());
@@ -341,17 +376,166 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
     }
   }, [loadStories, loadStudios, loadMyStudio, loadAudioTracks]);
 
+  // Auth functions
+  const loadCurrentUser = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setCurrentUser(null);
+        return;
+      }
+      const user = await apiService.getCurrentUser();
+      setCurrentUser(user);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 403 || status === 401) {
+        // Token is invalid, clear user
+        setCurrentUser(null);
+        localStorage.removeItem('authToken');
+      } else {
+        console.error('[ApiContext] Failed to load current user:', err);
+      }
+    }
+  }, []);
+
+  const clearUser = useCallback(() => {
+    setCurrentUser(null);
+    localStorage.removeItem('authToken');
+  }, []);
+
+  const login = useCallback(async (username: string, password: string) => {
+    try {
+      const result = await apiService.login(username, password);
+      localStorage.setItem('authToken', result.token);
+      setCurrentUser(result.user);
+      // Reload data after login
+      await loadCurrentUser(); // Load user first
+      await reloadAllData(); // Then reload all other data
+      
+      // Trigger cart refresh after login (cart is preserved on backend)
+      // The CartContext will automatically refresh on next fetchCart call
+      // We dispatch a custom event that CartContext can listen to
+      window.dispatchEvent(new Event('cart:refresh'));
+      
+      return result;
+    } catch (err: any) {
+      console.error('[ApiContext] Login failed:', err);
+      throw err;
+    }
+  }, [reloadAllData, loadCurrentUser]);
+
+  const register = useCallback(async (userData: { username: string; email: string; password: string; password2: string; first_name?: string; last_name?: string; accept_terms: boolean }) => {
+    try {
+      const result = await apiService.register(userData);
+      localStorage.setItem('authToken', result.token);
+      setCurrentUser(result.user);
+      // Reload data after registration
+      await loadCurrentUser(); // Load user first
+      await reloadAllData(); // Then reload all other data
+      return result;
+    } catch (err: any) {
+      console.error('[ApiContext] Registration failed:', err);
+      throw err;
+    }
+  }, [reloadAllData, loadCurrentUser]);
+
+  const logout = useCallback(async () => {
+    try {
+      await apiService.logout();
+    } catch (err: any) {
+      // Ignore errors - token will be cleared anyway
+      console.log('[ApiContext] Logout API error (non-critical):', err);
+    } finally {
+      // Always clear user state and token
+      setCurrentUser(null);
+      localStorage.removeItem('authToken');
+      // Clear all data
+      setStories([]);
+      setSeasons([]);
+      setCharacters([]);
+      setEpisodes([]);
+      setDialogues([]);
+      setStudios([]);
+      setAudioTracks([]);
+      setMyStudio(null);
+      setCurrentStory(null);
+      setCurrentSeason(null);
+      setCurrentEpisode(null);
+    }
+  }, []);
+
   // Load initial data (only run once on mount)
   useEffect(() => {
     // Check if user is authenticated before making API calls
     const token = localStorage.getItem('authToken');
     if (token) {
-      loadStories();
-      loadStudios();
-      loadMyStudio();
-      loadAudioTracks();
+      // Load current user first
+      loadCurrentUser().catch(err => {
+        console.warn('[ApiContext] Failed to load current user:', err);
+      });
+      
+      // Load data in parallel, but handle errors gracefully
+      Promise.all([
+        loadStories().catch(err => {
+          // Log all errors for debugging, but handle auth errors gracefully
+          const status = err?.response?.status;
+          if (status === 403 || status === 401) {
+            console.warn('[ApiContext] Auth error loading stories (token may be invalid):', status);
+          } else {
+            console.error('[ApiContext] Failed to load stories:', err);
+          }
+        }),
+        loadStudios().catch(err => {
+          const status = err?.response?.status;
+          if (status === 403 || status === 401) {
+            console.warn('[ApiContext] Auth error loading studios (token may be invalid):', status);
+          } else {
+            console.error('[ApiContext] Failed to load studios:', err);
+          }
+        }),
+        loadMyStudio().catch(err => {
+          const status = err?.response?.status;
+          if (status === 403 || status === 401) {
+            console.warn('[ApiContext] Auth error loading my studio (token may be invalid):', status);
+          } else {
+            console.error('[ApiContext] Failed to load my studio:', err);
+          }
+        }),
+        loadAudioTracks().catch(err => {
+          const status = err?.response?.status;
+          if (status === 403 || status === 401) {
+            console.warn('[ApiContext] Auth error loading audio tracks (token may be invalid):', status);
+          } else {
+            console.error('[ApiContext] Failed to load audio tracks:', err);
+          }
+        })
+      ]);
+    } else {
+      // No token - log for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[ApiContext] No auth token found, skipping initial data load');
+      }
     }
-  }, [loadStories, loadStudios, loadMyStudio, loadAudioTracks]); // Include dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
+
+  // Listen for storage changes (logout in other tabs)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'authToken') {
+        if (!e.newValue) {
+          // Token was removed, clear user
+          clearUser();
+        } else if (e.newValue && !currentUser) {
+          // Token was added, load user
+          loadCurrentUser();
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [currentUser, clearUser, loadCurrentUser]);
 
   const value: ApiContextType = {
     // State
@@ -366,6 +550,7 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
     currentSeason,
     currentEpisode,
     myStudio,
+    currentUser,
     
     // Loading states
     isLoading,
@@ -409,6 +594,13 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
     createAudioTrack,
     updateAudioTrack,
     deleteAudioTrack,
+    
+    // Auth
+    loadCurrentUser,
+    clearUser,
+    login,
+    register,
+    logout,
     
     // Utility
     clearError,

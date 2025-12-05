@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useScrollPosition } from '../hooks/useScrollPosition';
+import FloatingFeedbackButton from './FloatingFeedbackButton';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,23 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
   
   // Initialize scroll position management
   useScrollPosition();
+
+  // Automatically show profile navbar on profile-related pages
+  useEffect(() => {
+    const profilePaths = [
+      '/my-studio',
+      '/studio/',
+      '/story/',
+      '/season/',
+      '/episode/',
+      '/characters/',
+      '/collaborators/',
+      '/my-orders'
+    ];
+    
+    const isProfilePage = profilePaths.some(path => location.pathname.includes(path));
+    setShowProfileNavbar(isProfilePage);
+  }, [location.pathname]);
 
   // Function to switch to profile navbar
   const switchToProfileNavbar = () => {
@@ -56,7 +74,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
             />
           </Link>
           
-          <div className="d-flex align-items-center">
+          <div className="d-flex align-items-center font-quicksand">
             {isAuthenticated ? (
               <Link 
                 to="/immersivecomics/my-studio/" 
@@ -66,13 +84,13 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               >
                 <i className="fas fa-user"></i>
                 <span className="d-none d-sm-inline ms-1">
-                  {user?.first_name || user?.username || 'Profile'}
+                  &nbsp;{user?.first_name || user?.username || 'Profile'}
                 </span>
               </Link>
             ) : (
               <Link to="/login/" className="btn btn-light btn-sm mx-2 px-2" id="login-btn">
                 <i className="fas fa-sign-in-alt"></i>
-                <span className="d-none d-sm-inline ms-1">Login</span>
+                <span className="d-none d-sm-inline ms-1"> Login</span>
               </Link>
             )}
             <Link to="/product/cart/" className="btn btn-light btn-sm px-2 ms-2 position-relative">
@@ -95,8 +113,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
           >
             <Link 
               to="/immersivecomics/" 
-              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname === '/immersivecomics/' || location.pathname === '/' ? 'active' : ''}`}
-              style={getButtonStyle(location.pathname === '/immersivecomics/' || location.pathname === '/')}
+              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname === '/immersivecomics/' ? 'active' : ''}`}
+              style={getButtonStyle(location.pathname === '/immersivecomics/')}
             >
               <i className="fas fa-play me-1" style={{ fontSize: '1em', verticalAlign: 'middle', lineHeight: 'inherit' }}></i>
               <span> Stories</span>
@@ -140,8 +158,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
             </Link>
             <Link 
               to="/immersivecomics/my-studio/" 
-              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname.includes('my-studio') || location.pathname.includes('/story/') || location.pathname.includes('/season/') || location.pathname.includes('/episode/') || location.pathname.includes('/characters/') || location.pathname.includes('/collaborators/') ? 'active' : ''}`}
-              style={getButtonStyle(location.pathname.includes('my-studio') || location.pathname.includes('/story/') || location.pathname.includes('/season/') || location.pathname.includes('/episode/') || location.pathname.includes('/characters/') || location.pathname.includes('/collaborators/'))}
+              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname.includes('my-studio') || location.pathname.includes('/studio/') || location.pathname.includes('/story/') || location.pathname.includes('/season/') || location.pathname.includes('/episode/') || location.pathname.includes('/characters/') || location.pathname.includes('/collaborators/') ? 'active' : ''}`}
+              style={getButtonStyle(location.pathname.includes('my-studio') || location.pathname.includes('/studio/') || location.pathname.includes('/story/') || location.pathname.includes('/season/') || location.pathname.includes('/episode/') || location.pathname.includes('/characters/') || location.pathname.includes('/collaborators/'))}
             >
               <i className="fas fa-user me-1" style={{ fontSize: '1em', verticalAlign: 'middle', lineHeight: 'inherit' }}></i>
               <span> My Studio</span>
@@ -162,6 +180,9 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
       <main className="flex-grow-1">
         {children}
       </main>
+
+      {/* Floating Feedback Button */}
+      <FloatingFeedbackButton />
 
       {/* Footer */}
       <footer className="card border-top py-4 d-flex flex-column justify-content-end">

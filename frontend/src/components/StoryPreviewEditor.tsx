@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import AnimationController from './AnimationController';
 import { StoryCreationData } from './StoryCreationWizard';
-import Model3DPreview from './Model3DPreview';
 import SmallButton from './SmallButton';
-import BackButton from './BackButton';
+import './Comic3DViewer.css';
 
 interface StoryPreviewEditorProps {
   data: StoryCreationData;
@@ -56,7 +54,6 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   const [showEditingOverlay, setShowEditingOverlay] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [showComicNavigation, setShowComicNavigation] = useState(false);
   
   const [cameraData, setCameraData] = useState<CameraData>({
     orbit: { azimuth: 0, polar: 75, radius: 3 },
@@ -116,7 +113,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
       setCameraData(parsedCamera);
       setCurrentValues(parsedCamera);
     }
-  }, [currentDialogueIndex, dialogues]);
+  }, [currentDialogueIndex, dialogues, currentDialogue]);
 
   // Update progress
   useEffect(() => {
@@ -130,7 +127,6 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
     if (totalDialogues === 0) return;
     
     setIsPlaying(true);
-    setShowComicNavigation(true);
     
     playbackIntervalRef.current = setInterval(() => {
       setCurrentDialogueIndex(prev => {
@@ -237,53 +233,76 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   }, []);
 
   return (
-    <div className={`story-preview-editor ${className}`}>
-      {/* Control Panel */}
-      <div className="container mt-3 col-md-4">
-        <div className="card shadow-sm border-0" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
-          <div className="card-body p-3">
-            {/* Mode Toggle Row */}
-            <div className="row mb-3">
-              <div className="col-12">
-                <div className="btn-group w-100" role="group">
-                  <button 
-                    type="button" 
-                    className={`btn ${isPreviewMode ? 'btn-outline-primary active' : 'btn-outline-primary'}`}
-                    onClick={() => handleModeToggle('preview')}
+    <div className={`comic-3d-viewer story-preview-editor ${className}`}>
+      {/* 3D Model Container */}
+      <div className="row">
+        <div className="col-12">
+          <div className="card model-container position-relative" style={{ height: '400px', display: 'block' }}>
+            {data.model.previewUrl ? (
+              <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                {/* Direct model-viewer element */}
+                <model-viewer
+                  ref={modelViewerRef}
+                  src={data.model.previewUrl}
+                  alt="3D Scene"
+                  shadow-intensity="1"
+                  exposure="1"
+                  interaction-prompt="none"
+                  interpolation-decay="200"
+                  interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
+                  min-camera-orbit="auto auto 1m"
+                  max-camera-orbit="auto auto 30m"
+                  min-field-of-view="10deg"
+                  max-field-of-view="90deg"
+                  animation-name=""
+                  animation-crossfade-duration="0.5"
+                  auto-rotate-delay="0"
+                  camera-orbit={`${cameraData.orbit.azimuth}deg ${cameraData.orbit.polar}deg ${cameraData.orbit.radius}m`}
+                  camera-target={`${cameraData.target.x}m ${cameraData.target.y}m ${cameraData.target.z}m`}
+                  field-of-view={`${cameraData.fieldOfView}deg`}
+                  camera-controls
+                  style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    display: 'block',
+                    visibility: 'visible',
+                    opacity: 1
+                  }}
+                />
+                
+                {/* Speech Bubble - positioned absolutely over the model viewer (Django pattern) */}
+                {currentDialogue && (
+                  <div 
+                    className="speech-bubble position-absolute bg-light p-1 rounded-2 border border-secondary w-100 align-top"
+                    style={{ 
+                      zIndex: 10, 
+                      top: '0',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '90%',
+                      maxWidth: '600px',
+                      textAlign: 'left',
+                      fontFamily: 'animeace, Comic, sans-serif',
+                      fontSize: 'small',
+                      fontStyle: 'italic',
+                      backgroundColor: 'rgba(248, 249, 250, 0.95)',
+                      border: '2px solid #333',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                    }}
                   >
-                    <i className="fas fa-eye me-1"></i>Preview Mode
-                  </button>
-                  <button 
-                    type="button" 
-                    className={`btn ${!isPreviewMode ? 'btn-outline-warning active' : 'btn-outline-warning'}`}
-                    onClick={() => handleModeToggle('edit')}
-                  >
-                    <i className="fas fa-edit me-1"></i>Edit Mode
-                  </button>
-                </div>
+                    <div>
+                      <strong>{data.characters.find(char => char.id === currentDialogue.character)?.name || `Character ${currentDialogue.character}`}:</strong> {currentDialogue.text}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-            
-            {/* Edit Controls Row */}
-            {!isPreviewMode && (
-              <div className="row g-2">
-                <div className="col-6">
-                  <SmallButton 
-                    variant="success" 
-                    onClick={() => handleSave(cameraData)}
-                    className="w-100"
-                  >
-                    <i className="fas fa-save me-1"></i>Save
-                  </SmallButton>
-                </div>
-                <div className="col-6">
-                  <SmallButton 
-                    variant="secondary" 
-                    onClick={handleReset}
-                    className="w-100"
-                  >
-                    <i className="fas fa-undo me-1"></i>Reset
-                  </SmallButton>
+            ) : (
+              <div className="d-flex align-items-center justify-content-center h-100 bg-light">
+                <div className="text-center">
+                  <i className="fas fa-cube fa-3x text-muted mb-3"></i>
+                  <h5 className="text-muted">No 3D Model Available</h5>
+                  <p className="text-muted">Please upload a 3D model to preview your story.</p>
                 </div>
               </div>
             )}
@@ -291,385 +310,261 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
         </div>
       </div>
 
-      {/* 3D Model Container */}
-      <div className="container">
-        <div className="card model-container mb-2 position-relative" style={{ height: '400px', border: 'none', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
-          {data.model.previewUrl ? (
-            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-              {/* Animation Controller */}
-              <AnimationController
-                modelViewerRef={modelViewerRef}
-                autoPlay={true}
-                showControls={true}
-                onAnimationChange={(animationName) => {
-                  console.log('StoryPreviewEditor: Animation changed to:', animationName);
-                }}
-              />
-              
-              {/* Direct model-viewer element */}
-              <model-viewer
-                ref={modelViewerRef}
-                src={data.model.previewUrl}
-                alt="3D Scene"
-                shadow-intensity="1"
-                exposure="1"
-                interaction-prompt="none"
-                interpolation-decay="200"
-                interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
-                min-camera-orbit="auto auto 1m"
-                max-camera-orbit="auto auto 30m"
-                min-field-of-view="10deg"
-                max-field-of-view="90deg"
-                animation-name=""
-                animation-crossfade-duration="0.5"
-                auto-rotate-delay="0"
-                camera-orbit={`${cameraData.orbit.azimuth}deg ${cameraData.orbit.polar}deg ${cameraData.orbit.radius}m`}
-                camera-target={`${cameraData.target.x}m ${cameraData.target.y}m ${cameraData.target.z}m`}
-                field-of-view={`${cameraData.fieldOfView}deg`}
-                camera-controls
-                style={{ width: '100%', height: '100%' }}
-              >
-                <div className="position-absolute top-0 start-0 w-100 h-100" style={{ pointerEvents: 'none' }}>
-                  <div className="position-absolute top-0 start-0 m-3">
-                    <div className="bg-dark text-white p-2 rounded" style={{ fontSize: '0.8rem' }}>
-                      <i className="fas fa-cube me-1"></i>
-                      3D Scene
+      {/* Progress Bar */}
+      {totalDialogues > 0 && (
+        <div className="row mt-2">
+          <div className="col-12">
+            <div className="d-flex align-items-center gap-3">
+              <div className="progress flex-grow-1" style={{ height: '8px' }}>
+                <div 
+                  className="progress-bar bg-success" 
+                  style={{ 
+                    width: `${progress}%`,
+                    transition: 'width 0.3s ease'
+                  }}
+                />
+              </div>
+              <div className="text-end" style={{ fontSize: '0.8rem', minWidth: '40px' }}>
+                <span>{currentDialogueIndex + 1} / {totalDialogues}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Controls */}
+      {totalDialogues > 0 && (
+        <div className="row mt-2">
+          <div className="col-12">
+            <div className="card bg-transparent border-0">
+              <div className="card-body p-0">
+                <div className="row justify-content-between align-items-center">
+                  <div className="col-auto">
+                    <button
+                      className="btn btn-primary"
+                      onClick={prevDialogue}
+                      disabled={currentDialogueIndex === 0}
+                      title={`Previous dialogue (${currentDialogueIndex}/${totalDialogues})`}
+                    >
+                      <i className="fas fa-chevron-left"></i>
+                    </button>
+                  </div>
+                  
+                  <div className="col-auto d-flex align-items-center gap-2">
+                    <button
+                      className="btn btn-success"
+                      onClick={isPlaying ? pausePlayback : startPlayback}
+                    >
+                      <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+                    </button>
+                    
+                    <div className="btn-group" role="group">
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${playbackSpeed === 5000 ? 'btn-primary' : 'btn-outline-secondary'}`}
+                        onClick={() => handleSpeedChange(5000)}
+                      >
+                        1x
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${playbackSpeed === 3333 ? 'btn-primary' : 'btn-outline-secondary'}`}
+                        onClick={() => handleSpeedChange(3333)}
+                      >
+                        1.5x
+                      </button>
                     </div>
                   </div>
+                  
+                  <div className="col-auto">
+                    <button
+                      className="btn btn-primary"
+                      onClick={nextDialogue}
+                      disabled={currentDialogueIndex >= totalDialogues - 1}
+                      title={`Next dialogue (${currentDialogueIndex + 1}/${totalDialogues})`}
+                    >
+                      <i className="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
                 </div>
-              </model-viewer>
-            </div>
-          ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9fa' }}>
-              <p className="text-muted">3D model not available</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="container mt-2">
-        <div className="d-flex align-items-center gap-3">
-          <div className="progress flex-grow-1" style={{ height: '8px', borderRadius: '4px', backgroundColor: '#e9ecef' }}>
-            <div 
-              className="progress-bar bg-success" 
-              role="progressbar" 
-              style={{ width: `${progress}%`, transition: 'width 0.3s ease' }}
-              aria-valuenow={progress} 
-              aria-valuemin={0} 
-              aria-valuemax={100}
-            ></div>
-          </div>
-          <div className="text-end" style={{ fontSize: '0.8rem', color: 'white', minWidth: '40px' }}>
-            <span>{currentDialogueIndex + 1} / {totalDialogues}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Comic Navigation */}
-      {showComicNavigation && (
-        <div className="container comic-navigation border-dark pb-2">
-          <div className="row justify-content-between align-items-center">
-            <div className="col-auto">
-              <button 
-                className="btn btn-primary mx-1 p-1" 
-                style={{ 
-                  fontSize: '1.5rem', 
-                  fontWeight: 'bold', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  minWidth: '80px', 
-                  minHeight: '40px', 
-                  backgroundColor: '#111e7f', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
-                }}
-                onClick={prevDialogue}
-                disabled={currentDialogueIndex === 0}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 18l-6-6 6-6"/>
-                </svg>
-              </button>
-            </div>
-            <div className="col-auto d-flex align-items-center">
-              <button 
-                className="btn btn-success mx-1 p-1" 
-                style={{ 
-                  fontSize: '1.5rem', 
-                  fontWeight: 'bold', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  minWidth: '40px', 
-                  minHeight: '40px', 
-                  backgroundColor: isPlaying ? '#dc3545' : '#28a745', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)', 
-                  transition: 'all 0.3s ease' 
-                }}
-                onClick={isPlaying ? pausePlayback : startPlayback}
-              >
-                <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`} style={{ color: 'white' }}></i>
-              </button>
-              <div className="btn-group mx-1" role="group">
-                <button 
-                  type="button" 
-                  className={`btn btn-outline-secondary btn-sm speed-btn ${playbackSpeed === 5000 ? 'active' : ''}`}
-                  data-speed="5000" 
-                  style={{ 
-                    fontSize: '0.8rem', 
-                    padding: '0.25rem 0.5rem', 
-                    borderRadius: '4px 0 0 4px', 
-                    border: '1px solid #dee2e6', 
-                    color: 'white' 
-                  }}
-                  onClick={() => handleSpeedChange(5000)}
-                >
-                  1x
-                </button>
-                <button 
-                  type="button" 
-                  className={`btn btn-outline-secondary btn-sm speed-btn ${playbackSpeed === 3333 ? 'active' : ''}`}
-                  data-speed="3333" 
-                  style={{ 
-                    fontSize: '0.8rem', 
-                    padding: '0.25rem 0.5rem', 
-                    borderRadius: '0 4px 4px 0', 
-                    border: '1px solid #dee2e6', 
-                    color: 'white' 
-                  }}
-                  onClick={() => handleSpeedChange(3333)}
-                >
-                  1.5x
-                </button>
               </div>
-            </div>
-            <div className="col-auto">
-              <div className="col-auto d-flex justify-content-center align-items-center my-auto">
-                <a 
-                  href="/immersivecomics/" 
-                  className="mx-1 p-1" 
-                  style={{ 
-                    color: '#f9a602', 
-                    textDecoration: 'none', 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: '0.2rem', 
-                    fontWeight: '500', 
-                    transition: 'all 0.3s ease' 
-                  }}
-                >
-                  <span>Back to Comics</span>
-                </a>
-              </div>
-            </div>
-            <div className="col-auto">
-              <button 
-                className="btn btn-primary mx-1 p-1" 
-                style={{ 
-                  fontSize: '1.5rem', 
-                  fontWeight: 'bold', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  minWidth: '80px', 
-                  minHeight: '40px', 
-                  backgroundColor: '#111e7f', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
-                }}
-                onClick={nextDialogue}
-                disabled={currentDialogueIndex >= totalDialogues - 1}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 18l6-6-6-6"/>
-                </svg>
-              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Current Dialogue Display */}
-      {currentDialogue && (
-        <div className="container mt-3 col-md-6">
-          <div className="card" style={{ backgroundColor: '#111e7f', color: 'white' }}>
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <h6 className="subtext-btn mb-0">
-                  {data.characters.find(char => char.id === currentDialogue.character)?.name || `Character ${currentDialogue.character}`}
-                </h6>
-                <span className="badge bg-warning text-dark subtext-btn-sm">
-                  {currentDialogueIndex + 1} of {totalDialogues}
-                </span>
+
+      {/* Edit Mode Toggle */}
+      <div className="row mt-2">
+        <div className="col-12">
+          <div className="card bg-transparent">
+            <div className="card-body p-0">
+              <div className="btn-group w-100 mode-toggle-btn" role="group">
+                <button
+                  type="button"
+                  className={`btn ${isPreviewMode ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => handleModeToggle('preview')}
+                  style={{
+                    borderColor: '#111e7f',
+                    color: isPreviewMode ? '#fff' : '#111e7f',
+                    backgroundColor: isPreviewMode ? '#111e7f' : 'transparent'
+                  }}
+                >
+                  <i className="fas fa-eye me-1"></i>Preview Mode
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${!isPreviewMode ? 'btn-warning' : 'btn-outline-warning'}`}
+                  onClick={() => handleModeToggle('edit')}
+                  style={{
+                    borderColor: '#f9a602',
+                    color: !isPreviewMode ? '#fff' : '#f9a602',
+                    backgroundColor: !isPreviewMode ? '#f9a602' : 'transparent'
+                  }}
+                >
+                  <i className="fas fa-edit me-1"></i>Edit Mode
+                </button>
               </div>
-              <p className="subtext-btn-sm mb-0" style={{ 
-                fontSize: '1.1rem', 
-                opacity: 0.9, 
-                fontStyle: 'italic' 
-              }}>
-                "{currentDialogue.text}"
-              </p>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Editing Controls Overlay */}
       {showEditingOverlay && (
-        <div className="container mt-3 col-md-6 px-0">
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <span className="modern-card-title">Camera Editing Controls</span>
-            </div>
-            <div className="modern-card-body row g-3">
-              {/* Camera Orbit (Left Column) */}
-              <div className="col-md-6 mt-0">
-                <div className="section-header">Camera Orbit</div>
-                <div className="form-group mb-3">
-                  <label htmlFor="orbitAzimuth" className="form-label">Azimuth</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="orbitAzimuth" 
-                      className="form-range modern-slider" 
-                      min="-180" 
-                      max="180" 
-                      step="1"
-                      value={cameraData.orbit.azimuth}
-                      onChange={(e) => {
-                        const newCameraData = { ...cameraData };
-                        newCameraData.orbit.azimuth = parseFloat(e.target.value);
-                        handleCameraDataChange(newCameraData);
-                      }}
-                    />
+        <div className="row mt-2">
+          <div className="col-12">
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <span className="modern-card-title">Camera Editing Controls</span>
+              </div>
+              
+              {/* Save/Reset Buttons Row */}
+              <div className="row g-2" style={{ padding: '1rem 1.5rem 0.5rem 1.5rem' }}>
+                <div className="col-6">
+                  <button 
+                    className="btn btn-success btn-sm w-100"
+                    onClick={() => handleSave(cameraData)}
+                    style={{ 
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      borderRadius: '8px',
+                      padding: '0.5rem 1rem'
+                    }}
+                  >
+                    <i className="fas fa-save me-1"></i>Save
+                  </button>
+                </div>
+                <div className="col-6">
+                  <button 
+                    className="btn btn-secondary btn-sm w-100"
+                    onClick={handleReset}
+                    style={{ 
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      borderRadius: '8px',
+                      padding: '0.5rem 1rem'
+                    }}
+                  >
+                    <i className="fas fa-undo me-1"></i>Reset
+                  </button>
+                </div>
+              </div>
+              
+              <div className="modern-card-body p-0" style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '1.2rem 1rem'
+              }}>
+                {/* Camera Orbit (Left Column) */}
+                <div className="col mt-0 p-1 p-md-4">
+                  <div className="section-header">
+                    Camera Orbit
+                  </div>
+                  
+                  <div className="form-group mb-3">
+                    <label htmlFor="orbitAzimuth" className="form-label d-flex align-items-center gap-2">
+                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}>360</span>
+                      <span>Azimuth</span>
+                    </label>
+                    <div className="slider-row">
+                      <input
+                        type="range"
+                        id="orbitAzimuth"
+                        className="form-range modern-slider"
+                        style={{ flex: 1 }}
+                        min="-180"
+                        max="180"
+                        step="1"
+                        value={cameraData.orbit.azimuth}
+                        onChange={(e) => {
+                          const newCameraData = { ...cameraData };
+                          newCameraData.orbit.azimuth = parseFloat(e.target.value);
+                          handleCameraDataChange(newCameraData);
+                        }}
+                      />
                       <span className="value-badge">{cameraData.orbit.azimuth.toFixed(1)}°</span>
+                    </div>
                   </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label htmlFor="orbitPolar" className="form-label">Polar</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="orbitPolar" 
-                      className="form-range modern-slider" 
-                      min="0" 
-                      max="180" 
-                      step="1"
-                      value={cameraData.orbit.polar}
-                      onChange={(e) => {
-                        const newCameraData = { ...cameraData };
-                        newCameraData.orbit.polar = parseFloat(e.target.value);
-                        handleCameraDataChange(newCameraData);
-                      }}
-                    />
+                  
+                  <div className="form-group mb-3">
+                    <label htmlFor="orbitPolar" className="form-label d-flex align-items-center gap-2">
+                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', transform: 'rotate(90deg)', fontVariationSettings: "'FILL' 1" }}>360</span>
+                      <span>Polar</span>
+                    </label>
+                    <div className="slider-row">
+                      <input
+                        type="range"
+                        id="orbitPolar"
+                        className="form-range modern-slider"
+                        style={{ flex: 1 }}
+                        min="0"
+                        max="180"
+                        step="1"
+                        value={cameraData.orbit.polar}
+                        onChange={(e) => {
+                          const newCameraData = { ...cameraData };
+                          newCameraData.orbit.polar = parseFloat(e.target.value);
+                          handleCameraDataChange(newCameraData);
+                        }}
+                      />
                       <span className="value-badge">{cameraData.orbit.polar.toFixed(1)}°</span>
+                    </div>
                   </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label htmlFor="orbitRadius" className="form-label">Radius</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="orbitRadius" 
-                      className="form-range modern-slider" 
-                      min="1" 
-                      max="10" 
-                      step="0.1"
-                      value={cameraData.orbit.radius}
-                      onChange={(e) => {
-                        const newCameraData = { ...cameraData };
-                        newCameraData.orbit.radius = parseFloat(e.target.value);
-                        handleCameraDataChange(newCameraData);
-                      }}
-                    />
+                  
+                  <div className="form-group mb-3">
+                    <label htmlFor="orbitRadius" className="form-label">Radius</label>
+                    <div className="slider-row">
+                      <input
+                        type="range"
+                        id="orbitRadius"
+                        className="form-range modern-slider"
+                        style={{ flex: 1 }}
+                        min="1"
+                        max="10"
+                        step="0.1"
+                        value={cameraData.orbit.radius}
+                        onChange={(e) => {
+                          const newCameraData = { ...cameraData };
+                          newCameraData.orbit.radius = parseFloat(e.target.value);
+                          handleCameraDataChange(newCameraData);
+                        }}
+                      />
                       <span className="value-badge">{cameraData.orbit.radius.toFixed(1)}m</span>
+                    </div>
                   </div>
-                </div>
-              </div>
-              
-              {/* Camera Target (Right Column) */}
-              <div className="col-md-6 mt-0">
-                <div className="section-header">Camera Target</div>
-                <div className="form-group mb-3">
-                  <label htmlFor="targetX" className="form-label">X</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="targetX" 
-                      className="form-range modern-slider" 
-                      min="-5" 
-                      max="5" 
-                      step="0.1"
-                      value={cameraData.target.x}
-                      onChange={(e) => {
-                        const newCameraData = { ...cameraData };
-                        newCameraData.target.x = parseFloat(e.target.value);
-                        handleCameraDataChange(newCameraData);
-                      }}
-                    />
-                      <span className="value-badge">{cameraData.target.x.toFixed(1)}m</span>
-                  </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label htmlFor="targetY" className="form-label">Y</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="targetY" 
-                      className="form-range modern-slider" 
-                      min="0" 
-                      max="3" 
-                      step="0.1"
-                      value={cameraData.target.y}
-                      onChange={(e) => {
-                        const newCameraData = { ...cameraData };
-                        newCameraData.target.y = parseFloat(e.target.value);
-                        handleCameraDataChange(newCameraData);
-                      }}
-                    />
-                      <span className="value-badge">{cameraData.target.y.toFixed(1)}m</span>
-                  </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label htmlFor="targetZ" className="form-label">Z</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="targetZ" 
-                      className="form-range modern-slider" 
-                      min="-5" 
-                      max="5" 
-                      step="0.1"
-                      value={cameraData.target.z}
-                      onChange={(e) => {
-                        const newCameraData = { ...cameraData };
-                        newCameraData.target.z = parseFloat(e.target.value);
-                        handleCameraDataChange(newCameraData);
-                      }}
-                    />
-                      <span className="value-badge">{cameraData.target.z.toFixed(1)}m</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Field of View and Zoom Speed (Full Width) */}
-              <div className="col-12 mt-0">
-                <div className="row g-3">
-                  <div className="col-md-6">
+                  
+                  {/* Field of View */}
+                  <div className="form-group mb-3">
                     <label htmlFor="fieldOfView" className="form-label">Field of View</label>
                     <div className="slider-row">
-                      <input 
-                        type="range" 
-                        id="fieldOfView" 
-                        className="form-range modern-slider" 
-                        min="10" 
-                        max="90" 
+                      <input
+                        type="range"
+                        id="fieldOfView"
+                        className="form-range modern-slider"
+                        style={{ flex: 1 }}
+                        min="10"
+                        max="90"
                         step="1"
                         value={cameraData.fieldOfView}
                         onChange={(e) => {
@@ -681,15 +576,94 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                       <span className="value-badge">{cameraData.fieldOfView.toFixed(1)}°</span>
                     </div>
                   </div>
-                  <div className="col-md-6 mt-0">
+                </div>
+                
+                {/* Camera Target (Right Column) */}
+                <div className="col mt-0 p-1 p-md-4">
+                  <div className="section-header">
+                    Camera Target
+                  </div>
+                  
+                  <div className="form-group mb-3">
+                    <label htmlFor="targetX" className="form-label">X</label>
+                    <div className="slider-row">
+                      <input
+                        type="range"
+                        id="targetX"
+                        className="form-range modern-slider"
+                        style={{ flex: 1 }}
+                        min="-5"
+                        max="5"
+                        step="0.1"
+                        value={cameraData.target.x}
+                        onChange={(e) => {
+                          const newCameraData = { ...cameraData };
+                          newCameraData.target.x = parseFloat(e.target.value);
+                          handleCameraDataChange(newCameraData);
+                        }}
+                      />
+                      <span className="value-badge">{cameraData.target.x.toFixed(1)}m</span>
+                    </div>
+                  </div>
+                  
+                  <div className="form-group mb-3">
+                    <label htmlFor="targetY" className="form-label d-flex align-items-center gap-2">
+                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', transform: 'rotate(90deg)', fontVariationSettings: "'FILL' 1" }}>arrow_range</span>
+                      <span>Y</span>
+                    </label>
+                    <div className="slider-row">
+                      <input
+                        type="range"
+                        id="targetY"
+                        className="form-range modern-slider"
+                        style={{ flex: 1 }}
+                        min="0"
+                        max="3"
+                        step="0.1"
+                        value={cameraData.target.y}
+                        onChange={(e) => {
+                          const newCameraData = { ...cameraData };
+                          newCameraData.target.y = parseFloat(e.target.value);
+                          handleCameraDataChange(newCameraData);
+                        }}
+                      />
+                      <span className="value-badge">{cameraData.target.y.toFixed(1)}m</span>
+                    </div>
+                  </div>
+                  
+                  <div className="form-group mb-3">
+                    <label htmlFor="targetZ" className="form-label">Z</label>
+                    <div className="slider-row">
+                      <input
+                        type="range"
+                        id="targetZ"
+                        className="form-range modern-slider"
+                        style={{ flex: 1 }}
+                        min="-5"
+                        max="5"
+                        step="0.1"
+                        value={cameraData.target.z}
+                        onChange={(e) => {
+                          const newCameraData = { ...cameraData };
+                          newCameraData.target.z = parseFloat(e.target.value);
+                          handleCameraDataChange(newCameraData);
+                        }}
+                      />
+                      <span className="value-badge">{cameraData.target.z.toFixed(1)}m</span>
+                    </div>
+                  </div>
+                  
+                  {/* Zoom Speed */}
+                  <div className="form-group mb-3">
                     <label htmlFor="zoomSpeed" className="form-label">Zoom Speed</label>
                     <div className="slider-row">
-                      <input 
-                        type="range" 
-                        id="zoomSpeed" 
-                        className="form-range modern-slider" 
-                        min="0.1" 
-                        max="3" 
+                      <input
+                        type="range"
+                        id="zoomSpeed"
+                        className="form-range modern-slider"
+                        style={{ flex: 1 }}
+                        min="0.1"
+                        max="3"
                         step="0.1"
                         value={cameraData.zoomSpeed}
                         onChange={(e) => {
@@ -702,16 +676,16 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Current Values (Full Width) */}
-              <div className="col-12 mt-2">
-                <div className="current-values-box">
-                  <h6 className="text-primary mb-2">Current Values (Last Saved)</h6>
-                  <div><strong>Camera Orbit:</strong> <span>{currentValues.orbit.azimuth.toFixed(1)}deg {currentValues.orbit.polar.toFixed(1)}deg {currentValues.orbit.radius.toFixed(1)}m</span></div>
-                  <div><strong>Camera Target:</strong> <span>{currentValues.target.x.toFixed(1)}m {currentValues.target.y.toFixed(1)}m {currentValues.target.z.toFixed(1)}m</span></div>
-                  <div><strong>Field of View:</strong> <span>{currentValues.fieldOfView.toFixed(1)}°</span></div>
-                  <div><strong>Zoom Speed:</strong> <span>{currentValues.zoomSpeed.toFixed(1)}</span></div>
+                
+                {/* Current Values (Full Width) */}
+                <div className="col-12 mt-2" style={{ gridColumn: '1 / -1', padding: '0 1rem' }}>
+                  <div className="current-values-box">
+                    <h6 className="text-primary mb-2">Current Values (Last Saved)</h6>
+                    <div><strong>Camera Orbit:</strong> <span>{currentValues.orbit.azimuth.toFixed(1)}deg {currentValues.orbit.polar.toFixed(1)}deg {currentValues.orbit.radius.toFixed(1)}m</span></div>
+                    <div><strong>Camera Target:</strong> <span>{currentValues.target.x.toFixed(1)}m {currentValues.target.y.toFixed(1)}m {currentValues.target.z.toFixed(1)}m</span></div>
+                    <div><strong>Field of View:</strong> <span>{currentValues.fieldOfView.toFixed(1)}°</span></div>
+                    <div><strong>Zoom Speed:</strong> <span>{currentValues.zoomSpeed.toFixed(1)}</span></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -720,14 +694,16 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
       )}
 
       {/* Navigation Buttons */}
-      <div className="container mt-4">
-        <div className="d-flex justify-content-between">
-          <SmallButton variant="outline-secondary" onClick={onBack}>
-            <i className="fas fa-arrow-left me-1"></i> Back
-          </SmallButton>
-          <SmallButton variant="success" onClick={onNext}>
-            Publish Story <i className="fas fa-check ms-1"></i>
-          </SmallButton>
+      <div className="row mt-4">
+        <div className="col-12">
+          {/* <div className="d-flex justify-content-between">
+            <SmallButton variant="outline-secondary" onClick={onBack}>
+              <i className="fas fa-arrow-left me-1"></i> Back
+            </SmallButton>
+            <SmallButton variant="success" onClick={onNext}>
+              Publish Story <i className="fas fa-check ms-1"></i>
+            </SmallButton>
+          </div> */}
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import SmallButton from '../components/SmallButton';
 import BackButton from '../components/BackButton';
@@ -17,6 +17,14 @@ interface Character {
   user: number;
   created_at: string;
   updated_at: string;
+  pov_data?: {
+    id: number;
+    head_x: number;
+    head_y: number;
+    head_z: number;
+    default_camera_target: string;
+    character: number;
+  };
 }
 
 interface CharacterFormData {
@@ -24,19 +32,20 @@ interface CharacterFormData {
   bio: string;
   personality: string;
   love_interest: string;
+  pov_head_x?: number;
+  pov_head_y?: number;
+  pov_head_z?: number;
 }
 
 const CharacterManage: React.FC = () => {
   const { storyId } = useParams<{ storyId: string }>();
-  const navigate = useNavigate();
   const { 
     characters, 
     loadCharacters, 
     createCharacter, 
     updateCharacter, 
     deleteCharacter, 
-    isLoading, 
-    error 
+    isLoading
   } = useApi();
   
   const [showForm, setShowForm] = useState(false);
@@ -45,7 +54,10 @@ const CharacterManage: React.FC = () => {
     name: '',
     bio: '',
     personality: '',
-    love_interest: ''
+    love_interest: '',
+    pov_head_x: 0.0,
+    pov_head_y: 1.6,
+    pov_head_z: 0.0
   });
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
@@ -69,10 +81,20 @@ const CharacterManage: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Handle numeric fields for POV head positions
+    if (name === 'pov_head_x' || name === 'pov_head_y' || name === 'pov_head_z') {
+      const numValue = value === '' ? 0 : parseFloat(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: isNaN(numValue) ? 0 : numValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,7 +135,10 @@ const CharacterManage: React.FC = () => {
       name: character.name,
       bio: character.bio,
       personality: character.personality,
-      love_interest: character.love_interest
+      love_interest: character.love_interest,
+      pov_head_x: character.pov_data?.head_x ?? 0.0,
+      pov_head_y: character.pov_data?.head_y ?? 1.6,
+      pov_head_z: character.pov_data?.head_z ?? 0.0
     });
     setShowForm(true);
   };
@@ -143,7 +168,10 @@ const CharacterManage: React.FC = () => {
       name: '',
       bio: '',
       personality: '',
-      love_interest: ''
+      love_interest: '',
+      pov_head_x: 0.0,
+      pov_head_y: 1.6,
+      pov_head_z: 0.0
     });
     setEditingCharacter(null);
     setShowForm(false);
@@ -152,19 +180,6 @@ const CharacterManage: React.FC = () => {
   const handleCloseMessage = () => {
     setShowMessage(false);
   };
-
-  const roleOptions = [
-    'Protagonist',
-    'Antagonist', 
-    'Supporting Character',
-    'Minor Character',
-    'Narrator',
-    'Comic Relief',
-    'Mentor',
-    'Love Interest',
-    'Sidekick',
-    'Villain'
-  ];
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -260,6 +275,74 @@ const CharacterManage: React.FC = () => {
                   required
                 />
               </div>
+              
+              {/* POV Head Position Fields */}
+              <div className="mb-3">
+                <label className="form-label subtext-btn-sm">
+                  <i className="fas fa-cube me-1"></i>3D Head Position (for speech bubbles and camera targeting)
+                </label>
+                <p className="subtext-btn-sm text-muted mb-2" style={{ fontSize: '0.75rem' }}>
+                  Set the character's head position in 3D space. These coordinates determine where speech bubbles point to and where the camera targets.
+                </p>
+              </div>
+              
+              <div className="row">
+                <div className="col-md-4">
+                  <div className="mb-3">
+                    <label htmlFor="pov_head_x" className="form-label subtext-btn-sm">
+                      Head X Position
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control form-control-sm"
+                      id="pov_head_x"
+                      name="pov_head_x"
+                      value={formData.pov_head_x ?? 0.0}
+                      onChange={handleInputChange}
+                      step="0.1"
+                      placeholder="0.0"
+                    />
+                    <small className="form-text text-muted" style={{ fontSize: '0.7rem' }}>X coordinate in world space</small>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="mb-3">
+                    <label htmlFor="pov_head_y" className="form-label subtext-btn-sm">
+                      Head Y Position
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control form-control-sm"
+                      id="pov_head_y"
+                      name="pov_head_y"
+                      value={formData.pov_head_y ?? 1.6}
+                      onChange={handleInputChange}
+                      step="0.1"
+                      placeholder="1.6"
+                    />
+                    <small className="form-text text-muted" style={{ fontSize: '0.7rem' }}>Y coordinate (head height, default: 1.6m)</small>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="mb-3">
+                    <label htmlFor="pov_head_z" className="form-label subtext-btn-sm">
+                      Head Z Position
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control form-control-sm"
+                      id="pov_head_z"
+                      name="pov_head_z"
+                      value={formData.pov_head_z ?? 0.0}
+                      onChange={handleInputChange}
+                      step="0.1"
+                      placeholder="0.0"
+                    />
+                    <small className="form-text text-muted" style={{ fontSize: '0.7rem' }}>Z coordinate in world space</small>
+                  </div>
+                </div>
+              </div>
+              
               <div className="d-flex justify-content-end gap-2">
                 <SmallButton type="button" variant="outline-secondary" onClick={resetForm}>
                   Cancel

@@ -250,7 +250,7 @@ const PublishStep: React.FC<PublishStepProps> = ({
                     Publish this story now
                   </label>
                 </div>
-                <div className="form-text">
+                <div className="subtext-btn-sm">
                   If checked, your story will be visible to all users immediately.
                 </div>
               </div>
@@ -296,7 +296,7 @@ const PublishStep: React.FC<PublishStepProps> = ({
               <h6 className="subtext-btn-sm mb-0">Actions</h6>
             </div>
             <div className="card-body">
-              <div className="d-grid gap-2">
+              <div className="d-flex gap-2 justify-content-center">
                 <SmallButton
                   variant="success"
                   onClick={handlePublish}
@@ -310,7 +310,7 @@ const PublishStep: React.FC<PublishStepProps> = ({
                   ) : (
                     <>
                       <i className="fas fa-rocket me-1"></i>
-                      Publish Story
+                      &nbsp;Publish Story
                     </>
                   )}
                 </SmallButton>
@@ -328,7 +328,7 @@ const PublishStep: React.FC<PublishStepProps> = ({
                   ) : (
                     <>
                       <i className="fas fa-save me-1"></i>
-                      Save as Draft
+                      &nbsp;Save as Draft
                     </>
                   )}
                 </SmallButton>
@@ -346,7 +346,7 @@ const PublishStep: React.FC<PublishStepProps> = ({
                 <li>Review your story carefully before publishing</li>
                 <li>Make sure all dialogues are properly set up</li>
                 <li>Test your 3D model to ensure it loads correctly</li>
-                <li>Consider publishing as a draft first for review</li>
+                <li>Consider saving as a draft first for review</li>
                 <li>You can always edit your story after publishing</li>
               </ul>
             </div>

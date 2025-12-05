@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import AnimationController from './AnimationController';
 import SmallButton from './SmallButton';
+import './Comic3DViewer.css';
 
 interface Model3DPreviewProps {
   modelUrl?: string;
@@ -159,65 +160,13 @@ const Model3DPreview: React.FC<Model3DPreviewProps> = ({
   };
 
   return (
-    <div className={`model-3d-preview ${className}`}>
+    <div className={`comic-3d-viewer model-3d-preview ${className}`}>
       {/* Control Panel */}
-      {showControls && (
-        <div className="container mt-3 col-md-4">
-          <div className="card shadow-sm border-0" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
-            <div className="card-body p-3">
-              {/* Mode Toggle Row */}
-              <div className="row mb-3">
-                <div className="col-12">
-                  <div className="btn-group w-100" role="group">
-                    <button 
-                      type="button" 
-                      className={`btn ${isPreviewMode ? 'btn-outline-primary active' : 'btn-outline-primary'}`}
-                      onClick={() => handleModeToggle('preview')}
-                    >
-                      <i className="fas fa-eye me-1"></i>Preview Mode
-                    </button>
-                    <button 
-                      type="button" 
-                      className={`btn ${!isPreviewMode ? 'btn-outline-warning active' : 'btn-outline-warning'}`}
-                      onClick={() => handleModeToggle('edit')}
-                    >
-                      <i className="fas fa-edit me-1"></i>Edit Mode
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Edit Controls Row */}
-              {!isPreviewMode && (
-                <div className="row g-2">
-                  <div className="col-6">
-                    <SmallButton 
-                      variant="success" 
-                      onClick={handleSave}
-                      className="w-100"
-                    >
-                      <i className="fas fa-save me-1"></i>Save
-                    </SmallButton>
-                  </div>
-                  <div className="col-6">
-                    <SmallButton 
-                      variant="secondary" 
-                      onClick={handleReset}
-                      className="w-100"
-                    >
-                      <i className="fas fa-undo me-1"></i>Reset
-                    </SmallButton>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* 3D Model Container */}
       <div className="container">
-        <div className="card model-container mb-2 position-relative" style={{ height: '400px', border: 'none', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+        <div className="card model-container mb-2 position-relative" style={{ height: '400px' }}>
           {/* Overlay Image with Start Button */}
           {showStartButton && coverImage && (
             <div 
@@ -230,7 +179,7 @@ const Model3DPreview: React.FC<Model3DPreviewProps> = ({
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               <button 
-                className="btn btn-primary py-1 position-absolute" 
+                className="btn btn-primary position-absolute" 
                 style={{ 
                   top: '90%', 
                   left: '50%', 
@@ -240,11 +189,7 @@ const Model3DPreview: React.FC<Model3DPreviewProps> = ({
                   fontSize: '1.2rem', 
                   fontWeight: 'bold', 
                   textTransform: 'uppercase', 
-                  letterSpacing: '1px', 
-                  background: '#ff4d4d', 
-                  border: 'none', 
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)', 
-                  opacity: 0.9 
+                  letterSpacing: '1px'
                 }}
                 onClick={handleStartEpisode}
               >
@@ -256,14 +201,6 @@ const Model3DPreview: React.FC<Model3DPreviewProps> = ({
           {modelUrl ? (
             <div style={{ width: '100%', height: '100%', position: 'relative' }}>
               {/* Animation Controller */}
-              <AnimationController
-                modelViewerRef={modelViewerRef}
-                autoPlay={true}
-                showControls={true}
-                onAnimationChange={(animationName) => {
-                  console.log('Model3DPreview: Animation changed to:', animationName);
-                }}
-              />
               
               {/* Direct model-viewer element */}
               <model-viewer
@@ -290,7 +227,7 @@ const Model3DPreview: React.FC<Model3DPreviewProps> = ({
               >
                 <div className="position-absolute top-0 start-0 w-100 h-100" style={{ pointerEvents: 'none' }}>
                   <div className="position-absolute top-0 start-0 m-3">
-                    <div className="bg-dark text-white p-2 rounded" style={{ fontSize: '0.8rem' }}>
+                    <div className="bg-dark text-white p-2 rounded" style={{ fontSize: '0.8rem', fontFamily: 'quicksand, sans-serif' }}>
                       <i className="fas fa-cube me-1"></i>
                       3D Scene
                     </div>

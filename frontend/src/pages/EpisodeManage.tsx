@@ -7,8 +7,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import EpisodeCard from '../components/EpisodeCard';
 import DialogueCard from '../components/DialogueCard';
+import MetaTags from '../components/MetaTags';
 import { useApi } from '../contexts/ApiContext';
-import { Episode as ApiEpisode, apiService } from '../services/api';
+import { Episode as ApiEpisode, apiService, Season, Story } from '../services/api';
 
 interface Dialogue {
   id: number;
@@ -100,10 +101,12 @@ const EpisodeManage: React.FC = () => {
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
+  const [currentSeason, setCurrentSeason] = useState<Season | null>(null);
+  const [story, setStory] = useState<Story | null>(null);
 
   // Find the current season to get the story ID
-  const currentSeason = seasons.find(s => s.id === parseInt(seasonId || '0'));
-  const storyId = currentSeason?.comic;
+  const season = seasons.find(s => s.id === parseInt(seasonId || '0'));
+  const storyId = season?.comic;
 
   // Load all necessary data when component mounts
   useEffect(() => {
@@ -116,30 +119,39 @@ const EpisodeManage: React.FC = () => {
           await loadEpisodes(parseInt(seasonId));
           
           // If we don't have the current season, load it to get the story ID
-          if (!currentSeason) {
+          if (!season) {
             try {
-              const response = await fetch(`http://localhost:8000/api/icvybz/seasons/${seasonId}/`, {
-                headers: {
-                  'Authorization': 'Token 8fbc920c12fc42fec5012417bc51225445460acc',
-                  'Content-Type': 'application/json'
-                }
-              });
-              
-              if (response.ok) {
-                const seasonData = await response.json();
-                // Load seasons for the story that contains this season
-                if (seasonData.comic) {
-                  await loadSeasons(seasonData.comic);
-                  // Load characters for the story
-                  await loadCharacters(seasonData.comic);
+              const seasonData = await apiService.getSeason(parseInt(seasonId || '0'));
+              setCurrentSeason(seasonData);
+              // Load seasons for the story that contains this season
+              if (seasonData.comic) {
+                await loadSeasons(seasonData.comic);
+                // Load characters for the story
+                await loadCharacters(seasonData.comic);
+                // Load story data for meta tags
+                try {
+                  const storyData = await apiService.getStory(seasonData.comic);
+                  setStory(storyData);
+                } catch (error) {
+                  console.error('Error loading story data:', error);
                 }
               }
             } catch (error) {
               console.error('Error loading season data:', error);
             }
-          } else if (storyId) {
-            // If we already have the story ID, just load characters
-            await loadCharacters(storyId);
+          } else {
+            setCurrentSeason(season);
+            // If we already have the story ID, load characters and story
+            if (storyId) {
+              await loadCharacters(storyId);
+              // Load story data for meta tags
+              try {
+                const storyData = await apiService.getStory(storyId);
+                setStory(storyData);
+              } catch (error) {
+                console.error('Error loading story data:', error);
+              }
+            }
           }
         } catch (error) {
           console.error('Error loading data:', error);
@@ -151,7 +163,7 @@ const EpisodeManage: React.FC = () => {
     };
     
     loadAllData();
-  }, [seasonId, currentSeason, storyId, loadEpisodes, loadSeasons, loadCharacters]);
+  }, [seasonId, season, storyId, loadEpisodes, loadSeasons, loadCharacters]);
   
   // Helper function to reload all dialogues for all episodes
   const reloadAllDialogues = useCallback(async () => {
@@ -409,8 +421,40 @@ const EpisodeManage: React.FC = () => {
     return <LoadingSpinner message="Loading episodes..." />;
   }
 
+  // Get season image for meta tags - use first episode cover image, or story cover image, or default
+  const getSeasonImage = (): string | undefined => {
+    if (seasonEpisodes.length > 0 && seasonEpisodes[0].cover_image) {
+      const coverImage = seasonEpisodes[0].cover_image;
+      if (typeof coverImage === 'string') {
+        return coverImage.startsWith('http') ? coverImage : `https://www.justvybz.com${coverImage}`;
+      }
+    }
+    // Fallback to story cover image
+    if (story?.comic_image) {
+      const comicImage = story.comic_image;
+      if (typeof comicImage === 'string') {
+        return comicImage.startsWith('http') ? comicImage : `https://www.justvybz.com${comicImage}`;
+      }
+    }
+    return undefined; // Will use default from MetaTags component
+  };
+
+  // Get season title and description for meta tags
+  const seasonTitle = currentSeason 
+    ? `Season ${currentSeason.season_number}: ${currentSeason.title}${story ? ` - ${story.title}` : ''}`
+    : 'Season';
+  const seasonDescription = currentSeason?.description || story?.description || 'Explore episodes and dialogues for this season';
+
   return (
     <div className="container mt-4" style={{ maxWidth: '1200px' }}>
+      <MetaTags
+        title={seasonTitle}
+        description={seasonDescription}
+        keywords={`3D comics, ${currentSeason?.title || ''}, ${story?.title || ''}, interactive stories, immersive comics`}
+        image={getSeasonImage()}
+        url={typeof window !== 'undefined' ? window.location.href : undefined}
+        type="article"
+      />
       <PageHeader
         title="Episode Management"
         description="Create and manage episodes and dialogues for your season"
@@ -540,9 +584,12 @@ const EpisodeManage: React.FC = () => {
                 </h5>
                 <button 
                   type="button" 
-                  className="btn-close" 
+                  className="btn btn-sm btn-light border"
                   onClick={resetEpisodeForm}
-                ></button>
+                  aria-label="Close"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
               </div>
               <form onSubmit={handleEpisodeSubmit}>
                 <div className="modal-body">
@@ -629,9 +676,12 @@ const EpisodeManage: React.FC = () => {
                 </h5>
                 <button 
                   type="button" 
-                  className="btn-close" 
+                  className="btn btn-sm btn-light border"
                   onClick={resetDialogueForm}
-                ></button>
+                  aria-label="Close"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
               </div>
               <form onSubmit={handleDialogueSubmit}>
                 <div className="modal-body">

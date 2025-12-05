@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import PageHeader from './PageHeader';
 import SmallButton from './SmallButton';
 import BackButton from './BackButton';
 import LoadingSpinner from './LoadingSpinner';
 import MessagePopup from './MessagePopup';
 import { useApi } from '../contexts/ApiContext';
 import { apiService } from '../services/api';
+import { FeedbackContext } from '../contexts/FeedbackContext';
 
 // Step Components
 import StoryDetailsStep from './story-creation/StoryDetailsStep';
@@ -43,6 +43,9 @@ export interface StoryCreationData {
     bio: string;
     personality: string;
     love_interest: string;
+    pov_head_x?: number;
+    pov_head_y?: number;
+    pov_head_z?: number;
   }>;
   
   // Episode data
@@ -91,21 +94,22 @@ export interface StoryCreationData {
 }
 
 const steps = [
-  { id: 'story', title: 'Story Details', component: StoryDetailsStep },
+  { id: 'story', title: 'Title & Description', component: StoryDetailsStep },
   { id: 'characters', title: 'Characters', component: CharactersStep },
-  { id: 'season', title: 'Season Setup', component: SeasonSetupStep },
+  { id: 'season', title: 'Season', component: SeasonSetupStep },
   { id: 'episode', title: 'Episodes', component: EpisodeSetupStep },
   { id: 'dialogues', title: 'Dialogues', component: DialoguesStep },
-  { id: 'model', title: '3D Model', component: ModelUploadStep },
-  { id: 'preview', title: 'Preview/Edit', component: PreviewStep },
+  { id: 'model', title: 'Scene', component: ModelUploadStep },
+  { id: 'preview', title: 'Preview & Edit', component: PreviewStep },
   { id: 'publish', title: 'Publish', component: PublishStep },
 ];
 
 const StoryCreationWizard: React.FC = () => {
   const navigate = useNavigate();
   const { storyId } = useParams<{ storyId?: string }>();
-  const { loadStories } = useApi();
+  const { loadStories, currentUser } = useApi();
   const { createStory, createSeason, createCharacter, createEpisode, createDialogue, isLoading, error } = useApi();
+  const feedbackContext = useContext(FeedbackContext);
   const [currentStep, setCurrentStep] = useState(0);
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
@@ -148,25 +152,52 @@ const StoryCreationWizard: React.FC = () => {
     },
   });
 
-  // Update URL as user progresses through steps
+  // Set feedback context for story creation
+  useEffect(() => {
+    if (feedbackContext) {
+      const stepName = steps[currentStep]?.title || 'Unknown';
+      feedbackContext.setContext({
+        step: stepName,
+        page: 'Story Creation',
+        storyTitle: data.story.title || undefined,
+        storyId: data.story.id
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, data.story.title, data.story.id]);
+
   // Check authentication on mount and handle redirects
   useEffect(() => {
+    // Check if user is authenticated - check token first (immediate check)
     const token = localStorage.getItem('authToken');
     if (!token) {
-      // User is not authenticated, redirect to login
+      // No token, redirect immediately
       const currentPath = window.location.pathname;
       sessionStorage.setItem('redirectAfterLogin', currentPath);
-      window.location.href = `/login/?next=${encodeURIComponent(currentPath)}`;
+      navigate(`/login/?next=${encodeURIComponent(currentPath)}`, { replace: true });
       return;
     }
     
-    // Check if we're returning from login (check sessionStorage)
+    // If we have a token but no user yet, wait a moment for user to load
+    // If after a short delay there's still no user, redirect
+    if (!currentUser) {
+      const timeout = setTimeout(() => {
+        // Still no user after waiting, redirect to login
+        const currentPath = window.location.pathname;
+        sessionStorage.setItem('redirectAfterLogin', currentPath);
+        navigate(`/login/?next=${encodeURIComponent(currentPath)}`, { replace: true });
+      }, 1000); // Wait 1 second for user to load
+      
+      return () => clearTimeout(timeout);
+    }
+    
+    // User is authenticated, check if we're returning from login
     const redirectPath = sessionStorage.getItem('redirectAfterLogin');
     if (redirectPath && redirectPath.includes('/story/create/')) {
       // Clear the redirect path now that we're here
       sessionStorage.removeItem('redirectAfterLogin');
     }
-  }, []);
+  }, [navigate, currentUser]);
 
   useEffect(() => {
     const step = steps[currentStep];
@@ -303,30 +334,41 @@ const StoryCreationWizard: React.FC = () => {
     setShowMessage(false);
   };
 
+  // Show loading spinner while checking authentication
+  const token = localStorage.getItem('authToken');
+  if (!token || !currentUser) {
+    return <LoadingSpinner />;
+  }
+
   const currentStepComponent = steps[currentStep];
   const StepComponent = currentStepComponent.component;
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '1200px' }}>
-      <PageHeader
-        title="Create New Story"
-        description="Build your immersive 3D comic story step by step"
-        actions={
-          <>
-            <BackButton to="/immersivecomics/" />
-            <SmallButton 
-              variant="outline-primary"
-              onClick={() => {
-                console.log('Save Draft button clicked!');
-                handleSave();
-              }}
-              disabled={isSaving}
-            >
-              <i className="fas fa-save me-1"></i>{isSaving ? 'Saving...' : 'Save Draft'}
-            </SmallButton>
-          </>
-        }
-      />
+    <div className="container mt-2 p-2 p-md-4" style={{ maxWidth: '1200px' }}>
+      {/* Custom Header with title and buttons on same row */}
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <div className="flex-grow-1">
+          <h1 className="subtext-btn mb-0">Create New Story</h1>
+        </div>
+        <div className="d-flex gap-2 flex-wrap">
+          <BackButton to="/immersivecomics/" />
+          <SmallButton 
+            variant="outline-primary"
+            onClick={() => {
+              console.log('Save Draft button clicked!');
+              handleSave();
+            }}
+            disabled={isSaving}
+          >
+            <i className="fas fa-save me-1"></i>{isSaving ? 'Saving...' : ' Save Draft'}
+          </SmallButton>
+        </div>
+      </div>
+      
+      {/* Description */}
+      <div className="mb-2">
+        <p className="subtext-btn-sm text-muted mb-0">Story Building Process.</p>
+      </div>
 
       <MessagePopup
         message={message}
@@ -336,48 +378,128 @@ const StoryCreationWizard: React.FC = () => {
         duration={5000}
       />
 
-      {/* Progress Bar */}
-      <div className="card border-0 shadow-sm mb-4">
-        <div className="card-body">
-          <div className="row">
-            {steps.map((step, index) => (
-              <div key={step.id} className="col-12 col-md-6 col-lg-3 mb-2">
-                <div 
-                  className={`d-flex align-items-center p-2 rounded cursor-pointer ${
-                    index === currentStep 
-                      ? 'bg-primary text-white' 
-                      : index < currentStep 
-                        ? 'bg-success text-white' 
-                        : 'bg-light text-muted'
-                  }`}
-                  onClick={() => handleStepClick(index)}
-                  style={{ cursor: index <= currentStep ? 'pointer' : 'not-allowed' }}
-                >
-                  <div className="me-2">
-                    {index < currentStep ? (
-                      <i className="fas fa-check-circle"></i>
-                    ) : index === currentStep ? (
-                      <i className="fas fa-play-circle"></i>
-                    ) : (
-                      <i className="fas fa-circle"></i>
+      {/* Step Indicator - Modern Step Wizard Structure */}
+      <div className="card border-0 shadow-sm mb-2 font-quicksand">
+        <div className="card-body p-2 p-md-4">
+          <div className="step-indicator-wrapper" style={{ position: 'relative' }}>
+            {/* Step Items */}
+            <div className="d-flex justify-content-between align-items-start" style={{ position: 'relative', zIndex: 2 }}>
+              {steps.map((step, index) => {
+                const isActive = index === currentStep;
+                const isCompleted = index < currentStep;
+                
+                return (
+                  <div
+                    key={step.id}
+                    className="step-item"
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      position: 'relative',
+                      cursor: index <= currentStep ? 'pointer' : 'not-allowed'
+                    }}
+                    onClick={() => index <= currentStep && handleStepClick(index)}
+                  >
+                    {/* Step Circle */}
+                    <div
+                      className="step-circle"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '18px',
+                        border: '3px solid',
+                        backgroundColor: isActive 
+                          ? '#007bff' 
+                          : isCompleted 
+                            ? '#28a745' 
+                            : '#e9ecef',
+                        borderColor: isActive 
+                          ? '#007bff' 
+                          : isCompleted 
+                            ? '#28a745' 
+                            : '#dee2e6',
+                        color: isActive || isCompleted ? '#fff' : '#6c757d',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        zIndex: 3
+                      }}
+                    >
+                      {isCompleted ? (
+                        <i className="fas fa-check step-circle-icon" style={{ fontSize: '10px' }}></i>
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    
+                    {/* Step Label */}
+                    <div
+                      className="step-label"
+                      style={{
+                        marginTop: '10px',
+                        textAlign: 'center',
+                        fontSize: '10px',
+                        fontWeight: isActive ? '600' : '400',
+                        color: isActive 
+                          ? '#007bff' 
+                          : isCompleted 
+                            ? '#28a745' 
+                            : '#6c757d',
+                        maxWidth: '100px',
+                        lineHeight: '1.3'
+                      }}
+                    >
+                      {step.title}
+                    </div>
+                    
+                    {/* Connecting Line */}
+                    {index < steps.length - 1 && (
+                      <div
+                        className="step-line"
+                        style={{
+                          position: 'absolute',
+                          top: '25px',
+                          left: 'calc(50% + 25px)',
+                          width: 'calc(100% - 50px)',
+                          height: '3px',
+                          backgroundColor: index < currentStep ? '#28a745' : '#dee2e6',
+                          zIndex: 1,
+                          transition: 'background-color 0.3s ease'
+                        }}
+                      />
                     )}
                   </div>
-                  <div className="flex-grow-1">
-                    <div className="subtext-btn-sm fw-bold">{step.title}</div>
-                    <div className="subtext-btn-sm" style={{ fontSize: '0.75rem' }}>
-                      Step {index + 1} of {steps.length}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
+            
+            {/* Progress Bar Background */}
+            <div
+              className="step-progress-bg"
+              style={{
+                position: 'absolute',
+                top: '25px',
+                left: '25px',
+                right: '25px',
+                height: '3px',
+                backgroundColor: '#e9ecef',
+                zIndex: 1,
+                borderRadius: '2px'
+              }}
+            />
           </div>
         </div>
       </div>
 
       {/* Step Content */}
       <div className="card border-0 shadow-sm">
-        <div className="card-body">
+        <div className="card-body p-2">
           {isLoading ? (
             <LoadingSpinner />
           ) : (
@@ -394,13 +516,13 @@ const StoryCreationWizard: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <div className="d-flex justify-content-between mt-4">
+      <div className="d-flex justify-content-between mt-2">
         <SmallButton
           variant="outline-secondary"
           onClick={handlePrevious}
           disabled={currentStep === 0}
         >
-          <i className="fas fa-arrow-left me-1"></i>Previous
+          <i className="fas fa-arrow-left me-1"></i> Previous
         </SmallButton>
         
         <div className="d-flex gap-2">
@@ -417,7 +539,7 @@ const StoryCreationWizard: React.FC = () => {
               variant="primary"
               onClick={handleNext}
             >
-              Next<i className="fas fa-arrow-right ms-1"></i>
+              Next <i className="fas fa-arrow-right ms-1"></i>
             </SmallButton>
           )}
         </div>

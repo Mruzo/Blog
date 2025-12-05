@@ -1446,6 +1446,106 @@ class StudioAPITests(TestCase):
         self.assertEqual(studio_data['owner']['username'], 'testuser')
         self.assertTrue(studio_data['is_public'])
     
+    def test_studio_list_api_query_efficiency(self):
+        """Test that studio list API uses efficient queries (no N+1 problem)"""
+        # Create multiple studios with different owners
+        for i in range(10):
+            user = User.objects.create_user(
+                username=f'user{i}',
+                email=f'user{i}@example.com',
+                password='pass123',
+                first_name=f'User{i}',
+                last_name='Test'
+            )
+            studio = Studio.objects.create(
+                name=f'Studio {i}',
+                description=f'Description {i}',
+                owner=user,
+                is_public=True
+            )
+            # Create some stories for each studio owner
+            for j in range(3):
+                Comic.objects.create(
+                    title=f'Story {i}-{j}',
+                    description=f'Story description {i}-{j}',
+                    user=user,
+                    is_public=True,
+                    moderation_status='approved'
+                )
+        
+        # Should use maximum 3-4 queries:
+        # 1. Studios query (with select_related, prefetch, annotations)
+        # 2. Prefetch query for collaborators
+        # 3. Possibly a query for comic counts (if not using annotation)
+        with self.assertNumQueries(4):  # Allow 4 queries max (conservative)
+            response = self.client.get(reverse('immersivecomics:studio_list_api'))
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(len(data['studios']), 11)  # 10 new + 1 from setUp
+    
+    def test_studio_list_api_stories_count(self):
+        """Test that stories_count is correctly calculated"""
+        # Create additional stories for the test user
+        for i in range(5):
+            Comic.objects.create(
+                title=f'Public Story {i}',
+                description=f'Description {i}',
+                user=self.user,
+                is_public=True,
+                moderation_status='approved'
+            )
+        
+        # Create private stories (should not be counted)
+        for i in range(3):
+            Comic.objects.create(
+                title=f'Private Story {i}',
+                description=f'Description {i}',
+                user=self.user,
+                is_public=False,
+                moderation_status='approved'
+            )
+        
+        response = self.client.get(reverse('immersivecomics:studio_list_api'))
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        studio_data = data['studios'][0]  # Should be the test studio
+        # Should count 6 stories (1 from setUp + 5 new public stories)
+        self.assertEqual(studio_data['stories_count'], 6)
+    
+    def test_studio_list_api_collaborators(self):
+        """Test that collaborators data is included"""
+        # Create another collaborator
+        collaborator_user = User.objects.create_user(
+            username='collaborator',
+            email='collab@example.com',
+            password='pass123',
+            first_name='Collaborator',
+            last_name='User'
+        )
+        StudioCollaborator.objects.create(
+            studio=self.studio,
+            user=collaborator_user,
+            role='3d_artist',
+            is_active=True
+        )
+        
+        response = self.client.get(reverse('immersivecomics:studio_list_api'))
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        studio_data = data['studios'][0]
+        self.assertIn('collaborators', studio_data)
+        self.assertEqual(len(studio_data['collaborators']), 2)  # 2 active collaborators
+        
+        # Check collaborator data structure
+        collaborator = studio_data['collaborators'][0]
+        self.assertIn('id', collaborator)
+        self.assertIn('username', collaborator)
+        self.assertIn('first_name', collaborator)
+        self.assertIn('last_name', collaborator)
+        self.assertIn('role', collaborator)
+    
     def test_my_studio_api_authenticated(self):
         """Test my studio API endpoint for authenticated user"""
         self.client.login(username='testuser', password='testpass123')

@@ -1,0 +1,27 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>Thank You for Your Feedback</h1>
+    <p>We've received your message</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <p>Hi {{ feedback.full_name }},</p>
+    
+    <p>Thank you for reaching out to us! We've successfully received your feedback and will get back to you as soon as possible.</p>
+    
+    <div class="message-box">
+        <p><strong>Your Message:</strong></p>
+        <p><strong>Subject:</strong> {{ feedback.subject }}</p>
+        <p>{{ feedback.content }}</p>
+    </div>
+    
+    <p>Our support team typically responds within 24-48 hours. If your inquiry is urgent, please don't hesitate to contact us directly at <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a>.</p>
+    
+    <p>We appreciate your feedback and look forward to helping you!</p>
+</div>
+{% endblock %}
+

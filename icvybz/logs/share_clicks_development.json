@@ -188,5 +188,17 @@
     "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
     "referrer": "https://64867196bc82.ngrok-free.app/immersivecomics/seasons/1/episodes/1/",
     "host": "64867196bc82.ngrok-free.app"
+  },
+  {
+    "timestamp": "2025-11-27T20:29:34.773824",
+    "environment": "development",
+    "platform": "x_twitter",
+    "content_type": "story",
+    "episode_id": null,
+    "story_id": 10,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://localhost:3000/",
+    "host": "localhost:8000"
   }
 ]

@@ -41,10 +41,16 @@ class CollaborationService {
   // Search for existing users
   async searchUsers(query: string): Promise<User[]> {
     try {
+      console.log('Searching users with query:', query);
       const response = await api.get(`/users/search/?q=${encodeURIComponent(query)}`);
-      return response.data.results || response.data;
-    } catch (error) {
+      console.log('Search response:', response.data);
+      const results = response.data.results || response.data;
+      console.log('Parsed results:', results);
+      return results;
+    } catch (error: any) {
       console.error('Error searching users:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       throw error;
     }
   }
@@ -143,6 +149,70 @@ class CollaborationService {
       return response.data.results || response.data;
     } catch (error) {
       console.error('Error fetching pending invitations:', error);
+      throw error;
+    }
+  }
+
+  // Studio Collaboration Methods
+  async getStudioCollaborators(studioId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/studios/${studioId}/collaborators/`);
+      return response.data.results || response.data;
+    } catch (error) {
+      console.error('Error fetching studio collaborators:', error);
+      throw error;
+    }
+  }
+
+  async inviteStudioUser(studioId: number, inviteData: { user_id: number; role: string }): Promise<any> {
+    try {
+      const response = await api.post(`/studios/${studioId}/collaborators/invite-user/`, inviteData);
+      return response.data;
+    } catch (error) {
+      console.error('Error inviting studio user:', error);
+      throw error;
+    }
+  }
+
+  async inviteStudioByEmail(studioId: number, inviteData: { email: string; role: string }): Promise<any> {
+    try {
+      const response = await api.post(`/studios/${studioId}/collaborators/invite-email/`, inviteData);
+      return response.data;
+    } catch (error) {
+      console.error('Error sending studio email invitation:', error);
+      throw error;
+    }
+  }
+
+  async removeStudioCollaborator(studioId: number, collaboratorId: number): Promise<void> {
+    try {
+      await api.delete(`/studios/${studioId}/collaborators/${collaboratorId}/remove/`);
+    } catch (error) {
+      console.error('Error removing studio collaborator:', error);
+      throw error;
+    }
+  }
+
+  // Get studio collaborators for a story
+  async getStudioCollaboratorsForStory(storyId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/stories/${storyId}/studio-collaborators/`);
+      return response.data.results || response.data;
+    } catch (error) {
+      console.error('Error fetching studio collaborators for story:', error);
+      throw error;
+    }
+  }
+
+  // Bulk assign story collaborators from studio collaborators
+  async bulkAssignStoryCollaborators(storyId: number, userIds: number[]): Promise<any[]> {
+    try {
+      const response = await api.post(`/stories/${storyId}/collaborators/bulk-assign/`, {
+        user_ids: userIds
+      });
+      return response.data.results || response.data;
+    } catch (error) {
+      console.error('Error bulk assigning story collaborators:', error);
       throw error;
     }
   }

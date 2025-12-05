@@ -14,6 +14,7 @@ interface ShippingRate {
   estimated_days: number;
   amount: string;
   total_with_shipping: string;
+  _canadapost_service_name?: string; // Optional Canada Post service name fallback
 }
 
 interface Order {
@@ -52,7 +53,16 @@ const SelectShipping: React.FC = () => {
 
   const fetchOrderAndRates = async () => {
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+      
       const response = await fetch(`http://localhost:8000/api/orders/${orderId}/shipping/`, {
+        headers,
         credentials: 'include',
       });
 
@@ -62,7 +72,17 @@ const SelectShipping: React.FC = () => {
 
       const data = await response.json();
       setOrder(data.order);
-      setRates(data.rates || []);
+      // Debug: log the rates to see what we're getting
+      console.log('Shipping rates received:', JSON.stringify(data.rates, null, 2));
+      console.log('First rate structure:', data.rates && data.rates[0] ? JSON.stringify(data.rates[0], null, 2) : 'No rates');
+      
+      // Sort rates by cost (amount) from lowest to highest
+      const sortedRates = (data.rates || []).sort((a: ShippingRate, b: ShippingRate) => {
+        const amountA = parseFloat(a.amount || '0');
+        const amountB = parseFloat(b.amount || '0');
+        return amountA - amountB;
+      });
+      setRates(sortedRates);
     } catch (error: any) {
       console.error('Error fetching order:', error);
       setError(error.message || 'Failed to load shipping options');
@@ -74,11 +94,17 @@ const SelectShipping: React.FC = () => {
   const handleSelectRate = async (rateId: string) => {
     setSubmitting(true);
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+      
       const response = await fetch(`http://localhost:8000/api/orders/${orderId}/select-shipping/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ rate_id: rateId })
       });
@@ -122,9 +148,17 @@ const SelectShipping: React.FC = () => {
   }
 
   return (
-    <div className="container text-center p-0 mt-0">
+    <div className="container text-center p-1 mt-0">
       <div className="container mt-5 p-0">
-        <h2 className="subtext-btn-sm text-center text-decoration-none">Select Shipping Option</h2>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="flex-grow-1">
+            <h2 className="subtext-btn text-decoration-none mb-0">Select Shipping Option</h2>
+          </div>
+          <div className="d-flex gap-2">
+            <BackButton to="/product/cart/checkout/" />
+          </div>
+        </div>
+        
 
         <MessagePopup
           message={message}
@@ -140,11 +174,13 @@ const SelectShipping: React.FC = () => {
           </div>
         )}
 
+        
+
         {rates.length > 0 ? (
           <>
             <hr />
 
-            <div className="table-responsive mt-4">
+            <div className="table-responsive mt-4 font-quicksand">
               <table className="table table-bordered table-striped table-sm text-center mb-0">
                 <thead className="thead-light">
                   {/* Top header with image */}
@@ -166,11 +202,22 @@ const SelectShipping: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {rates.map((rate) => (
-                    <tr className="subtext-btn-sm" key={rate.object_id}>
-                      <td className="p-0 align-middle">{rate.servicelevel.name}</td>
-                      <td className="p-0 align-middle">{rate.estimated_days}</td>
-                      <td className="p-0 align-middle">${rate.amount}</td>
+                  {rates.map((rate, index) => {
+                    // Debug: log each rate
+                    console.log('Rendering rate:', rate);
+                    const serviceName = rate.servicelevel?.name || rate._canadapost_service_name || 'Standard Shipping';
+                    const estimatedDays = rate.estimated_days || 0;
+                    // Use object_id if available, otherwise use index to ensure unique keys
+                    const uniqueKey = rate.object_id || `rate-${index}`;
+                    return (
+                      <tr className="subtext-btn-sm" key={uniqueKey}>
+                        <td className="p-0 align-middle">
+                          {serviceName}
+                        </td>
+                        <td className="p-0 align-middle">
+                          {estimatedDays > 0 ? `${estimatedDays} day${estimatedDays !== 1 ? 's' : ''}` : 'N/A'}
+                        </td>
+                      <td className="p-0 align-middle">${parseFloat(rate.amount || '0').toFixed(2)}</td>
                       <td className="p-1 align-middle">
                         <button
                           type="button"
@@ -178,11 +225,12 @@ const SelectShipping: React.FC = () => {
                           onClick={() => handleSelectRate(rate.object_id)}
                           disabled={submitting}
                         >
-                          {submitting ? 'Processing...' : `$${rate.total_with_shipping}`}
+                          {submitting ? 'Processing...' : `$${parseFloat(rate.total_with_shipping || '0').toFixed(2)}`}
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

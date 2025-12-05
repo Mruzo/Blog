@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collaborationService, User } from '../services/collaborationService';
 
 interface UserSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectUser: (user: User) => void;
-  onInviteByEmail: (email: string) => void;
+  onSelectUser: (user: User, role: string) => void;
+  onInviteByEmail: (email: string, role: string) => void;
 }
 
 const UserSearchModal: React.FC<UserSearchModalProps> = ({
@@ -19,6 +19,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [showEmailInvite, setShowEmailInvite] = useState(false);
   const [emailAddress, setEmailAddress] = useState('');
+  const [selectedRole, setSelectedRole] = useState<string>('writer');
 
   // Debounced search
   useEffect(() => {
@@ -30,10 +31,14 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
     const timeoutId = setTimeout(async () => {
       setIsSearching(true);
       try {
+        console.log('UserSearchModal: Searching for:', searchQuery);
         const results = await collaborationService.searchUsers(searchQuery);
+        console.log('UserSearchModal: Search results:', results);
         setSearchResults(results);
-      } catch (error) {
-        console.error('Error searching users:', error);
+      } catch (error: any) {
+        console.error('UserSearchModal: Error searching users:', error);
+        console.error('UserSearchModal: Error details:', error.response?.data);
+        console.error('UserSearchModal: Error status:', error.response?.status);
         setSearchResults([]);
       } finally {
         setIsSearching(false);
@@ -44,13 +49,13 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
   }, [searchQuery]);
 
   const handleUserSelect = (user: User) => {
-    onSelectUser(user);
+    onSelectUser(user, selectedRole);
     onClose();
   };
 
   const handleEmailInvite = () => {
     if (emailAddress.trim()) {
-      onInviteByEmail(emailAddress.trim());
+      onInviteByEmail(emailAddress.trim(), selectedRole);
       onClose();
     }
   };
@@ -70,19 +75,48 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
 
   return (
     <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-lg">
+      <div 
+        className="modal-dialog modal-lg" 
+        style={{ 
+          marginTop: '120px', // Position below navbar (navbar ~60px + nav buttons ~50px = ~110px, add small margin)
+          marginBottom: '20px',
+          marginLeft: 'auto',
+          marginRight: 'auto'
+        }}
+      >
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Invite Collaborator</h5>
+            <h5 className="modal-title font-gillsans subtext">Invite Collaborator</h5>
             <button
               type="button"
-              className="btn-close"
+              className="btn btn-sm btn-light border"
               onClick={onClose}
               aria-label="Close"
-            ></button>
+            >
+              <i className="fas fa-times"></i>
+            </button>
           </div>
           
-          <div className="modal-body">
+          <div className="modal-body font-quicksand p-2">
+            {/* Role Selection */}
+            <div className="mb-3">
+              <label htmlFor="roleSelect" className="form-label">
+                Select Role &nbsp;
+              </label>
+              <select
+                className="form-select font-quicksand"
+                id="roleSelect"
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+              >
+                <option value="writer"> Writer</option>
+                <option value="3d_artist"> 3D Artist</option>
+                <option value="voice_actor"> Voice Actor</option>
+                <option value="sound_engineer"> Sound Engineer</option>
+                <option value="cinematographer"> Cinematographer</option>
+              </select>
+            </div>
+
             {/* Search Input */}
             <div className="mb-3">
               <label htmlFor="userSearch" className="form-label">
@@ -111,21 +145,21 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
 
             {/* Search Results */}
             {searchQuery && !showEmailInvite && (
-              <div className="mb-3">
-                <h6>Search Results</h6>
+              <div className="mb-3 font-quicksand">
+                <h6 className="font-quicksand">Search Results</h6>
                 {isSearching ? (
                   <div className="text-center py-3">
                     <div className="spinner-border text-primary" role="status">
                       <span className="visually-hidden">Searching...</span>
                     </div>
-                    <p className="mt-2 text-muted">Searching for users...</p>
+                    <p className="mt-2 text-muted font-quicksand">Searching for users...</p>
                   </div>
                 ) : searchResults.length > 0 ? (
                   <div className="list-group">
                     {searchResults.map((user) => (
                       <div
                         key={user.id}
-                        className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                        className="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2"
                         onClick={() => handleUserSelect(user)}
                         style={{ cursor: 'pointer' }}
                       >
@@ -145,13 +179,13 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                               {user.first_name.charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <div>
-                            <h6 className="mb-0">{user.first_name} {user.last_name}</h6>
-                            <small className="text-muted">@{user.username}</small>
+                          <div className="ml-1">
+                            <h6 className="mb-0 font-quicksand">{user.first_name} {user.last_name}</h6>
+                            <small className="text-muted font-quicksand">@{user.username}</small>
                           </div>
                         </div>
                         <button
-                          className="btn btn-sm btn-primary"
+                          className="btn btn-sm btn-primary font-quicksand"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleUserSelect(user);
@@ -163,10 +197,10 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-3">
-                    <p className="text-muted">No users found for "{searchQuery}"</p>
+                  <div className="text-center py-3 font-quicksand">
+                    <p className="text-muted font-quicksand">No users found for "{searchQuery}"</p>
                     <button
-                      className="btn btn-outline-primary"
+                      className="btn btn-outline-primary font-quicksand"
                       onClick={() => {
                         setShowEmailInvite(true);
                         setEmailAddress(searchQuery);
@@ -197,6 +231,21 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                     onChange={(e) => setEmailAddress(e.target.value)}
                     placeholder="user@example.com"
                   />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="emailRoleSelect" className="form-label">Role</label>
+                  <select
+                    className="form-select"
+                    id="emailRoleSelect"
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                  >
+                    <option value="writer"> Writer</option>
+                    <option value="3d_artist"> 3D Artist</option>
+                    <option value="voice_actor"> Voice Actor</option>
+                    <option value="sound_engineer"> Sound Engineer</option>
+                    <option value="cinematographer"> Cinematographer</option>
+                  </select>
                 </div>
                 <div className="d-flex gap-2">
                   <button

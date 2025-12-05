@@ -46,7 +46,8 @@ const MessagePopup: React.FC<MessagePopupProps> = ({
   // Add position-specific styles
   switch (position) {
     case 'top':
-      positionStyles.top = 5;
+      // Position below navbar (navbar ~60px + nav buttons ~50px = ~110px, add small margin)
+      positionStyles.top = 120;
       break;
     case 'center':
       positionStyles.top = '50%';
@@ -67,17 +68,33 @@ const MessagePopup: React.FC<MessagePopupProps> = ({
         <span>{message}</span>
         <button
           type="button"
-          className="btn-close"
+          className="btn btn-link p-0"
           aria-label="Close"
           onClick={onClose}
-          style={{ marginLeft: '10px' }}
-        />
+          style={{ 
+            marginLeft: '10px',
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            color: 'inherit',
+            opacity: 0.8,
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+        >
+          <i className="fas fa-times" style={{ fontSize: '1.5rem' }}></i>
+        </button>
       </div>
     </div>
   );
 };
 
 export default MessagePopup;
+
+
+
+
 
 
 

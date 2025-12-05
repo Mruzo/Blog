@@ -1,41 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CollaborationInvite, User, collaborationService } from '../services/collaborationService';
+import { User, collaborationService } from '../services/collaborationService';
 import { Story, apiService } from '../services/api';
-import UserSearchModal from './UserSearchModal';
-import CollaboratorInviteForm from './CollaboratorInviteForm';
-import CollaboratorsList from './CollaboratorsList';
-import NotificationToast from './NotificationToast';
+import MessagePopup from './MessagePopup';
+
+interface StudioCollaborator {
+  id: number;
+  user: User;
+  role: string;
+  is_story_collaborator: boolean;
+}
 
 const StoryCollaborators: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const storyId = id ? parseInt(id) : 0;
 
-  const [collaborators, setCollaborators] = useState<CollaborationInvite[]>([]);
+  const [studioCollaborators, setStudioCollaborators] = useState<StudioCollaborator[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [story, setStory] = useState<Story | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showUserSearch, setShowUserSearch] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [notification, setNotification] = useState<{
-    message: string;
-    type: 'success' | 'error' | 'info' | 'warning';
-  } | null>(null);
+  const [message, setMessage] = useState<string>('');
+  const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
+  const [showMessage, setShowMessage] = useState(false);
 
   // Check if current user is the story owner
   const isOwner = story && currentUser ? story.user === currentUser.id : false;
 
-  // Load collaborators
-  const loadCollaborators = async () => {
+  // Load studio collaborators for the story
+  const loadStudioCollaborators = async () => {
+    if (!storyId) return;
     try {
       setLoading(true);
-      const data = await collaborationService.getCollaborators(storyId);
-      setCollaborators(data);
+      const data = await collaborationService.getStudioCollaboratorsForStory(storyId);
+      setStudioCollaborators(data);
+      
+      // Set selected user IDs based on who is already a story collaborator
+      const selected = new Set<number>();
+      data.forEach((collab: StudioCollaborator) => {
+        if (collab.is_story_collaborator) {
+          selected.add(collab.user.id);
+        }
+      });
+      setSelectedUserIds(selected);
+      
       setError(null);
-    } catch (err) {
-      setError('Failed to load collaborators');
-      console.error('Error loading collaborators:', err);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.detail || 'Failed to load studio collaborators';
+      setError(errorMsg);
+      console.error('Error loading studio collaborators:', err);
     } finally {
       setLoading(false);
     }
@@ -59,8 +74,6 @@ const StoryCollaborators: React.FC = () => {
       setCurrentUser(userData);
     } catch (err) {
       console.error('Error loading current user:', err);
-      // If getting current user fails, try to get user ID from token
-      // This is a fallback - the API should provide this
     }
   };
 
@@ -68,109 +81,58 @@ const StoryCollaborators: React.FC = () => {
     if (storyId) {
       loadStory();
       loadCurrentUser();
-      loadCollaborators();
+      loadStudioCollaborators();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyId]);
 
-  // Handle user selection from search
-  const handleUserSelect = (user: User) => {
-    setSelectedUser(user);
-    setShowUserSearch(false);
+  // Handle checkbox toggle
+  const handleToggleCollaborator = (userId: number) => {
+    const newSelected = new Set(selectedUserIds);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUserIds(newSelected);
   };
 
-  // Handle email invitation
-  const handleEmailInvite = (email: string) => {
-    // For now, we'll show an alert. In a real implementation,
-    // you'd want to show a form to select role and message
-    alert(`Email invitation to ${email} would be sent here. This requires backend implementation.`);
-    setShowUserSearch(false);
-  };
-
-  // Handle invitation submission
-  const handleInvite = async (role: 'editor' | 'viewer' | 'admin', message?: string) => {
-    if (!selectedUser) return;
-
+  // Handle save
+  const handleSave = async () => {
+    if (!storyId) return;
+    
     try {
-      await collaborationService.inviteExistingUser(storyId, {
-        user_id: selectedUser.id,
-        role,
-        message
-      });
+      setSaving(true);
+      const userIdsArray = Array.from(selectedUserIds);
+      await collaborationService.bulkAssignStoryCollaborators(storyId, userIdsArray);
       
-      // Reload collaborators
-      await loadCollaborators();
-      setSelectedUser(null);
-      setNotification({
-        message: `Invitation sent to ${selectedUser.first_name} ${selectedUser.last_name}`,
-        type: 'success'
-      });
-    } catch (err) {
-      setNotification({
-        message: 'Failed to send invitation',
-        type: 'error'
-      });
-      console.error('Error sending invitation:', err);
-    }
-  };
-
-  // Handle role update
-  const handleUpdateRole = async (inviteId: number, role: 'editor' | 'viewer' | 'admin') => {
-    try {
-      await collaborationService.updateCollaboratorRole(storyId, inviteId, role);
-      await loadCollaborators();
-      setNotification({
-        message: 'Collaborator role updated successfully',
-        type: 'success'
-      });
-    } catch (err) {
-      setNotification({
-        message: 'Failed to update role',
-        type: 'error'
-      });
-      console.error('Error updating role:', err);
-    }
-  };
-
-  // Handle collaborator removal
-  const handleRemoveCollaborator = async (inviteId: number) => {
-    if (!window.confirm('Are you sure you want to remove this collaborator?')) {
-      return;
-    }
-
-    try {
-      await collaborationService.removeCollaborator(storyId, inviteId);
-      await loadCollaborators();
-      setNotification({
-        message: 'Collaborator removed successfully',
-        type: 'success'
-      });
-    } catch (err) {
-      setNotification({
-        message: 'Failed to remove collaborator',
-        type: 'error'
-      });
-      console.error('Error removing collaborator:', err);
-    }
-  };
-
-  // Handle accepting collaborator (for story owners)
-  const handleAcceptCollaborator = async (inviteId: number) => {
-    try {
-      await collaborationService.acceptInvitation(inviteId);
-      await loadCollaborators();
-      setNotification({
-        message: 'Collaborator accepted successfully',
-        type: 'success'
-      });
+      // Reload to get updated state
+      await loadStudioCollaborators();
+      
+      setMessage('Collaborators updated successfully');
+      setMessageType('success');
+      setShowMessage(true);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to accept collaborator';
-      setNotification({
-        message: errorMessage,
-        type: 'error'
-      });
-      console.error('Error accepting collaborator:', err);
+      const errorMsg = err.response?.data?.detail || 'Failed to update collaborators';
+      setMessage(errorMsg);
+      setMessageType('danger');
+      setShowMessage(true);
+      console.error('Error saving collaborators:', err);
+    } finally {
+      setSaving(false);
     }
+  };
+
+  // Get role color for badge
+  const getRoleColor = (role: string): string => {
+    const roleColors: { [key: string]: string } = {
+      'writer': 'primary',
+      '3d_artist': 'success',
+      'voice_actor': 'info',
+      'sound_engineer': 'warning',
+      'cinematographer': 'danger',
+    };
+    return roleColors[role] || 'secondary';
   };
 
   if (loading) {
@@ -179,7 +141,16 @@ const StoryCollaborators: React.FC = () => {
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading...</span>
         </div>
-        <p className="mt-2">Loading collaborators...</p>
+        <p className="mt-2 subtext-btn-sm">Loading collaborators...</p>
+      </div>
+    );
+  }
+
+  if (!isOwner) {
+    return (
+      <div className="alert alert-info" role="alert">
+        <i className="fas fa-info-circle me-2"></i>
+        Only the story owner can manage collaborators.
       </div>
     );
   }
@@ -187,17 +158,35 @@ const StoryCollaborators: React.FC = () => {
   return (
     <div className="container-fluid p-0">
       <div className="row">
-        <div className="col-12 border-left">
+        <div className="col-md-4">
           <div className="d-flex justify-content-between align-items-center mb-1">
-            <h3 className="subtext-btn mb-0">Collaborators</h3>
+            <h3 className="subtext-btn mb-0 font-gillsans">Story Collaborators</h3>
             <button
               className="btn btn-primary subtext-btn-sm"
-              onClick={() => setShowUserSearch(true)}
+              onClick={handleSave}
+              disabled={saving}
             >
-              <i className="fas fa-user-plus me-2"> &nbsp;</i>
-              Invite Collaborator
+              {saving ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-save me-2"></i>
+                  &nbsp;Save
+                </>
+              )}
             </button>
           </div>
+
+          <MessagePopup
+            message={message}
+            type={messageType}
+            show={showMessage}
+            onClose={() => setShowMessage(false)}
+            duration={3000}
+          />
 
           {error && (
             <div className="alert alert-danger" role="alert">
@@ -206,52 +195,79 @@ const StoryCollaborators: React.FC = () => {
             </div>
           )}
 
-          {/* Invite Form */}
-          {selectedUser && (
-            <div className="mb-4">
-              <CollaboratorInviteForm
-                selectedUser={selectedUser}
-                onInvite={handleInvite}
-                onCancel={() => setSelectedUser(null)}
-              />
+          {studioCollaborators.length === 0 ? (
+            <div className="alert alert-info" role="alert">
+              <i className="fas fa-info-circle me-2"></i>
+              No studio collaborators available. Add collaborators to your studio first.
+            </div>
+          ) : (
+            <div className="card">
+              <div className="card-header">
+                <h5 className="mb-0 subtext-btn-sm font-quicksand">
+                  Select Collaborators for This Story
+                </h5>
+                
+              </div>
+              <div className="card-body p-1">
+                <div className="list-group">
+                  {studioCollaborators.map((collab) => (
+                    <div
+                      key={collab.id}
+                      className={`list-group-item d-flex align-items-center p-1 ${
+                        selectedUserIds.has(collab.user.id) ? 'active' : ''
+                      }`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleToggleCollaborator(collab.user.id)}
+                    >
+                      <div className="form-check me-3 d-flex align-items-center">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={selectedUserIds.has(collab.user.id)}
+                          onChange={() => handleToggleCollaborator(collab.user.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      <div className="flex-grow-1">
+                        <div className="d-flex align-items-center">
+                          <div className="me-2">
+                            {collab.user.avatar ? (
+                              <img
+                                src={collab.user.avatar}
+                                alt={collab.user.username}
+                                className="rounded-circle"
+                                style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <div
+                                className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+                                style={{ width: '40px', height: '40px', fontSize: '1rem' }}
+                              >
+                                {(collab.user.first_name || collab.user.username || 'U').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-grow-1">
+                            <div className="subtext-btn-sm fw-bold font-quicksand">
+                              {collab.user.first_name} {collab.user.last_name}
+                            </div>
+                            <div className="subtext-btn-sm text-muted font-quicksand">
+                              @{collab.user.username}
+                            </div>
+                          </div>
+                          <span className={`badge bg-${getRoleColor(collab.role)} ms-2`}>
+                            {collab.role.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
-
-          {/* Collaborators List */}
-          <div className="card">
-            {/* <div className="card-header">
-              <h5 className="mb-0 subtext-btn-sm">Current Collaborators</h5>
-            </div> */}
-            <div className="card-body p-1">
-              <CollaboratorsList
-                collaborators={collaborators}
-                onUpdateRole={handleUpdateRole}
-                onRemoveCollaborator={handleRemoveCollaborator}
-                onAcceptCollaborator={handleAcceptCollaborator}
-                canManage={true} // In a real app, check user permissions
-                isOwner={isOwner}
-              />
-            </div>
-          </div>
         </div>
       </div>
-
-      {/* User Search Modal */}
-      <UserSearchModal
-        isOpen={showUserSearch}
-        onClose={() => setShowUserSearch(false)}
-        onSelectUser={handleUserSelect}
-        onInviteByEmail={handleEmailInvite}
-      />
-
-      {/* Notification Toast */}
-      {notification && (
-        <NotificationToast
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
     </div>
   );
 };

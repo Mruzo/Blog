@@ -57,15 +57,52 @@ class ShippingAddressForm(forms.ModelForm):
             'full_name': forms.TextInput(attrs={'placeholder': 'first and last name'}),
         }
 
-        def __init__(self, *args, **kwargs):
-            user = kwargs.pop('user', None)
-            super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
 
-            if user and user.is_authenticated:
-                full_name = f"{user.first_name} {user.last_name}".strip()
-                self.fields['full_name'].widget.attrs.update({
-                'placeholder': full_name or 'Full Name'
+        if user and user.is_authenticated:
+            full_name = f"{user.first_name} {user.last_name}".strip()
+            self.fields['full_name'].widget.attrs.update({
+            'placeholder': full_name or 'Full Name'
+            })
+    
+    def clean(self):
+        """High Priority: Validate postal code format based on country"""
+        cleaned_data = super().clean()
+        postal_code = cleaned_data.get('postal_code', '')
+        country_code = cleaned_data.get('country_code', '')
+        
+        if not postal_code or not country_code:
+            return cleaned_data
+        
+        import re
+        postal_code = postal_code.strip().upper()
+        country_code = country_code.upper()
+        
+        # Canadian postal code: A1A 1A1 or A1A1A1
+        if country_code == 'CA':
+            # Remove spaces and validate format
+            postal_code_clean = postal_code.replace(' ', '')
+            if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', postal_code_clean):
+                raise forms.ValidationError({
+                    'postal_code': 'Invalid Canadian postal code format. Expected format: A1A 1A1'
                 })
+            # Format with space: A1A 1A1
+            cleaned_data['postal_code'] = f"{postal_code_clean[:3]} {postal_code_clean[3:]}"
+        
+        # US ZIP code: 12345 or 12345-6789 (exactly 5 digits, optionally followed by - and 4 digits)
+        elif country_code == 'US':
+            # Remove any spaces first
+            postal_code_clean = postal_code.replace(' ', '')
+            if not re.match(r'^\d{5}(-\d{4})?$', postal_code_clean):
+                raise forms.ValidationError({
+                    'postal_code': 'Invalid US ZIP code format. Expected format: 12345 or 12345-6789'
+                })
+            cleaned_data['postal_code'] = postal_code_clean
+        
+        # For other countries, just return as-is (can be extended later)
+        return cleaned_data
 
 
 class ShippingSelectionForm(forms.Form):

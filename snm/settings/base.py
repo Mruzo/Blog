@@ -31,7 +31,23 @@ SECRET_KEY = config.get('section', 'VYBZ_KEY')
 STRIPE_PUBLIC_KEY = config.get('section','STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY = config.get('section', 'STRIPE_SECRET_KEY')
 
-SHIPPO_API_KEY=config.get('section', 'SHIPPO_LIVE')
+
+# Canada Post Developer Portal API Configuration
+# Key Number format: "username : password" or "Key Number (username : password)"
+# Base settings use DEVELOPMENT credentials by default
+CANADAPOST_DEVELOPMENT_KEY_NUMBER = config.get('section', 'CANADAPOST_DEV_KEY_NUMBER', fallback='')
+CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER = config.get('section', 'CANADAPOST_DEV_CUSTOMER_NUMBER', fallback='')
+
+CANADAPOST_PRODUCTION_KEY_NUMBER = config.get('section', 'CANADAPOST_PROD_KEY_NUMBER', fallback='')
+CANADAPOST_PRODUCTION_CUSTOMER_NUMBER = config.get('section', 'CANADAPOST_PROD_CUSTOMER_NUMBER', fallback='')
+
+# Base settings: Use DEVELOPMENT API by default
+# Production settings (pro.py) will override this to True
+CANADAPOST_USE_PRODUCTION = False
+
+# Set active credentials to development (base/local)
+CANADAPOST_KEY_NUMBER = CANADAPOST_DEVELOPMENT_KEY_NUMBER
+CANADAPOST_CUSTOMER_NUMBER = CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER
 
 
 META_SITE_PROTOCOL = 'http', 'https'
@@ -186,8 +202,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 
 # Email configuration
-DEFAULT_FROM_EMAIL = 'noreply@justvybz.com'
-SUPPORT_EMAIL = 'support@justvybz.com'
+DEFAULT_FROM_EMAIL = 'justvybz@justvybz.com'
+SUPPORT_EMAIL = 'Justvybz@justvybz.com'
 
 EMAIL_HOST = 'mail.papamail.net'
 EMAIL_PORT = 587
@@ -249,6 +265,15 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    # Rate limiting for API endpoints (OWASP, NIST compliance)
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',  # Anonymous users: 100 requests per hour
+        'user': '1000/hour',  # Authenticated users: 1000 requests per hour
+    }
 }
 
 # CORS settings
@@ -258,3 +283,9 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Session settings - ensure session cookie is sent with cross-origin requests
+SESSION_COOKIE_SAMESITE = 'Lax'  # Allows session cookie to be sent with cross-origin requests
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request to keep it alive

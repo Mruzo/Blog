@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StoryCreationData } from '../StoryCreationWizard';
+import FormFieldWithLimit from '../FormFieldWithLimit';
 
 interface SeasonSetupStepProps {
   data: StoryCreationData;
@@ -74,36 +75,54 @@ const SeasonSetupStep: React.FC<SeasonSetupStepProps> = ({
     <div>
       <div className="row">
         <div className="col-12">
-          <h4 className="subtext-btn mb-4">Season Setup</h4>
-          <p className="subtext-btn-sm text-muted mb-4">
+          <h4 className="subtext-btn mb-2">Season Setup</h4>
+          {/* <p className="subtext-btn-sm text-muted mb-4">
             Create the first season for your story. You can add more seasons later.
-          </p>
+          </p> */}
         </div>
       </div>
 
       <div className="row">
-        <div className="col-md-8">
-          <div className="mb-3">
-            <label htmlFor="title" className="form-label subtext-btn-sm">
-              Season Title <span className="text-danger">*</span>
+      <div className="col-md-4">
+          <div className="mb-2">
+            <label htmlFor="release_date" className="form-label subtext-btn-sm">
+              Release Date <span className="text-danger"></span>
             </label>
             <input
-              type="text"
-              className={`form-control ${errors.title ? 'is-invalid' : ''}`}
-              id="title"
-              name="title"
-              value={formData.title}
+              type="date"
+              className={`form-control ${errors.release_date ? 'is-invalid' : ''}`}
+              id="release_date"
+              name="release_date"
+              value={formData.release_date}
               onChange={handleInputChange}
-              placeholder="e.g., The Beginning, Chapter One, etc."
             />
+            {errors.release_date && <div className="invalid-feedback">{errors.release_date}</div>}
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="mb-2">
+            <label htmlFor="title" className="form-label subtext-btn-sm">
+              Title <span className="text-danger">*</span>
+            </label>
+            <FormFieldWithLimit value={formData.title} maxLength={50}>
+              <input
+                type="text"
+                className={`form-control ${errors.title ? 'is-invalid' : ''}`}
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                placeholder="e.g., The Beginning, Chapter One, etc."
+              />
+            </FormFieldWithLimit>
             {errors.title && <div className="invalid-feedback">{errors.title}</div>}
           </div>
         </div>
 
         <div className="col-md-4">
-          <div className="mb-3">
+          <div className="mb-2">
             <label htmlFor="season_number" className="form-label subtext-btn-sm">
-              Season Number <span className="text-danger">*</span>
+              Number <span className="text-danger">*</span>
             </label>
             <input
               type="number"
@@ -120,45 +139,32 @@ const SeasonSetupStep: React.FC<SeasonSetupStepProps> = ({
       </div>
 
       <div className="row">
-        <div className="col-md-6">
-          <div className="mb-3">
-            <label htmlFor="release_date" className="form-label subtext-btn-sm">
-              Release Date <span className="text-danger">*</span>
-            </label>
-            <input
-              type="date"
-              className={`form-control ${errors.release_date ? 'is-invalid' : ''}`}
-              id="release_date"
-              name="release_date"
-              value={formData.release_date}
-              onChange={handleInputChange}
-            />
-            {errors.release_date && <div className="invalid-feedback">{errors.release_date}</div>}
-          </div>
-        </div>
+        
       </div>
 
       <div className="row">
         <div className="col-12">
-          <div className="mb-3">
+          <div className="mb-2">
             <label htmlFor="description" className="form-label subtext-btn-sm">
-              Season Description <span className="text-danger">*</span>
+              Season Description <span className="text-danger"></span>
             </label>
-            <textarea
-              className={`form-control ${errors.description ? 'is-invalid' : ''}`}
-              id="description"
-              name="description"
-              rows={4}
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Describe what happens in this season, key events, character development, etc."
-            />
+            <FormFieldWithLimit value={formData.description} maxLength={150}>
+              <textarea
+                className={`form-control ${errors.description ? 'is-invalid' : ''}`}
+                id="description"
+                name="description"
+                rows={2}
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Describe what happens in this season, key events, character development, etc."
+              />
+            </FormFieldWithLimit>
             {errors.description && <div className="invalid-feedback">{errors.description}</div>}
           </div>
         </div>
       </div>
 
-      <div className="row">
+      {/* <div className="row">
         <div className="col-12">
           <div className="alert alert-info">
             <i className="fas fa-info-circle me-2"></i>
@@ -185,7 +191,7 @@ const SeasonSetupStep: React.FC<SeasonSetupStepProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

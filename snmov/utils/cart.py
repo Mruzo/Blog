@@ -1,24 +1,93 @@
 from django.shortcuts import get_object_or_404
 from snmov.models import Product, ShippingAddress
 import requests
-import shippo
+# import shippo  # Replaced with Canada Post
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
+from datetime import timedelta
 
 User = get_user_model()
 
-def get_cart_for_session(request):
+def get_cart_for_session(request, clean_expired=True):
+    """
+    Get cart items for session.
+    High Priority: Automatically clean expired cart items (older than 30 days).
+    
+    CRITICAL FIX: When user is authenticated, merge cart from ALL their sessions.
+    This handles the case where Token Auth creates new sessions on each request.
+    """
+    from django.contrib.sessions.models import Session
+    from django.utils import timezone
+    
+    # Handle case where request might not have user attribute (e.g., in tests)
+    has_user = hasattr(request, 'user')
+    is_authenticated = has_user and hasattr(request.user, 'is_authenticated') and request.user.is_authenticated
+    
     cart = request.session.get('cart', {})
+    
+    # CRITICAL: If authenticated, merge cart from ALL user's sessions
+    # BUT: Current session takes precedence (most recent updates)
+    if is_authenticated:
+        # Search for user's sessions with cart and merge them
+        active_sessions = Session.objects.filter(expire_date__gte=timezone.now())
+        merged_cart = dict(cart)  # Start with current session cart (this is the source of truth)
+        
+        for session in active_sessions:
+            try:
+                session_data = session.get_decoded()
+                session_user_id = session_data.get('_auth_user_id')
+                if session_user_id == str(request.user.id):
+                    session_cart = session_data.get('cart', {})
+                    if session_cart:
+                        # Merge session cart into merged_cart
+                        # CRITICAL: Current session (merged_cart) takes precedence over other sessions
+                        for product_id, details in session_cart.items():
+                            if product_id not in merged_cart:
+                                # Only add items that don't exist in current session
+                                # This ensures current session updates are not overwritten
+                                merged_cart[product_id] = details
+            except Exception:
+                continue
+        
+        # If we merged carts, save to current session
+        if merged_cart != cart:
+            cart = merged_cart
+            request.session['cart'] = cart
+            request.session['_auth_user_id'] = str(request.user.id)
+            request.session.modified = True
+            request.session.save()
     cart_items = []
     total_price = 0
+    cart_modified = False
+    
+    # High Priority: Cart expiration - 30 days
+    CART_EXPIRY_DAYS = 30
+    expiry_date = timezone.now() - timedelta(days=CART_EXPIRY_DAYS)
 
     for product_id, details in cart.items():
         try:
             # Validate UUID format first
             import uuid
             uuid.UUID(product_id)
+            
+            # High Priority: Check if cart item has expired
+            if clean_expired:
+                item_added_at = details.get('added_at')
+                if item_added_at:
+                    try:
+                        from django.utils.dateparse import parse_datetime
+                        added_datetime = parse_datetime(item_added_at)
+                        if added_datetime and added_datetime < expiry_date:
+                            # Item expired, remove it
+                            cart_modified = True
+                            continue
+                    except (ValueError, TypeError):
+                        # If date parsing fails, keep the item (backward compatibility)
+                        pass
+            
             product = Product.objects.get(uuid=product_id)
             quantity = details.get('quantity', 1)
             unit_price = product.get_discounted_price()
@@ -33,7 +102,30 @@ def get_cart_for_session(request):
             total_price += total
         except (Product.DoesNotExist, ValueError):
             # Skip invalid UUIDs or non-existent products
+            cart_modified = True
             continue
+    
+    # If we removed expired items, update the session
+    if cart_modified and clean_expired:
+        # Rebuild cart with only non-expired items
+        cleaned_cart = {}
+        for product_id, details in cart.items():
+            item_added_at = details.get('added_at')
+            if item_added_at:
+                try:
+                    from django.utils.dateparse import parse_datetime
+                    added_datetime = parse_datetime(item_added_at)
+                    if added_datetime and added_datetime >= expiry_date:
+                        cleaned_cart[product_id] = details
+                except (ValueError, TypeError):
+                    # Keep items without valid timestamps (backward compatibility)
+                    cleaned_cart[product_id] = details
+            else:
+                # Keep items without timestamps (backward compatibility)
+                cleaned_cart[product_id] = details
+        
+        request.session['cart'] = cleaned_cart
+        request.session.modified = True
 
     return {
         'cart_items': cart_items,
@@ -117,25 +209,45 @@ def get_shipping_rates(order):
 
 
     try:
-        shipment = shippo.Shipment.create(
-            address_from=from_address,
-            address_to=to_address,
-            parcels=[parcel],
-              **{'async': False}, 
-        )
-       
-        # Print the raw API response
-        print("==== SHIPPO API RAW RESPONSE ====")
-        print(shipment)
-
-        if not shipment.get("rates"):
-            if "messages" in shipment:
-                print("==== SHIPPO MESSAGES ====")
-                for msg in shipment["messages"]:
-                    print(f"- {msg.get('source')}: {msg.get('text')}")
+        # Use Canada Post API instead of Shippo
+        from snmov.utils.canadapost import get_canadapost_rates
+        
+        # use_production=None will use settings.CANADAPOST_USE_PRODUCTION
+        rates = get_canadapost_rates(order, use_production=None)
+        
+        if not rates:
             raise ValueError("No shipping options available.")
-
-        return shipment["rates"]
+        
+        # get_canadapost_rates already returns formatted rates with servicelevel.name
+        # So we can return them directly, but ensure all fields are present
+        formatted_rates = []
+        for rate in rates:
+            # Extract service name from servicelevel.name or _canadapost_service_name
+            service_name = rate.get('servicelevel', {}).get('name', '') or rate.get('_canadapost_service_name', '')
+            service_code = rate.get('object_id', '') or rate.get('_canadapost_service_code', '')
+            estimated_days = rate.get('estimated_days', 0)
+            
+            formatted_rates.append({
+                'object_id': service_code,
+                'servicelevel': {
+                    'name': service_name,
+                },
+                'amount': str(rate.get('amount', '0.00')),
+                'currency': rate.get('currency', 'CAD'),
+                'estimated_days': int(estimated_days) if estimated_days else 0,
+                'courier_name': rate.get('courier_name', 'Canada Post'),
+                'provider': rate.get('provider', 'Canada Post'),
+                'provider_image_200': rate.get('provider_image_200', ''),
+                'shipment_charge': {
+                    'amount': str(rate.get('amount', '0.00')),
+                    'currency': rate.get('currency', 'CAD'),
+                },
+                # Store original Canada Post data
+                '_canadapost_service_code': service_code,
+                '_canadapost_service_name': service_name,
+            })
+        
+        return formatted_rates
 
     except requests.exceptions.HTTPError as e:
         raise ValueError(f"Failed to fetch rates: {e}")

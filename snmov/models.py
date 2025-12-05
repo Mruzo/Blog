@@ -392,3 +392,290 @@ class Comment(models.Model):
 
 class About(models.Model):
     body = models.TextField(null=True, blank=True)
+
+
+class EmailPreference(models.Model):
+    """Model to track user email preferences and unsubscribe status"""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='email_preferences'
+    )
+    
+    # Essential emails (cannot be unsubscribed)
+    # These are always sent regardless of preferences
+    # - Order confirmations
+    # - Password resets
+    # - Account security alerts
+    
+    # Marketing emails
+    marketing_emails = models.BooleanField(default=True, help_text="Receive marketing and promotional emails")
+    
+    # Product notifications
+    product_notifications = models.BooleanField(default=True, help_text="Receive product back in stock notifications")
+    
+    # Order updates
+    order_updates = models.BooleanField(default=True, help_text="Receive order status update emails")
+    
+    # Abandoned cart reminders
+    cart_reminders = models.BooleanField(default=True, help_text="Receive abandoned cart reminder emails")
+    
+    # Collaboration notifications
+    collaboration_notifications = models.BooleanField(default=True, help_text="Receive collaboration invitation and request emails")
+    
+    # Newsletter
+    newsletter = models.BooleanField(default=False, help_text="Subscribe to newsletter")
+    
+    # Unsubscribe token for one-click unsubscribe
+    unsubscribe_token = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    unsubscribe_token_created_at = models.DateTimeField(null=True, blank=True)
+    
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Email Preference"
+        verbose_name_plural = "Email Preferences"
+    
+    def __str__(self):
+        return f"Email Preferences for {self.user.username}"
+    
+    def save(self, *args, **kwargs):
+        if not self.unsubscribe_token:
+            import secrets
+            self.unsubscribe_token = secrets.token_urlsafe(32)
+            self.unsubscribe_token_created_at = timezone.now()
+        super().save(*args, **kwargs)
+    
+    def can_receive_email(self, email_type):
+        """
+        Check if user can receive a specific type of email.
+        
+        email_type options:
+        - 'marketing': Marketing/promotional emails
+        - 'product': Product back in stock notifications
+        - 'order_updates': Order status updates (non-essential)
+        - 'cart_reminders': Abandoned cart reminders
+        - 'collaboration': Collaboration invitations/requests
+        - 'newsletter': Newsletter emails
+        - 'essential': Essential emails (always True)
+        """
+        if email_type == 'essential':
+            return True  # Essential emails always sent
+        
+        if email_type == 'marketing':
+            return self.marketing_emails
+        elif email_type == 'product':
+            return self.product_notifications
+        elif email_type == 'order_updates':
+            return self.order_updates
+        elif email_type == 'cart_reminders':
+            return self.cart_reminders
+        elif email_type == 'collaboration':
+            return self.collaboration_notifications
+        elif email_type == 'newsletter':
+            return self.newsletter
+        
+        return True  # Default to True if unknown type
+
+
+class EmailLog(models.Model):
+    """Model to track email sending for analytics and debugging"""
+    
+    STATUS_CHOICES = [
+        ('sent', 'Sent'),
+        ('failed', 'Failed'),
+        ('skipped', 'Skipped'),
+    ]
+    
+    email_type = models.CharField(
+        max_length=50,
+        help_text="Type of email (e.g., 'order_confirmation', 'welcome')"
+    )
+    recipient_email = models.EmailField()
+    recipient_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='email_logs'
+    )
+    subject = models.CharField(max_length=255)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    error_message = models.TextField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True, help_text="Additional metadata")
+    
+    # Tracking fields (for future analytics integration)
+    opened_at = models.DateTimeField(null=True, blank=True)
+    clicked_at = models.DateTimeField(null=True, blank=True)
+    bounced = models.BooleanField(default=False)
+    bounced_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['email_type', 'status']),
+            models.Index(fields=['recipient_email', 'created_at']),
+            models.Index(fields=['recipient_user', 'created_at']),
+        ]
+        verbose_name = "Email Log"
+        verbose_name_plural = "Email Logs"
+    
+    def __str__(self):
+        return f"{self.email_type} to {self.recipient_email} - {self.status}"
+
+
+class NewsletterSubscription(models.Model):
+    """Model for newsletter subscriptions (for periodic email blasts)"""
+    email = models.EmailField(unique=True)
+    is_active = models.BooleanField(default=True, help_text="Whether the subscription is active")
+    subscribed_at = models.DateTimeField(auto_now_add=True)
+    unsubscribed_at = models.DateTimeField(null=True, blank=True)
+    unsubscribe_token = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    
+    # Optional: Link to user account if they have one
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='newsletter_subscriptions'
+    )
+    
+    # Source tracking
+    source = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Where the subscription came from (e.g., 'website', 'checkout', 'signup')"
+    )
+    
+    class Meta:
+        verbose_name = "Newsletter Subscription"
+        verbose_name_plural = "Newsletter Subscriptions"
+        ordering = ['-subscribed_at']
+        indexes = [
+            models.Index(fields=['email', 'is_active']),
+            models.Index(fields=['is_active', 'subscribed_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.email} - {'Active' if self.is_active else 'Unsubscribed'}"
+    
+    def save(self, *args, **kwargs):
+        if not self.unsubscribe_token:
+            import secrets
+            self.unsubscribe_token = secrets.token_urlsafe(32)
+        if not self.is_active and not self.unsubscribed_at:
+            self.unsubscribed_at = timezone.now()
+        super().save(*args, **kwargs)
+    
+    def unsubscribe(self):
+        """Unsubscribe from newsletter"""
+        self.is_active = False
+        self.unsubscribed_at = timezone.now()
+        self.save()
+        
+        # Also update user's EmailPreference if linked
+        if self.user:
+            try:
+                preference = self.user.email_preferences
+                preference.newsletter = False
+                preference.save()
+            except EmailPreference.DoesNotExist:
+                pass
+
+
+class SecurityLog(models.Model):
+    """Model for security event logging (NIST, PCI DSS compliance)"""
+    
+    SEVERITY_CHOICES = [
+        ('INFO', 'Info'),
+        ('WARNING', 'Warning'),
+        ('ERROR', 'Error'),
+        ('CRITICAL', 'Critical'),
+    ]
+    
+    EVENT_TYPE_CHOICES = [
+        ('login_success', 'Login Success'),
+        ('login_failed', 'Login Failed'),
+        ('brute_force_attempt', 'Brute Force Attempt'),
+        ('rate_limit_exceeded', 'Rate Limit Exceeded'),
+        ('unauthorized_access', 'Unauthorized Access'),
+        ('file_upload', 'File Upload'),
+        ('payment_processed', 'Payment Processed'),
+        ('data_export', 'Data Export'),
+        ('data_deletion', 'Data Deletion'),
+        ('password_reset', 'Password Reset'),
+        ('api_access', 'API Access'),
+        ('suspicious_activity', 'Suspicious Activity'),
+    ]
+    
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPE_CHOICES)
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='INFO')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default='')
+    path = models.CharField(max_length=255, blank=True, default='')
+    method = models.CharField(max_length=10, blank=True, default='')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_logs'
+    )
+    details = models.JSONField(default=dict, blank=True, help_text="Additional event details")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['event_type', 'created_at']),
+            models.Index(fields=['ip_address', 'created_at']),
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['severity', 'created_at']),
+        ]
+        verbose_name = "Security Log"
+        verbose_name_plural = "Security Logs"
+    
+    def __str__(self):
+        return f"{self.event_type} - {self.severity} - {self.created_at}"
+
+
+class DataConsent(models.Model):
+    """Model for GDPR consent management"""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='data_consents'
+    )
+    consent_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('privacy_policy', 'Privacy Policy'),
+            ('terms_of_service', 'Terms of Service'),
+            ('cookies', 'Cookie Consent'),
+            ('marketing', 'Marketing Emails'),
+            ('analytics', 'Analytics Tracking'),
+        ]
+    )
+    consented = models.BooleanField(default=False)
+    consent_date = models.DateTimeField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    version = models.CharField(max_length=20, help_text="Version of policy/terms consented to")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['user', 'consent_type']
+        ordering = ['-created_at']
+        verbose_name = "Data Consent"
+        verbose_name_plural = "Data Consents"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.consent_type} - {'Consented' if self.consented else 'Not Consented'}"

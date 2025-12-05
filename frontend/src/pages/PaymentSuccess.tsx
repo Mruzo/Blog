@@ -52,7 +52,16 @@ const PaymentSuccess: React.FC = () => {
 
   const fetchOrderDetails = async (sessionId: string) => {
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+      
       const response = await fetch(`http://localhost:8000/api/payment/success/?session_id=${sessionId}`, {
+        headers,
         credentials: 'include',
       });
 
@@ -211,6 +220,10 @@ const PaymentSuccess: React.FC = () => {
 };
 
 export default PaymentSuccess;
+
+
+
+
 
 
 

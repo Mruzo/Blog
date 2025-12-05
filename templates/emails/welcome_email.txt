@@ -2,17 +2,20 @@ Welcome to Justvybz!
 
 Hi {{ user.first_name|default:user.username }},
 
-Thank you for joining Justvybz! We're excited to have you as part of our community. Get ready to explore our collection of beautiful desk mats and experience them in augmented reality.
+Welcome to Justvybz! We're thrilled to have you join our community of innovative storytellers. You're now part of a platform that's revolutionizing how stories are told and experienced through immersive 3D technology.
 
 Here's what you can do now:
-* Browse our collection of desk mats
-* Experience products in AR before buying
-* Save your favorite items
-* Track your orders easily
+- Create immersive 3D comic stories with interactive dialogues
+- Collaborate with other creators on shared narratives
+- Experience stories with dynamic camera controls and 3D models
+- Build your creative studio and invite collaborators
+- Share your stories with the community or keep them private
 
-Start shopping now: {{ site_url }}/products
+Start Creating: {{ site_url }}/immersivecomics/story/create/
 
-If you have any questions, our support team is here to help. Just reply to this email or contact us at support@justvybz.com.
+Ready to bring your stories to life? Start by creating your first immersive comic story, or explore what other creators are building on the platform.
+
+If you have any questions about creating stories, collaboration features, or anything else, our support team is here to help. Just reply to this email or contact us at Justvybz@justvybz.com.
 
 ---
 This email was sent to {{ user.email }}.
@@ -22,5 +25,4 @@ Privacy Policy: {{ site_url }}{% url 'privacy' %}
 Terms of Service: {{ site_url }}{% url 'terms' %}
 Cookie Policy: {{ site_url }}{% url 'cookie_policy' %}
 
-© 2025 Justvybz Inc.
-All rights reserved 
+© {% now "Y" %} Justvybz Inc. All rights reserved.

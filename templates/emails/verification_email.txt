@@ -10,7 +10,7 @@ Note: This verification link will expire in 24 hours for security reasons.
 
 If you didn't create an account with Justvybz, please ignore this email.
 
-Need help? Contact our support team at uzo@justvybz.com
+Need help? Contact our support team at Justvybz@justvybz.com
 
 Privacy Policy: {{ site_url }}{% url 'privacy' %}
 Terms of Service: {{ site_url }}{% url 'terms' %}

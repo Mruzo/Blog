@@ -13,6 +13,7 @@ interface SeasonFormData {
   description: string;
   season_number: number;
   release_date: string;
+  is_public: boolean;
   model_gltf?: File;
   model_usdz?: File;
 }
@@ -27,6 +28,7 @@ const SeasonEdit: React.FC = () => {
     description: '',
     season_number: 1,
     release_date: new Date().toISOString().split('T')[0],
+    is_public: false,
     model_gltf: undefined,
     model_usdz: undefined
   });
@@ -48,6 +50,7 @@ const SeasonEdit: React.FC = () => {
         description: season.description,
         season_number: season.season_number,
         release_date: season.release_date,
+        is_public: season.is_public || false,
         model_gltf: undefined, // Don't pre-populate file inputs
         model_usdz: undefined
       });
@@ -60,10 +63,11 @@ const SeasonEdit: React.FC = () => {
   }, [season, seasons]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'season_number' ? parseInt(value) || 1 : value
+      [name]: type === 'checkbox' ? checked : (name === 'season_number' ? parseInt(value) || 1 : value)
     }));
   };
 
@@ -109,14 +113,14 @@ const SeasonEdit: React.FC = () => {
     // Validate file types and sizes
     if (formData.model_gltf) {
       const file = formData.model_gltf;
-      if (!file.name.toLowerCase().endsWith('.glb') && !file.name.toLowerCase().endsWith('.gltf')) {
-        setMessage('GLTF model must be a .glb or .gltf file');
+      if (!file.name.toLowerCase().endsWith('.glb')) {
+        setMessage('Model must be a .glb file');
         setMessageType('warning');
         setShowMessage(true);
         return false;
       }
       if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        setMessage('GLTF model file size cannot exceed 50MB');
+        setMessage('GLB model file size cannot exceed 50MB');
         setMessageType('warning');
         setShowMessage(true);
         return false;
@@ -164,6 +168,7 @@ const SeasonEdit: React.FC = () => {
         description: formData.description.trim(),
         season_number: formData.season_number,
         release_date: formData.release_date,
+        is_public: formData.is_public,
         model_gltf: formData.model_gltf,
         model_usdz: formData.model_usdz
       };
@@ -234,29 +239,13 @@ const SeasonEdit: React.FC = () => {
       />
 
       <div className="card border-0 shadow-sm">
-        <div className="card-body">
+        <div className="card-body p-2 p-md-3">
           <form onSubmit={handleSubmit}>
             <div className="row">
-              <div className="col-md-6">
-                <div className="mb-3">
-                  <label htmlFor="title" className="form-label subtext-btn-sm">
-                    Season Title <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    id="title"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    placeholder="Enter season title"
-                    required
-                  />
-                </div>
-                
-                <div className="mb-3">
+              <div className="col-md-2">
+                <div className="mb-2">
                   <label htmlFor="season_number" className="form-label subtext-btn-sm">
-                    Season Number <span className="text-danger">*</span>
+                    Season No. <span className="text-danger">*</span>
                   </label>
                   <input
                     type="number"
@@ -271,8 +260,26 @@ const SeasonEdit: React.FC = () => {
                 </div>
               </div>
               
-              <div className="col-md-6">
-                <div className="mb-3">
+              <div className="col-md-7">
+                <div className="mb-2">
+                  <label htmlFor="title" className="form-label subtext-btn-sm">
+                    Season Title <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    placeholder="Enter season title"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="col-md-3">
+                <div className="mb-2">
                   <label htmlFor="release_date" className="form-label subtext-btn-sm">
                     Release Date <span className="text-danger">*</span>
                   </label>
@@ -307,82 +314,69 @@ const SeasonEdit: React.FC = () => {
 
             {/* 3D Model Upload Section */}
             <div className="mb-4">
-              <h5 className="subtext-btn-sm mb-3">
-                <i className="fas fa-cube me-2"></i>3D Models (Optional)
+              <h5 className="subtext-btn-sm mb-2">
+                <i className="fas fa-cube me-2"></i> 3D Model
               </h5>
               
-              <div className="row">
-                <div className="col-md-6">
-                  <div className="mb-3">
-                    <label htmlFor="model_gltf" className="form-label subtext-btn-sm">
-                      GLTF/GLB Model
+              <div className="mb-3">
+                <div className="row align-items-center">
+                  <div className="col-auto">
+                    <label htmlFor="model_gltf" className="form-label subtext-btn-sm mb-0">
+                      GLB Model
                     </label>
+                  </div>
+                  <div className="col">
                     <input
                       type="file"
                       className="form-control form-control-sm"
                       id="model_gltf"
                       name="model_gltf"
-                      accept=".glb,.gltf"
+                      accept=".glb"
                       onChange={handleFileChange}
                     />
-                    <div className="form-text subtext-btn-sm">
-                      <i className="fas fa-info-circle me-1"></i>
-                      Maximum 50MB. Supports .glb and .gltf formats.
-                    </div>
-                    {formData.model_gltf && (
-                      <div className="mt-2">
-                        <small className="text-success">
-                          <i className="fas fa-check-circle me-1"></i>
-                          Selected: {formData.model_gltf.name} ({formatFileSize(formData.model_gltf.size)})
-                        </small>
-                      </div>
-                    )}
-                    {season.model_gltf && !formData.model_gltf && (
-                      <div className="mt-2">
-                        <small className="text-info">
-                          <i className="fas fa-info-circle me-1"></i>
-                          Current: {season.model_gltf.split('/').pop()}
-                        </small>
-                      </div>
-                    )}
                   </div>
                 </div>
-                
-                <div className="col-md-6">
-                  <div className="mb-3">
-                    <label htmlFor="model_usdz" className="form-label subtext-btn-sm">
-                      USDZ Model
-                    </label>
-                    <input
-                      type="file"
-                      className="form-control form-control-sm"
-                      id="model_usdz"
-                      name="model_usdz"
-                      accept=".usdz"
-                      onChange={handleFileChange}
-                    />
-                    <div className="form-text subtext-btn-sm">
-                      <i className="fas fa-info-circle me-1"></i>
-                      Maximum 25MB. Supports .usdz format for AR/VR.
-                    </div>
-                    {formData.model_usdz && (
-                      <div className="mt-2">
-                        <small className="text-success">
-                          <i className="fas fa-check-circle me-1"></i>
-                          Selected: {formData.model_usdz.name} ({formatFileSize(formData.model_usdz.size)})
-                        </small>
-                      </div>
-                    )}
-                    {season.model_usdz && !formData.model_usdz && (
-                      <div className="mt-2">
-                        <small className="text-info">
-                          <i className="fas fa-info-circle me-1"></i>
-                          Current: {season.model_usdz.split('/').pop()}
-                        </small>
-                      </div>
-                    )}
-                  </div>
+                <div className="form-text subtext-btn-sm">
+                  <i className="fas fa-info-circle me-1"></i>
+                  &nbsp;Maximum 50MB.
                 </div>
+                {formData.model_gltf && (
+                  <div className="mt-2">
+                    <small className="text-success">
+                      <i className="fas fa-check-circle me-1"></i>
+                      Selected: {formData.model_gltf.name} ({formatFileSize(formData.model_gltf.size)})
+                    </small>
+                  </div>
+                )}
+                {season.model_gltf && !formData.model_gltf && (
+                  <div className="mt-2">
+                    <small className="text-info">
+                      <i className="fas fa-info-circle me-1"></i>
+                      Current: {season.model_gltf.split('/').pop()}
+                    </small>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Public/Private Toggle */}
+            <div className="mb-3">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="is_public"
+                  name="is_public"
+                  checked={formData.is_public}
+                  onChange={handleInputChange}
+                />
+                <label className="form-check-label subtext-btn-sm" htmlFor="is_public">
+                  Make this season public
+                  <small className="text-muted d-block mt-1">
+                    <i className="fas fa-info-circle me-1"></i>
+                    &nbsp;Season must be public and story must be public for others to view it
+                  </small>
+                </label>
               </div>
             </div>
 
@@ -407,7 +401,7 @@ const SeasonEdit: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-save me-1"></i>Update Season
+                    <i className="fas fa-save me-1"></i> Update Season
                   </>
                 )}
               </SmallButton>

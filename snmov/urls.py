@@ -19,7 +19,9 @@ from .views import (
     order_detail,
     verify_email,
     resend_verification,
-    register
+    register,
+    email_preferences,
+    unsubscribe
 )
 
 app_name = 'snmov'
@@ -47,4 +49,6 @@ urlpatterns = [
     path('verify-email/<int:user_id>/<str:token>/', verify_email, name='verify_email'),
     path('resend-verification/', resend_verification, name='resend_verification'),
     path('register/', register, name='register'),
+    path('email/preferences/', email_preferences, name='email_preferences'),
+    path('unsubscribe/<str:token>/', unsubscribe, name='unsubscribe'),
 ]

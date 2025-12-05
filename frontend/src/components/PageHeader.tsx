@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface PageHeaderProps {
-  title: string;
-  description?: string;
+  title: string | React.ReactNode;
+  description?: string | React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
 }
@@ -29,8 +29,12 @@ const PageHeader: React.FC<PageHeaderProps> = ({
       
       {/* Description */}
       {description && (
-        <div className="mb-4">
-          <p className="subtext-btn-sm text-muted mb-0">{description}</p>
+        <div className="mb-2">
+          {typeof description === 'string' ? (
+            <p className="subtext-btn-sm text-muted mb-0">{description}</p>
+          ) : (
+            description
+          )}
         </div>
       )}
     </>

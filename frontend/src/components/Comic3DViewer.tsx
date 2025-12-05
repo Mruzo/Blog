@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Episode, Dialogue, Season } from '../services/api';
+import apiService from '../services/api';
 import AnimationController from './AnimationController';
 
 // Extend JSX.IntrinsicElements for model-viewer
@@ -62,6 +63,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const [previousModel, setPreviousModel] = useState<string | null>(null);
   const [dialogueData, setDialogueData] = useState<DialogueData[]>([]);
   const [currentDialValues, setCurrentDialValues] = useState<any>(null);
+  const trackedEpisodesRef = useRef<Set<number>>(new Set()); // Track which episodes have had views incremented
   
   const modelViewerRef = useRef<any>(null);
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -74,6 +76,48 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       : [];
   }, [dialogues, selectedEpisode]);
   
+  // Create hotspots for characters based on POV data
+  const createHotspots = useCallback(() => {
+    const modelViewer = modelViewerRef.current;
+    if (!modelViewer || !dialogueData.length) {
+      return;
+    }
+
+    // Remove existing hotspots
+    const existingHotspots = modelViewer.querySelectorAll('[slot^="hotspot"]');
+    existingHotspots.forEach((hotspot: any) => hotspot.remove());
+
+    // Create hotspots for each unique character
+    const uniqueCharacters = new Set<string>();
+    dialogueData.forEach((dialogue) => {
+      // Extract base character name (remove numbers if any)
+      const baseCharacterName = dialogue.character.replace(/\s*\d+$/, '');
+      
+      // Only create hotspot if we haven't seen this character before
+      if (!uniqueCharacters.has(baseCharacterName)) {
+        uniqueCharacters.add(baseCharacterName);
+
+        const hotspot = document.createElement('div');
+        hotspot.setAttribute('slot', `hotspot-${baseCharacterName}`);
+        hotspot.className = 'hotspot';
+        hotspot.setAttribute('data-position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
+        hotspot.setAttribute('data-normal', '0m 1m 0m');
+        hotspot.setAttribute('data-character', baseCharacterName);
+        
+        // Create the dot element inside the hotspot
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        dot.textContent = baseCharacterName;
+        hotspot.appendChild(dot);
+        
+        // Add the hotspot to the model-viewer
+        modelViewer.appendChild(hotspot);
+        
+        console.log('Comic3DViewer: Created hotspot for character', baseCharacterName, 'at position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
+      }
+    });
+  }, [dialogueData]);
+
   // Update dialogueData when episodeDialogues changes
   useEffect(() => {
     const newDialogueData: DialogueData[] = episodeDialogues.map(d => ({
@@ -84,12 +128,24 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       camera_target: d.camera_target,
       field_of_view: d.field_of_view,
       zoom_speed: d.zoom_speed,
-      head_x: 0, // These would come from POV data
-      head_y: 1.6,
-      head_z: 0
+      // Use POV head position if available, otherwise use defaults
+      head_x: d.pov_data?.head_x ?? 0,
+      head_y: d.pov_data?.head_y ?? 1.6,
+      head_z: d.pov_data?.head_z ?? 0
     }));
     setDialogueData(newDialogueData);
   }, [episodeDialogues]);
+  
+  // Recreate hotspots when dialogueData changes (if model is ready)
+  useEffect(() => {
+    if (isModelReady && dialogueData.length > 0 && modelViewerRef.current) {
+      // Small delay to ensure model-viewer is ready
+      const timer = setTimeout(() => {
+        createHotspots();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [dialogueData, isModelReady, createHotspots]);
 
   // Initialize model viewer when component mounts
   useEffect(() => {
@@ -204,10 +260,13 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       console.log('Comic3DViewer: Model and hotspots ready');
       setIsModelReady(true);
       
+      // Create hotspots from POV data
+      createHotspots();
+      
       // Start all available animations
       startAllAnimations();
     }
-  }, [startAllAnimations]);
+  }, [startAllAnimations, createHotspots]);
 
   // Handle camera change event
   const handleCameraChange = useCallback(() => {
@@ -925,6 +984,32 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }
   }, [episodes, selectedEpisode]);
 
+  // Track episode view when episode is selected (only in read-only/public mode)
+  useEffect(() => {
+    if (selectedEpisode && readOnly && selectedEpisode.is_published) {
+      // Only track once per episode per session
+      if (!trackedEpisodesRef.current.has(selectedEpisode.id)) {
+        trackedEpisodesRef.current.add(selectedEpisode.id);
+        
+        // Increment view count via API
+        apiService.incrementEpisodeView(selectedEpisode.id)
+          .then((response) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Episode view incremented:', response);
+            }
+            // Update the episode's view_count in local state if needed
+            // The view count will be updated on next data fetch
+          })
+          .catch((error) => {
+            // Silently fail - don't interrupt user experience
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error incrementing episode view:', error);
+            }
+          });
+      }
+    }
+  }, [selectedEpisode, readOnly]);
+
   // Handle model switching when episode changes
   useEffect(() => {
     if (selectedEpisode) {
@@ -985,18 +1070,26 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
               {episodes.length === 0 ? (
                 <p className="text-muted">No episodes available for this story.</p>
               ) : (
-                <div className="d-flex flex-wrap gap-2">
-                  {episodes.map(episode => (
-                    <button
-                      key={episode.id}
-                      className={`btn ${selectedEpisode?.id === episode.id ? 'btn-primary' : 'btn-outline-primary'} episode-select-btn`}
-                      onClick={() => handleEpisodeSelect(episode)}
-                      style={{ flex: `0 0 calc(${100 / episodes.length}% - 0.5rem)`, minWidth: '150px' }}
-                    >
-                      <i className="fas fa-video me-1"></i>
-                      {episode.title}
-                    </button>
-                  ))}
+                <div className="d-flex gap-2" style={{ justifyContent: 'flex-start' }}>
+                  {episodes.map(episode => {
+                    const isActive = selectedEpisode?.id === episode.id;
+                    return (
+                      <button
+                        key={episode.id}
+                        className={`btn ${isActive ? 'btn-primary' : 'btn-outline-primary'} episode-select-btn`}
+                        onClick={() => handleEpisodeSelect(episode)}
+                        style={{ minWidth: 'auto', padding: '0.225rem 0.5rem' }}
+                      >
+                        {isActive ? (
+                          <>
+                            E{episode.episode_number}: {episode.title}
+                          </>
+                        ) : (
+                          <>E{episode.episode_number}</>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1171,15 +1264,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
               className="dialogue" 
               data-pov={JSON.stringify({
                 dialogue_id: dialogue.id,
-                character: dialogue.character,
+                character: dialogue.character_name || dialogue.character?.toString() || 'Unknown',
                 camera_orbit: dialogue.camera_orbit,
                 camera_target: dialogue.camera_target,
                 field_of_view: dialogue.field_of_view,
                 zoom_speed: dialogue.zoom_speed,
                 rotation: dialogue.rotation || '0deg 0deg 0deg',
-                head_x: 0,
-                head_y: 0,
-                head_z: 0,
+                head_x: dialogue.pov_data?.head_x ?? 0,
+                head_y: dialogue.pov_data?.head_y ?? 1.6,
+                head_z: dialogue.pov_data?.head_z ?? 0,
                 text: dialogue.text
               })}
             />
@@ -1400,14 +1493,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
               }}>
                 {/* Camera Orbit (Left Column) */}
                 <div className="col mt-0 p-1 p-md-4">
-                  <div className="section-header" style={{
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    color: '#111e7f',
-                    marginBottom: '0.5rem',
-                    marginTop: '0.5rem',
-                    letterSpacing: '0.2px'
-                  }}>
+                  <div className="section-header">
                     Camera Orbit
                   </div>
                   
@@ -1416,12 +1502,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}>360</span>
                       <span>Azimuth</span>
                     </label>
-                    <div className="slider-row" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%'
-                    }}>
+                    <div className="slider-row">
                       <input
                         type="range"
                         id="orbitAzimuth"
@@ -1461,18 +1542,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           }
                         }}
                       />
-                      <span className="value-badge" id="orbitAzimuthValue" style={{
-                        minWidth: '38px',
-                        display: 'inline-block',
-                        background: '#f9a602',
-                        color: '#222',
-                        fontWeight: '600',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '0.95em',
-                        marginLeft: '0.5rem',
-                        textAlign: 'center'
-                      }}>
+                      <span className="value-badge" id="orbitAzimuthValue">
                         0°
                       </span>
                     </div>
@@ -1483,12 +1553,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       <span className="material-symbols-outlined" style={{ fontSize: '2rem', transform: 'rotate(90deg)', fontVariationSettings: "'FILL' 1" }}>360</span>
                       <span>Polar</span>
                     </label>
-                    <div className="slider-row" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%'
-                    }}>
+                    <div className="slider-row">
                       <input
                         type="range"
                         id="orbitPolar"
@@ -1522,18 +1587,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           }
                         }}
                       />
-                      <span className="value-badge" id="orbitPolarValue" style={{
-                        minWidth: '38px',
-                        display: 'inline-block',
-                        background: '#f9a602',
-                        color: '#222',
-                        fontWeight: '600',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '0.95em',
-                        marginLeft: '0.5rem',
-                        textAlign: 'center'
-                      }}>
+                      <span className="value-badge" id="orbitPolarValue">
                         75°
                       </span>
                     </div>
@@ -1541,12 +1595,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   
                   <div className="form-group mb-3">
                     <label htmlFor="orbitRadius" className="form-label">Radius</label>
-                    <div className="slider-row" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%'
-                    }}>
+                    <div className="slider-row">
                       <input
                         type="range"
                         id="orbitRadius"
@@ -1580,18 +1629,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           }
                         }}
                       />
-                      <span className="value-badge" id="orbitRadiusValue" style={{
-                        minWidth: '38px',
-                        display: 'inline-block',
-                        background: '#f9a602',
-                        color: '#222',
-                        fontWeight: '600',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '0.95em',
-                        marginLeft: '0.5rem',
-                        textAlign: 'center'
-                      }}>
+                      <span className="value-badge" id="orbitRadiusValue">
                         3m
                       </span>
                     </div>
@@ -1600,12 +1638,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   {/* Field of View (Left Column) */}
                   <div className="form-group mb-3">
                     <label htmlFor="fieldOfView" className="form-label">Field of View</label>
-                    <div className="slider-row" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%'
-                    }}>
+                    <div className="slider-row">
                       <input
                         type="range"
                         id="fieldOfView"
@@ -1638,18 +1671,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           }
                         }}
                       />
-                      <span className="value-badge" id="fieldOfViewValue" style={{
-                        minWidth: '38px',
-                        display: 'inline-block',
-                        background: '#f9a602',
-                        color: '#222',
-                        fontWeight: '600',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '0.95em',
-                        marginLeft: '0.5rem',
-                        textAlign: 'center'
-                      }}>
+                      <span className="value-badge" id="fieldOfViewValue">
                         45°
                       </span>
                     </div>
@@ -1658,25 +1680,13 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 
                 {/* Camera Target (Right Column) */}
                 <div className="col mt-0 p-1 p-md-4">
-                  <div className="section-header" style={{
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    color: '#111e7f',
-                    marginBottom: '0.5rem',
-                    marginTop: '0.5rem',
-                    letterSpacing: '0.2px'
-                  }}>
+                  <div className="section-header">
                     Camera Target
                   </div>
                   
                   <div className="form-group mb-3">
                     <label htmlFor="targetX" className="form-label">X</label>
-                    <div className="slider-row" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%'
-                    }}>
+                    <div className="slider-row">
                       <input
                         type="range"
                         id="targetX"
@@ -1710,18 +1720,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           }
                         }}
                       />
-                      <span className="value-badge" id="targetXValue" style={{
-                        minWidth: '38px',
-                        display: 'inline-block',
-                        background: '#f9a602',
-                        color: '#222',
-                        fontWeight: '600',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '0.95em',
-                        marginLeft: '0.5rem',
-                        textAlign: 'center'
-                      }}>
+                      <span className="value-badge" id="targetXValue">
                         0m
                       </span>
                     </div>
@@ -1732,12 +1731,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       <span className="material-symbols-outlined" style={{ fontSize: '2rem', transform: 'rotate(90deg)', fontVariationSettings: "'FILL' 1" }}>arrow_range</span>
                       <span>Y</span>
                     </label>
-                    <div className="slider-row" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%'
-                    }}>
+                    <div className="slider-row">
                       <input
                         type="range"
                         id="targetY"
@@ -1771,18 +1765,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           }
                         }}
                       />
-                      <span className="value-badge" id="targetYValue" style={{
-                        minWidth: '38px',
-                        display: 'inline-block',
-                        background: '#f9a602',
-                        color: '#222',
-                        fontWeight: '600',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '0.95em',
-                        marginLeft: '0.5rem',
-                        textAlign: 'center'
-                      }}>
+                      <span className="value-badge" id="targetYValue">
                         1.6m
                       </span>
                     </div>
@@ -1793,12 +1776,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}>arrow_range</span>
                       <span>Z</span>
                     </label>
-                    <div className="slider-row" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%'
-                    }}>
+                    <div className="slider-row">
                       <input
                         type="range"
                         id="targetZ"
@@ -1832,18 +1810,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           }
                         }}
                       />
-                      <span className="value-badge" id="targetZValue" style={{
-                        minWidth: '38px',
-                        display: 'inline-block',
-                        background: '#f9a602',
-                        color: '#222',
-                        fontWeight: '600',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '0.95em',
-                        marginLeft: '0.5rem',
-                        textAlign: 'center'
-                      }}>
+                      <span className="value-badge" id="targetZValue">
                         0m
                       </span>
                     </div>
@@ -1852,12 +1819,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   {/* Zoom Speed (Right Column) */}
                   <div className="form-group mb-3">
                     <label htmlFor="zoomSpeed" className="form-label">Zoom Speed</label>
-                    <div className="slider-row" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%'
-                    }}>
+                    <div className="slider-row">
                       <input
                         type="range"
                         id="zoomSpeed"
@@ -1888,18 +1850,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           }
                         }}
                       />
-                      <span className="value-badge" id="zoomSpeedValue" style={{
-                        minWidth: '38px',
-                        display: 'inline-block',
-                        background: '#f9a602',
-                        color: '#222',
-                        fontWeight: '600',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '0.95em',
-                        marginLeft: '0.5rem',
-                        textAlign: 'center'
-                      }}>
+                      <span className="value-badge" id="zoomSpeedValue">
                         1.0x
                       </span>
                     </div>

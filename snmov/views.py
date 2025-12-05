@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Product, Comment, Preference, ProductNotification, SiteImage, Order, OrderItem, ShippingAddress
+from .models import Product, Comment, Preference, ProductNotification, SiteImage, Order, OrderItem, ShippingAddress, EmailPreference
 from .forms import ArticleModelForm, CommentForm, ReachOutForm, ShippingAddressForm, ShippingSelectionForm, CustomUserCreationForm
 from snm.forms import ProductNotificationForm
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -47,7 +47,12 @@ Cart = get_cart_class()
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-shippo.config.api_key = settings.SHIPPO_API_KEY
+# Shippo replaced with Canada Post - keeping for backward compatibility
+try:
+    import shippo
+    shippo.config.api_key = getattr(settings, 'SHIPPO_API_KEY', None)
+except (ImportError, AttributeError):
+    pass  # Shippo not used anymore
 
 
 class ProductListView(generic.ListView):
@@ -828,6 +833,81 @@ def cancel_order(request, order_id):
         logger.error(f"Error cancelling order {order_id}: {str(e)}")
         messages.error(request, "There was an error cancelling your order. Please try again or contact support.")
         return redirect('order_detail', order_id=order_id)
+
+
+@login_required
+def email_preferences(request):
+    """User email preferences management page"""
+    try:
+        preferences = EmailPreference.objects.get(user=request.user)
+    except EmailPreference.DoesNotExist:
+        preferences = EmailPreference.objects.create(user=request.user)
+    
+    if request.method == 'POST':
+        # Update preferences
+        preferences.marketing_emails = request.POST.get('marketing_emails') == 'on'
+        preferences.product_notifications = request.POST.get('product_notifications') == 'on'
+        preferences.order_updates = request.POST.get('order_updates') == 'on'
+        preferences.cart_reminders = request.POST.get('cart_reminders') == 'on'
+        preferences.collaboration_notifications = request.POST.get('collaboration_notifications') == 'on'
+        preferences.newsletter = request.POST.get('newsletter') == 'on'
+        preferences.save()
+        
+        messages.success(request, "Your email preferences have been updated.")
+        return redirect('snmov:email_preferences')
+    
+    return render(request, 'snmov/email_preferences.html', {
+        'preferences': preferences
+    })
+
+
+def unsubscribe(request, token):
+    """Unsubscribe page with token validation"""
+    try:
+        preferences = EmailPreference.objects.get(unsubscribe_token=token)
+        user = preferences.user
+    except EmailPreference.DoesNotExist:
+        messages.error(request, "Invalid unsubscribe link. Please contact support if you continue to receive unwanted emails.")
+        return redirect('homepage')
+    
+    # If user is logged in and matches the token, redirect to preferences page
+    if request.user.is_authenticated and request.user == user:
+        return redirect('snmov:email_preferences')
+    
+    # Handle unsubscribe action
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'unsubscribe_all':
+            # Unsubscribe from all non-essential emails
+            preferences.marketing_emails = False
+            preferences.product_notifications = False
+            preferences.order_updates = False
+            preferences.cart_reminders = False
+            preferences.collaboration_notifications = False
+            preferences.newsletter = False
+            preferences.save()
+            
+            messages.success(request, f"You have been unsubscribed from all non-essential emails. You will still receive important account and order-related emails.")
+            return redirect('snmov:unsubscribe', token=token)
+        
+        elif action == 'update_preferences':
+            # Update specific preferences
+            preferences.marketing_emails = request.POST.get('marketing_emails') == 'on'
+            preferences.product_notifications = request.POST.get('product_notifications') == 'on'
+            preferences.order_updates = request.POST.get('order_updates') == 'on'
+            preferences.cart_reminders = request.POST.get('cart_reminders') == 'on'
+            preferences.collaboration_notifications = request.POST.get('collaboration_notifications') == 'on'
+            preferences.newsletter = request.POST.get('newsletter') == 'on'
+            preferences.save()
+            
+            messages.success(request, "Your email preferences have been updated.")
+            return redirect('snmov:unsubscribe', token=token)
+    
+    return render(request, 'snmov/unsubscribe.html', {
+        'preferences': preferences,
+        'user': user
+    })
 
 @login_required
 def my_orders(request):
