@@ -74,6 +74,11 @@ STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
+# Stripe API Configuration - Production
+# Override base settings to use PRODUCTION (live) keys
+STRIPE_PUBLIC_KEY = STRIPE_PRODUCTION_PUBLIC_KEY
+STRIPE_SECRET_KEY = STRIPE_PRODUCTION_SECRET_KEY
+
 # Canada Post Developer Portal API Configuration - Production
 # Override base settings to use PRODUCTION credentials
 CANADAPOST_USE_PRODUCTION = True

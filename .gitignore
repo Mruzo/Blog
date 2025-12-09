@@ -65,3 +65,20 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build cache
+.cache/
+**/.cache/
+*.pack
+*.pack.old
+
+# Build outputs
+dist/
+build/
+.next/

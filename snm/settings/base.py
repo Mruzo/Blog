@@ -28,8 +28,20 @@ config = RawConfigParser()
 config.read('/etc/vybz/settings.ini')
 #SECRET_KEY = os.environ.get('SNM_KEY')
 SECRET_KEY = config.get('section', 'VYBZ_KEY')
-STRIPE_PUBLIC_KEY = config.get('section','STRIPE_PUBLIC_KEY')
-STRIPE_SECRET_KEY = config.get('section', 'STRIPE_SECRET_KEY')
+
+# Stripe API Configuration
+# Base settings use DEVELOPMENT (test) keys by default
+# Production settings (pro.py) will override to use production (live) keys
+STRIPE_DEVELOPMENT_PUBLIC_KEY = config.get('section', 'STRIPE_DEV_PUBLIC_KEY', fallback='')
+STRIPE_DEVELOPMENT_SECRET_KEY = config.get('section', 'STRIPE_DEV_SECRET_KEY', fallback='')
+
+STRIPE_PRODUCTION_PUBLIC_KEY = config.get('section', 'STRIPE_PROD_PUBLIC_KEY', fallback='')
+STRIPE_PRODUCTION_SECRET_KEY = config.get('section', 'STRIPE_PROD_SECRET_KEY', fallback='')
+
+# Base settings: Use DEVELOPMENT (test) keys by default
+# Production settings (pro.py) will override to use production keys
+STRIPE_PUBLIC_KEY = STRIPE_DEVELOPMENT_PUBLIC_KEY
+STRIPE_SECRET_KEY = STRIPE_DEVELOPMENT_SECRET_KEY
 
 
 # Canada Post Developer Portal API Configuration
