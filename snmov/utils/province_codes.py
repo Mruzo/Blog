@@ -52,3 +52,4 @@ def normalize_province_code(province_name):
     # Return the code if found, otherwise return the original (uppercase)
     return PROVINCE_CODES.get(normalized, province_name.upper()[:2] if len(province_name) >= 2 else province_name.upper())
 
+

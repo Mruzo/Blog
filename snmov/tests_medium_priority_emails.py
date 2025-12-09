@@ -260,3 +260,4 @@ class ProductBackInStockSignalTestCase(TestCase):
         # Should not send another email
         self.assertEqual(len(mail.outbox), 0)
 
+

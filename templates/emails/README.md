@@ -174,3 +174,4 @@ Based on the communications review, these templates should be created:
 - `product_availability_confirmation.html/txt` - Product notification confirmation
 - `feedback_confirmation.html/txt` - Feedback form confirmation
 
+

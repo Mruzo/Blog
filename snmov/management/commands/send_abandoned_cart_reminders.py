@@ -173,3 +173,4 @@ class Command(BaseCommand):
             f'\nSummary: Found {carts_found} abandoned carts, sent {emails_sent} emails, {errors} errors'
         ))
 
+
