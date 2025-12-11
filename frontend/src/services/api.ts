@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 // API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/icvybz';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 // Create axios instance with default config
 const api: AxiosInstance = axios.create({
@@ -631,7 +631,7 @@ class ApiService {
     // This endpoint is at /immersivecomics/api/studios/ which is outside the /api/icvybz namespace
     try {
       // Get base URL and construct full path
-      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/icvybz';
+      const baseURL = process.env.REACT_APP_API_URL || '';
       const serverBase = baseURL.replace('/api/icvybz', '');
       // Don't add token for public studios endpoint
       const headers: any = {
