@@ -37,10 +37,38 @@ email_verification_token = EmailVerificationTokenGenerator()
 
 class ReactAppView(TemplateView):
     """View to serve React app's index.html for client-side routing"""
-    template_name = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+    
+    def get(self, request, *args, **kwargs):
+        """Serve React index.html file directly"""
+        import os
+        from django.conf import settings
+        from django.http import HttpResponse
+        from django.template.loader import render_to_string
+        
+        index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html')
+        except FileNotFoundError:
+            return HttpResponse('React app not found. Please build the frontend.', status=404)
 class HomePageView(FormView, TemplateView):
-    template_name = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+    template_name = None  # We'll serve React directly
     form_class = ProductNotificationForm
+    
+    def get(self, request, *args, **kwargs):
+        """Serve React index.html for homepage"""
+        import os
+        from django.conf import settings
+        from django.http import HttpResponse
+        
+        index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html')
+        except FileNotFoundError:
+            return HttpResponse('React app not found. Please build the frontend.', status=404)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
