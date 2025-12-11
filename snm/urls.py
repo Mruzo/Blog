@@ -1,5 +1,6 @@
 from .views import(
     HomePageView,
+    ReactAppView,
     track_ar_usage,
     track_model_usage,
     about_page,
