@@ -77,6 +77,9 @@ yarn-error.log*
 
 # Build outputs
 dist/
-build/
 .next/
 snmov/migrations_backup/
+
+# Production-specific files (don't commit these)
+vybzenv310/
+snmov/migrations/_old_backup_phase2/
