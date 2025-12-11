@@ -94,7 +94,7 @@ const Stories: React.FC = () => {
                        document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
       
       // Construct the full URL - endpoint is at /immersivecomics/api/track-share/
-      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/icvybz';
+      const baseURL = process.env.REACT_APP_API_URL || '/api/icvybz';
       const serverBase = baseURL.replace('/api/icvybz', '');
       const endpoint = `${serverBase}/immersivecomics/api/track-share/`;
       

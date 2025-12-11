@@ -59,7 +59,7 @@ const Checkout: React.FC = () => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
 
-        const response = await fetch('http://localhost:8000/api/addresses/', {
+        const response = await fetch('/api/addresses/', {
           method: 'GET',
           headers: {
             'Authorization': `Token ${token}`,
@@ -145,7 +145,7 @@ const Checkout: React.FC = () => {
         headers['Authorization'] = `Token ${token}`;
       }
 
-      const response = await fetch('http://localhost:8000/api/checkout/', {
+      const response = await fetch('/api/checkout/', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -187,7 +187,7 @@ const Checkout: React.FC = () => {
       if (saveAddress && currentUser) {
         try {
           const token = localStorage.getItem('authToken');
-          await fetch('http://localhost:8000/api/addresses/save/', {
+          await fetch('/api/addresses/save/', {
             method: 'POST',
             headers: {
               'Authorization': `Token ${token}`,

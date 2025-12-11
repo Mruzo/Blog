@@ -75,7 +75,7 @@ const OrderDetail: React.FC = () => {
           headers['Authorization'] = `Token ${token}`;
         }
 
-        const response = await fetch(`http://localhost:8000/api/orders/${orderId}/`, {
+        const response = await fetch(`/api/orders/${orderId}/`, {
           headers,
           credentials: 'include',
         });

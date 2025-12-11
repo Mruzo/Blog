@@ -61,7 +61,7 @@ const SelectShipping: React.FC = () => {
         headers['Authorization'] = `Token ${token}`;
       }
       
-      const response = await fetch(`http://localhost:8000/api/orders/${orderId}/shipping/`, {
+      const response = await fetch(`/api/orders/${orderId}/shipping/`, {
         headers,
         credentials: 'include',
       });
@@ -102,7 +102,7 @@ const SelectShipping: React.FC = () => {
         headers['Authorization'] = `Token ${token}`;
       }
       
-      const response = await fetch(`http://localhost:8000/api/orders/${orderId}/select-shipping/`, {
+      const response = await fetch(`/api/orders/${orderId}/select-shipping/`, {
         method: 'POST',
         headers,
         credentials: 'include',

@@ -29,7 +29,7 @@ const PasswordResetConfirm: React.FC = () => {
 
       try {
         // Check if token is valid by attempting to load the confirm page
-        const response = await fetch(`http://localhost:8000/password-reset-confirm/${uidb64}/${token}/`, {
+        const response = await fetch(`/password-reset-confirm/${uidb64}/${token}/`, {
           method: 'GET',
           credentials: 'include'
         });
@@ -84,7 +84,7 @@ const PasswordResetConfirm: React.FC = () => {
     setShowMessage(false);
 
     try {
-      const response = await fetch(`http://localhost:8000/password-reset-confirm/${uidb64}/${token}/`, {
+      const response = await fetch(`/password-reset-confirm/${uidb64}/${token}/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

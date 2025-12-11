@@ -303,7 +303,7 @@ class ApiService {
 
   async submitContactForm(contactData: { full_name: string; email: string; subject: string; content: string; _honeypot?: string; _form_time?: string }): Promise<{ success: boolean; message?: string; errors?: any }> {
     // Contact form is in the snmov API namespace, not icvybz
-    const response = await axios.post('http://localhost:8000/api/contact/', contactData, {
+    const response = await axios.post('/api/contact/', contactData, {
       headers: {
         'Content-Type': 'application/json',
       },

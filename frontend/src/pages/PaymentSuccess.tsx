@@ -60,7 +60,7 @@ const PaymentSuccess: React.FC = () => {
         headers['Authorization'] = `Token ${token}`;
       }
       
-      const response = await fetch(`http://localhost:8000/api/payment/success/?session_id=${sessionId}`, {
+      const response = await fetch(`/api/payment/success/?session_id=${sessionId}`, {
         headers,
         credentials: 'include',
       });

@@ -50,7 +50,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         headers['Authorization'] = `Token ${token}`;
       }
       
-      const response = await fetch('http://localhost:8000/api/cart/', {
+      const response = await fetch('/api/cart/', {
         headers,
         credentials: 'include',
       });
@@ -83,7 +83,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         headers['Authorization'] = `Token ${token}`;
       }
       
-      const response = await fetch('http://localhost:8000/api/cart/add/', {
+      const response = await fetch('/api/cart/add/', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -136,7 +136,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         headers['Authorization'] = `Token ${token}`;
       }
       
-      const response = await fetch(`http://localhost:8000/api/cart/update/${productId}/`, {
+      const response = await fetch(`/api/cart/update/${productId}/`, {
         method: 'PUT',
         headers,
         credentials: 'include',
@@ -205,7 +205,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         headers['Authorization'] = `Token ${token}`;
       }
       
-      const response = await fetch(`http://localhost:8000/api/cart/remove/${productId}/`, {
+      const response = await fetch(`/api/cart/remove/${productId}/`, {
         method: 'DELETE',
         headers,
         credentials: 'include',
@@ -270,7 +270,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         headers['Authorization'] = `Token ${token}`;
       }
       
-      const response = await fetch('http://localhost:8000/api/cart/clear/', {
+      const response = await fetch('/api/cart/clear/', {
         method: 'DELETE',
         headers,
         credentials: 'include',
