@@ -77,6 +77,10 @@ urlpatterns = [
          name='password_reset_complete'),
 ]
 
+    # Catch-all route for React client-side routing
+    # This must be LAST to allow Django URLs to take precedence
+    path('<path:path>', ReactAppView.as_view(), name='react_app'),
+
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

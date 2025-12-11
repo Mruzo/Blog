@@ -24,6 +24,7 @@ from django.dispatch import receiver
 from snm.settings.base import DEFAULT_FROM_EMAIL, SUPPORT_EMAIL
 from django.contrib.sites.models import Site
 from django.contrib.sites.shortcuts import get_current_site
+import os
 
 
 class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
@@ -33,8 +34,12 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
 email_verification_token = EmailVerificationTokenGenerator()
 
 
+
+class ReactAppView(TemplateView):
+    """View to serve React app's index.html for client-side routing"""
+    template_name = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
 class HomePageView(FormView, TemplateView):
-    template_name = 'home.html'
+    template_name = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
     form_class = ProductNotificationForm
     
     def get_context_data(self, **kwargs):
