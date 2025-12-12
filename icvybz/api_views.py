@@ -92,21 +92,17 @@ class PublicStoriesView(generics.ListAPIView):
     permission_classes = [AllowAny]  # No authentication required
     
     def get_queryset(self):
-        # Check cache first
-        cache_key = "public_stories"
-        cached_queryset = cache.get(cache_key)
-        if cached_queryset:
-            return cached_queryset
-        
-        # Only show stories that are both public AND approved (published)
-        queryset = Comic.objects.filter(
-            is_public=True,
-            moderation_status='approved'
-        ).select_related('user').order_by('-created_at')
-        # Cache for 10 minutes (public data changes less frequently)
-        cache.set(cache_key, queryset, 60 * 10)
-        return queryset
-
+        try:
+            # Only show stories that are both public AND approved (published)
+            queryset = Comic.objects.filter(
+                is_public=True,
+                moderation_status='approved'
+            ).select_related('user').order_by('-created_at')
+            return queryset
+        except Exception as e:
+            # Log the error and return empty queryset instead of crashing
+            logger.error(f"Error in PublicStoriesView.get_queryset(): {str(e)}", exc_info=True)
+            return Comic.objects.none()
 # Season API Views
 class SeasonListCreateView(generics.ListCreateAPIView):
     serializer_class = SeasonSerializer

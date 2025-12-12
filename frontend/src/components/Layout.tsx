@@ -197,7 +197,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                   <span className="text-muted">|</span>
                   <a href="/privacy" className="text-dark mx-1 text-decoration-none hover-underline">Privacy Policy</a>
                   <span className="text-muted">|</span>
-                  <a href="/cookie-policy" className="text-dark mx-1 text-decoration-none hover-underline">Cookie Policy</a>
+                  <a href="/cookies/" className="text-dark mx-1 text-decoration-none hover-underline">Cookie Policy</a>
                 </div>
               </div>
 
