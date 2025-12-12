@@ -27,6 +27,8 @@ snm/settings/local.py
 .env
 # Distribution / packaging
 .Python
+!frontend/build/
+!frontend/build/**
 build/
 develop-eggs/
 dist/

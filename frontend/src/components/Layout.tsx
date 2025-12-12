@@ -68,7 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
         <div className="container-fluid px-0">
           <Link className="navbar-brand p-0" to="/">
             <img 
-              src="/jv_header.svg" 
+              src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/jv_header%201.2.svg` : "/jv_header.svg"} 
               alt="VYBZ Logo - Updated" 
               height="40"
             />
@@ -204,7 +204,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               {/* Logo */}
               <div className="mb-4">
                 <a href="/">
-                  <img src="/logo-80x80.svg" alt="VYBZ Logo" width="100" height="100" />
+                  <img src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/logo%2080x80.svg` : "/logo-80x80.svg"} alt="VYBZ Logo" width="100" height="100" />
                 </a>
                 <div className="footer-copyright subtext-btn-sm">
                   <p className="mt-2">&copy; 2025 Justvybz</p>
@@ -215,7 +215,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               <div className="powered-by">
                 <p className="mb-2 subtext-btn-sm">Powered by</p>
                 <a href="https://www.misteruzo.com" target="_blank" rel="noopener noreferrer">
-                  <img src="/powered-by-logo.png" alt="powered by Logo" width="50" />
+                  <img src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/powered-by-logo.png` : "/powered-by-logo.png"} alt="powered by Logo" width="50" />
                 </a>
               </div>
             </div>
