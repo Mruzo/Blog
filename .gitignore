@@ -4,7 +4,6 @@ db.sqlite3
 __pycache__/
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
 *.py[cod]
 *$py.class
 *.pyc
@@ -29,7 +28,11 @@ snm/settings/local.py
 .Python
 !frontend/build/
 !frontend/build/**
+!frontend/build/static/js/main.*.js
+# Build directories (except frontend/build/)
 build/
+!frontend/
+!frontend/build/
 develop-eggs/
 dist/
 downloads/
@@ -78,10 +81,10 @@ yarn-error.log*
 *.pack.old
 
 # Build outputs
-dist/
 .next/
 snmov/migrations_backup/
 
 # Production-specific files (don't commit these)
 vybzenv310/
 snmov/migrations/_old_backup_phase2/
+
