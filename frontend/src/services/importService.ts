@@ -187,7 +187,7 @@ export class ImportService {
       // Create story
       // Truncate title and description to meet backend validation limits
       const maxTitleLength = 20;
-      const maxDescriptionLength = 260;
+      const maxDescriptionLength = 300;
       
       const truncatedTitle = comicData.title.length > maxTitleLength 
         ? comicData.title.substring(0, maxTitleLength) 
@@ -344,7 +344,7 @@ export class ImportService {
       // Create episode
       // Truncate fields to meet backend validation limits
       const maxEpisodeTitleLength = 50;
-      const maxEpisodeDescriptionLength = 230;
+      const maxEpisodeDescriptionLength = 300;
       
       const truncatedEpisodeTitle = episodeData.title.length > maxEpisodeTitleLength
         ? episodeData.title.substring(0, maxEpisodeTitleLength)
