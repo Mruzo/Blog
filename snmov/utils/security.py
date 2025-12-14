@@ -41,11 +41,32 @@ def rate_limit_check(request, key_prefix, max_requests, window_seconds=3600):
     # Create rate limit key
     if user_id:
         rate_limit_key = f'{key_prefix}_user_{user_id}'
+        expiry_key = f'{key_prefix}_expiry_user_{user_id}'
     else:
         rate_limit_key = f'{key_prefix}_ip_{client_ip}'
+        expiry_key = f'{key_prefix}_expiry_ip_{client_ip}'
     
     # Get current count
     current_count = cache.get(rate_limit_key, 0)
+    
+    # Get TTL - try cache.ttl() first (for Redis, etc.), fallback to stored expiry time
+    reset_time = window_seconds  # Default fallback
+    try:
+        # Try to use cache.ttl() if available (Redis, Memcached, etc.)
+        if hasattr(cache, 'ttl'):
+            reset_time = cache.ttl(rate_limit_key) or window_seconds
+        else:
+            # For LocMemCache and other backends without ttl(), use stored expiry time
+            expiry_timestamp = cache.get(expiry_key)
+            if expiry_timestamp:
+                from django.utils import timezone
+                now = timezone.now().timestamp()
+                reset_time = max(0, int(expiry_timestamp - now))
+            else:
+                reset_time = window_seconds
+    except (AttributeError, TypeError):
+        # If ttl() doesn't exist or fails, use window_seconds as fallback
+        reset_time = window_seconds
     
     if current_count >= max_requests:
         # Log rate limit violation
@@ -58,12 +79,26 @@ def rate_limit_check(request, key_prefix, max_requests, window_seconds=3600):
                 'max_requests': max_requests,
             }
         )
-        return False, 0, cache.ttl(rate_limit_key)
+        return False, 0, reset_time
     
     # Increment counter
     cache.set(rate_limit_key, current_count + 1, window_seconds)
+    
+    # Store expiry timestamp for backends without ttl() support
+    from django.utils import timezone
+    expiry_timestamp = timezone.now().timestamp() + window_seconds
+    cache.set(expiry_key, expiry_timestamp, window_seconds)
+    
     remaining = max_requests - (current_count + 1)
-    reset_time = cache.ttl(rate_limit_key)
+    
+    # Get updated reset time
+    try:
+        if hasattr(cache, 'ttl'):
+            reset_time = cache.ttl(rate_limit_key) or window_seconds
+        else:
+            reset_time = window_seconds
+    except (AttributeError, TypeError):
+        reset_time = window_seconds
     
     return True, remaining, reset_time
 
