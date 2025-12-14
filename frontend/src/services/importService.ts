@@ -145,7 +145,32 @@ export class ImportService {
       this.updateProgress(progress);
 
     } catch (error: any) {
-      progress.errors.push(`Import failed: ${error.message}`);
+      // Extract detailed error message from backend
+      let errorMessage = error.message || 'Unknown error';
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === 'object') {
+          // Format validation errors
+          const errorMessages = Object.entries(errorData)
+            .map(([field, errors]: [string, any]) => {
+              if (Array.isArray(errors)) {
+                return `${field}: ${errors.join(', ')}`;
+              }
+              return `${field}: ${errors}`;
+            })
+            .join('; ');
+          if (errorMessages) {
+            errorMessage = errorMessages;
+          }
+        }
+      }
+      progress.errors.push(`Import failed: ${errorMessage}`);
       this.updateProgress(progress);
       throw error;
     }
@@ -186,7 +211,32 @@ export class ImportService {
       }
 
     } catch (error: any) {
-      progress.errors.push(`Failed to import story ${comicData.title}: ${error.message}`);
+      // Extract detailed error message from backend
+      let errorMessage = error.message || 'Unknown error';
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === 'object') {
+          // Format validation errors
+          const errorMessages = Object.entries(errorData)
+            .map(([field, errors]: [string, any]) => {
+              if (Array.isArray(errors)) {
+                return `${field}: ${errors.join(', ')}`;
+              }
+              return `${field}: ${errors}`;
+            })
+            .join('; ');
+          if (errorMessages) {
+            errorMessage = errorMessages;
+          }
+        }
+      }
+      progress.errors.push(`Failed to import story ${comicData.title}: ${errorMessage}`);
       throw error;
     }
   }

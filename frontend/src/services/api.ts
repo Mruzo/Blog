@@ -354,28 +354,37 @@ class ApiService {
     }
   }
 
-  async createStory(storyData: Partial<Story>): Promise<Story> {
-    const formData = new FormData();
-    
-    // Add text fields
-    if (storyData.title) formData.append('title', storyData.title);
-    if (storyData.description) formData.append('description', storyData.description);
-    if (storyData.is_public !== undefined) formData.append('is_public', storyData.is_public.toString());
-    
-    // Add file if present
+    async createStory(storyData: Partial<Story>): Promise<Story> {
+    // Use JSON if no file, FormData if file is present
     if (storyData.comic_image instanceof File) {
+      // Use FormData for file uploads
+      const formData = new FormData();
+      
+      // Add text fields
+      if (storyData.title) formData.append('title', storyData.title);
+      if (storyData.description) formData.append('description', storyData.description);
+      if (storyData.is_public !== undefined) formData.append('is_public', storyData.is_public ? 'True' : 'False');
+      
+      // Add file
       formData.append('comic_image', storyData.comic_image);
+      
+      const response = await api.post('/stories/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } else {
+      // Use JSON for simple data (no file)
+      const jsonData: any = {};
+      if (storyData.title) jsonData.title = storyData.title;
+      if (storyData.description) jsonData.description = storyData.description;
+      if (storyData.is_public !== undefined) jsonData.is_public = storyData.is_public;
+      
+      const response = await api.post('/stories/', jsonData);
+      return response.data;
     }
-    
-    const response = await api.post('/stories/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  }
-
-  async updateStory(id: number, storyData: Partial<Story>): Promise<Story> {
+  }  async updateStory(id: number, storyData: Partial<Story>): Promise<Story> {
     // Check if we have a file to upload - if so, use FormData
     const hasFile = storyData.comic_image instanceof File;
     

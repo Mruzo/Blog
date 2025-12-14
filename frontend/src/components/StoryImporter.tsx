@@ -73,12 +73,37 @@ const StoryImporter: React.FC<StoryImporterProps> = ({ onImportComplete }) => {
       setIsImporting(false);
       setProgress(null);
       
-      // Provide user-friendly error messages
+      // Provide user-friendly error messages with detailed backend errors
       let errorMessage = 'Import failed';
       if (error?.response?.status === 403 || error?.response?.status === 401) {
         errorMessage = 'Authentication required. Please log in and try again.';
       } else if (error?.response?.status === 400) {
-        errorMessage = `Invalid data: ${error?.response?.data?.error || error?.message || 'Please check your export file.'}`;
+        // Extract detailed validation errors from backend
+        const errorData = error?.response?.data;
+        if (typeof errorData === 'string') {
+          errorMessage = `Invalid data: ${errorData}`;
+        } else if (errorData?.error) {
+          errorMessage = `Invalid data: ${errorData.error}`;
+        } else if (errorData?.detail) {
+          errorMessage = `Invalid data: ${errorData.detail}`;
+        } else if (typeof errorData === 'object') {
+          // Format validation errors
+          const errorMessages = Object.entries(errorData)
+            .map(([field, errors]: [string, any]) => {
+              if (Array.isArray(errors)) {
+                return `${field}: ${errors.join(', ')}`;
+              }
+              return `${field}: ${errors}`;
+            })
+            .join('; ');
+          if (errorMessages) {
+            errorMessage = `Invalid data: ${errorMessages}`;
+          } else {
+            errorMessage = `Invalid data: ${error?.message || 'Please check your export file.'}`;
+          }
+        } else {
+          errorMessage = `Invalid data: ${error?.message || 'Please check your export file.'}`;
+        }
       } else if (error?.message) {
         errorMessage = `Import failed: ${error.message}`;
       }
