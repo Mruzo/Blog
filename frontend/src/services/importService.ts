@@ -185,9 +185,29 @@ export class ImportService {
       this.updateProgress(progress);
 
       // Create story
+      // Truncate title and description to meet backend validation limits
+      const maxTitleLength = 50;
+      const maxDescriptionLength = 200;
+      
+      const truncatedTitle = comicData.title.length > maxTitleLength 
+        ? comicData.title.substring(0, maxTitleLength) 
+        : comicData.title;
+      
+      const truncatedDescription = comicData.description.length > maxDescriptionLength
+        ? comicData.description.substring(0, maxDescriptionLength) + '...'
+        : comicData.description;
+      
+      // Warn if truncation occurred
+      if (comicData.title.length > maxTitleLength) {
+        progress.errors.push(`Warning: Title "${comicData.title}" was truncated to "${truncatedTitle}" (max ${maxTitleLength} chars)`);
+      }
+      if (comicData.description.length > maxDescriptionLength) {
+        progress.errors.push(`Warning: Description for "${comicData.title}" was truncated from ${comicData.description.length} to ${maxDescriptionLength} chars`);
+      }
+      
       const story = await apiService.createStory({
-        title: comicData.title,
-        description: comicData.description,
+        title: truncatedTitle,
+        description: truncatedDescription,
         is_public: true // Imported stories are public by default
       });
 
@@ -279,10 +299,22 @@ export class ImportService {
       this.updateProgress(progress);
 
       // Create season
+      // Truncate fields to meet backend validation limits
+      const maxSeasonTitleLength = 50;
+      const maxSeasonDescriptionLength = 150;
+      
+      const truncatedSeasonTitle = seasonData.title.length > maxSeasonTitleLength
+        ? seasonData.title.substring(0, maxSeasonTitleLength)
+        : seasonData.title;
+      
+      const truncatedSeasonDescription = seasonData.description.length > maxSeasonDescriptionLength
+        ? seasonData.description.substring(0, maxSeasonDescriptionLength) + '...'
+        : seasonData.description;
+      
       const season = await apiService.createSeason(storyId, {
-        title: seasonData.title,
+        title: truncatedSeasonTitle,
         season_number: seasonData.season_number,
-        description: seasonData.description,
+        description: truncatedSeasonDescription,
         release_date: seasonData.release_date || new Date().toISOString().split('T')[0]
       });
 
@@ -310,10 +342,22 @@ export class ImportService {
       this.updateProgress(progress);
 
       // Create episode
+      // Truncate fields to meet backend validation limits
+      const maxEpisodeTitleLength = 50;
+      const maxEpisodeDescriptionLength = 150;
+      
+      const truncatedEpisodeTitle = episodeData.title.length > maxEpisodeTitleLength
+        ? episodeData.title.substring(0, maxEpisodeTitleLength)
+        : episodeData.title;
+      
+      const truncatedEpisodeDescription = episodeData.description.length > maxEpisodeDescriptionLength
+        ? episodeData.description.substring(0, maxEpisodeDescriptionLength) + '...'
+        : episodeData.description;
+      
       const episode = await apiService.createEpisode(seasonId, {
-        title: episodeData.title,
+        title: truncatedEpisodeTitle,
         episode_number: episodeData.episode_number,
-        description: episodeData.description,
+        description: truncatedEpisodeDescription,
         summary: episodeData.summary,
         is_published: episodeData.is_published
       });
