@@ -1,11 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { ImportService, ImportProgress } from '../services/importService';
+import { useApi } from '../contexts/ApiContext';
 
 interface StoryImporterProps {
   onImportComplete?: () => void;
 }
 
 const StoryImporter: React.FC<StoryImporterProps> = ({ onImportComplete }) => {
+    const { currentUser } = useApi();
+
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -18,11 +21,16 @@ const StoryImporter: React.FC<StoryImporterProps> = ({ onImportComplete }) => {
     }
 
     // Check authentication before starting import
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+    // Only show error if explicitly not authenticated (null)
+    // If undefined, user is still loading - let API handle auth check
+    if (currentUser === null) {
       alert('Please log in to import stories. Import requires authentication.');
       return;
     }
+    
+    // If currentUser is undefined, it's still loading
+    // Don't block - let the API call handle authentication
+    // The API will return 403 if not authenticated, which we handle below
 
     try {
       const text = await file.text();
