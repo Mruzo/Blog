@@ -17,6 +17,13 @@ const StoryImporter: React.FC<StoryImporterProps> = ({ onImportComplete }) => {
       return;
     }
 
+    // Check authentication before starting import
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      alert('Please log in to import stories. Import requires authentication.');
+      return;
+    }
+
     try {
       const text = await file.text();
       const data = JSON.parse(text);
@@ -56,7 +63,19 @@ const StoryImporter: React.FC<StoryImporterProps> = ({ onImportComplete }) => {
 
     } catch (error: any) {
       setIsImporting(false);
-      alert(`Import failed: ${error.message}`);
+      setProgress(null);
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'Import failed';
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
+        errorMessage = 'Authentication required. Please log in and try again.';
+      } else if (error?.response?.status === 400) {
+        errorMessage = `Invalid data: ${error?.response?.data?.error || error?.message || 'Please check your export file.'}`;
+      } else if (error?.message) {
+        errorMessage = `Import failed: ${error.message}`;
+      }
+      
+      alert(errorMessage);
     }
   };
 
