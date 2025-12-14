@@ -301,4 +301,38 @@ def custom_404(request, exception):
     return render(request, '404.html', status=404)
 
 def custom_500(request):
-    return render(request, '500.html', status=500)
+    """
+    Custom 500 error handler with logging and fallback.
+    """
+    import logging
+    import traceback
+    from django.http import HttpResponse
+    
+    logger = logging.getLogger(__name__)
+    
+    # Log the error details
+    try:
+        # Try to get exception info from request if available
+        exc_info = getattr(request, '_exception_info', None)
+        if exc_info:
+            logger.error(
+                f"500 Error: {exc_info[1]}",
+                exc_info=exc_info
+            )
+        else:
+            logger.error("500 Internal Server Error (no exception info available)")
+    except Exception as log_error:
+        logger.error(f"Error logging 500: {log_error}")
+    
+    # Try to render the 500.html template
+    try:
+        return render(request, '500.html', status=500)
+    except Exception as template_error:
+        # If template rendering fails, return a simple error message
+        logger.error(f"Error rendering 500.html template: {template_error}")
+        logger.error(traceback.format_exc())
+        return HttpResponse(
+            '<h1>500 Internal Server Error</h1><p>An error occurred. Please check the server logs.</p>',
+            status=500,
+            content_type='text/html'
+        )
