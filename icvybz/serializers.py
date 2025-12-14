@@ -16,14 +16,14 @@ class ComicSerializer(serializers.ModelSerializer):
     
     def validate_title(self, value):
         """Validate title length"""
-        if value and len(value) > 50:
-            raise serializers.ValidationError("Story title cannot exceed 50 characters.")
+        if value and len(value) > 20:
+            raise serializers.ValidationError("Story title cannot exceed 20 characters.")
         return value
     
     def validate_description(self, value):
         """Validate description length"""
-        if value and len(value) > 200:
-            raise serializers.ValidationError("Story description cannot exceed 200 characters.")
+        if value and len(value) > 260:
+            raise serializers.ValidationError("Story description cannot exceed 260 characters.")
         return value
 
 class SeasonSerializer(serializers.ModelSerializer):
@@ -37,13 +37,13 @@ class SeasonSerializer(serializers.ModelSerializer):
     
     def validate_title(self, value):
         """Validate title length"""
-        if value and len(value) > 50:
+        if value and len(value) > 20:
             raise serializers.ValidationError("Season title cannot exceed 50 characters.")
         return value
     
     def validate_description(self, value):
         """Validate description length"""
-        if value and len(value) > 150:
+        if value and len(value) > 230:
             raise serializers.ValidationError("Season description cannot exceed 150 characters.")
         return value
     
@@ -74,14 +74,14 @@ class EpisodeSerializer(serializers.ModelSerializer):
     
     def validate_title(self, value):
         """Validate title length"""
-        if value and len(value) > 50:
+        if value and len(value) > 20:
             raise serializers.ValidationError("Episode title cannot exceed 50 characters.")
         return value
     
     def validate_description(self, value):
         """Validate description length"""
-        if value and len(value) > 150:
-            raise serializers.ValidationError("Episode description cannot exceed 150 characters.")
+        if value and len(value) > 220:
+            raise serializers.ValidationError("Episode description cannot exceed 230 characters.")
         return value
 
 class DialogueSerializer(serializers.ModelSerializer):
