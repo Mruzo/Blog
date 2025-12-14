@@ -30,6 +30,7 @@ from snmov.views import (
     article_detail,
     validate_username,
 )
+from tilf.admin import download_export
 from snmov.sitemaps import StaticViewSitemap, ArticleSitemap, CommentSitemap
 
 sitemaps = {
@@ -68,6 +69,7 @@ urlpatterns = [
     path('data-access-request/<int:user_id>/', data_access_request, name='data_access_request'),
     path('invalid-link/', invalidlink_view, name='invalid_link'),
     path('uno/', admin.site.urls),
+    path('admin/tilf/download-export/', download_export, name='download_export'),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     path('tinymce/', include('tinymce.urls')),
     path('ajax/validate_username/', validate_username, name='validate_username'),

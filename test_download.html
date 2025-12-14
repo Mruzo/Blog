@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Download</title>
+</head>
+<body>
+    <h1>Test Download</h1>
+    <p>Click the button below to test the download:</p>
+    <button onclick="testDownload()">Test Download</button>
+    
+    <script>
+        function testDownload() {
+            const downloadUrl = '/admin/tilf/download-export/?type=comic&comic_ids=3&include_unpublished=false';
+            console.log('Attempting download:', downloadUrl);
+            window.location.href = downloadUrl;
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
