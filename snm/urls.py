@@ -75,10 +75,10 @@ urlpatterns = [
     path('password-reset-complete/',
          auth_views.PasswordResetCompleteView.as_view(
              template_name='snmov/password_reset_complete.html'),
+         name='password_reset_complete'),
     # Catch-all route for React client-side routing
     # This must be LAST to allow Django URLs to take precedence
     path('<path:path>', ReactAppView.as_view(), name='react_app'),
-         name='password_reset_complete'),
 ]
 
 
