@@ -55,7 +55,7 @@ class SeasonAdmin(admin.ModelAdmin):
 
 @admin.register(Episode)
 class EpisodeAdmin(admin.ModelAdmin):
-    list_display = ('title', 'season', 'episode_number', 'view_count', 'last_viewed', 'is_published', 'preview_link')
+    list_display = ('title', 'season', 'episode_number', 'view_count', 'last_viewed', 'is_published')
     list_filter = ('season', 'is_published')
     list_editable = ('is_published',)
     inlines = [DialogueInline]
@@ -64,12 +64,13 @@ class EpisodeAdmin(admin.ModelAdmin):
     readonly_fields = ('view_count', 'last_viewed')
     fields = ('title', 'season', 'episode_number', 'description', 'cover_image', 'is_published', 'summary', 'summary_camera_orbit', 'summary_field_of_view', 'view_count', 'last_viewed')
     
-    def preview_link(self, obj):
-        if obj.pk:
-            return format_html('<a href="{}" target="_blank">Preview/Edit</a>', 
-                             reverse('immersivecomics:episode_preview', args=[obj.season.id, obj.pk]))
-        return "N/A"
-    preview_link.short_description = 'Preview/Edit'
+    # preview_link method commented out - immersivecomics namespace removed
+    # def preview_link(self, obj):
+    #     if obj.pk:
+    #         return format_html('<a href="{}" target="_blank">Preview/Edit</a>', 
+    #                          reverse('immersivecomics:episode_preview', args=[obj.season.id, obj.pk]))
+    #     return "N/A"
+    # preview_link.short_description = 'Preview/Edit'
 
 
 @admin.register(Character)

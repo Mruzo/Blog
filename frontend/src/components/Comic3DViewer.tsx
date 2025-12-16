@@ -1071,7 +1071,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 <p className="text-muted">No episodes available for this story.</p>
               ) : (
                 <div className="d-flex gap-2" style={{ justifyContent: 'flex-start' }}>
-                  {episodes.map(episode => {
+                  {[...episodes].sort((a, b) => a.episode_number - b.episode_number).map(episode => {
                     const isActive = selectedEpisode?.id === episode.id;
                     return (
                       <button
