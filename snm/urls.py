@@ -42,40 +42,41 @@ urlpatterns = [
     path('api/', include(('snmov.api_urls', 'api'), namespace='api')),
     path('api/icvybz/', include(('icvybz.api_urls', 'icvybz-api'), namespace='icvybz-api')),
     # path('immersivecomics/', include(('icvybz.urls', 'icvybz'), namespace='immersivecomics')),  # Commented: React handles /immersivecomics/ via catch-all
-    path('about/', about_page, name='about'),
-    path('privacy/', privacy_page, name='privacy'),
-    path('terms/', terms_page, name='terms'),
-    path('cookies/', cookie_page, name='cookie_policy'),
-    path('contact/', contact_page, name='contact'),
+    # Commented out: React handles these routes via catch-all
+    # path('about/', about_page, name='about'),
+    # path('privacy/', privacy_page, name='privacy'),
+    # path('terms/', terms_page, name='terms'),
+    # path('cookies/', cookie_page, name='cookie_policy'),
+    # path('contact/', contact_page, name='contact'),
+    # path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'), name='login_req'),
+    # path('register/', register_view, name='register'),
     path('track-ar-usage/', track_ar_usage, name='track-ar-usage'),
     path('track-model-usage/', track_model_usage, name='track-ar-usage'),
     path('logout/', logout_request, name='logout_req'),
-    path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'),
-         name='login_req'),
-    path('register/', register_view, name='register'),
     path('verify_email/<int:user_id>/<str:token>/', verify_email, name='verify_email'),
     path('verify/invalid_link/', invalidlink_view, name='invalid_link'),
     path('uno/', admin.site.urls),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     path('tinymce/', include('tinymce.urls')),
     path('ajax/validate_username/', validate_username, name='validate_username'),
-    path('password-reset/',
-         auth_views.PasswordResetView.as_view(
-             template_name='snmov/password_reset.html',
-             extra_email_context={'protocol': 'https'}),
-         name='password_reset'),
-    path('password-reset/done/',
-         auth_views.PasswordResetDoneView.as_view(
-             template_name='snmov/password_reset_done.html'),
-         name='password_reset_done'),
-    path('password-reset-confirm/<uidb64>/<token>/',
-         auth_views.PasswordResetConfirmView.as_view(
-             template_name='snmov/password_reset_confirm.html'),
-         name='password_reset_confirm'),
-    path('password-reset-complete/',
-         auth_views.PasswordResetCompleteView.as_view(
-             template_name='snmov/password_reset_complete.html'),
-         name='password_reset_complete'),
+    # Commented out: React handles password reset routes via catch-all
+    # path('password-reset/',
+    #      auth_views.PasswordResetView.as_view(
+    #          template_name='snmov/password_reset.html',
+    #          extra_email_context={'protocol': 'https'}),
+    #      name='password_reset'),
+    # path('password-reset/done/',
+    #      auth_views.PasswordResetDoneView.as_view(
+    #          template_name='snmov/password_reset_done.html'),
+    #      name='password_reset_done'),
+    # path('password-reset-confirm/<uidb64>/<token>/',
+    #      auth_views.PasswordResetConfirmView.as_view(
+    #          template_name='snmov/password_reset_confirm.html'),
+    #      name='password_reset_confirm'),
+    # path('password-reset-complete/',
+    #      auth_views.PasswordResetCompleteView.as_view(
+    #          template_name='snmov/password_reset_complete.html'),
+    #      name='password_reset_complete'),
     # Catch-all route for React client-side routing
     # This must be LAST to allow Django URLs to take precedence
     path('<path:path>', ReactAppView.as_view(), name='react_app'),

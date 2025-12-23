@@ -261,3 +261,5 @@ class ProductBackInStockSignalTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
 
+
+

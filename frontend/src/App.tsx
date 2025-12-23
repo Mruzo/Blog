@@ -31,6 +31,10 @@ import PasswordResetDone from './pages/PasswordResetDone';
 import PasswordResetConfirm from './pages/PasswordResetConfirm';
 import PasswordResetComplete from './pages/PasswordResetComplete';
 import Contact from './pages/Contact';
+import About from './pages/About';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import CookiePolicy from './pages/CookiePolicy';
 import { CartProvider } from './contexts/CartContext';
 import { ApiProvider, useApi } from './contexts/ApiContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
@@ -60,6 +64,12 @@ function AppContent() {
           
           {/* Contact Form */}
           <Route path="/contact/" element={<Contact />} />
+          
+          {/* Policy Pages */}
+          <Route path="/about/" element={<About />} />
+          <Route path="/privacy/" element={<Privacy />} />
+          <Route path="/terms/" element={<Terms />} />
+          <Route path="/cookies/" element={<CookiePolicy />} />
           
           {/* Product/Store URLs - Matching Django exactly */}
           <Route path="/product/" element={<ProductList />} />
