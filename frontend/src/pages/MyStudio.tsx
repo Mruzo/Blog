@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
@@ -367,6 +367,20 @@ const MyStudio: React.FC = () => {
     }
   }, [myStudio?.id, loadCollaborators, loadCollaborationRequests]);
 
+  // Calculate unique team members count (not total role assignments)
+  const uniqueTeamMembersCount = useMemo(() => {
+    const activeCollaborators = collaborators.filter((collab: any) => 
+      collab.is_active === true || collab.is_active === undefined
+    );
+    const uniqueUserIds = new Set(
+      activeCollaborators.map((collab: any) => {
+        const user = collab.user || collab;
+        return user?.id;
+      }).filter((id: any) => id !== undefined)
+    );
+    return uniqueUserIds.size;
+  }, [collaborators]);
+
   // Poll for new collaboration requests periodically (every 10 seconds)
   // This ensures the desktop user sees new requests without needing to refresh
   useEffect(() => {
@@ -704,7 +718,7 @@ const MyStudio: React.FC = () => {
                   <div className="subtext-btn-sm text-muted">Episodes</div>
                 </div>
                 <div className="col-3">
-                  <div className="subtext-btn-xs text-success">1</div>
+                  <div className="subtext-btn-xs text-success">{uniqueTeamMembersCount}</div>
                   <div className="subtext-btn-sm text-muted">Team</div>
                 </div>
               </div>
@@ -766,7 +780,7 @@ const MyStudio: React.FC = () => {
                           }
                           const ownerId = typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner;
                           const isOwner = Number(currentUser.id) === Number(ownerId);
-                          return isOwner ? 'You' : (currentUser?.first_name || currentUser?.username || 'User');
+                          return isOwner ? 'Me' : (currentUser?.first_name || currentUser?.username || 'User');
                         })()}
                       </div>
                     </div>
@@ -794,7 +808,7 @@ const MyStudio: React.FC = () => {
                         const isCollaboratorOwner = myStudio && Number(user?.id) === Number(ownerId);
                         
                         return (
-                          <div key={collaborator.id || collaborator.user?.id || Math.random()} className="d-flex flex-column align-items-center p-2 position-relative">
+                          <div key={collaborator.id || collaborator.user?.id || Math.random()} className="d-flex flex-column align-items-center p-2 position-relative border-right">
                             <span className={`badge bg-${getRoleColor(role)} mb-1`}>
                               {/* <i className={`${getRoleIcon(role)} me-1`}></i> */}
                               &nbsp;{role.replace('_', ' ').toUpperCase()}

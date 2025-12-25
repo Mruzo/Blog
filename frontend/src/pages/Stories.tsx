@@ -771,7 +771,7 @@ const Stories: React.FC = () => {
                           });
                         }}
                       >
-                        {expandedDescriptions.has(comic.id) ? 'Show less' : '... Show more'}
+                        {expandedDescriptions.has(comic.id) ? 'less' : '... more'}
                       </button>
                     )}
                   </div>

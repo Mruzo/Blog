@@ -304,7 +304,17 @@ const Studios: React.FC = () => {
                     </div>
                     <div className="col-6">
                       <div className="subtext-btn text-success">
-                        {(studio.collaborators?.filter(collab => collab.is_active === true).length || 0) + 1}
+                        {(() => {
+                          // Count unique team members (not total role assignments)
+                          const activeCollaborators = studio.collaborators?.filter(collab => collab.is_active === true) || [];
+                          const uniqueUserIds = new Set(
+                            activeCollaborators.map((collab: any) => {
+                              const user = collab.user || collab;
+                              return user?.id;
+                            }).filter((id: any) => id !== undefined)
+                          );
+                          return uniqueUserIds.size + 1; // +1 for the owner
+                        })()}
                       </div>
                       <div className="subtext-btn-sm text-muted">Members</div>
                     </div>
