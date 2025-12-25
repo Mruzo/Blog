@@ -1,0 +1,627 @@
+/* Comic 3D Viewer Styles */
+.comic-3d-viewer {
+  font-family: 'quicksand', sans-serif;
+}
+
+/* Material Symbols Outlined - Camera Control Icons */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
+  font-variation-settings: 'FILL' 1, 'wght' 700, 'GRAD' 0, 'opsz' 48;
+}
+
+/* Model Container - All styling consolidated here */
+.comic-3d-viewer .model-container {
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 1 / 1.5; /* Height is double the width */
+  margin: 0 auto;
+  display: block;
+}
+
+/* Speech Bubble - Match Django episode_preview.html styling */
+/* Uses AnimeAce font (referenced as 'Comic' in Django template) */
+.speech-bubble {
+  max-width: 80%;
+  text-align: left;
+  z-index: 10;
+  font-family: 'animeace', 'Comic', sans-serif;
+  font-size: small;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 1rem; /* Default padding for larger screens (>768px) */
+}
+
+.speech-bubble strong {
+  color: #111e7f;
+  font-weight: 600;
+}
+
+/* Remove padding from dialogue text container */
+#top-dialogue {
+  padding: 0 !important;
+  margin: 0;
+}
+
+#top-dialogue > div {
+  padding: 0 !important;
+  margin: 0;
+}
+
+#top-dialogue p,
+#top-dialogue h6 {
+  margin: 0;
+  padding: 0;
+}
+
+/* Overlay Container */
+.overlay-container {
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2;
+  pointer-events: auto;
+}
+
+/* Navigation Controls */
+.comic-3d-viewer .btn {
+  font-family: 'quicksand', sans-serif;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.comic-3d-viewer .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.comic-3d-viewer .btn:disabled {
+  opacity: 0.5;
+  transform: none;
+  cursor: not-allowed;
+}
+
+/* Primary Button Styles */
+.comic-3d-viewer .btn-primary {
+  background: #111e7f;
+  border-color: #111e7f;
+  color: white;
+}
+
+.comic-3d-viewer .btn-primary:hover {
+  background: #222fbf;
+  border-color: #222fbf;
+  color: white;
+}
+
+/* Success Button Styles */
+.comic-3d-viewer .btn-success {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+.comic-3d-viewer .btn-success:hover {
+  background: #218838;
+  border-color: #1e7e34;
+  color: white;
+}
+
+/* Warning Button Styles */
+.comic-3d-viewer .btn-warning {
+  background: #f9a602;
+  border-color: #f9a602;
+  color: #111e7f;
+}
+
+.comic-3d-viewer .btn-warning:hover {
+  background: #e69500;
+  border-color: #d58500;
+  color: #111e7f;
+}
+
+/* Progress Bar */
+.comic-3d-viewer .progress {
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.comic-3d-viewer .progress-bar {
+  background: linear-gradient(45deg, #28a745, #20c997);
+  transition: width 0.3s ease;
+}
+
+/* Speed Button Group */
+.comic-3d-viewer .btn-group .btn {
+  border-radius: 0;
+}
+
+.comic-3d-viewer .btn-group .btn:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.comic-3d-viewer .btn-group .btn:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+/* Edit Mode Controls */
+.comic-3d-viewer .form-range {
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.comic-3d-viewer .form-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #111e7f;
+  border: 2px solid #f9a602;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.comic-3d-viewer .form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #111e7f;
+  border: 2px solid #f9a602;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.comic-3d-viewer .form-range:focus {
+  outline: none;
+}
+
+.comic-3d-viewer .form-range:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(17, 30, 127, 0.3);
+}
+
+.comic-3d-viewer .form-range:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(17, 30, 127, 0.3);
+}
+
+/* Card Styles */
+.comic-3d-viewer .card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.comic-3d-viewer .card-header {
+  background: linear-gradient(90deg, #f8f9fa 60%, #f9a602 100%);
+  border-bottom: 1px solid #e0e0e0;
+  font-family: 'quicksand', sans-serif;
+  font-weight: 600;
+  color: #222;
+}
+
+/* Episode Selection Grid */
+.comic-3d-viewer .episode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .comic-3d-viewer .model-container {
+    max-width: 100%;
+    /* aspect-ratio maintained from base rule */
+  }
+  
+  .comic-3d-viewer .speech-bubble {
+    font-size: 0.8rem;
+    padding: 0.75rem !important;
+  }
+  
+  .comic-3d-viewer .btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .comic-3d-viewer .btn-group .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .comic-3d-viewer .model-container {
+    max-width: 100%;
+    /* aspect-ratio maintained from base rule */
+  }
+  
+  .comic-3d-viewer .speech-bubble {
+    font-size: 0.75rem;
+    padding: 0.3rem !important;
+  }
+  
+  .comic-3d-viewer .btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+/* Animation for smooth transitions */
+.comic-3d-viewer * {
+  transition: all 0.3s ease;
+}
+
+/* Loading state */
+.comic-3d-viewer .loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Focus states for accessibility */
+.comic-3d-viewer .btn:focus,
+.comic-3d-viewer .form-range:focus {
+  outline: 2px solid #f9a602;
+  outline-offset: 2px;
+}
+
+/* Episode selection container - horizontally scrollable, single line */
+.comic-3d-viewer .episode-select-container {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding: 0.25rem 0;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  /* Touch scrolling support for mobile */
+  -webkit-overflow-scrolling: touch;
+  /* Ensure container stays single line height */
+  max-height: 2.5rem;
+  min-height: 2.5rem;
+  /* Custom scrollbar styling (optional, for better UX) */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.comic-3d-viewer .episode-select-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.comic-3d-viewer .episode-select-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.comic-3d-viewer .episode-select-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.comic-3d-viewer .episode-select-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Episode selection buttons - single line, no wrapping */
+.comic-3d-viewer .episode-select-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 0.225rem 0.5rem;
+  min-width: auto;
+  height: fit-content;
+  line-height: 1.5;
+  /* Prevent text wrapping - buttons will grow horizontally as needed */
+  overflow: visible;
+  /* Ensure button content doesn't wrap */
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Remove yellow border from episode selection buttons */
+.comic-3d-viewer .episode-select-btn:focus,
+.comic-3d-viewer .episode-select-btn:active,
+.comic-3d-viewer .episode-select-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: inherit;
+}
+
+/* Remove yellow border from mode toggle buttons (Preview/Edit Mode) */
+.comic-3d-viewer .mode-toggle-btn:focus,
+.comic-3d-viewer .mode-toggle-btn:active,
+.comic-3d-viewer .mode-toggle-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .comic-3d-viewer .btn {
+    border-width: 2px;
+  }
+  
+  .comic-3d-viewer .speech-bubble {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .comic-3d-viewer * {
+    transition: none;
+  }
+  
+  .comic-3d-viewer .btn:hover {
+    transform: none;
+  }
+}
+
+/* Modern Slider Styles */
+input[type="range"].modern-slider {
+  width: 100%;
+  height: 2.2em;
+  background: transparent;
+  margin: 0.5em 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"].modern-slider:focus {
+  outline: none;
+}
+
+/* Webkit (Chrome, Safari) */
+input[type="range"].modern-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111e7f;
+  border: 3px solid #f9a602;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+  transition: background 0.2s, border 0.2s;
+}
+
+input[type="range"].modern-slider:focus::-webkit-slider-thumb {
+  background: #222fbf;
+  border-color: #f9a602;
+}
+
+input[type="range"].modern-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Firefox */
+input[type="range"].modern-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111e7f;
+  border: 3px solid #f9a602;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+  transition: background 0.2s, border 0.2s;
+}
+
+input[type="range"].modern-slider:focus::-moz-range-thumb {
+  background: #222fbf;
+  border-color: #f9a602;
+}
+
+input[type="range"].modern-slider::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Remove outline on focus for Firefox */
+input[type="range"].modern-slider:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(17, 30, 127, 0.15);
+}
+
+/* Edge/IE */
+input[type="range"].modern-slider::-ms-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111e7f;
+  border: 3px solid #f9a602;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(17,30,127,0.10);
+  transition: background 0.2s, border 0.2s;
+}
+
+input[type="range"].modern-slider:focus::-ms-thumb {
+  background: #222fbf;
+  border-color: #f9a602;
+}
+
+input[type="range"].modern-slider::-ms-fill-lower {
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+input[type="range"].modern-slider::-ms-fill-upper {
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Remove default focus outline for all browsers */
+input[type="range"].modern-slider:focus {
+  outline: none;
+}
+
+/* Value Badge Styles */
+.value-badge {
+  min-width: 38px;
+  display: inline-block;
+  background: #f9a602;
+  color: #222;
+  font-family: 'quicksand', sans-serif;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 0.95em;
+  margin-left: 0.5rem;
+  text-align: center;
+}
+
+/* Current Values Box */
+.current-values-box {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-family: 'quicksand', sans-serif;
+  font-size: 0.98em;
+  color: #333;
+  margin-top: 0.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+
+/* Modern Card Styles */
+.modern-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  border: 1px solid #e0e0e0;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+
+.modern-card-header {
+  background: linear-gradient(90deg, #f8f9fa 60%, #f9a602 100%);
+  border-radius: 18px 18px 0 0;
+  padding: 1rem 1.5rem 0.5rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modern-card-title {
+  font-family: 'quicksand', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: 0.5px;
+}
+
+.modern-card-body {
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem 1.5rem;
+}
+
+.section-header {
+  font-family: 'quicksand', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111e7f;
+  margin-bottom: 0.5rem;
+  margin-top: 0.5rem;
+  letter-spacing: 0.2px;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .modern-card {
+    padding: 0.2rem;
+  }
+  
+  .modern-card-header {
+    padding: 0.7rem 0.7rem 0.3rem 0.7rem;
+    font-size: 1em;
+  }
+  
+  .modern-card-title {
+    font-size: 1em;
+  }
+  
+  .modern-card-body {
+    padding: 0.7rem 0.7rem 0.5rem 0.7rem;
+    gap: 0.5rem 0.5rem;
+    font-size: 0.95em;
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .section-header {
+    font-size: 0.95em;
+    margin-bottom: 0.2rem;
+    margin-top: 0.2rem;
+  }
+  
+  .form-label {
+    font-size: 0.95em;
+    margin-bottom: 0.1rem;
+  }
+  
+  .slider-row {
+    gap: 0.3rem;
+  }
+  
+  .value-badge {
+    min-width: 28px;
+    font-size: 0.85em;
+    padding: 1px 5px;
+    margin-left: 0.2rem;
+  }
+  
+  .current-values-box {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.92em;
+    margin-top: 0.2rem;
+  }
+  
+  input[type="range"].modern-slider {
+    height: 1.2em;
+    margin: 0.2em 0;
+  }
+  
+  input[type="range"].modern-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  input[type="range"].modern-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  input[type="range"].modern-slider::-ms-thumb {
+    width: 16px;
+    height: 16px;
+  }
+}

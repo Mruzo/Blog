@@ -1,0 +1,34 @@
+Product Back in Stock - {{ notification.product.title }}
+
+Hi {{ notification.first_name }},
+
+Great news! The product you requested to be notified about is now back in stock.
+
+Product Details:
+---------------
+{{ notification.product.title }}
+{% if notification.product.description %}{{ notification.product.description }}{% endif %}
+
+Price: ${{ notification.product.get_discounted_price|floatformat:2 }}
+{% if notification.product.discount_percentage > 0 %}
+Original Price: ${{ notification.product.price|floatformat:2 }}
+Discount: {{ notification.product.discount_percentage }}% off
+{% endif %}
+{% if notification.product.stock %}Stock Available: {{ notification.product.stock }} units{% endif %}
+
+View Product: {{ product_url }}
+
+Hurry! Stock is limited and this product may sell out quickly.
+
+Note: You will only receive this notification once. If you'd like to be notified again when this product goes out of stock and comes back, please sign up for notifications again on the product page.
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.
+
+
+
+
+
+
+
+
+

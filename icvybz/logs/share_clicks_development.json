@@ -1,0 +1,204 @@
+[
+  {
+    "timestamp": "2025-08-07T00:04:21.495778",
+    "environment": "development",
+    "platform": "facebook",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Test Browser)",
+    "referrer": "http://test.com/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:04:24.977407",
+    "environment": "development",
+    "platform": "facebook",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Test Browser)",
+    "referrer": "http://test.com/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:05:19.519506",
+    "environment": "development",
+    "platform": "facebook",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Test Browser)",
+    "referrer": "http://test.com/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:05:23.022490",
+    "environment": "development",
+    "platform": "facebook",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Test Browser)",
+    "referrer": "http://test.com/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:22:28.693140",
+    "environment": "development",
+    "platform": "reddit",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:22:29.850795",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:22:34.118319",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:24:08.789786",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:24:13.097332",
+    "environment": "development",
+    "platform": "reddit",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:24:22.540944",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:25:37.133593",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:26:54.867954",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:29:59.063231",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:53:58.388598",
+    "environment": "development",
+    "platform": "linkedin",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:54:02.130604",
+    "environment": "development",
+    "platform": "x_twitter",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:54:06.434998",
+    "environment": "development",
+    "platform": "facebook",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-07T00:54:29.558104",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-11T01:22:30.382332",
+    "environment": "development",
+    "platform": "globalcomix",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/",
+    "host": "127.0.0.1:8000"
+  },
+  {
+    "timestamp": "2025-08-11T03:40:21.982354",
+    "environment": "development",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "142.116.137.110",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+    "referrer": "https://64867196bc82.ngrok-free.app/immersivecomics/seasons/1/episodes/1/",
+    "host": "64867196bc82.ngrok-free.app"
+  },
+  {
+    "timestamp": "2025-11-27T20:29:34.773824",
+    "environment": "development",
+    "platform": "x_twitter",
+    "content_type": "story",
+    "episode_id": null,
+    "story_id": 10,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://localhost:3000/",
+    "host": "localhost:8000"
+  }
+]

@@ -1,0 +1,1074 @@
+/* Import only used fonts */
+@font-face {
+  font-family: 'quicksand';
+  src: local('Quicksand'), url('./fonts/Quicksand.ttf') format("truetype");
+}
+
+/* AnimeAce font (referenced as 'Comic' in Django template) */
+@font-face {
+  font-family: 'animeace';
+  src: local('AnimeAce2 Italic'), url('./fonts/comic.ttf') format("truetype");
+  font-style: italic;
+}
+
+/* GillSans font */
+@font-face {
+  font-family: 'gillsans';
+  src: local('Gill Sans'), url('./fonts/gillsansmt.ttf') format("truetype");
+}
+
+/* CSS Custom Properties for efficiency */
+:root {
+  --font-primary: 'quicksand', sans-serif;
+  --font-size-xs: 0.9rem;    /* 14.4px - Base size */
+  --font-size-sm: 1rem;       /* 16px - Small headers */
+  --font-size-md: 1.15rem;    /* 18.4px - Medium headers */
+  --font-size-lg: 1.25rem;    /* 20px - Large headers */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+}
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 1rem;
+  height: 100%;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;   
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  font-family: 'varela', sans-serif;
+  overflow-x: hidden;
+  position: relative;
+  background-color: #f2f2f2;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'varela', sans-serif;
+  font-weight: 800;
+  color: #414042;
+  letter-spacing: 0.6px;
+}
+
+h2 {
+  font-size: 40px;
+  margin: auto;
+  margin-left: 4px;
+}
+
+.landtext {
+  font-family: 'gillsans', sans-serif;
+  font-size: 4.5rem;
+  font-weight: 800; /* Normal weight - most fonts support this */
+}
+
+/* Removed unused font classes: .subtext, .subtext-md, .subtext-28 */
+
+/* Consolidated font classes using CSS variables */
+.subtext-btn {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subtext-btn-sm {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subtext-btn-md {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subtext-btn-xs {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subtext-sm {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+}
+
+.subtext-sm p {
+  margin: 0;
+}
+
+.subtext-smm {
+  font-family: 'quicksand', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+/* Font family utility classes */
+.font-gillsans {
+  font-family: 'gillsans', sans-serif;
+}
+
+.font-quicksand {
+  font-family: 'quicksand', sans-serif;
+}
+
+.font-quicksand-italic {
+  font-family: 'quicksand', sans-serif;
+  font-style: italic;
+}
+
+/* Utility classes for common inline styles */
+.bg-inherit {
+  background-color: inherit;
+}
+
+.opacity-full {
+  opacity: 1;
+}
+
+/* Custom button styles */
+.btn-primary {
+  background-color: #ffbc00;
+  border-color: #f2f2f2;
+  color: #414042;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background-color: #e6a900;
+  border-color: #f2f2f2;
+  color: #414042;
+}
+
+.btn-primary:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 188, 0, 0.25);
+}
+
+/* Active navigation styles - consolidated below with enhanced transitions */
+
+/* Card styles */
+.card {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Badge styles */
+.badge {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Form styles */
+.form-control {
+  font-family: var(--font-primary);
+}
+
+.form-control:focus {
+  border-color: #ffbc00;
+  box-shadow: 0 0 0 0.2rem rgba(255, 188, 0, 0.25);
+}
+
+/* Custom placeholder */
+.custom-placeholder::placeholder {
+  font-family: var(--font-primary);
+  font-size: 1.1rem;
+  font-style: italic;
+  color: #242424;
+}
+
+/* Loading spinner - Standardized blue color */
+.spinner-border {
+  color: #0d6efd; /* Bootstrap primary blue */
+}
+
+/* Ensure all spinners use the same blue color */
+.spinner-border.text-primary {
+  color: #0d6efd;
+}
+
+/* FontAwesome spinner should also be blue */
+.fa-spinner {
+  color: #0d6efd;
+}
+
+/* Screen reader only / visually hidden utility - consolidated */
+.sr-only,
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Alert styles */
+.alert {
+  font-family: var(--font-primary);
+  border-radius: 0.5rem;
+}
+
+/* ============================================
+   RESPONSIVE STYLES - MOBILE (max-width: 768px)
+   ============================================ */
+
+/* Custom border styles matching Django */
+.land-border {
+  background-image: linear-gradient(to left, #ffbc00 50%, #dc2229 50%);
+  background-size: 100% 3%;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  padding-bottom: 15px; /* Adjust the distance of the border from the text */
+  border-radius: 50px;
+}
+
+.test-border {
+  background-image: linear-gradient(to left, #ffbc00 50%, #dc2229 50%);
+  background-size: 30% 3%;
+  background-position: 50% 100%;
+  background-repeat: no-repeat;
+  padding-bottom: 2px; /* Adjust the distance of the border from the text */
+  border-radius: 50px;
+}
+
+/* Navbar buttons layout - centered on desktop, full-width on mobile */
+.navbar-buttons-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.navbar-buttons-container .nav-btn {
+  white-space: nowrap !important;
+  min-width: fit-content !important;
+  max-width: none !important;
+  margin: 0 4px !important;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  flex-basis: auto !important;
+}
+
+/* Product carousel styles */
+.carousel-item {
+  transition: opacity 0.3s ease-in-out;
+}
+
+.carousel-item.active {
+  opacity: 1;
+}
+
+.carousel-item:not(.active) {
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.carousel-inner {
+  position: relative;
+  overflow: hidden;
+}
+
+.img-thumbnail {
+  transition: border-color 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.img-thumbnail:hover {
+  border-color: #6c757d !important;
+}
+
+/* Enhanced navbar button transitions */
+.nav-btn {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.nav-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 188, 0, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.nav-btn:hover::before {
+  left: 100%;
+}
+
+.nav-btn:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 6px 6px rgba(255, 188, 0, 0.2);
+}
+
+/* Active navigation styles */
+.nav-btn.active {
+  color: #414042;
+  background: linear-gradient(0deg, #414042, rgba(0,0,0,0) 3%);
+  transition: opacity 0.3s ease;
+  border: 0px;
+}
+
+/* Smooth button transitions */
+.btn {
+  transition: all 0.3s ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* SmallButton icon thickness */
+.small-button-icon i,
+.small-button-icon i.fas,
+.small-button-icon i.far,
+.small-button-icon i.fal,
+.small-button-icon i.fab {
+  font-weight: 900 !important;
+  -webkit-text-stroke-width: 0.5px;
+  -webkit-text-stroke-color: currentColor;
+  paint-order: stroke fill;
+}
+
+/* Navbar state visibility controls - consolidated */
+#profile-navbar.navbar-state-profile {
+  display: none !important;
+  justify-content: center !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+#profile-navbar.navbar-state-profile.show {
+  display: flex !important;
+}
+
+#default-navbar.navbar-state-default.hidden {
+  display: none !important;
+}
+
+.navbar-state-default.hidden {
+  display: none !important;
+}
+
+.navbar-state-default.show {
+  display: flex !important;
+}
+
+.navbar-state-profile.hidden {
+  display: none !important;
+}
+
+.navbar-state-profile.show {
+  display: flex !important;
+}
+
+/* Ensure profile navbar buttons have same styling as default */
+#profile-navbar .nav-btn {
+  white-space: nowrap !important;
+  min-width: fit-content !important;
+  max-width: none !important;
+  margin: 0 4px !important;
+  flex: 0 0 auto !important;
+}
+
+.bd-light {
+  border-color: #dee2e6;
+}
+
+/* Flex utilities */
+.flex-grow-1 {
+  flex-grow: 1;
+}
+
+/* Position utilities */
+.position-relative {
+  position: relative;
+}
+
+.position-absolute {
+  position: absolute;
+}
+
+.position-fixed {
+  position: fixed;
+}
+
+/* Display utilities */
+.d-flex {
+  display: flex;
+}
+
+.d-none {
+  display: none;
+}
+
+/* Text utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: #6c757d;
+}
+
+/* Margin utilities */
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
+.mt-5 { margin-top: 3rem; }
+
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+.mb-5 { margin-bottom: 3rem; }
+
+.my-1 { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+.my-2 { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.my-3 { margin-top: 1rem; margin-bottom: 1rem; }
+
+/* Padding utilities */
+.p-0 { padding: 0; }
+.p-1 { padding: 0.25rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-5 { padding-top: 3rem; padding-bottom: 3rem; }
+
+/* Gap utilities */
+.gap-2 {
+  gap: 0.5rem;
+}
+
+/* Z-index utilities */
+.z-index-1000 {
+  z-index: 1000;
+}
+
+/* 3D Model Preview Styles */
+.model-3d-preview {
+  position: relative;
+}
+
+.model-container {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.overlay-container {
+  transition: opacity 0.3s ease;
+}
+
+/* Modern Card Styles */
+.modern-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  border: 1px solid #e0e0e0;
+  padding: 0;
+  margin: 0;
+}
+
+.modern-card-header {
+  background: linear-gradient(90deg, #f8f9fa 60%, #f9a602 100%);
+  border-radius: 18px 18px 0 0;
+  padding: 1rem 1.5rem 0.5rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modern-card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.modern-card-body {
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem 1.5rem;
+}
+
+.section-header {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f9a602;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.value-badge {
+  min-width: 38px;
+  display: inline-block;
+  background: #f9a602;
+  color: #222;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-align: center;
+  margin-left: 0.5rem;
+}
+
+.current-values-box {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+.current-values-box div {
+  margin-bottom: 0.5rem;
+}
+
+.current-values-box div:last-child {
+  margin-bottom: 0;
+}
+
+/* Modern Slider Styles */
+input[type="range"].modern-slider {
+  width: 100%;
+  height: 2.2em;
+  background: transparent;
+  margin: 0.5em 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"].modern-slider:focus {
+  outline: none;
+}
+
+input[type="range"].modern-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111e7f;
+  border: 3px solid #f9a602;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+input[type="range"].modern-slider:focus::-webkit-slider-thumb {
+  background: #222fbf;
+  border-color: #f9a602;
+}
+
+input[type="range"].modern-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Firefox */
+input[type="range"].modern-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111e7f;
+  border: 3px solid #f9a602;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+input[type="range"].modern-slider:focus::-moz-range-thumb {
+  background: #222fbf;
+  border-color: #f9a602;
+}
+
+input[type="range"].modern-slider::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+input[type="range"].modern-slider:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(17, 30, 127, 0.15);
+}
+
+/* Edge/IE */
+input[type="range"].modern-slider::-ms-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111e7f;
+  border: 3px solid #f9a602;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+input[type="range"].modern-slider:focus::-ms-thumb {
+  background: #222fbf;
+  border-color: #f9a602;
+}
+
+input[type="range"].modern-slider::-ms-fill-lower {
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+input[type="range"].modern-slider::-ms-fill-upper {
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Remove default focus outline for all browsers */
+input[type="range"].modern-slider:focus {
+  outline: none;
+}
+
+/* Modern card mobile styles moved to consolidated section below */
+
+/* Story Preview Editor Styles */
+.story-preview-editor {
+  position: relative;
+}
+
+.comic-navigation {
+  background: linear-gradient(135deg, #4d4d4d 0%, #2c2c2c 100%);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.comic-navigation .btn {
+  transition: all 0.3s ease;
+}
+
+.comic-navigation .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.comic-navigation .btn:disabled {
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+
+.speed-btn.active {
+  background-color: #f9a602 !important;
+  border-color: #f9a602 !important;
+  color: #222 !important;
+}
+
+/* Dialogue Display */
+.dialogue-display {
+  background: linear-gradient(135deg, #111e7f 0%, #0d1556 100%);
+  border-radius: 8px;
+  padding: 1.5rem;
+  color: white;
+  box-shadow: 0 4px 12px rgba(17, 30, 127, 0.3);
+}
+
+.dialogue-display .character-name {
+  color: #f9a602;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.dialogue-display .dialogue-text {
+  font-style: italic;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-top: 0.5rem;
+}
+
+/* Progress Bar Enhancements */
+.progress {
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+  transition: width 0.3s ease;
+}
+
+/* Model Container Enhancements */
+.model-container {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+}
+
+.model-container:hover {
+  box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+}
+
+/* Control Panel Enhancements */
+.control-panel {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Preview editor mobile styles moved to consolidated section below */
+
+/* ============================================
+   CONSOLIDATED MOBILE STYLES (max-width: 768px)
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Typography */
+  .subtext-btn-sm {
+    font-size: 1rem;
+  }
+  
+  .landtext {
+    font-size: 2.5rem;
+  }
+  
+  .subtext {
+    font-size: 1.4rem;
+  }
+
+  .subtext-sm {
+    font-size: 1rem;
+  }
+
+  /* Navbar Buttons Container - Default and Profile */
+  /* Fixed to bottom on mobile like modern mobile apps */
+  .navbar-buttons-container,
+  #default-navbar,
+  #profile-navbar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    background-color: #fff !important;
+    border-top: 1px solid #dee2e6 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    z-index: 1000 !important;
+    justify-content: space-between !important;
+    padding: 0.5rem 10px !important;
+    margin: 0 !important;
+  }
+  
+  /* Container divs wrapping navbar buttons - make them fixed too */
+  .border-bottom.w-100 {
+    position: relative;
+  }
+  
+  /* Add padding to main content to prevent content from being hidden behind fixed nav */
+  main,
+  .main-content {
+    padding-bottom: 80px !important;
+  }
+  
+  /* Adjust floating buttons to be above the fixed navbar on mobile */
+  .floating-feedback-btn {
+    bottom: 172px !important; /* Position above navbar (~70px) + some spacing */
+  }
+  
+  /* Adjust create story button (+ button) on Stories page - mobile */
+  .create-story-btn {
+    bottom: 100px !important; /* Position above navbar + feedback button */
+  }
+
+  /* Cookie notification should appear above mobile navbar */
+  .cookies-notification {
+    bottom: 80px !important; /* Position above fixed navbar (z-index 1000) */
+  }
+
+  .navbar-buttons-container .nav-btn,
+  #default-navbar .nav-btn,
+  #profile-navbar .nav-btn {
+    flex: 1 1 0% !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    font-size: 1rem !important;
+    margin: 0 2px !important;
+  }
+
+  .navbar-buttons-container .nav-btn i,
+  #default-navbar .nav-btn i,
+  #profile-navbar .nav-btn i {
+    margin-right: 2px !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Modern Card Styles */
+  .modern-card {
+    padding: 0.2rem;
+  }
+  
+  .modern-card-header {
+    padding: 0.7rem 0.7rem 0.3rem 0.7rem;
+    font-size: 1em;
+  }
+  
+  .modern-card-title {
+    font-size: 1em;
+  }
+  
+  .modern-card-body {
+    padding: 0.7rem 0.7rem 0.5rem 0.7rem;
+    gap: 0.5rem 0.5rem;
+    font-size: 0.95em;
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .section-header {
+    font-size: 0.9em;
+    margin-bottom: 0.8rem;
+  }
+  
+  .slider-row {
+    gap: 0.3rem;
+  }
+  
+  .value-badge {
+    min-width: 28px;
+    font-size: 0.85em;
+    padding: 1px 5px;
+    margin-left: 0.2rem;
+  }
+  
+  .current-values-box {
+    padding: 0.7rem;
+    font-size: 0.85em;
+  }
+  
+  input[type="range"].modern-slider {
+    height: 1.2em;
+    margin: 0.2em 0;
+  }
+  
+  input[type="range"].modern-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  input[type="range"].modern-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  input[type="range"].modern-slider::-ms-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Story Preview Editor */
+  .comic-navigation {
+    padding: 0.5rem;
+  }
+  
+  .comic-navigation .btn {
+    min-width: 60px;
+    min-height: 35px;
+    font-size: 1.2rem;
+  }
+  
+  .dialogue-display {
+    padding: 1rem;
+  }
+  
+  .dialogue-display .character-name {
+    font-size: 1rem;
+  }
+  
+  .dialogue-display .dialogue-text {
+    font-size: 1rem;
+  }
+}
+
+/* ============================================
+   SMALL MOBILE STYLES (max-width: 576px)
+   ============================================ */
+
+@media (max-width: 576px) {
+  /* Navbar Buttons - Smaller padding for very small screens */
+  .navbar-buttons-container,
+  #default-navbar,
+  #profile-navbar {
+    padding: 0.4rem 5px !important;
+  }
+  
+  /* Adjust main content padding for smaller screens */
+  main,
+  .main-content {
+    padding-bottom: 75px !important;
+  }
+
+  .navbar-buttons-container .nav-btn,
+  #default-navbar .nav-btn,
+  #profile-navbar .nav-btn {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    margin: 0 1px !important;
+  }
+
+  .navbar-buttons-container .nav-btn i,
+  #default-navbar .nav-btn i,
+  #profile-navbar .nav-btn i {
+    margin-right: 1px !important;
+    font-size: 0.7rem !important;
+  }
+}
+
+/* ============================================
+   EXTRA SMALL MOBILE STYLES (max-width: 400px)
+   ============================================ */
+
+@media (max-width: 400px) {
+  /* Navbar Buttons - Minimal padding for smallest screens */
+  .navbar-buttons-container,
+  #default-navbar,
+  #profile-navbar {
+    padding: 0.3rem 2px !important;
+  }
+
+  .navbar-buttons-container .nav-btn,
+  #default-navbar .nav-btn,
+  #profile-navbar .nav-btn {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    margin: 0 1px !important;
+  }
+
+  .navbar-buttons-container .nav-btn i,
+  #default-navbar .nav-btn i,
+  #profile-navbar .nav-btn i {
+    margin-right: 0 !important;
+    font-size: 0.65rem !important;
+  }
+}
+
+/* ============================================
+   STEP INDICATOR RESPONSIVE STYLES
+   ============================================ */
+
+/* Mobile: 40% smaller step circles */
+@media (max-width: 768px) {
+  .step-circle {
+    width: 30px !important; /* 50px * 0.6 = 30px */
+    height: 30px !important;
+    font-size: 11px !important; /* 18px * 0.6 = 10.8px, rounded to 11px */
+    border-width: 2px !important; /* 3px * 0.6 = 1.8px, rounded to 2px */
+  }
+  
+  .step-circle-icon {
+    font-size: 12px !important; /* 20px * 0.6 = 12px */
+  }
+  
+  /* Adjust connecting lines for smaller circles */
+  .step-line {
+    top: 15px !important; /* 30px / 2 = 15px (half of circle height) */
+    left: calc(50% + 15px) !important; /* Adjusted for 30px circle */
+    width: calc(100% - 30px) !important; /* Adjusted for 30px circle */
+    height: 2px !important; /* 3px * 0.6 = 1.8px, rounded to 2px */
+  }
+  
+  /* Adjust progress bar background */
+  .step-progress-bg {
+    top: 15px !important;
+    left: 15px !important;
+    right: 15px !important;
+    height: 2px !important;
+  }
+  
+  /* Step label font size for mobile/tablet */
+  .step-label {
+    font-size: 10px !important;
+  }
+}
+
+/* ============================================
+   DESKTOP STYLES (min-width: 769px)
+   ============================================ */
+
+/* Desktop: Adjust floating buttons to prevent conflicts */
+@media (min-width: 769px) {
+  /* On Stories page, position feedback button above create button with more spacing */
+  .floating-feedback-btn {
+    bottom: 100px !important; /* Position above create story button (60px height + 40px bottom + gap) */
+  }
+  
+  /* Create story button stays at default position on desktop */
+  .create-story-btn {
+    bottom: 30px !important; /* Default position, feedback button is above it */
+  }
+}
+
+/* ============================================
+   DESKTOP STYLES (min-width: 992px)
+   ============================================ */
+
+@media (min-width: 992px) {
+  /* Step label font size for desktop */
+  .step-label {
+    font-size: 14px !important;
+  }
+}
+
+/* Share Button Hover Effects - Match Django template */
+.share-btn:hover {
+  background-color: #000000 !important;
+  border-color: #000000 !important;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.share-btn:hover i {
+  color: #ffffff !important;
+}

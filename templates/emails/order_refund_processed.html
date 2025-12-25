@@ -1,0 +1,52 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>Refund Processed</h1>
+    <p>Your refund has been successfully processed</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <p>Hi {{ order.customer.first_name|default:order.customer.username }},</p>
+    
+    <p>This email confirms that your refund for the cancelled order has been successfully processed.</p>
+    
+    <div class="order-details">
+        <h2>Order #{{ order.id }}</h2>
+        <p><strong>Order Date:</strong> {{ order.order_date|date:"F j, Y" }}</p>
+        <p><strong>Status:</strong> Cancelled</p>
+        
+        <h3>Refund Details:</h3>
+        <p><strong>Refund Amount:</strong> ${{ refund_amount|floatformat:2 }}</p>
+        <p><strong>Refund Method:</strong> {{ refund_method|default:"Original payment method" }}</p>
+        <p><strong>Processing Time:</strong> 5-10 business days</p>
+        
+        <h3>Items Refunded:</h3>
+        <ul>
+        {% for item in order.orderitem_set.all %}
+            <li>{{ item.quantity }}x {{ item.product.title }} - ${{ item.product.get_discounted_price|floatformat:2 }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+
+    <div class="message-box">
+        <p><strong>Important:</strong> The refund will appear in your account within 5-10 business days, depending on your financial institution.</p>
+        <p>If you have any questions about this refund, please contact our support team.</p>
+    </div>
+
+    <div class="button-center">
+        <a href="{{ site_url }}/product/orders/" class="button">View All Orders</a>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Email Templates Preview{% endblock %}
+
+{% block extra_css %}
+<style>
+    .email-preview-container {
+        background-color: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        min-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .email-preview-frame {
+        width: 100%;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .carousel-control-prev,
+    .carousel-control-next {
+        width: 5%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .carousel-indicators {
+        bottom: -50px;
+    }
+    
+    .carousel-indicators button {
+        background-color: #007bff;
+    }
+    
+    .email-info {
+        background: white;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .email-info h5 {
+        margin: 0 0 5px 0;
+        color: #333;
+    }
+    
+    .email-info p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .dev-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        color: #856404;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="dev-warning">
+        <strong>⚠️ Development Mode Only</strong>
+        <p class="mb-0">This page is only available in development mode. It will not be accessible in production.</p>
+    </div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Email Templates Preview</h1>
+        <span class="badge bg-primary">Total: {{ total_emails }} emails</span>
+    </div>
+    
+    <div id="emailCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="false">
+        <div class="carousel-indicators">
+            {% for preview in email_previews %}
+            <button type="button" data-bs-target="#emailCarousel" data-bs-slide-to="{{ forloop.counter0 }}" 
+                    {% if forloop.first %}class="active" aria-current="true"{% endif %} 
+                    aria-label="Slide {{ forloop.counter }}"></button>
+            {% endfor %}
+        </div>
+        
+        <div class="carousel-inner">
+            {% for preview in email_previews %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <div class="email-info">
+                    <h5>{{ preview.name }}</h5>
+                    <p><strong>Template:</strong> {{ preview.template }} | <strong>Description:</strong> {{ preview.description }}</p>
+                </div>
+                
+                <div class="email-preview-container">
+                    <div class="email-preview-frame">
+                        {{ preview.html|safe }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <button class="carousel-control-prev" type="button" data-bs-target="#emailCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#emailCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+    
+    <div class="mt-4">
+        <h3>Email List</h3>
+        <div class="list-group">
+            {% for preview in email_previews %}
+            <a href="#" class="list-group-item list-group-item-action" 
+               onclick="document.querySelector('#emailCarousel').carousel({{ forloop.counter0 }}); return false;">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ preview.name }}</h5>
+                    <small>{{ forloop.counter }} / {{ total_emails }}</small>
+                </div>
+                <p class="mb-1">{{ preview.description }}</p>
+                <small>Template: {{ preview.template }}</small>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    const carousel = document.querySelector('#emailCarousel');
+    if (e.key === 'ArrowLeft') {
+        carousel.carousel('prev');
+    } else if (e.key === 'ArrowRight') {
+        carousel.carousel('next');
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+

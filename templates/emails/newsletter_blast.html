@@ -1,0 +1,30 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>Justvybz Newsletter</h1>
+    <p>Your monthly update</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    {{ content|safe }}
+    
+    <div class="message-box" style="margin-top: 30px;">
+        <p class="text-small">
+            <strong>Unsubscribe:</strong> 
+            <a href="{{ unsubscribe_url }}">Click here to unsubscribe</a> from future newsletters.
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+

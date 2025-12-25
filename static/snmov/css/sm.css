@@ -1,0 +1,1051 @@
+{% load static %}
+
+@font-face {
+    font-family: 'varela';
+    src: local('Varela-Regular'), url('Varela-Regular.ttf') format("truetype");
+}
+
+@font-face {
+    font-family: 'sofia';
+    src: local('SofiaSans'), url('SofiaSans-VariableFont_wght.ttf') format("truetype");
+}
+
+@font-face {
+    font-family: 'quicksand';
+    src: local('Quicksand'), url('Quicksand.ttf') format("truetype");
+}
+
+@font-face {
+    font-family: 'gillsans';
+    src: local('gillsansmt'), url('gillsansmt.ttf') format("truetype");
+}
+
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 1rem;
+    height: 100%;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%; /* For Safari/Apple devices */
+    text-size-adjust: 100%;   
+    overflow-x: hidden;
+}
+  
+@include media-breakpoint-up(sm) {
+    html {
+        font-size: 1.2rem;
+    }
+}
+
+body {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    font-family: 'varela', sans-serif;
+    overflow-x: hidden;
+    position: relative;
+}
+
+h2 {
+    font-family: 'varela', sans-serif;
+    font-weight: 800;
+    font-size: 40px;
+    color: #414042;@font-face {
+        font-family: 'kurale';
+        src: local('Kurale'), url('kurale.ttf') format("truetype");
+    }
+    letter-spacing: 1px; 
+    margin: auto;
+    margin-left: 4px;
+    
+}
+
+.toast {
+    position: fixed; /* Position the pop-up element relative to the viewport */
+    top: 20px; /* Adjust the distance from the top of the viewport */
+    right: 20px; /* Adjust the distance from the right edge of the viewport */
+    z-index: 1000; /* Ensure that the pop-up appears above other elements */
+}
+
+.cookies-notification {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #333;
+    color: #fff;
+    padding: 10px;
+    text-align: center;
+}
+
+#accept-cookies {
+    margin-left: 10px;
+}
+
+.landtext {
+    font-family: 'gillsans', sans-serif;
+    font-size: 2rem;
+    font-weight: 960;
+}
+
+
+.custom-placeholder::placeholder {
+    font-family: 'quicksand', sans-serif; /* Specify your desired font */
+    font-size: 1.1rem; /* Adjust font size as needed */
+    font-style: italic; /* Adjust font style as needed */
+    color: #242424; /* Adjust placeholder text color as needed */
+}
+
+.list-group-item {
+    border: none; /* Remove all default borders */
+    border-bottom: 1px solid #dee2e6; /* Add bottom border */
+}
+
+
+#canvas-container {
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center;     /* Center vertically */
+    height: 100vh;           /* Adjust as needed */
+}
+
+#canvas-container canvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center the canvas */
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.custom-ar-button {
+    font-family: 'quicksand', sans-serif;
+    /* font-size: 1.4rem; */
+    font-weight: 600;
+    position: relative;
+    display: block;
+    margin: 10px auto;  /* Center it under the canvas */
+    top: 10px; /* Adjust this value to control spacing under the canvas */
+    z-index: 10; /* Ensure it stays on top */
+    left: auto !important;
+}
+
+.ar-button:hover {
+    content: 'view in AR';  /* Use 'content' for hover effect text */
+    
+}
+
+#ar {
+    position: relative;
+}
+
+#canvas-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#canvas-container canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.subtext {
+    font-family: 'gillsans', sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.subtext-md {
+    font-family: 'gillsans', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 500;
+}
+
+.subtext-28 {
+    font-family: 'quicksand', sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.subtext-btn {
+    font-family: 'quicksand', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.subtext-btn-sm {
+    font-family: 'quicksand', sans-serif !important;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.subtext-sm {
+    font-family: 'quicksand', sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+.subtext-sm p {
+    margin: 0;
+}
+
+.subtext-smm {
+    font-family: 'quicksand', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+.landborder{
+    background-color: inherit;
+}
+
+.land-border {
+    background-image: linear-gradient(to left, #ffbc00 50%, #dc2229 50%);
+    background-size: 100% 3%;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    padding-bottom: 15px; /* Adjust the distance of the border from the text */
+    border-radius: 50px;
+}
+
+.test-border {
+    background-image: linear-gradient(to left, #ffbc00 50%, #dc2229 50%);
+    background-size: 30% 3%;
+    background-position: 50% 100%;
+    background-repeat: no-repeat;
+    padding-bottom: 2px; /* Adjust the distance of the border from the text */
+    border-radius: 50px;
+}
+
+#availablePictureCarousel .carousel-inner {
+    transition-timing-function: ease-in-out; /* Add smooth easing */
+}
+
+#availablePictureCarousel .carousel-inner .carousel-item {
+    transition: transform 0.5s ease-in-out; /* Adjust the duration as needed */
+}
+
+#availablePictureCarousel .carousel-inner .carousel-item.active {
+    transform: translateX(0); /* Keep the current slide centered */
+}
+
+#availablePictureCarousel .carousel-inner .carousel-item.next,
+#availablePictureCarousel .carousel-inner .carousel-item.prev,
+#availablePictureCarousel .carousel-inner .carousel-item.active {
+    transform: translateX(0); /* Ensure smooth transition */
+}
+
+#notAvailablePictureCarousel .carousel-inner {
+    transition-timing-function: ease-in-out; /* Add smooth easing */
+}
+
+#notAvailablePictureCarousel .carousel-inner .carousel-item {
+    transition: transform 0.5s ease-in-out; /* Adjust the duration as needed */
+}
+
+#notAvailablePictureCarousel .carousel-inner .carousel-item.active {
+    transform: translateX(0); /* Keep the current slide centered */
+}
+
+#notAvailablePictureCarousel .carousel-inner .carousel-item.next,
+#notAvailablePictureCarousel .carousel-inner .carousel-item.prev,
+#notAvailablePictureCarousel .carousel-inner .carousel-item.active {
+    transform: translateX(0); /* Ensure smooth transition */
+}
+
+.custom-checkbox .form-check {
+    width: 1rem;
+    height: 1rem;
+}
+
+.form-check-input:checked {
+    background-color: #ffbc00; /* Specify your desired color */
+    border-color: #f2f2f2; /* Specify your desired color */
+}
+
+footer {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+    height: 100%; /* Optional: remove if you're not using a fixed height */
+    padding: 0; /* Ensure no unexpected padding */
+    margin: 0;
+}
+
+/* .main {
+    flex: 1 0 auto;
+} */
+
+#posts {
+    opacity: 0;
+    transform: scale(0.4);
+    transition: transform 4s .25s cubic-bezier(0,1,.3,1), opacity .3s .25s ease-out;
+    will-change: transform, opacity;
+}
+
+#posts.is-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.neww-success:hover {
+    color: #fff;
+    background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 95%, #FFBC00 95%);
+    background-repeat: no-repeat;
+
+}
+
+.neww-success {
+    color: #fff;
+    background: linear-gradient(135deg, #000 70%, #64ad60 85% 90%, #DC2229 90% 95%, #FFBC00 95%);
+    background-repeat: no-repeat;
+
+}
+
+.neww-danger {
+    color: #fff;
+    /*background: linear-gradient(110deg, #000 33%, rgba(0, 0, 0, 0) 33%), linear-gradient(110deg, #dd0000 66%, #ffc608 66%);*/
+    background: linear-gradient(135deg, #DC2229 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #FFBC00 90%, #64ad60 90%);
+    background-repeat: no-repeat;
+    border-color: #000;
+}
+
+.neww-warning {
+    color: #000;
+    /*background: linear-gradient(110deg, #000 33%, rgba(0, 0, 0, 0) 33%), linear-gradient(110deg, #dd0000 66%, #ffc608 66%);*/
+    background: linear-gradient(135deg, #FFBC00 80%, rgba(0, 0, 0, 0) 33%), linear-gradient(135deg, #64ad60 90%, #DC2229 90%);
+    background-repeat: no-repeat;
+    border-color: #000;
+}
+
+.navbar-toggler {
+    /* Optional: Customize the button appearance as needed */
+    /* background-color: #f9f9f9; */
+    background: transparent;
+    color: #414042;
+    top: 38px;
+    left: 38px;
+    z-index: 1000;
+  }
+
+  /* .navbar-toggler:hover {
+    outline: 5px solid #414042;
+    background: linear-gradient(180deg, #414042, rgba(0, 0, 0, 0) 20%);
+    z-index: 3;
+  } */
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+  color: #f2f2f2;
+  background-repeat: no-repeat;
+  outline: 2px #414042;
+}
+
+/* Only apply active styling to buttons, not navbar containers */
+.nav-btn.active,
+.btn.active {
+    color: #414042;
+    background: linear-gradient(0deg, #414042, rgba(0,0,0,0) 10% );
+    transition: opacity 0.3s ease;
+    
+}
+
+.navbar .navbar-nav li a {
+    position: relative;
+    text-align: center;
+    border-color: #414042;
+    border-width: 10px;
+}
+
+.navbar .navbar-nav li a::before{
+    content: '';
+    position: absolute;
+    background-color: #414042;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    opacity: 0;
+    transition: opacity 1s ease, width 1s ease;
+}
+
+.navbar .navbar-nav li a::after{
+    content: '';
+    position: absolute;
+    background-color: #414042;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.navbar .navbar-nav li a:hover::before,
+.navbar .navbar-nav li a:hover::after{
+    opacity:1;
+    width: 100%;
+}
+
+.card-header {
+    background-color: #929292;
+}
+
+.stackon {
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+#quote, #quote2 {
+    font-family: 'SofiaSans', serif;
+    text-transform: uppercase;
+}
+
+#quote h1 {
+    font-size: 4.5rem;
+    letter-spacing: 1px;
+}
+
+section {
+    display: block;
+}
+
+/* Target iPhone specifically to reduce the font size */
+@media only screen and (min-device-width: 375px) and (max-device-width: 812px) and (-webkit-min-device-pixel-ratio: 2) {
+    .subtext-btn-sm {
+        font-size: 1.2rem; /* Adjust this value to fit the desired look */
+    }
+}
+
+main {
+    flex: 1 0 auto;
+    position: relative;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar but keep functionality */
+::-webkit-scrollbar {
+    width: 0;
+}
+
+/* Navbar styles */
+.navbar {
+    position: relative;
+    width: 100%;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    padding: 0;
+}
+
+.navbar .container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+@media (max-width: 768px) {
+    .navbar .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .navbar-brand img {
+        height: 40px;
+    }
+}
+
+/* Card and carousel styles */
+.card {
+    overflow: hidden;
+}
+
+.carousel {
+    overflow: hidden;
+}
+
+.carousel-item img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+/* Footer styles */
+footer {
+    position: absolute;
+    bottom: 0;
+    background-repeat: no-repeat;
+    border-style: solid;
+    border-color: #414042;
+}
+
+/* Utility classes */
+.w-100 {
+    width: 100% !important;
+}
+
+.h-100 {
+    height: 100% !important;
+}
+
+/* Prevent content jumping */
+.container {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
+/* ===== BASE TEMPLATE STYLES ===== */
+
+/* Body and container styles */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f8f9fa;
+}
+
+.container {
+    width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+/* Carousel animations */
+.carousel-fade .carousel-item {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.carousel-fade .carousel-item.active {
+    opacity: 1;
+}
+
+.carousel-item img {
+    transition: transform 0.5s ease-in-out;
+    max-width: 100%;
+    height: auto;
+}
+
+.carousel-item:hover img {
+    transform: scale(1.02);
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+    transition: opacity 0.3s ease-in-out;
+}
+
+.carousel-control-prev:hover,
+.carousel-control-next:hover {
+    opacity: 0.9;
+}
+
+/* Footer styles */
+footer {
+    background-color: #fff;
+}
+
+.hover-underline {
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.hover-underline::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 1px;
+    bottom: -2px;
+    left: 0;
+    background-color: currentColor;
+    transition: width 0.3s ease;
+}
+
+.hover-underline:hover::after {
+    width: 100%;
+}
+
+/* Policy links and powered by styles */
+.policy-links a {
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.policy-links a:hover {
+    color: #007bff !important;
+}
+
+.powered-by {
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.powered-by:hover {
+    opacity: 1;
+}
+
+/* Cookie policy styles */
+.list-group-item-action {
+    transition: all 0.3s ease;
+}
+
+.list-group-item-action:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    transform: translateX(5px);
+}
+
+.table-hover tbody tr {
+    transition: background-color 0.3s ease;
+}
+
+/* Mobile responsive footer */
+@media (max-width: 768px) {
+    body {
+        margin-bottom: 450px; /* Larger footer height for mobile */
+    }
+
+    footer {
+        height: 450px;
+    }
+}
+
+/* ===== SMOOTH NAVIGATION & UX ENHANCEMENTS ===== */
+
+/* Smooth page transitions */
+.page-content {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+}
+
+.page-content.page-transitioning {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+/* Smooth navbar transitions */
+.navbar-nav .nav-link {
+    transition: all 0.3s ease-in-out;
+}
+
+.navbar-nav .nav-link:hover {
+    transform: translateY(-2px);
+}
+
+/* Enhanced navbar button transitions */
+.nav-btn {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 188, 0, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.nav-btn:hover::before {
+    left: 100%;
+}
+
+.nav-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 12px rgba(255, 188, 0, 0.2);
+}
+
+.nav-btn.active {
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(255, 188, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 188, 0, 0.6);
+    }
+}
+
+/* Loading spinner */
+.loading-spinner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    display: none;
+}
+
+.loading-spinner.show {
+    display: block;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #ffbc00;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Smooth button transitions */
+.btn {
+    transition: all 0.3s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Smooth card transitions */
+.card {
+    transition: all 0.3s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+/* ===== SMOOTH CONTENT LOADING ANIMATIONS ===== */
+
+/* Content animation base classes */
+.content-animate {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.content-animate.animate-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Staggered animation delays */
+.content-animate:nth-child(1) { transition-delay: 0.1s; }
+.content-animate:nth-child(2) { transition-delay: 0.25s; }
+.content-animate:nth-child(3) { transition-delay: 0.4s; }
+.content-animate:nth-child(4) { transition-delay: 0.55s; }
+.content-animate:nth-child(5) { transition-delay: 0.7s; }
+.content-animate:nth-child(6) { transition-delay: 0.85s; }
+
+/* Special animation effects */
+.scale-in {
+    transform: scale(0.8) translateY(50px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.scale-in.animate-in {
+    transform: scale(1) translateY(0);
+}
+
+.slide-left {
+    transform: translateX(-50px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.slide-left.animate-in {
+    transform: translateX(0);
+}
+
+.slide-right {
+    transform: translateX(50px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.slide-right.animate-in {
+    transform: translateX(0);
+}
+
+.bounce-in {
+    transform: scale(0.9) translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.bounce-in.animate-in {
+    transform: scale(1) translateY(0);
+}
+
+.rotate-in {
+    transform: translateY(40px) rotateX(10deg);
+    transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.rotate-in.animate-in {
+    transform: translateY(0) rotateX(0deg);
+}
+
+/* Skip animation class for elements that shouldn't animate */
+.skip-animation {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+/* Navbar buttons layout - centered on desktop, full-width on mobile */
+.navbar-buttons-container {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.navbar-buttons-container .nav-btn {
+    white-space: nowrap !important;
+    min-width: fit-content !important;
+    max-width: none !important;
+    margin: 0 4px !important;
+    flex: 0 0 auto !important;
+}
+
+/* Mobile responsive navbar buttons - full width on mobile */
+@media (max-width: 768px) {
+    .navbar-buttons-container {
+        justify-content: space-between !important;
+        padding: 0 10px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn {
+        flex: 1 1 0% !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        font-size: 0.8rem !important;
+        margin: 0 2px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn i {
+        margin-right: 2px !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 576px) {
+    .navbar-buttons-container {
+        justify-content: space-between !important;
+        padding: 0 5px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn {
+        flex: 1 1 0% !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+        font-size: 0.75rem !important;
+        margin: 0 1px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn i {
+        margin-right: 1px !important;
+        font-size: 0.7rem !important;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 400px) {
+    .navbar-buttons-container {
+        justify-content: space-between !important;
+        padding: 0 2px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn {
+        flex: 1 1 0% !important;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+        font-size: 0.7rem !important;
+        margin: 0 1px !important;
+    }
+    
+    .navbar-buttons-container .nav-btn i {
+        margin-right: 0 !important;
+        font-size: 0.65rem !important;
+    }
+}
+
+/* Force navbar buttons to never wrap - ultimate fallback */
+.navbar-buttons-container {
+    display: -webkit-box !important;
+    display: -ms-flexbox !important;
+    display: flex !important;
+    -webkit-box-orient: horizontal !important;
+    -webkit-box-direction: normal !important;
+    -ms-flex-direction: row !important;
+    flex-direction: row !important;
+    -ms-flex-wrap: nowrap !important;
+    flex-wrap: nowrap !important;
+    -webkit-box-pack: center !important;
+    -ms-flex-pack: center !important;
+    justify-content: center !important;
+    -webkit-box-align: center !important;
+    -ms-flex-align: center !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+.navbar-buttons-container .nav-btn {
+    -webkit-box-flex: 0 !important;
+    -ms-flex: 0 0 auto !important;
+    flex: 0 0 auto !important;
+    -ms-flex-negative: 0 !important;
+    flex-shrink: 0 !important;
+    -ms-flex-positive: 0 !important;
+    flex-grow: 0 !important;
+    -ms-flex-preferred-size: auto !important;
+    flex-basis: auto !important;
+}
+
+/* Mobile fallback - full width */
+@media (max-width: 768px) {
+    .navbar-buttons-container {
+        -webkit-box-pack: justify !important;
+        -ms-flex-pack: justify !important;
+        justify-content: space-between !important;
+    }
+    
+    .navbar-buttons-container .nav-btn {
+        -webkit-box-flex: 1 !important;
+        -ms-flex: 1 1 0% !important;
+        flex: 1 1 0% !important;
+        -ms-flex-negative: 1 !important;
+        flex-shrink: 1 !important;
+        -ms-flex-positive: 1 !important;
+        flex-grow: 1 !important;
+        -ms-flex-preferred-size: 0% !important;
+        flex-basis: 0% !important;
+    }
+}
+
+/* ===== DYNAMIC NAVBAR TRANSITIONS ===== */
+
+/* Default navbar state - visible by default */
+#default-navbar.navbar-state-default {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+/* Profile navbar state - hidden by default */
+#profile-navbar.navbar-state-profile {
+    display: none !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+/* When profile navbar is shown */
+#profile-navbar.navbar-state-profile.show {
+    display: flex !important;
+}
+
+/* When default navbar is hidden */
+#default-navbar.navbar-state-default.hidden {
+    display: none !important;
+}
+
+/* Mobile responsive for both navbar states */
+@media (max-width: 768px) {
+    #default-navbar,
+    #profile-navbar {
+        justify-content: space-between !important;
+        padding: 0 10px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    #default-navbar,
+    #profile-navbar {
+        justify-content: space-between !important;
+        padding: 0 5px !important;
+    }
+}
+
+/* Smooth fade effect when switching navbar states */
+.navbar-transitioning {
+    opacity: 0.7;
+    transform: translateY(-2px);
+}
+
+/* Ensure profile navbar buttons have same styling as default */
+#profile-navbar .nav-btn {
+    white-space: nowrap !important;
+    min-width: fit-content !important;
+    max-width: none !important;
+    margin: 0 4px !important;
+    flex: 0 0 auto !important;
+}
+
+/* Mobile responsive for profile navbar buttons */
+@media (max-width: 768px) {
+    #profile-navbar .nav-btn {
+        flex: 1 1 0% !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        font-size: 0.8rem !important;
+        margin: 0 2px !important;
+    }
+    
+    #profile-navbar .nav-btn i {
+        margin-right: 2px !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    #profile-navbar .nav-btn {
+        -webkit-box-flex: 1 !important;
+        -ms-flex: 1 1 0% !important;
+        flex: 1 1 0% !important;
+        -ms-flex-negative: 1 !important;
+        flex-shrink: 1 !important;
+        -ms-flex-positive: 1 !important;
+        flex-grow: 1 !important;
+        -ms-flex-preferred-size: 0% !important;
+        flex-basis: 0% !important;
+    }
+}
