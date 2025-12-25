@@ -574,31 +574,6 @@ class StudioCollaborationRequest(models.Model):
         return f"{self.requester.username} -> {self.studio.name} ({self.status})"
 
 
-class StoryCollaborator(models.Model):
-    ROLE_CHOICES = [
-        ('writer', 'Writer'),
-        ('3d_artist', '3D Artist'),
-        ('voice_actor', 'Voice Actor'),
-        ('sound_engineer', 'Sound Engineer'),
-        ('cinematographer', 'Cinematographer'),
-    ]
-
-    story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='collaborators')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='story_collaborations')
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES)
-    joined_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        app_label = 'icvybz'
-        # Allow multiple roles per user: unique on story, user, and role combination
-        unique_together = [['story', 'user', 'role']]
-        ordering = ['joined_at']
-
-    def __str__(self):
-        return f"{self.user.username} - {self.role} on {self.story.title}"
-
-
 # Audio System Models
 class AudioTrack(models.Model):
     AUDIO_TYPES = [
