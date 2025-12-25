@@ -15,7 +15,7 @@ from .views import(
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.contrib.auth import views as auth_views
 from django.conf.urls.static import static
 from snmov.views import (
@@ -95,6 +95,9 @@ if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # Add catch-all route AFTER media/static patterns (in development) or at the end (in production)
+# IMPORTANT: Exclude API endpoints from catch-all - they must be handled by Django
+# Use regex with negative lookahead to exclude /api/ and /immersivecomics/api/ paths
+# The pattern matches any path that doesn't start with 'api/' or 'immersivecomics/api/'
 urlpatterns += [
-    path('<path:path>', ReactAppView.as_view(), name='react_app'),
+    re_path(r'^(?!api/)(?!immersivecomics/api/).+', ReactAppView.as_view(), name='react_app'),
 ]

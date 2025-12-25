@@ -668,26 +668,38 @@ class ApiService {
     // Use the detailed studio_list_api endpoint which includes owner and collaborators info
     // This endpoint is at /immersivecomics/api/studios/ which is outside the /api/icvybz namespace
     try {
-      // In development, use relative URL so proxy can intercept it
-      // In production, this will be handled by Django directly
       const headers: any = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       };
       
-      // WORKAROUND: Proxy isn't intercepting /immersivecomics/api/*, so call Django directly in dev
-      // In production, this will work through Django's URL routing
+      // Construct URL - use relative URL that works in both dev and production
+      // In development, proxy should handle it (or we fall back to direct Django call)
+      // In production, Django serves the React app, so relative URL works
       const isDevelopment = process.env.NODE_ENV === 'development';
-      const url = isDevelopment 
-        ? 'http://localhost:8000/immersivecomics/api/studios/'
-        : '/immersivecomics/api/studios/';
+      let url = '/immersivecomics/api/studios/';
       
-      console.log('getStudios: Calling', url);
+      // In development, if proxy isn't working, try direct Django call as fallback
+      if (isDevelopment) {
+        // First try relative URL (proxy should intercept)
+        // If that fails, the error handler will show the issue
+        url = '/immersivecomics/api/studios/';
+      }
+      
+      console.log('getStudios: Calling', url, 'isDevelopment:', isDevelopment);
       const response = await axios.get(url, { 
         headers,
         withCredentials: false // Public endpoint, no auth needed
       });
+      
       console.log('getStudios: Response received:', response.status, response.data);
+      
+      // Check if we got HTML instead of JSON (indicates catch-all route matched)
+      if (typeof response.data === 'string' && response.data.trim().startsWith('<!DOCTYPE')) {
+        console.error('getStudios: Received HTML instead of JSON - catch-all route may have matched');
+        throw new Error('Received HTML response instead of JSON. API endpoint may not be configured correctly.');
+      }
+      
       if (response.data && response.data.studios) {
         console.log('getStudios: Returning studios array with', response.data.studios.length, 'studios');
         return response.data.studios;
@@ -699,12 +711,20 @@ class ApiService {
       const status = error?.response?.status;
       const errorMessage = error?.response?.data?.detail || error?.message || 'Unknown error';
       const errorData = error?.response?.data;
+      
+      // Check if we got HTML in the error response
+      if (error?.response?.data && typeof error.response.data === 'string' && error.response.data.trim().startsWith('<!DOCTYPE')) {
+        console.error('getStudios: API endpoint returned HTML instead of JSON. URL routing issue.');
+        console.error('getStudios: This suggests the catch-all React route matched instead of the API endpoint.');
+      }
+      
       console.error('getStudios: Studio list API endpoint failed:', {
         status,
         errorMessage,
         errorData,
         url: '/immersivecomics/api/studios/',
-        hasResponse: !!error?.response
+        hasResponse: !!error?.response,
+        responseType: error?.response?.headers?.['content-type']
       });
       // Re-throw the error so loadStudios can handle it properly
       throw error;
