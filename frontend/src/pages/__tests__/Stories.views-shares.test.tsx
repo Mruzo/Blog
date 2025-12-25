@@ -160,14 +160,17 @@ describe('Stories Component - Views Count and Share Features', () => {
       renderWithProviders(<Stories />);
 
       await waitFor(() => {
-        expect(screen.getByText(/50/)).toBeInTheDocument(); // 10 + 25 + 15 = 50
+        expect(screen.getByText(/50 views/)).toBeInTheDocument(); // 10 + 25 + 15 = 50
       });
 
-      // Check that views badge is displayed
-      const viewsBadge = screen.getByText(/50/);
-      expect(viewsBadge).toBeInTheDocument();
-      expect(viewsBadge.closest('.badge')).toHaveStyle({
-        background: '#f9a602',
+      // Check that views count is displayed
+      const viewsText = screen.getByText(/50 views/);
+      expect(viewsText).toBeInTheDocument();
+      // Check that it's in a badge with transparent background
+      const badge = viewsText.closest('.badge');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveStyle({
+        background: 'transparent',
         color: '#111e7f',
       });
     });
@@ -184,7 +187,7 @@ describe('Stories Component - Views Count and Share Features', () => {
       renderWithProviders(<Stories />);
 
       await waitFor(() => {
-        expect(screen.getByText(/0/)).toBeInTheDocument();
+        expect(screen.getByText(/0 views/)).toBeInTheDocument();
       });
     });
 
@@ -200,11 +203,11 @@ describe('Stories Component - Views Count and Share Features', () => {
       renderWithProviders(<Stories />);
 
       await waitFor(() => {
-        expect(screen.getByText(/0/)).toBeInTheDocument();
+        expect(screen.getByText(/0 views/)).toBeInTheDocument();
       });
     });
 
-    it('should display views count with eye icon', async () => {
+    it('should display views count in badge format', async () => {
       mockedApiService.getPublicStories.mockResolvedValue(mockStories);
       mockedApiService.getSeasons.mockResolvedValue(mockSeasons);
       mockedApiService.getEpisodes.mockResolvedValue(mockEpisodes);
@@ -214,8 +217,11 @@ describe('Stories Component - Views Count and Share Features', () => {
       renderWithProviders(<Stories />);
 
       await waitFor(() => {
-        const eyeIcon = screen.getByText(/50/).closest('.badge')?.querySelector('.fa-eye');
-        expect(eyeIcon).toBeInTheDocument();
+        const viewsBadge = screen.getByText(/50 views/).closest('.badge');
+        expect(viewsBadge).toBeInTheDocument();
+        // Verify it's left-aligned (justify-content-start)
+        const container = viewsBadge?.closest('.d-flex');
+        expect(container).toHaveClass('justify-content-start');
       });
     });
   });
@@ -416,7 +422,7 @@ describe('Stories Component - Views Count and Share Features', () => {
       renderWithProviders(<Stories />);
 
       await waitFor(() => {
-        const viewsSection = screen.getByText(/50/).closest('.card');
+        const viewsSection = screen.getByText(/50 views/).closest('.card');
         const collaboratorsSection = screen.queryByText(/Collaborators/);
         
         // Views should be rendered
@@ -465,12 +471,15 @@ describe('Stories Component - Views Count and Share Features', () => {
 
       await waitFor(() => {
         // Should display views for each story
-        const viewsBadges = screen.getAllByText(/50/);
+        const viewsBadges = screen.getAllByText(/50 views/);
         expect(viewsBadges.length).toBeGreaterThan(0);
       });
     });
   });
 });
+
+
+
 
 
 

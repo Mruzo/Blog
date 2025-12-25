@@ -11,6 +11,8 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, HttpRe
 from django.views.generic.edit import DeleteView
 from django.views.generic import TemplateView, FormView, ListView
 from django.template.loader import render_to_string
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 from django.conf import settings
 import random
 import uuid
@@ -38,12 +40,56 @@ email_verification_token = EmailVerificationTokenGenerator()
 class ReactAppView(TemplateView):
     """View to serve React app's index.html for client-side routing"""
     
+    @method_decorator(ensure_csrf_cookie)
     def get(self, request, *args, **kwargs):
         """Serve React index.html file directly"""
         import os
+        import logging
         from django.conf import settings
-        from django.http import HttpResponse
-        from django.template.loader import render_to_string
+        from django.http import HttpResponse, JsonResponse
+        
+        logger = logging.getLogger(__name__)
+        
+        # Safety check: If this view is somehow called for an API route,
+        # return a proper error instead of HTML (should never happen due to URL ordering)
+        path = kwargs.get('path', '')
+        
+        # Log when catch-all route is hit for debugging
+        # Only log in development to avoid production noise
+        from django.conf import settings
+        if settings.DEBUG:
+            print(f'\n[ReactAppView] ===== CATCH-ALL ROUTE MATCHED =====')
+            print(f'[ReactAppView] Path param: {path}')
+            print(f'[ReactAppView] Request path: {request.path}')
+            print(f'[ReactAppView] Full path: {request.get_full_path()}')
+            print(f'[ReactAppView] Method: {request.method}')
+            print(f'[ReactAppView] Host: {request.get_host()}')
+            print(f'[ReactAppView] Accept header: {request.headers.get("Accept", "N/A")}')
+            print(f'[ReactAppView] ======================================\n')
+        
+        logger.warning(f'[ReactAppView] Catch-all route matched! Path: {path}, Full URL: {request.get_full_path()}, Method: {request.method}')
+        logger.warning(f'[ReactAppView] Request headers: Host={request.get_host()}, Accept={request.headers.get("Accept", "N/A")}')
+        
+        # Safety check: If this view is somehow called for an API route,
+        # return a proper error instead of HTML (should never happen due to URL ordering)
+        if path.startswith('api/') or request.path.startswith('/api/'):
+            if settings.DEBUG:
+                print(f'\n[ReactAppView] ERROR: API route caught by catch-all!')
+                print(f'[ReactAppView] Path param: {path}')
+                print(f'[ReactAppView] Request path: {request.path}\n')
+            logger.error(f'[ReactAppView] ERROR: API route caught by catch-all! Path: {path}, Request path: {request.path}')
+            # In production, still return JSON error but without debug details
+            debug_info = {
+                'path': path,
+                'request_path': request.path,
+                'full_path': request.get_full_path(),
+                'url': request.build_absolute_uri()
+            } if settings.DEBUG else {}
+            return JsonResponse({
+                'error': 'API route not found',
+                'message': 'This should not happen - API routes should be matched before catch-all',
+                **({'debug': debug_info} if settings.DEBUG else {})
+            }, status=404)
         
         index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
         try:

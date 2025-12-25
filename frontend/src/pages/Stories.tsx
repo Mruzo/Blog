@@ -6,6 +6,7 @@ import MetaTags from '../components/MetaTags';
 import { useApi } from '../contexts/ApiContext';
 import apiService from '../services/api';
 import { collaborationService } from '../services/collaborationService';
+import './Stories.css';
 
 interface Character {
   id: number;
@@ -45,6 +46,48 @@ const Stories: React.FC = () => {
   const loadingRef = useRef<Map<number, boolean>>(new Map());
   // Track selected episode for each story (for sharing)
   const [selectedEpisodes, setSelectedEpisodes] = useState<Map<number, any>>(new Map());
+  // Track expanded descriptions for each story
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<number>>(new Set());
+  
+  // Request deduplication cache - stores in-flight and completed requests
+  const requestCache = useRef<Map<string, Promise<any>>>(new Map());
+  const requestResults = useRef<Map<string, any>>(new Map());
+  
+  // Helper function for request deduplication
+  const cachedRequest = useCallback(async <T,>(
+    cacheKey: string,
+    requestFn: () => Promise<T>
+  ): Promise<T> => {
+    // Check if we have a cached result
+    if (requestResults.current.has(cacheKey)) {
+      return requestResults.current.get(cacheKey);
+    }
+    
+    // Check if request is already in-flight
+    if (requestCache.current.has(cacheKey)) {
+      return requestCache.current.get(cacheKey);
+    }
+    
+    // Create new request and cache it
+    const request = requestFn()
+      .then(result => {
+        // Cache the result
+        requestResults.current.set(cacheKey, result);
+        // Remove from in-flight cache
+        requestCache.current.delete(cacheKey);
+        return result;
+      })
+      .catch(error => {
+        // Remove from in-flight cache on error
+        requestCache.current.delete(cacheKey);
+        throw error;
+      });
+    
+    // Add to in-flight cache
+    requestCache.current.set(cacheKey, request);
+    
+    return request;
+  }, []);
 
   // Track authentication state - update when component mounts or token changes
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -258,14 +301,80 @@ const Stories: React.FC = () => {
     }
   };
   
-  // Handle episode selection from Comic3DViewer
-  const handleEpisodeSelect = useCallback((storyId: number, episode: any) => {
+  // Handle episode selection from Comic3DViewer - with progressive dialogue loading
+  const handleEpisodeSelect = useCallback(async (storyId: number, episode: any) => {
+    console.log(`[Stories] handleEpisodeSelect called for episode ${episode.id} in story ${storyId}`);
+    
+    // Update selected episode
     setSelectedEpisodes(prev => {
       const newMap = new Map(prev);
       newMap.set(storyId, episode);
       return newMap;
     });
-  }, []);
+    
+    // PROGRESSIVE LOADING: Load dialogues for this episode on-demand
+    const storyDataForStory = storyData.get(storyId);
+    const existingDialogues = storyDataForStory?.dialogues || [];
+    
+    // Check if dialogues for this episode are already loaded
+    const episodeDialogues = existingDialogues.filter((d: any) => d.episode === episode.id);
+    if (episodeDialogues.length > 0) {
+      // Dialogues already loaded, no need to fetch
+      console.log(`[Stories] Dialogues already loaded for episode ${episode.id}, count: ${episodeDialogues.length}`);
+      return;
+    }
+    
+    console.log(`[Stories] Loading dialogues for episode ${episode.id}...`);
+    
+    // Load dialogues for this specific episode (with deduplication)
+    try {
+      const dialogues = await cachedRequest(
+        `dialogues-${episode.id}`,
+        () => {
+          console.log(`[Stories] Making API call to getDialogues(${episode.id})`);
+          return apiService.getDialogues(episode.id);
+        }
+      );
+      
+      console.log(`[Stories] Dialogues loaded for episode ${episode.id}, count: ${dialogues.length}`);
+      
+      // Update story data with new dialogues
+      setStoryData(prev => {
+        const updated = new Map(prev);
+        const currentData = updated.get(storyId) || {
+          seasons: [],
+          episodes: [],
+          dialogues: [],
+          collaborators: []
+        };
+        
+        // Merge new dialogues with existing ones (avoid duplicates)
+        const existingIds = new Set(currentData.dialogues.map((d: any) => d.id));
+        const newDialogues = dialogues.filter((d: any) => !existingIds.has(d.id));
+        
+        console.log(`[Stories] Adding ${newDialogues.length} new dialogues to story ${storyId}`);
+        
+        updated.set(storyId, {
+          ...currentData,
+          dialogues: [...currentData.dialogues, ...newDialogues]
+        });
+        
+        return updated;
+      });
+    } catch (error: any) {
+      // If 403/401, it's expected for public stories when not authenticated
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
+        console.log(`[Stories] Dialogues not available for episode ${episode.id} (auth required)`);
+      } else {
+        console.error(`[Stories] Failed to load dialogues for episode ${episode.id}:`, error);
+        console.error(`[Stories] Error details:`, {
+          status: error?.response?.status,
+          message: error?.message,
+          data: error?.response?.data
+        });
+      }
+    }
+  }, [storyData, cachedRequest]);
 
   // Load studio if studio ID is provided
   useEffect(() => {
@@ -299,7 +408,10 @@ const Stories: React.FC = () => {
 
   // Filter stories by studio if studio is provided
   useEffect(() => {
+    console.log('Stories component: stories from context:', stories);
+    console.log('Stories component: stories type:', typeof stories, 'Is array:', Array.isArray(stories));
     if (!stories || !Array.isArray(stories)) {
+      console.log('Stories component: stories is not an array, setting filteredStories to []');
       setFilteredStories([]);
       return;
     }
@@ -375,10 +487,13 @@ const Stories: React.FC = () => {
       const results = await Promise.allSettled(
         storiesToLoad.map(async (story) => {
           try {
-            // Load seasons - may require auth, handle gracefully
+            // Load seasons - may require auth, handle gracefully (with deduplication)
             let seasonsData: any[] = [];
             try {
-              seasonsData = await apiService.getSeasons(story.id);
+              seasonsData = await cachedRequest(
+                `seasons-${story.id}`,
+                () => apiService.getSeasons(story.id)
+              );
             } catch (error: any) {
               // If 403/401, it's expected for public stories when not authenticated
               if (error?.response?.status === 403 || error?.response?.status === 401) {
@@ -400,10 +515,15 @@ const Stories: React.FC = () => {
               };
             }
             
-            // Load episodes for all seasons in parallel - may require auth
+            // Load episodes for all seasons in parallel - may require auth (with deduplication)
             let allEpisodes: any[] = [];
             try {
-              const episodePromises = seasonsData.map(season => apiService.getEpisodes(season.id));
+              const episodePromises = seasonsData.map(season => 
+                cachedRequest(
+                  `episodes-${season.id}`,
+                  () => apiService.getEpisodes(season.id)
+                )
+              );
               const episodeResults = await Promise.all(episodePromises);
               allEpisodes = episodeResults.flat();
             } catch (error: any) {
@@ -418,32 +538,21 @@ const Stories: React.FC = () => {
               // Continue with empty episodes
             }
             
-            // Load dialogues for all episodes in parallel - may require auth
+            // PROGRESSIVE LOADING: Don't load dialogues upfront - load on-demand when episode is selected
+            // This significantly reduces initial load time and API calls
             let allDialogues: any[] = [];
-            try {
-              const dialoguePromises = allEpisodes.map(episode => apiService.getDialogues(episode.id));
-              const dialogueResults = await Promise.all(dialoguePromises);
-              allDialogues = dialogueResults.flat();
-            } catch (error: any) {
-              // If 403/401, it's expected for public stories when not authenticated
-              if (error?.response?.status === 403 || error?.response?.status === 401) {
-                if (process.env.NODE_ENV === 'development') {
-                  console.log(`[Stories] Dialogues not available for public story ${story.id} (auth required)`);
-                }
-              } else {
-                console.error(`[Stories] Failed to load dialogues for story ${story.id}:`, error);
-              }
-              // Continue with empty dialogues
-            }
             
-            // Load collaborators for this story
+            // Load collaborators for this story (with deduplication)
             // Only show StoryCollaborator objects (those selected via checkbox system)
             // Exclude CollaborationInvite objects entirely
             let collaboratorsData: any[] = [];
             try {
               // Try to load collaborators - might fail if story is private and user is not authenticated
               // This is okay, we'll just show no collaborators
-              const allCollaborators = await collaborationService.getCollaborators(story.id);
+              const allCollaborators = await cachedRequest(
+                `collaborators-${story.id}`,
+                () => collaborationService.getCollaborators(story.id)
+              );
               
               // Filter to show ONLY StoryCollaborator objects (those with user field and is_active === true)
               // These are the collaborators selected through the checkbox system
@@ -532,7 +641,7 @@ const Stories: React.FC = () => {
     };
     
     loadStoryData();
-  }, [stories, filteredStories, studio, loadedStoryIds]);
+  }, [stories, filteredStories, studio, loadedStoryIds, cachedRequest]);
 
   if (isLoading || isLoadingStoryData) {
     return <LoadingSpinner />;
@@ -650,9 +759,32 @@ const Stories: React.FC = () => {
                     </div>
                   </div>
                   
-                  <p className="subtext-btn-sm text-muted mb-2">
+                  <div className="mb-2">
+                    <p 
+                      className={`subtext-btn-sm text-muted mb-0 story-description ${expandedDescriptions.has(comic.id) ? 'expanded' : 'collapsed'}`}
+                    >
                     {comic.description}
                   </p>
+                    {comic.description && comic.description.length > 100 && (
+                      <button
+                        className="btn btn-link p-0 text-primary text-decoration-none"
+                        style={{ fontSize: '0.85rem', paddingTop: '0.25rem' }}
+                        onClick={() => {
+                          setExpandedDescriptions(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(comic.id)) {
+                              newSet.delete(comic.id);
+                            } else {
+                              newSet.add(comic.id);
+                            }
+                            return newSet;
+                          });
+                        }}
+                      >
+                        {expandedDescriptions.has(comic.id) ? 'Show less' : '... Show more'}
+                      </button>
+                    )}
+                  </div>
                   
                   {/* 3D Comic Viewer - Read-only mode */}
                   {storyData.has(comic.id) && (
@@ -663,7 +795,9 @@ const Stories: React.FC = () => {
                         seasons={storyData.get(comic.id)?.seasons || []}
                         storyId={comic.id}
                         readOnly={true}
-                        onEpisodeSelect={(episode) => handleEpisodeSelect(comic.id, episode)}
+                        onEpisodeSelect={(episode) => {
+                          handleEpisodeSelect(comic.id, episode);
+                        }}
                       />
                     </div>
                   )}
@@ -678,16 +812,19 @@ const Stories: React.FC = () => {
                     }, 0);
                     // Always show the views count section, even if 0, to match the pattern
                     return (
-                      <div className="mb-2">
-                        <div className="card border-0 shadow-sm">
-                          <div className="card-body p-1 border-top">
-                            <div className="d-flex justify-content-center align-items-center">
-                              <span className="badge" style={{ background: '#f9a602', color: '#111e7f', fontSize: '0.8rem' }}>
-                                <i className="fas fa-eye me-1"></i> {totalViews} 
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="d-flex justify-content-start align-items-center mb-2">
+                        <span 
+                          className="badge" 
+                          style={{ 
+                            background: 'transparent', 
+                            color: '#111e7f',
+                            fontSize: '0.85rem',
+                            padding: '0.35rem 0.65rem'
+                          }}
+                        >
+                          
+                          {totalViews} views
+                        </span>
                       </div>
                     );
                   })()}
@@ -696,7 +833,7 @@ const Stories: React.FC = () => {
                   {storyData.has(comic.id) && (
                     <div className="mb-2">
                       <div className="card border-0 shadow-sm">
-                        <div className="card-header bg-transparent border-bottom p-2">
+                        <div className="card-header bg-transparent border-bottom border-top p-2">
                           <h6 className="subtext-btn-sm mb-0">
                             <i className="fas fa-users me-2"></i>
                             &nbsp;Collaborators ({(() => {
@@ -878,9 +1015,9 @@ const Stories: React.FC = () => {
       {/* Floating Action Button */}
       <Link 
         to={isAuthenticated ? "/immersivecomics/story/create/" : "#"}
-        className="btn btn-primary rounded-circle position-fixed"
+        className="btn btn-primary rounded-circle position-fixed create-story-btn"
         style={{ 
-          bottom: '20px', 
+          bottom: '40px', 
           right: '20px', 
           width: '60px', 
           height: '60px',

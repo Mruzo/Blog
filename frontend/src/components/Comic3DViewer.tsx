@@ -63,6 +63,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const [previousModel, setPreviousModel] = useState<string | null>(null);
   const [dialogueData, setDialogueData] = useState<DialogueData[]>([]);
   const [currentDialValues, setCurrentDialValues] = useState<any>(null);
+  const [isWaitingForDialogues, setIsWaitingForDialogues] = useState(false);
   const trackedEpisodesRef = useRef<Set<number>>(new Set()); // Track which episodes have had views incremented
   
   const modelViewerRef = useRef<any>(null);
@@ -103,6 +104,9 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         hotspot.setAttribute('data-position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
         hotspot.setAttribute('data-normal', '0m 1m 0m');
         hotspot.setAttribute('data-character', baseCharacterName);
+        hotspot.setAttribute('data-surface', 'false');
+        hotspot.setAttribute('visibility-angle', "0");
+
         
         // Create the dot element inside the hotspot
         const dot = document.createElement('div');
@@ -135,6 +139,12 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }));
     setDialogueData(newDialogueData);
   }, [episodeDialogues]);
+  
+  // Handle dialogues loading after episode has started (progressive loading fix)
+  // This ensures that when dialogues load asynchronously after "Start Episode" is clicked,
+  // the viewer properly displays the first dialogue instead of staying on the summary
+  // Removed automatic switching from summary to dialogue
+  // Summary will stay visible until user clicks Next button
   
   // Recreate hotspots when dialogueData changes (if model is ready)
   useEffect(() => {
@@ -326,29 +336,40 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     console.log('Comic3DViewer: Model URL:', selectedEpisode ? getModelFromSeason(selectedEpisode) : null);
     console.log('Comic3DViewer: Episode dialogues length:', episodeDialogues.length);
     
-    // Set isStarted to true - this will trigger model-viewer to render and start loading
+    // Always set isStarted to true - this will trigger model-viewer to render
     setIsStarted(true);
     // Reset isModelReady - it will be set to true when model actually loads
     setIsModelReady(false);
     
-    console.log('Comic3DViewer: Set isStarted to true, model will load now');
+    // ALWAYS show summary first - user will navigate to first dialogue by clicking Next
+    setIsShowingSummary(true);
+    setCurrentDialogueIndex(0); // Set index to 0 so Next button will go to first dialogue
     
-    // Show first dialogue if available
-    if (episodeDialogues.length > 0) {
-      console.log('Comic3DViewer: Starting with first dialogue, total dialogues:', episodeDialogues.length);
-      setCurrentDialogueIndex(0);
-      // Wait a bit for model-viewer to initialize, then show dialogue
-      setTimeout(() => {
-        showDialogue(0);
-      }, 100);
+    // If dialogues are not loaded yet, wait for them
+    if (episodeDialogues.length === 0 && selectedEpisode) {
+      console.log('Comic3DViewer: Dialogues not loaded yet, showing summary while waiting...');
+      setIsWaitingForDialogues(true);
     } else {
-      console.log('Comic3DViewer: No dialogues available for this episode');
-      setIsShowingSummary(true);
+      setIsWaitingForDialogues(false);
+      console.log('Comic3DViewer: Starting with summary (dialogues available, user can click Next to proceed)');
     }
     
     // Don't start auto-play immediately - let user control with navigation buttons
     setIsPlaying(false);
   };
+  
+  // Handle dialogues loading after "Start" was clicked (progressive loading fix)
+  useEffect(() => {
+    // If we're waiting for dialogues and they just became available, keep showing summary
+    // User will click Next to proceed to first dialogue
+    if (isWaitingForDialogues && isStarted && selectedEpisode && episodeDialogues.length > 0) {
+      console.log('Comic3DViewer: Dialogues loaded after Start clicked, keeping summary visible (user can click Next)');
+      setIsWaitingForDialogues(false);
+      // Keep summary visible - don't auto-switch to dialogue
+      // Summary stays visible until user clicks Next
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episodeDialogues.length, isWaitingForDialogues, isStarted, selectedEpisode]);
 
 
 
@@ -912,7 +933,20 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   const goToNextDialogue = () => {
     console.log('Comic3DViewer: Next button clicked, current index:', currentDialogueIndex);
+    console.log('Comic3DViewer: isShowingSummary:', isShowingSummary);
+    console.log('Comic3DViewer: episodeDialogues.length:', episodeDialogues.length);
     
+    // If showing summary, move to first dialogue
+    if (isShowingSummary && episodeDialogues.length > 0) {
+      console.log('Comic3DViewer: Moving from summary to first dialogue');
+      setIsShowingSummary(false);
+      setCurrentDialogueIndex(0);
+      loadDialogue(0);
+      showDialogue(0);
+      return;
+    }
+    
+    // Otherwise, move to next dialogue
     if (currentDialogueIndex < episodeDialogues.length - 1) {
       const newIndex = currentDialogueIndex + 1;
       console.log('Comic3DViewer: Moving to next dialogue, new index:', newIndex);
@@ -980,9 +1014,12 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     if (episodes.length > 0 && !selectedEpisode) {
       // Select first episode (Django pattern - model comes from season)
       console.log('Comic3DViewer: Auto-selecting first episode (Django pattern):', episodes[0]);
-      setSelectedEpisode(episodes[0]);
+      const firstEpisode = episodes[0];
+      setSelectedEpisode(firstEpisode);
+      // CRITICAL: Also call onEpisodeSelect to trigger dialogue loading in parent
+      onEpisodeSelect?.(firstEpisode);
     }
-  }, [episodes, selectedEpisode]);
+  }, [episodes, selectedEpisode, onEpisodeSelect]);
 
   // Track episode view when episode is selected (only in read-only/public mode)
   useEffect(() => {
@@ -1070,7 +1107,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
               {episodes.length === 0 ? (
                 <p className="text-muted">No episodes available for this story.</p>
               ) : (
-                <div className="d-flex gap-2" style={{ justifyContent: 'flex-start' }}>
+                <div className="episode-select-container">
                   {[...episodes].sort((a, b) => a.episode_number - b.episode_number).map(episode => {
                     const isActive = selectedEpisode?.id === episode.id;
                     return (
@@ -1078,7 +1115,6 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                         key={episode.id}
                         className={`btn ${isActive ? 'btn-primary' : 'btn-outline-primary'} episode-select-btn`}
                         onClick={() => handleEpisodeSelect(episode)}
-                        style={{ minWidth: 'auto', padding: '0.225rem 0.5rem' }}
                       >
                         {isActive ? (
                           <>
@@ -1101,23 +1137,23 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       {selectedEpisode && (
         <div className="row">
           <div className="col-12">
-            <div className="card model-container position-relative" style={{ height: '400px', display: 'block' }}>
+            <div className="card model-container position-relative">
               {/* Overlay with Start Button */}
               {!isStarted && (
-                <div className="overlay-container position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 2, background: 'rgba(0,0,0,0.7)' }}>
+                <div className="overlay-container position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 2, background: 'rgba(0,0,0,0.5)' }}>
                   <button
                     className="btn btn-primary btn-lg"
                     onClick={startEpisode}
                     style={{ 
-                      background: 'rgba(255, 77, 77, 0.5)', 
+                      background: 'rgba(255, 77, 77, 0.6)', 
                       border: 'none',
-                      padding: '1rem 2rem',
+                      padding: '0.6rem 1rem',
                       fontSize: '1.2rem',
                       fontWeight: 'bold'
                     }}
                   >
                     <i className="fas fa-play me-2"></i>
-                    &nbsp;Start Episode
+                    &nbsp;Start
                   </button>
                 </div>
               )}
@@ -1160,7 +1196,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   
                   {/* Speech Bubble - positioned absolutely over the model viewer (Django pattern) */}
                   <div 
-                    className="speech-bubble position-absolute bg-light p-1 rounded-2 border border-secondary w-100 align-top"
+                    className="speech-bubble position-absolute bg-light p-0 rounded-2 border border-secondary w-100 align-top"
                     style={{ 
                       zIndex: 10, 
                       top: '0',
@@ -1178,11 +1214,14 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
                     }}
                   >
-                    <div id="top-dialogue">
+                    <div id="top-dialogue" style={{ padding: 0, margin: 0 }}>
                       {isShowingSummary ? (
                         <div>
-                          <h6>Episode Summary</h6>
-                          <p>{selectedEpisode.description}</p>
+                          {selectedEpisode.description ? (
+                            <div dangerouslySetInnerHTML={{ __html: selectedEpisode.description }} />
+                          ) : (
+                            <p>No summary available for this episode.</p>
+                          )}
                         </div>
                       ) : currentDialogueText ? (
                         <div dangerouslySetInnerHTML={{ __html: currentDialogueText }} />
@@ -1236,7 +1275,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   </div>
                 )
               ) : (
-                <div className="w-100 h-100">
+                <div className="w-100">
                   {selectedEpisode?.cover_image && typeof selectedEpisode.cover_image === 'string' ? (
                     <img 
                       src={selectedEpisode.cover_image as string}
@@ -1280,8 +1319,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         </div>
       )}
 
-      {/* Progress Bar */}
-      {selectedEpisode && episodeDialogues.length > 0 && (
+      {/* Progress Bar - Show after Start is clicked, even if waiting for dialogues */}
+      {selectedEpisode && isStarted && (
         <div className="row mt-2">
           <div className="col-12">
             <div className="d-flex align-items-center gap-3">
@@ -1289,14 +1328,16 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 <div 
                   className="progress-bar bg-success" 
                   style={{ 
-                    width: `${isShowingSummary ? 100 : ((currentDialogueIndex + 1) / episodeDialogues.length) * 100}%`,
+                    width: `${isShowingSummary ? 100 : (episodeDialogues.length > 0 ? ((currentDialogueIndex + 1) / episodeDialogues.length) * 100 : 0)}%`,
                     transition: 'width 0.3s ease'
                   }}
                 />
               </div>
               <div className="text-end" style={{ fontSize: '0.8rem', minWidth: '40px' }}>
                 <span>
-                  {isShowingSummary ? `${episodeDialogues.length} / ${episodeDialogues.length}` : `${currentDialogueIndex + 1} / ${episodeDialogues.length}`}
+                  {isShowingSummary 
+                    ? (episodeDialogues.length > 0 ? `${episodeDialogues.length} / ${episodeDialogues.length}` : '0 / 0')
+                    : (episodeDialogues.length > 0 ? `${currentDialogueIndex + 1} / ${episodeDialogues.length}` : '0 / 0')}
                 </span>
               </div>
             </div>
@@ -1304,8 +1345,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         </div>
       )}
 
-      {/* Navigation Controls - Only show after Start Episode is clicked */}
-      {isStarted && selectedEpisode && episodeDialogues.length > 0 && (
+      {/* Navigation Controls - Show after Start Episode is clicked, even if waiting for dialogues */}
+      {isStarted && selectedEpisode && (
         <div className="row mt-2">
           <div className="col-12">
             <div className="card bg-transparent border-0">
@@ -1315,8 +1356,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     <button
                       className="btn btn-primary"
                       onClick={goToPreviousDialogue}
-                      disabled={currentDialogueIndex === 0 && !isShowingSummary}
-                      title={`Previous dialogue (${currentDialogueIndex}/${episodeDialogues.length})`}
+                      disabled={(episodeDialogues.length === 0) || (currentDialogueIndex === 0 && !isShowingSummary)}
+                      title={episodeDialogues.length > 0 ? `Previous dialogue (${currentDialogueIndex}/${episodeDialogues.length})` : 'Waiting for dialogues...'}
                     >
                       <i className="fas fa-chevron-left"></i>
                     </button>
@@ -1352,8 +1393,12 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     <button
                       className="btn btn-primary"
                       onClick={goToNextDialogue}
-                      disabled={currentDialogueIndex === episodeDialogues.length - 1 && !isShowingSummary}
-                      title={`Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})`}
+                      disabled={episodeDialogues.length === 0}
+                      title={
+                        isShowingSummary 
+                          ? (episodeDialogues.length > 0 ? 'Go to first dialogue' : 'Waiting for dialogues...')
+                          : (episodeDialogues.length > 0 ? `Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})` : 'Waiting for dialogues...')
+                      }
                     >
                       <i className="fas fa-chevron-right"></i>
                     </button>

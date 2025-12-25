@@ -33,10 +33,12 @@ const FloatingFeedbackButton: React.FC = () => {
                         location.pathname === '/immersivecomics/dashboard/';
 
   // Adjust position based on page - if Stories page, position on left side or above create button
+  // On mobile, position higher to avoid fixed navbar at bottom (~70px tall)
+  // Button sticks to the edge of the screen (right: 0)
   const buttonStyle = isStoriesPage ? {
     position: 'fixed' as const,
     bottom: '90px', // Position above the create story button (60px height + 20px bottom + 10px gap)
-    right: '20px',
+    right: '0',
     zIndex: 1030,
     borderRadius: '50%',
     width: '40px',
@@ -52,7 +54,7 @@ const FloatingFeedbackButton: React.FC = () => {
   } : {
     position: 'fixed' as const,
     bottom: '20px',
-    right: '20px',
+    right: '0',
     zIndex: 1030,
     borderRadius: '50%',
     width: '40px',
@@ -71,7 +73,7 @@ const FloatingFeedbackButton: React.FC = () => {
     <>
       <button
         onClick={handleOpenModal}
-        className="btn btn-warning shadow-lg"
+        className="btn btn-warning shadow-lg floating-feedback-btn"
         style={buttonStyle}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.1)';

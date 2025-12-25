@@ -1,5 +1,5 @@
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -1365,6 +1365,7 @@ def logout_api(request):
 
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([])  # Exempt from rate limiting - this is a lightweight auth check endpoint
 def get_current_user_api(request):
     """
     Get or update current authenticated user information.

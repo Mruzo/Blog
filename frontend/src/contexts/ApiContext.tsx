@@ -150,6 +150,9 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
 
   const loadPublicStories = useCallback(async () => {
     const stories = await handleApiCall(() => apiService.getPublicStories());
+    console.log('ApiContext: loadPublicStories returned', stories);
+    console.log('ApiContext: Stories type:', typeof stories, 'Is array:', Array.isArray(stories));
+    console.log('ApiContext: Stories length:', stories?.length || 0);
     setStories(stories);
   }, [handleApiCall]);
 

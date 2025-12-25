@@ -273,7 +273,7 @@ const Studios: React.FC = () => {
                           <div className="d-flex align-items-center mb-1">
                             <i className="fas fa-crown text-warning me-2"></i>
                             <span className="subtext-btn-sm fw-bold">&nbsp;{ownerInfo.first_name} {ownerInfo.last_name}</span>
-                            {/* <span className="text-muted ms-1">(@{ownerInfo.username})</span> */}
+                            <span className="text-muted ms-1">(@{ownerInfo.username})</span>
                           </div>
                         );
                       })()}

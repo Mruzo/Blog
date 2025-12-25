@@ -23,6 +23,7 @@ from snmov.views import (
     logout_request,
     validate_username,
 )
+from icvybz import views as icvybz_views
 from snmov.sitemaps import StaticViewSitemap, ProductSitemap, CommentSitemap
 
 sitemaps = {
@@ -41,7 +42,11 @@ urlpatterns = [
     path('product/', include(('snmov.urls', 'snmov'), namespace='product')),
     path('api/', include(('snmov.api_urls', 'api'), namespace='api')),
     path('api/icvybz/', include(('icvybz.api_urls', 'icvybz-api'), namespace='icvybz-api')),
-    # path('immersivecomics/', include(('icvybz.urls', 'icvybz'), namespace='immersivecomics')),  # Commented: React handles /immersivecomics/ via catch-all
+    # Include immersivecomics API endpoints BEFORE catch-all to allow API endpoints to work
+    # The API endpoints (like /immersivecomics/api/studios/) need to be handled by Django, not React
+    # Only include API endpoints, not the full immersivecomics URLs (React handles frontend routes)
+    path('immersivecomics/api/studios/', icvybz_views.studio_list_api, name='studio_list_api'),
+    path('immersivecomics/api/my-studio/', icvybz_views.my_studio_api, name='my_studio_api'),
     # Commented out: React handles these routes via catch-all
     # path('about/', about_page, name='about'),
     # path('privacy/', privacy_page, name='privacy'),
@@ -79,10 +84,17 @@ urlpatterns = [
     #      name='password_reset_complete'),
     # Catch-all route for React client-side routing
     # This must be LAST to allow Django URLs to take precedence
-    path('<path:path>', ReactAppView.as_view(), name='react_app'),
+    # path('<path:path>', ReactAppView.as_view(), name='react_app'),
 ]
 
-
+# Add media and static file serving BEFORE the catch-all route
+# This ensures media files are served in development before React catch-all matches
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # Add media/static serving patterns
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Add catch-all route AFTER media/static patterns (in development) or at the end (in production)
+urlpatterns += [
+    path('<path:path>', ReactAppView.as_view(), name='react_app'),
+]

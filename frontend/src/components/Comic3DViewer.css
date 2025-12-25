@@ -22,12 +22,17 @@
   font-variation-settings: 'FILL' 1, 'wght' 700, 'GRAD' 0, 'opsz' 48;
 }
 
-/* Model Container */
-.model-container {
+/* Model Container - All styling consolidated here */
+.comic-3d-viewer .model-container {
   border: none;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   overflow: hidden;
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 1 / 1.5; /* Height is double the width */
+  margin: 0 auto;
+  display: block;
 }
 
 /* Speech Bubble - Match Django episode_preview.html styling */
@@ -42,11 +47,29 @@
   font-style: italic;
   line-height: 1.4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 1rem; /* Default padding for larger screens (>768px) */
 }
 
 .speech-bubble strong {
   color: #111e7f;
   font-weight: 600;
+}
+
+/* Remove padding from dialogue text container */
+#top-dialogue {
+  padding: 0 !important;
+  margin: 0;
+}
+
+#top-dialogue > div {
+  padding: 0 !important;
+  margin: 0;
+}
+
+#top-dialogue p,
+#top-dialogue h6 {
+  margin: 0;
+  padding: 0;
 }
 
 /* Overlay Container */
@@ -210,7 +233,8 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .comic-3d-viewer .model-container {
-    height: 300px !important;
+    max-width: 100%;
+    /* aspect-ratio maintained from base rule */
   }
   
   .comic-3d-viewer .speech-bubble {
@@ -231,12 +255,13 @@
 
 @media (max-width: 576px) {
   .comic-3d-viewer .model-container {
-    height: 250px !important;
+    max-width: 100%;
+    /* aspect-ratio maintained from base rule */
   }
   
   .comic-3d-viewer .speech-bubble {
     font-size: 0.75rem;
-    padding: 0.5rem !important;
+    padding: 0.3rem !important;
   }
   
   .comic-3d-viewer .btn {
@@ -261,6 +286,58 @@
 .comic-3d-viewer .form-range:focus {
   outline: 2px solid #f9a602;
   outline-offset: 2px;
+}
+
+/* Episode selection container - horizontally scrollable, single line */
+.comic-3d-viewer .episode-select-container {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding: 0.25rem 0;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  /* Touch scrolling support for mobile */
+  -webkit-overflow-scrolling: touch;
+  /* Ensure container stays single line height */
+  max-height: 2.5rem;
+  min-height: 2.5rem;
+  /* Custom scrollbar styling (optional, for better UX) */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.comic-3d-viewer .episode-select-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.comic-3d-viewer .episode-select-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.comic-3d-viewer .episode-select-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.comic-3d-viewer .episode-select-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Episode selection buttons - single line, no wrapping */
+.comic-3d-viewer .episode-select-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 0.225rem 0.5rem;
+  min-width: auto;
+  height: fit-content;
+  line-height: 1.5;
+  /* Prevent text wrapping - buttons will grow horizontally as needed */
+  overflow: visible;
+  /* Ensure button content doesn't wrap */
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Remove yellow border from episode selection buttons */

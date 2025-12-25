@@ -55,14 +55,22 @@ class SeasonAdmin(admin.ModelAdmin):
 
 @admin.register(Episode)
 class EpisodeAdmin(admin.ModelAdmin):
-    list_display = ('title', 'season', 'episode_number', 'view_count', 'last_viewed', 'is_published')
-    list_filter = ('season', 'is_published')
+    list_display = ('title', 'comic', 'season', 'episode_number', 'view_count', 'last_viewed', 'is_published')
+    list_filter = ('season', 'is_published', 'season__comic')
     list_editable = ('is_published',)
     inlines = [DialogueInline]
-    search_fields = ('title',)
+    search_fields = ('title', 'season__comic__title')
     ordering = ('season', 'episode_number')
     readonly_fields = ('view_count', 'last_viewed')
     fields = ('title', 'season', 'episode_number', 'description', 'cover_image', 'is_published', 'summary', 'summary_camera_orbit', 'summary_field_of_view', 'view_count', 'last_viewed')
+    
+    def comic(self, obj):
+        """Return the comic title for this episode"""
+        if obj.season and obj.season.comic:
+            return obj.season.comic.title
+        return '-'
+    comic.short_description = 'Comic'
+    comic.admin_order_field = 'season__comic__title'
     
     # preview_link method commented out - immersivecomics namespace removed
     # def preview_link(self, obj):

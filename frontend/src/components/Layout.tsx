@@ -31,7 +31,15 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
       '/episode/',
       '/characters/',
       '/collaborators/',
-      '/my-orders'
+      '/my-orders',
+      '/immersivecomics/my-studio', // Full path for my-studio
+      '/immersivecomics/studio/', // Full path for studio pages
+      '/immersivecomics/story/', // Full path for story pages
+      '/immersivecomics/season/', // Full path for season pages
+      '/immersivecomics/episode/', // Full path for episode pages
+      '/immersivecomics/characters/', // Full path for characters pages
+      '/immersivecomics/collaborators/', // Full path for collaborators pages
+      '/product/my-orders' // Full path for my-orders
     ];
     
     const isProfilePage = profilePaths.some(path => location.pathname.includes(path));
@@ -185,7 +193,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
       <FloatingFeedbackButton />
 
       {/* Footer */}
-      <footer className="card border-top py-4 d-flex flex-column justify-content-end">
+      <footer className="card border-top py-5 d-flex flex-column justify-content-end">
         <div className="container d-flex flex-column justify-content-end flex-grow-1">
           <div className="row">
             <div className="col-12 text-center">
@@ -207,7 +215,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                   <img src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/logo%2080x80.svg` : "/logo-80x80.svg"} alt="VYBZ Logo" width="100" height="100" />
                 </a>
                 <div className="footer-copyright subtext-btn-sm">
-                  <p className="mt-2">&copy; 2025 Justvybz</p>
+                  <p className="mt-2">&copy; {new Date().getFullYear()} Justvybz Inc.</p>
                 </div>
               </div>
 

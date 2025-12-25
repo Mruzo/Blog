@@ -12,7 +12,23 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Helper function to get CSRF token from cookies
+function getCookie(name: string): string | null {
+  let cookieValue: string | null = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === name + '=') {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+// Request interceptor to add auth token and CSRF token
 api.interceptors.request.use(
   (config) => {
     // Don't send auth token for public endpoints
@@ -36,6 +52,19 @@ api.interceptors.request.use(
         config.headers.Authorization = `Token ${token}`;
       }
     }
+    
+    // Add CSRF token for POST, PUT, PATCH, DELETE requests
+    // Django REST Framework with SessionAuthentication requires CSRF tokens
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      const csrfToken = getCookie('csrftoken') || 
+                       document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+      if (csrfToken) {
+        config.headers['X-CSRFToken'] = csrfToken;
+      }
+    }
+    
+    // Include credentials (cookies) for CSRF token to work
+    config.withCredentials = true;
     
     // Don't set Content-Type for FormData - let browser set it with boundary
     if (config.data instanceof FormData) {
@@ -639,22 +668,25 @@ class ApiService {
     // Use the detailed studio_list_api endpoint which includes owner and collaborators info
     // This endpoint is at /immersivecomics/api/studios/ which is outside the /api/icvybz namespace
     try {
-      // Get base URL and construct full path
-      const baseURL = process.env.REACT_APP_API_URL || '';
-      const serverBase = baseURL.replace('/api/icvybz', '');
-      // Don't add token for public studios endpoint
+      // In development, use relative URL so proxy can intercept it
+      // In production, this will be handled by Django directly
       const headers: any = {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       };
       
-      // Use axios directly with full URL since this endpoint is outside the /api/icvybz namespace
-      const axiosInstance = axios.create({
-        baseURL: serverBase,
-        headers
-      });
+      // WORKAROUND: Proxy isn't intercepting /immersivecomics/api/*, so call Django directly in dev
+      // In production, this will work through Django's URL routing
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const url = isDevelopment 
+        ? 'http://localhost:8000/immersivecomics/api/studios/'
+        : '/immersivecomics/api/studios/';
       
-      console.log('getStudios: Calling /immersivecomics/api/studios/');
-      const response = await axiosInstance.get('/immersivecomics/api/studios/');
+      console.log('getStudios: Calling', url);
+      const response = await axios.get(url, { 
+        headers,
+        withCredentials: false // Public endpoint, no auth needed
+      });
       console.log('getStudios: Response received:', response.status, response.data);
       if (response.data && response.data.studios) {
         console.log('getStudios: Returning studios array with', response.data.studios.length, 'studios');
