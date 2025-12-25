@@ -12,7 +12,7 @@ const CookiePolicy: React.FC = () => {
   return (
     <div className="container mt-4" style={{ maxWidth: '900px' }}>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="subtext-btn mb-0">Cookie Policy</h1>
+        <h1 className="subtext-btn mb-0 font-quicksand">Cookie Policy</h1>
         <BackButton to="/" />
       </div>
 
@@ -20,20 +20,20 @@ const CookiePolicy: React.FC = () => {
         <div className="card-body p-4">
           <p className="text-muted small text-center mb-4">Last updated: {currentDate}</p>
 
-          <div className="policy-content">
+          <div className="policy-content font-quicksand">
             <p className="lead mb-4">
               Justvybz Inc. ("us", "we", or "our") uses cookies on www.justvybz.com (the "Platform"). This policy 
               explains how we use cookies and similar technologies to provide, customize, evaluate, improve, and protect 
               our immersive storytelling platform.
             </p>
 
-            <h2 className="h4 mt-5 mb-3">What are Cookies?</h2>
+            <h2 className="h4 mt-5 mb-3 font-quicksand">What are Cookies?</h2>
             <p>
               Cookies are small text files that are stored on your device when you visit our Platform. They help make our 
               Platform work efficiently and provide us with analytical information that helps improve your storytelling experience.
             </p>
 
-            <h2 className="h4 mt-5 mb-3">How We Use Cookies</h2>
+            <h2 className="h4 mt-5 mb-3 font-quicksand">How We Use Cookies</h2>
             <p>We use cookies for the following purposes:</p>
             <ul className="list-group list-group-flush mb-4">
               <li className="list-group-item bg-transparent">
@@ -59,7 +59,7 @@ const CookiePolicy: React.FC = () => {
               </li>
             </ul>
 
-            <h2 className="h4 mt-5 mb-3">Types of Cookies We Use</h2>
+            <h2 className="h4 mt-5 mb-3 font-quicksand">Types of Cookies We Use</h2>
             <div className="table-responsive">
               <table className="table table-hover">
                 <thead className="table-light">
@@ -89,7 +89,7 @@ const CookiePolicy: React.FC = () => {
               </table>
             </div>
 
-            <h2 className="h4 mt-5 mb-3">Your Cookie Choices</h2>
+            <h2 className="h4 mt-5 mb-3 font-quicksand">Your Cookie Choices</h2>
             <p>
               You can control cookies through your browser settings. However, please note that disabling certain cookies may 
               affect the functionality of our Platform and your storytelling experience. Your options include:
@@ -106,7 +106,7 @@ const CookiePolicy: React.FC = () => {
               </li>
             </ul>
 
-            <h2 className="h4 mt-5 mb-3">Browser-Specific Cookie Management</h2>
+            <h2 className="h4 mt-5 mb-3 font-quicksand">Browser-Specific Cookie Management</h2>
             <p>To manage cookies in your browser, visit the following links:</p>
             <div className="list-group mb-4">
               <a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer" className="list-group-item list-group-item-action">
@@ -123,13 +123,13 @@ const CookiePolicy: React.FC = () => {
               </a>
             </div>
 
-            <h2 className="h4 mt-5 mb-3">Updates to This Policy</h2>
+            <h2 className="h4 mt-5 mb-3 font-quicksand">Updates to This Policy</h2>
             <p>
               We may update this Cookie Policy to reflect changes in our practices or for operational, legal, or regulatory 
               reasons. The date at the top of this policy indicates when it was last updated.
             </p>
 
-            <h2 className="h4 mt-5 mb-3">Contact Us</h2>
+            <h2 className="h4 mt-5 mb-3 font-quicksand">Contact Us</h2>
             <p>If you have questions about our Cookie Policy, please contact us at:</p>
             <div className="card bg-light border-0 p-4 mb-4">
               <div className="card-body">

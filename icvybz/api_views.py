@@ -805,19 +805,25 @@ def invite_studio_user(request, studio_id):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Check if user is already a collaborator
-            if StudioCollaborator.objects.filter(studio=studio, user=invitee_user).exists():
+            # Check if user already has this specific role
+            if StudioCollaborator.objects.filter(studio=studio, user=invitee_user, role=role).exists():
                 return Response(
-                    {'detail': 'User is already a collaborator'}, 
+                    {'detail': 'User already has this role'}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Create collaborator
-            collaborator = StudioCollaborator.objects.create(
+            # Create collaborator with this role (user can have multiple roles)
+            collaborator, created = StudioCollaborator.objects.get_or_create(
                 studio=studio,
                 user=invitee_user,
-                role=role
+                role=role,
+                defaults={'is_active': True}
             )
+            
+            # If it already existed but was inactive, reactivate it
+            if not created:
+                collaborator.is_active = True
+                collaborator.save()
             
             # Send email notification to invited user
             try:

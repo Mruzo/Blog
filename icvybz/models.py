@@ -464,7 +464,8 @@ class StudioCollaborator(models.Model):
 
     class Meta:
         app_label = 'icvybz'
-        unique_together = ['studio', 'user']
+        # Allow multiple roles per user: unique on studio, user, and role combination
+        unique_together = [['studio', 'user', 'role']]
         ordering = ['joined_at']
 
     def __str__(self):
@@ -590,7 +591,8 @@ class StoryCollaborator(models.Model):
 
     class Meta:
         app_label = 'icvybz'
-        unique_together = ['story', 'user']
+        # Allow multiple roles per user: unique on story, user, and role combination
+        unique_together = [['story', 'user', 'role']]
         ordering = ['joined_at']
 
     def __str__(self):
@@ -920,7 +922,8 @@ class StoryCollaborator(models.Model):
     
     class Meta:
         app_label = 'icvybz'
-        unique_together = ['story', 'user']
+        # Allow multiple roles per user: unique on story, user, and role combination
+        unique_together = [['story', 'user', 'role']]
         ordering = ['joined_at']
     
     def __str__(self):

@@ -117,17 +117,7 @@ const Stories: React.FC = () => {
     };
   }, []);
 
-  // Handle create story button click - memoized with useCallback
-  const handleCreateStoryClick = useCallback((e: React.MouseEvent) => {
-    if (!isAuthenticated) {
-      e.preventDefault();
-      // Store the intended destination in sessionStorage for post-login redirect
-      sessionStorage.setItem('redirectAfterLogin', '/immersivecomics/story/create/');
-      // Redirect to login with return URL (Django supports 'next' parameter)
-      window.location.href = `/login/?next=${encodeURIComponent('/immersivecomics/story/create/')}`;
-    }
-    // If authenticated, let the Link component handle navigation normally
-  }, [isAuthenticated]);
+  // Create story button removed - now handled by FloatingActionMenu in Layout
 
   // Track share click function - matches Django template pattern
   const trackShareClick = async (platform: string, contentId: number, contentType: 'episode' | 'story' = 'story') => {
@@ -767,7 +757,7 @@ const Stories: React.FC = () => {
                   </p>
                     {comic.description && comic.description.length > 100 && (
                       <button
-                        className="btn btn-link p-0 text-primary text-decoration-none"
+                        className="btn btn-link p-0 text-primary text-decoration-none font-quicksand"
                         style={{ fontSize: '0.85rem', paddingTop: '0.25rem' }}
                         onClick={() => {
                           setExpandedDescriptions(prev => {
@@ -824,7 +814,7 @@ const Stories: React.FC = () => {
                         >
                           
                           {totalViews} views
-                        </span>
+                              </span>
                       </div>
                     );
                   })()}
@@ -856,16 +846,34 @@ const Stories: React.FC = () => {
                             
                             return storyCollaborators.length > 0 ? (
                               <div className="d-flex flex-wrap gap-2">
-                                {storyCollaborators.map((collaborator: any) => {
-                                  // StoryCollaborator: has user field directly
-                                  const displayName = `@${collaborator.user.username}`;
-                                  const key = collaborator.id || `${collaborator.user?.id}-${collaborator.role || 'collaborator'}`;
-                                  return (
-                                    <span key={key} className="badge bg-primary subtext-btn-sm">
-                                      {displayName}
-                                    </span>
-                                  );
-                                })}
+                                {(() => {
+                                  // Group collaborators by user (since one user can have multiple roles)
+                                  const collaboratorsByUser = new Map();
+                                  storyCollaborators.forEach((collaborator: any) => {
+                                    const userId = collaborator.user?.id;
+                                    if (!userId) return;
+                                    
+                                    if (!collaboratorsByUser.has(userId)) {
+                                      collaboratorsByUser.set(userId, {
+                                        user: collaborator.user,
+                                        roles: []
+                                      });
+                                    }
+                                    if (collaborator.role) {
+                                      collaboratorsByUser.get(userId).roles.push(collaborator.role);
+                                    }
+                                  });
+                                  
+                                  return Array.from(collaboratorsByUser.values()).map((collab: any) => {
+                                    const displayName = `@${collab.user.username}`;
+                                    const key = `${collab.user.id}`;
+                                    return (
+                                      <span key={key} className="badge bg-primary subtext-btn-sm me-1">
+                                        {displayName} {collab.roles.length > 1 && `(${collab.roles.length} roles)`}
+                                      </span>
+                                    );
+                                  });
+                                })()}
                               </div>
                             ) : (
                               <div className="text-muted subtext-btn-sm">
@@ -1012,24 +1020,7 @@ const Stories: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Action Button */}
-      <Link 
-        to={isAuthenticated ? "/immersivecomics/story/create/" : "#"}
-        className="btn btn-primary rounded-circle position-fixed create-story-btn"
-        style={{ 
-          bottom: '40px', 
-          right: '20px', 
-          width: '60px', 
-          height: '60px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}
-        onClick={handleCreateStoryClick}
-      >
-        <i className="fas fa-plus fa-lg"></i>
-      </Link>
+      {/* Floating Action Button removed - now handled by FloatingActionMenu in Layout */}
     </div>
   );
 };

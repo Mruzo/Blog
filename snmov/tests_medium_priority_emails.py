@@ -266,3 +266,5 @@ class ProductBackInStockSignalTestCase(TestCase):
 
 
 
+
+

@@ -84,12 +84,12 @@ def invite_existing_user(request, story_id):
     """Invite an existing user to collaborate on a story"""
     story = get_object_or_404(Comic, id=story_id)
     
-    # Check if user is the story owner or has admin role
+    # Check if user is the story owner or has admin role (any admin role record)
     if story.user != request.user:
-        collaborator = StoryCollaborator.objects.filter(
-            story=story, user=request.user, role='admin'
-        ).first()
-        if not collaborator:
+        has_admin_role = StoryCollaborator.objects.filter(
+            story=story, user=request.user, role='admin', is_active=True
+        ).exists()
+        if not has_admin_role:
             return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     
     serializer = InviteUserSerializer(data=request.data)
@@ -143,12 +143,12 @@ def invite_by_email(request, story_id):
     """Invite a user by email address"""
     story = get_object_or_404(Comic, id=story_id)
     
-    # Check if user is the story owner or has admin role
+    # Check if user is the story owner or has admin role (any admin role record)
     if story.user != request.user:
-        collaborator = StoryCollaborator.objects.filter(
-            story=story, user=request.user, role='admin'
-        ).first()
-        if not collaborator:
+        has_admin_role = StoryCollaborator.objects.filter(
+            story=story, user=request.user, role='admin', is_active=True
+        ).exists()
+        if not has_admin_role:
             return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     
     serializer = InviteEmailSerializer(data=request.data)
@@ -199,12 +199,12 @@ def update_collaborator_role(request, story_id, invite_id):
     story = get_object_or_404(Comic, id=story_id)
     invite = get_object_or_404(CollaborationInvite, id=invite_id, story=story)
     
-    # Check if user is the story owner or has admin role
+    # Check if user is the story owner or has admin role (any admin role record)
     if story.user != request.user:
-        collaborator = StoryCollaborator.objects.filter(
-            story=story, user=request.user, role='admin'
-        ).first()
-        if not collaborator:
+        has_admin_role = StoryCollaborator.objects.filter(
+            story=story, user=request.user, role='admin', is_active=True
+        ).exists()
+        if not has_admin_role:
             return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     
     serializer = UpdateRoleSerializer(data=request.data)
@@ -213,13 +213,17 @@ def update_collaborator_role(request, story_id, invite_id):
         invite.role = new_role
         invite.save()
         
-        # If the invitation was accepted, update the collaborator role
+        # If the invitation was accepted, add/update the collaborator role
+        # With multiple roles, we add a new role record or update existing one for this specific role
         if invite.status == 'accepted' and invite.invitee_user:
-            collaborator = StoryCollaborator.objects.filter(
-                story=story, user=invite.invitee_user
-            ).first()
-            if collaborator:
-                collaborator.role = new_role
+            collaborator, created = StoryCollaborator.objects.get_or_create(
+                story=story,
+                user=invite.invitee_user,
+                role=new_role,
+                defaults={'is_active': True, 'invited_by': invite.inviter}
+            )
+            if not created:
+                collaborator.is_active = True
                 collaborator.save()
         
         serializer = CollaborationInviteSerializer(invite)
@@ -235,18 +239,19 @@ def remove_collaborator(request, story_id, invite_id):
     story = get_object_or_404(Comic, id=story_id)
     invite = get_object_or_404(CollaborationInvite, id=invite_id, story=story)
     
-    # Check if user is the story owner or has admin role
+    # Check if user is the story owner or has admin role (any admin role record)
     if story.user != request.user:
-        collaborator = StoryCollaborator.objects.filter(
-            story=story, user=request.user, role='admin'
-        ).first()
-        if not collaborator:
+        has_admin_role = StoryCollaborator.objects.filter(
+            story=story, user=request.user, role='admin', is_active=True
+        ).exists()
+        if not has_admin_role:
             return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     
-    # If the invitation was accepted, remove from active collaborators
+    # If the invitation was accepted, remove the specific role from active collaborators
+    # With multiple roles, we only remove the role from the invitation, not all roles
     if invite.status == 'accepted' and invite.invitee_user:
         StoryCollaborator.objects.filter(
-            story=story, user=invite.invitee_user
+            story=story, user=invite.invitee_user, role=invite.role
         ).delete()
     
     # Delete the invitation
@@ -299,20 +304,22 @@ def accept_invitation(request, invite_id):
         # Create active collaborator - use invitee_user if available, otherwise use the user from the request
         collaborator_user = invite.invitee_user if invite.invitee_user else request.user
         
-        # Check if collaborator already exists
+        # Create or activate the specific role for this collaborator
+        # With multiple roles, we create a new role record (or activate existing one)
         collaborator, created = StoryCollaborator.objects.get_or_create(
             story=invite.story,
             user=collaborator_user,
+            role=invite.role,
             defaults={
-                'role': invite.role,
-                'invited_by': invite.inviter
+                'invited_by': invite.inviter,
+                'is_active': True
             }
         )
         
-        # Update role if collaborator already existed
+        # Activate role if it already existed but was inactive
         if not created:
-            collaborator.role = invite.role
             collaborator.is_active = True
+            collaborator.invited_by = invite.inviter
             collaborator.save()
         
         serializer = CollaborationInviteSerializer(invite)
@@ -360,21 +367,43 @@ def get_studio_collaborators_for_story(request, story_id):
         is_active=True
     ).select_related('user').exclude(user=studio.owner)
     
-    # Get current story collaborators
+    # Get current story collaborators (all active roles per user)
+    story_collaborators_by_user = {}
     story_collaborators = StoryCollaborator.objects.filter(
         story=story,
         is_active=True
-    ).values_list('user_id', flat=True)
+    ).select_related('user')
     
-    # Serialize studio collaborators and mark which ones are already story collaborators
-    results = []
+    # Group story collaborators by user with their roles
+    for sc in story_collaborators:
+        if sc.user.id not in story_collaborators_by_user:
+            story_collaborators_by_user[sc.user.id] = []
+        story_collaborators_by_user[sc.user.id].append(sc.role)
+    
+    # Group studio collaborators by user (since one user can have multiple roles)
+    studio_collaborators_by_user = {}
     for collab in studio_collaborators:
-        user_data = UserSerializer(collab.user).data
+        if collab.user.id not in studio_collaborators_by_user:
+            studio_collaborators_by_user[collab.user.id] = {
+                'user': collab.user,
+                'roles': [],
+                'ids': []
+            }
+        studio_collaborators_by_user[collab.user.id]['roles'].append(collab.role)
+        studio_collaborators_by_user[collab.user.id]['ids'].append(collab.id)
+    
+    # Serialize studio collaborators with all their roles
+    results = []
+    for user_id, data in studio_collaborators_by_user.items():
+        user_data = UserSerializer(data['user']).data
+        user_story_roles = story_collaborators_by_user.get(user_id, [])
         results.append({
-            'id': collab.id,
+            'id': data['ids'][0],  # Use first ID for backward compatibility
             'user': user_data,
-            'role': collab.role,
-            'is_story_collaborator': collab.user.id in story_collaborators
+            'role': data['roles'][0],  # Primary role for backward compatibility
+            'roles': data['roles'],  # All roles this user has
+            'is_story_collaborator': len(user_story_roles) > 0,
+            'story_roles': user_story_roles  # Roles this user has on the story
         })
     
     return Response({'results': results})
@@ -383,7 +412,7 @@ def get_studio_collaborators_for_story(request, story_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bulk_assign_story_collaborators(request, story_id):
-    """Bulk assign/remove story collaborators from studio collaborators"""
+    """Bulk assign/remove story collaborators from studio collaborators with role selection"""
     story = get_object_or_404(Comic, id=story_id)
     
     # Check if user is the story owner
@@ -396,10 +425,36 @@ def bulk_assign_story_collaborators(request, story_id):
     except Studio.DoesNotExist:
         return Response({'detail': 'Studio not found for story owner'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Get selected user IDs from request
-    selected_user_ids = request.data.get('user_ids', [])
-    if not isinstance(selected_user_ids, list):
-        return Response({'detail': 'user_ids must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+    # Get selected user roles from request (new format: [{user_id: int, roles: [str]}])
+    user_roles = request.data.get('user_roles', [])
+    
+    # Backward compatibility: support old format (user_ids: [int])
+    if not user_roles and 'user_ids' in request.data:
+        selected_user_ids = request.data.get('user_ids', [])
+        if not isinstance(selected_user_ids, list):
+            return Response({'detail': 'user_ids must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Convert old format to new format (assign all studio roles)
+        studio_collaborators = StudioCollaborator.objects.filter(
+            studio=studio,
+            is_active=True
+        ).select_related('user')
+        
+        user_roles = []
+        for user_id in selected_user_ids:
+            user_studio_roles = StudioCollaborator.objects.filter(
+                studio=studio,
+                user_id=user_id,
+                is_active=True
+            ).values_list('role', flat=True)
+            if user_studio_roles:
+                user_roles.append({
+                    'user_id': user_id,
+                    'roles': list(user_studio_roles)
+                })
+    else:
+        if not isinstance(user_roles, list):
+            return Response({'detail': 'user_roles must be a list'}, status=status.HTTP_400_BAD_REQUEST)
     
     # Get all active studio collaborators
     studio_collaborators = StudioCollaborator.objects.filter(
@@ -407,38 +462,62 @@ def bulk_assign_story_collaborators(request, story_id):
         is_active=True
     ).select_related('user')
     
+    # Build a map of selected user roles: {user_id: set(roles)}
+    selected_user_roles_map = {}
+    selected_user_ids_set = set()
+    for user_role_data in user_roles:
+        if not isinstance(user_role_data, dict):
+            continue
+        user_id = user_role_data.get('user_id')
+        roles = user_role_data.get('roles', [])
+        if user_id and isinstance(roles, list):
+            selected_user_roles_map[user_id] = set(roles)
+            selected_user_ids_set.add(user_id)
+    
     # Get current story collaborators
     current_story_collaborators = StoryCollaborator.objects.filter(
         story=story,
         is_active=True
     )
     
-    # Get IDs of users who should be story collaborators
-    selected_user_ids_set = set(selected_user_ids)
-    
-    # Remove story collaborators that are not selected
+    # Deactivate story collaborator roles that are not selected
+    # For each current story collaborator, check if their role is still selected
     for story_collab in current_story_collaborators:
-        if story_collab.user.id not in selected_user_ids_set:
-            # Check if user is a studio collaborator (only remove if they are)
-            if studio_collaborators.filter(user=story_collab.user).exists():
+        user_id = story_collab.user.id
+        # Only process if user is a studio collaborator
+        if studio_collaborators.filter(user=story_collab.user).exists():
+            # If user is not in selection at all, deactivate all their roles
+            if user_id not in selected_user_ids_set:
                 story_collab.is_active = False
                 story_collab.save()
+            # If user is in selection but this specific role is not selected, deactivate it
+            elif user_id in selected_user_roles_map:
+                if story_collab.role not in selected_user_roles_map[user_id]:
+                    story_collab.is_active = False
+                    story_collab.save()
     
-    # Add new story collaborators from selected studio collaborators
-    for studio_collab in studio_collaborators:
-        if studio_collab.user.id in selected_user_ids_set:
-            # Create or update story collaborator
+    # Add/activate story collaborators with selected roles
+    for user_id, selected_roles in selected_user_roles_map.items():
+        # Verify user is a studio collaborator
+        user_studio_roles = StudioCollaborator.objects.filter(
+            studio=studio,
+            user_id=user_id,
+            is_active=True
+        ).values_list('role', flat=True)
+        
+        # Only assign roles that the user actually has in the studio
+        valid_roles = [role for role in selected_roles if role in user_studio_roles]
+        
+        # Create or activate story collaborator records for each selected role
+        for role in valid_roles:
             story_collaborator, created = StoryCollaborator.objects.get_or_create(
                 story=story,
-                user=studio_collab.user,
-                defaults={
-                    'role': studio_collab.role,
-                    'is_active': True
-                }
+                user_id=user_id,
+                role=role,
+                defaults={'is_active': True}
             )
             if not created:
-                # Update if already exists
-                story_collaborator.role = studio_collab.role
+                # Activate if already exists
                 story_collaborator.is_active = True
                 story_collaborator.save()
     

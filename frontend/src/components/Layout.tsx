@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useScrollPosition } from '../hooks/useScrollPosition';
-import FloatingFeedbackButton from './FloatingFeedbackButton';
+import FloatingActionMenu from './FloatingActionMenu';
+import CookieNotification from './CookieNotification';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -189,8 +190,11 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
         {children}
       </main>
 
-      {/* Floating Feedback Button */}
-      <FloatingFeedbackButton />
+      {/* Floating Action Menu (combines feedback and create story buttons) */}
+      <FloatingActionMenu />
+
+      {/* Cookie Notification */}
+      <CookieNotification />
 
       {/* Footer */}
       <footer className="card border-top py-5 d-flex flex-column justify-content-end">
@@ -200,7 +204,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               
               {/* Policy Links and Copyright */}
               <div className="mb-4">
-                <div className="policy-links subtext-sm mb-3">
+                <div className="policy-links subtext-btn-sm mb-3">
                   <a href="/terms" className="text-dark mx-1 text-decoration-none hover-underline">Terms of Service</a>
                   <span className="text-muted">|</span>
                   <a href="/privacy" className="text-dark mx-1 text-decoration-none hover-underline">Privacy Policy</a>

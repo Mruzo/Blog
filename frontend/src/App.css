@@ -824,6 +824,11 @@ input[type="range"].modern-slider:focus {
     bottom: 100px !important; /* Position above navbar + feedback button */
   }
 
+  /* Cookie notification should appear above mobile navbar */
+  .cookies-notification {
+    bottom: 80px !important; /* Position above fixed navbar (z-index 1000) */
+  }
+
   .navbar-buttons-container .nav-btn,
   #default-navbar .nav-btn,
   #profile-navbar .nav-btn {

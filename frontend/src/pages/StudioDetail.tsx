@@ -554,22 +554,42 @@ const StudioDetail: React.FC = () => {
                               const collaborators = storyData.get(comic.id)?.collaborators || [];
                               return collaborators.length > 0 ? (
                                 <div className="d-flex flex-wrap gap-2">
-                                  {collaborators.map((collaborator: any) => {
-                                    let displayName: string;
-                                    if (collaborator.user) {
-                                      displayName = `@${collaborator.user.username}`;
-                                    } else if (collaborator.invitee_user) {
-                                      displayName = `@${collaborator.invitee_user.username}`;
-                                    } else {
-                                      displayName = collaborator.invitee_email || 'Unknown';
-                                    }
-                                    const key = collaborator.id || `${collaborator.user?.id || collaborator.invitee_user?.id || collaborator.invitee_email}-${collaborator.role || 'collaborator'}`;
-                                    return (
-                                      <span key={key} className="badge bg-primary subtext-btn-sm">
-                                        {displayName}
-                                      </span>
-                                    );
-                                  })}
+                                  {(() => {
+                                    // Group collaborators by user (since one user can have multiple roles)
+                                    const collaboratorsByUser = new Map();
+                                    collaborators.forEach((collaborator: any) => {
+                                      const userId = collaborator.user?.id || collaborator.invitee_user?.id;
+                                      const userEmail = collaborator.invitee_email;
+                                      const key = userId || userEmail;
+                                      if (!key) return;
+                                      
+                                      if (!collaboratorsByUser.has(key)) {
+                                        collaboratorsByUser.set(key, {
+                                          user: collaborator.user || collaborator.invitee_user,
+                                          email: collaborator.invitee_email,
+                                          roles: []
+                                        });
+                                      }
+                                      if (collaborator.role) {
+                                        collaboratorsByUser.get(key).roles.push(collaborator.role);
+                                      }
+                                    });
+                                    
+                                    return Array.from(collaboratorsByUser.values()).map((collab: any) => {
+                                      let displayName: string;
+                                      if (collab.user) {
+                                        displayName = `@${collab.user.username}`;
+                                      } else {
+                                        displayName = collab.email || 'Unknown';
+                                      }
+                                      const key = collab.user?.id || collab.email;
+                                      return (
+                                        <span key={key} className="badge bg-primary subtext-btn-sm me-1">
+                                          {displayName} {collab.roles.length > 1 && `(${collab.roles.length} roles)`}
+                                        </span>
+                                      );
+                                    });
+                                  })()}
                                 </div>
                               ) : (
                                 <div className="text-muted subtext-btn-sm">

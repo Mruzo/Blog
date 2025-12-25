@@ -205,10 +205,11 @@ class CollaborationService {
   }
 
   // Bulk assign story collaborators from studio collaborators
-  async bulkAssignStoryCollaborators(storyId: number, userIds: number[]): Promise<any[]> {
+  // userRoles: Array of {user_id: number, roles: string[]}
+  async bulkAssignStoryCollaborators(storyId: number, userRoles: Array<{user_id: number, roles: string[]}>): Promise<any[]> {
     try {
       const response = await api.post(`/stories/${storyId}/collaborators/bulk-assign/`, {
-        user_ids: userIds
+        user_roles: userRoles
       });
       return response.data.results || response.data;
     } catch (error) {

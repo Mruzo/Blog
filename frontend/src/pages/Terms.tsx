@@ -12,7 +12,7 @@ const Terms: React.FC = () => {
   return (
     <div className="container mt-4" style={{ maxWidth: '900px' }}>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="subtext-btn mb-0">Terms of Service</h1>
+        <h1 className="subtext-btn mb-0 font-quicksand">Terms of Service</h1>
         <BackButton to="/" />
       </div>
 
@@ -20,21 +20,21 @@ const Terms: React.FC = () => {
         <div className="card-body p-4">
           <p className="text-muted small mb-4">Last updated: {currentDate}</p>
 
-          <div className="policy-content">
+          <div className="policy-content font-quicksand">
             <p>
               Welcome to Justvybz Inc. These Terms of Service ("Terms") govern your use of www.justvybz.com (the "Platform") 
               and all related services, including our immersive storytelling platform for creating and experiencing interactive 
               3D comic stories. By accessing or using our Platform, you agree to be bound by these Terms.
             </p>
 
-            <h2 className="h5 mt-4">1. Platform Overview</h2>
+            <h2 className="h5 mt-4 font-quicksand">1. Platform Overview</h2>
             <p>
               Justvybz is an innovative storytelling platform that enables creators to build, share, and experience immersive 
               3D comic stories with interactive dialogues, dynamic camera controls, and collaborative features. Our Platform 
               empowers storytellers to bring their narratives to life through cutting-edge 3D technology.
             </p>
 
-            <h2 className="h5 mt-4">2. Account Registration</h2>
+            <h2 className="h5 mt-4 font-quicksand">2. Account Registration</h2>
             <p>To use certain features of our Platform, you must:</p>
             <ul className="list-unstyled">
               <li>✓ Be at least 13 years old (or have parental consent)</li>
@@ -44,7 +44,7 @@ const Terms: React.FC = () => {
               <li>✓ Be responsible for all activities under your account</li>
             </ul>
 
-            <h2 className="h5 mt-4">3. User-Generated Content</h2>
+            <h2 className="h5 mt-4 font-quicksand">3. User-Generated Content</h2>
             <p>As a creator on our Platform, you may:</p>
             <ul className="list-unstyled">
               <li>✓ Create and publish immersive 3D comic stories</li>
@@ -57,7 +57,7 @@ const Terms: React.FC = () => {
               to host, display, and distribute your content as necessary to provide our services.
             </p>
 
-            <h2 className="h5 mt-4">4. Content Guidelines</h2>
+            <h2 className="h5 mt-4 font-quicksand">4. Content Guidelines</h2>
             <p>You agree that your content will:</p>
             <ul className="list-unstyled">
               <li>✓ Be original or properly licensed</li>
@@ -68,7 +68,7 @@ const Terms: React.FC = () => {
             </ul>
             <p>We reserve the right to remove content that violates these guidelines or our community standards.</p>
 
-            <h2 className="h5 mt-4">5. Collaboration Features</h2>
+            <h2 className="h5 mt-4 font-quicksand">5. Collaboration Features</h2>
             <p>Our Platform includes collaboration tools that allow multiple creators to work together on stories. When collaborating:</p>
             <ul className="list-unstyled">
               <li>✓ Story owners control access and permissions</li>
@@ -77,7 +77,7 @@ const Terms: React.FC = () => {
               <li>✓ Disputes between collaborators are the responsibility of the parties involved</li>
             </ul>
 
-            <h2 className="h5 mt-4">6. E-Commerce Terms (If Applicable)</h2>
+            <h2 className="h5 mt-4 font-quicksand">6. E-Commerce Terms (If Applicable)</h2>
             <p>If you purchase products through our Platform:</p>
             <ul className="list-unstyled">
               <li>✓ All prices are in Canadian Dollars (CAD)</li>
@@ -87,14 +87,14 @@ const Terms: React.FC = () => {
               <li>✓ Returns are accepted within 30 days of delivery (items must be unused)</li>
             </ul>
 
-            <h2 className="h5 mt-4">7. Intellectual Property</h2>
+            <h2 className="h5 mt-4 font-quicksand">7. Intellectual Property</h2>
             <p>
               You retain all rights to content you create. Our Platform's design, functionality, and proprietary features are 
               protected by copyright and other intellectual property laws. You may not copy, modify, or distribute our Platform's 
               code or design without permission.
             </p>
 
-            <h2 className="h5 mt-4">8. Prohibited Activities</h2>
+            <h2 className="h5 mt-4 font-quicksand">8. Prohibited Activities</h2>
             <p>You agree not to:</p>
             <ul className="list-unstyled">
               <li>✓ Use the Platform for any illegal purpose</li>
@@ -106,29 +106,29 @@ const Terms: React.FC = () => {
               <li>✓ Harass, abuse, or harm other creators or users</li>
             </ul>
 
-            <h2 className="h5 mt-4">9. Content Moderation</h2>
+            <h2 className="h5 mt-4 font-quicksand">9. Content Moderation</h2>
             <p>
               We reserve the right to review, moderate, and remove content that violates these Terms or our community guidelines. 
               We may suspend or terminate accounts that repeatedly violate our policies.
             </p>
 
-            <h2 className="h5 mt-4">10. Limitation of Liability</h2>
+            <h2 className="h5 mt-4 font-quicksand">10. Limitation of Liability</h2>
             <p>
               To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, 
               or punitive damages arising from your use of our Platform, including but not limited to loss of creative content, 
               collaboration disputes, or technical issues.
             </p>
 
-            <h2 className="h5 mt-4">11. Changes to Terms</h2>
+            <h2 className="h5 mt-4 font-quicksand">11. Changes to Terms</h2>
             <p>
               We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting to the 
               Platform. Your continued use of the Platform after changes constitutes acceptance of the modified Terms.
             </p>
 
-            <h2 className="h5 mt-4">12. Governing Law</h2>
+            <h2 className="h5 mt-4 font-quicksand">12. Governing Law</h2>
             <p>These Terms are governed by the laws of Canada. Any disputes shall be resolved exclusively in the courts of Canada.</p>
 
-            <h2 className="h5 mt-4">13. Contact Information</h2>
+            <h2 className="h5 mt-4 font-quicksand">13. Contact Information</h2>
             <p>For questions about these Terms or our storytelling platform:</p>
             <ul className="list-unstyled">
               <li>Email: <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a></li>

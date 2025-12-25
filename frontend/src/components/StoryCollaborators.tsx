@@ -7,8 +7,10 @@ import MessagePopup from './MessagePopup';
 interface StudioCollaborator {
   id: number;
   user: User;
-  role: string;
+  role: string; // Primary role for backward compatibility
+  roles?: string[]; // All roles this user has
   is_story_collaborator: boolean;
+  story_roles?: string[]; // Roles this user has on the story
 }
 
 const StoryCollaborators: React.FC = () => {
@@ -16,7 +18,8 @@ const StoryCollaborators: React.FC = () => {
   const storyId = id ? parseInt(id) : 0;
 
   const [studioCollaborators, setStudioCollaborators] = useState<StudioCollaborator[]>([]);
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
+  // Track selected roles per user: Map<userId, Set<role>>
+  const [selectedUserRoles, setSelectedUserRoles] = useState<Map<number, Set<string>>>(new Map());
   const [story, setStory] = useState<Story | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -37,14 +40,17 @@ const StoryCollaborators: React.FC = () => {
       const data = await collaborationService.getStudioCollaboratorsForStory(storyId);
       setStudioCollaborators(data);
       
-      // Set selected user IDs based on who is already a story collaborator
-      const selected = new Set<number>();
+      // Set selected roles per user based on who is already a story collaborator
+      const selectedRoles = new Map<number, Set<string>>();
       data.forEach((collab: StudioCollaborator) => {
-        if (collab.is_story_collaborator) {
-          selected.add(collab.user.id);
+        if (collab.is_story_collaborator && collab.story_roles) {
+          selectedRoles.set(collab.user.id, new Set(collab.story_roles));
+        } else if (collab.is_story_collaborator) {
+          // Fallback: if story_roles not provided, use all their studio roles
+          selectedRoles.set(collab.user.id, new Set(collab.roles || [collab.role]));
         }
       });
-      setSelectedUserIds(selected);
+      setSelectedUserRoles(selectedRoles);
       
       setError(null);
     } catch (err: any) {
@@ -86,15 +92,34 @@ const StoryCollaborators: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyId]);
 
-  // Handle checkbox toggle
-  const handleToggleCollaborator = (userId: number) => {
-    const newSelected = new Set(selectedUserIds);
-    if (newSelected.has(userId)) {
-      newSelected.delete(userId);
+  // Handle role toggle for a specific user
+  const handleToggleRole = (userId: number, role: string) => {
+    const newSelectedRoles = new Map(selectedUserRoles);
+    const userRoles = newSelectedRoles.get(userId) || new Set<string>();
+    
+    if (userRoles.has(role)) {
+      userRoles.delete(role);
+      if (userRoles.size === 0) {
+        newSelectedRoles.delete(userId);
+      } else {
+        newSelectedRoles.set(userId, userRoles);
+      }
     } else {
-      newSelected.add(userId);
+      userRoles.add(role);
+      newSelectedRoles.set(userId, userRoles);
     }
-    setSelectedUserIds(newSelected);
+    
+    setSelectedUserRoles(newSelectedRoles);
+  };
+  
+  // Check if a user has any selected roles
+  const hasSelectedRoles = (userId: number): boolean => {
+    return selectedUserRoles.has(userId) && (selectedUserRoles.get(userId)?.size || 0) > 0;
+  };
+  
+  // Check if a specific role is selected for a user
+  const isRoleSelected = (userId: number, role: string): boolean => {
+    return selectedUserRoles.get(userId)?.has(role) || false;
   };
 
   // Handle save
@@ -103,8 +128,13 @@ const StoryCollaborators: React.FC = () => {
     
     try {
       setSaving(true);
-      const userIdsArray = Array.from(selectedUserIds);
-      await collaborationService.bulkAssignStoryCollaborators(storyId, userIdsArray);
+      // Convert Map to array of {user_id, roles} objects
+      const userRolesArray = Array.from(selectedUserRoles.entries()).map(([userId, roles]) => ({
+        user_id: userId,
+        roles: Array.from(roles)
+      }));
+      
+      await collaborationService.bulkAssignStoryCollaborators(storyId, userRolesArray);
       
       // Reload to get updated state
       await loadStudioCollaborators();
@@ -158,7 +188,7 @@ const StoryCollaborators: React.FC = () => {
   return (
     <div className="container-fluid p-0">
       <div className="row">
-        <div className="col-md-4">
+        <div className="col">
           <div className="d-flex justify-content-between align-items-center mb-1">
             <h3 className="subtext-btn mb-0 font-gillsans">Story Collaborators</h3>
             <button
@@ -208,60 +238,95 @@ const StoryCollaborators: React.FC = () => {
                 </h5>
                 
               </div>
-              <div className="card-body p-1">
+              <div className="card-body p-0">
                 <div className="list-group">
-                  {studioCollaborators.map((collab) => (
+                  {studioCollaborators.map((collab) => {
+                    const userRoles = collab.roles || [collab.role];
+                    const hasSelected = hasSelectedRoles(collab.user.id);
+                    return (
                     <div
                       key={collab.id}
-                      className={`list-group-item d-flex align-items-center p-1 ${
-                        selectedUserIds.has(collab.user.id) ? 'active' : ''
-                      }`}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => handleToggleCollaborator(collab.user.id)}
+                      className="list-group-item p-1"
+                      style={{ 
+                        backgroundColor: hasSelected ? '#e7f3ff' : 'transparent',
+                        borderLeft: hasSelected ? '4px solid #0d6efd' : '4px solid transparent',
+                        borderTop: hasSelected ? '2px solid #0d6efd' : '1px solid rgba(0,0,0,.125)',
+                        borderBottom: hasSelected ? '2px solid #0d6efd' : '1px solid rgba(0,0,0,.125)',
+                        borderRight: hasSelected ? '2px solid #0d6efd' : '1px solid rgba(0,0,0,.125)',
+                        transition: 'all 0.2s ease-in-out'
+                      }}
                     >
-                      <div className="form-check me-3 d-flex align-items-center">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          checked={selectedUserIds.has(collab.user.id)}
-                          onChange={() => handleToggleCollaborator(collab.user.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                      <div className="flex-grow-1">
-                        <div className="d-flex align-items-center">
-                          <div className="me-2">
-                            {collab.user.avatar ? (
-                              <img
-                                src={collab.user.avatar}
-                                alt={collab.user.username}
-                                className="rounded-circle"
-                                style={{ width: '40px', height: '40px', objectFit: 'cover' }}
-                              />
-                            ) : (
-                              <div
-                                className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
-                                style={{ width: '40px', height: '40px', fontSize: '1rem' }}
-                              >
-                                {(collab.user.first_name || collab.user.username || 'U').charAt(0).toUpperCase()}
+                      <div className="row g-2">
+                        {/* Column 1: Individual ID Information */}
+                        <div className="col-5 col-sm-4">
+                          <div className="d-flex align-items-center">
+                            <div className="me-2">
+                              {collab.user.avatar ? (
+                                <img
+                                  src={collab.user.avatar}
+                                  alt={collab.user.username}
+                                  className="rounded-circle"
+                                  style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                <div
+                                  className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+                                  style={{ width: '40px', height: '40px', fontSize: '1rem' }}
+                                >
+                                  {(collab.user.first_name || collab.user.username || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                              <div className="subtext-btn-sm fw-bold font-quicksand mb-0" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {collab.user.first_name} {collab.user.last_name}
                               </div>
-                            )}
-                          </div>
-                          <div className="flex-grow-1">
-                            <div className="subtext-btn-sm fw-bold font-quicksand">
-                              {collab.user.first_name} {collab.user.last_name}
-                            </div>
-                            <div className="subtext-btn-sm text-muted font-quicksand">
-                              @{collab.user.username}
+                              <div className="subtext-btn-sm text-muted font-quicksand" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                @{collab.user.username}
+                              </div>
                             </div>
                           </div>
-                          <span className={`badge bg-${getRoleColor(collab.role)} ms-2`}>
-                            {collab.role.replace('_', ' ').toUpperCase()}
-                          </span>
+                        </div>
+                        
+                        {/* Column 2: Roles */}
+                        <div className="col-7 col-sm-8">
+                          <div className="d-flex flex-wrap gap-2 align-items-center">
+                            {userRoles.map((role: string, idx: number) => {
+                              const roleSelected = isRoleSelected(collab.user.id, role);
+                              return (
+                                <div key={idx} className="d-flex align-items-center gap-1">
+                                  <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    checked={roleSelected}
+                                    onChange={() => handleToggleRole(collab.user.id, role)}
+                                    style={{
+                                      width: '1rem',
+                                      height: '1rem',
+                                      cursor: 'pointer',
+                                      borderColor: roleSelected ? '#0d6efd' : '#6c757d',
+                                      backgroundColor: roleSelected ? '#0d6efd' : '#fff',
+                                      margin: 0,
+                                      flexShrink: 0
+                                    }}
+                                    aria-label={`${role} role ${roleSelected ? 'selected' : 'not selected'}`}
+                                  />&nbsp;&nbsp;&nbsp;
+                                  <span 
+                                    className={`badge bg-${getRoleColor(role)} ${roleSelected ? 'opacity-100' : 'opacity-50'}`}
+                                    style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                    onClick={() => handleToggleRole(collab.user.id, role)}
+                                  >
+                                   {role.replace('_', ' ').toUpperCase()}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

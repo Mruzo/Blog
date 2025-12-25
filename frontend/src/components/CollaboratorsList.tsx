@@ -217,7 +217,7 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
             <div className="mt-3 p-3 bg-light rounded">
               <h6 className="subtext-btn-sm">Change Role</h6>
               <div className="row">
-                <div className="col-md-4">
+                <div className="col-md-6">
                   <div className="form-check">
                     <input
                       className="form-check-input"
