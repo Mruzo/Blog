@@ -103,4 +103,3 @@ def send_back_in_stock_notifications(sender, instance, created, **kwargs):
         del _previous_product_availability[instance.pk]
     if instance.pk in _previous_product_stock:
         del _previous_product_stock[instance.pk]
-

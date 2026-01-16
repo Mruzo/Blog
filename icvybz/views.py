@@ -2198,5 +2198,3 @@ def preview_all_emails(request):
         'email_previews': email_previews,
         'total_emails': len(email_previews)
     })
-
-

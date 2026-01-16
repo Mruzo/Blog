@@ -58,9 +58,9 @@ const Home: React.FC = () => {
         <div className="col card mx-auto position-relative rounded-0 border-0 d-flex justify-content-center align-items-center bg-inherit">
           <div className="text-center land-border rounded-0 opacity-full">
             <h2 className="landtext mb-3">
-              <div>CULTURAL INSPIRATION</div>
+              <div>INSPIRATION</div>
               <div className="font-quicksand-italic">meets</div>
-              <div>PRACTICAL INNOVATION</div>
+              <div>INNOVATION</div>
             </h2>
             
             {/* <div className="mt-3">
@@ -84,8 +84,8 @@ const Home: React.FC = () => {
           <div className="card col-md-6 mx-auto bg-light border-0">
             <div className="card-body p-0">
               <pre className="card-text subtext-sm" style={{ whiteSpace: 'pre-wrap' }}>
-                Welcome to Immersive Comics - your platform for creating and experiencing interactive 3D stories. 
-                Build engaging 3D comic stories with interactive dialogues and camera controls.
+                Justvybz is your platform for creating and experiencing immersive comics. 
+                We provide tools that help you reimagine your traditional comic.
               </pre>
             </div>
           </div>
@@ -108,7 +108,7 @@ const Home: React.FC = () => {
                   <i className="fas fa-cube fa-3x text-primary mb-3"></i>
                   <h5 className="subtext-md font-quicksand">Create Immersive Stories</h5>
                   <p className="subtext-sm">
-                    Build engaging 3D comic stories with interactive scenes, and dialogues.
+                    Build engaging comic stories with interactive 3D scenes, and dialogues.
                   </p>
                 </div>
               </div>
@@ -128,9 +128,9 @@ const Home: React.FC = () => {
               <div className="card h-100 border-0 shadow-sm">
                 <div className="card-body text-center">
                   <i className="fas fa-share-alt fa-3x text-primary mb-3"></i>
-                  <h5 className="subtext-md font-quicksand">Share & Publish</h5>
+                  <h5 className="subtext-md font-quicksand">Share </h5>
                   <p className="subtext-sm">
-                    Share your creations with the world and track engagement analytics.
+                    Share your creations and invite collaborators to build with you.
                   </p>
                 </div>
               </div>
