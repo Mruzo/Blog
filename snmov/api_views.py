@@ -13,11 +13,15 @@ import json
 import uuid
 from decimal import Decimal
 
-from .models import Product, Order, OrderItem, ShippingAddress, ReachOut, NewsletterSubscription
+from .models import (
+    Product, Order, OrderItem, ShippingAddress, ReachOut, NewsletterSubscription,
+    ReturnRequest, ReturnItem, CreditNote, Invoice
+)
 from .serializers import (
     ProductSerializer, ProductListSerializer, OrderSerializer, 
     CartItemSerializer, CartUpdateSerializer, ReachOutSerializer,
-    NewsletterSubscriptionSerializer
+    NewsletterSubscriptionSerializer, ReturnRequestSerializer, ReturnRequestCreateSerializer,
+    CreditNoteSerializer, InvoiceSerializer, AvailableReturnItemSerializer
 )
 from snm.settings.base import DEFAULT_FROM_EMAIL, SUPPORT_EMAIL
 from django.core.mail import send_mail
@@ -1525,3 +1529,365 @@ def delete_user_data(request):
             'error': 'Failed to delete user data',
             'message': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================================
+# RETURN/REFUND API ENDPOINTS
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_available_return_items(request, order_id):
+    """Get items available for return from an order"""
+    try:
+        order = Order.objects.get(id=order_id, customer=request.user)
+        
+        from snmov.utils.returns import get_available_return_items
+        available_items = get_available_return_items(order)
+        
+        serializer = AvailableReturnItemSerializer(available_items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Order.DoesNotExist:
+        return Response(
+            {'error': 'Order not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_return_request(request):
+    """Create a new return request"""
+    from snmov.utils.returns import (
+        validate_return_window, validate_return_items, validate_return_condition,
+        calculate_return_shipping_cost, get_return_window_days
+    )
+    from snmov.utils.email_notifications import send_return_request_submitted
+    from django.db import transaction
+    
+    serializer = ReturnRequestCreateSerializer(data=request.data, context={'request': request})
+    
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        order = Order.objects.get(id=serializer.validated_data['order_id'])
+        
+        # Validate return window
+        return_window_days = get_return_window_days(order)
+        is_valid, error_msg = validate_return_window(order, return_window_days)
+        if not is_valid:
+            return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Calculate return shipping cost
+        return_shipping_cost = calculate_return_shipping_cost(None)  # Will be calculated properly
+        
+        with transaction.atomic():
+            # Create return request
+            return_request = ReturnRequest.objects.create(
+                order=order,
+                customer=request.user,
+                reason=serializer.validated_data['reason'],
+                reason_category=serializer.validated_data['reason_category'],
+                return_window_days=return_window_days,
+                return_shipping_cost=return_shipping_cost,
+                return_shipping_paid_by=serializer.validated_data.get('return_shipping_paid_by', 'customer'),
+                status='PENDING'
+            )
+            
+            # Create return items
+            for item_data in serializer.validated_data['return_items']:
+                order_item = OrderItem.objects.get(
+                    id=item_data['order_item_id'],
+                    order=order
+                )
+                
+                # Validate quantity
+                available = order_item.get_available_for_return()
+                if item_data['quantity'] > available:
+                    raise ValueError(f"Cannot return {item_data['quantity']} of {order_item.product.title}. Only {available} available.")
+                
+                ReturnItem.objects.create(
+                    return_request=return_request,
+                    order_item=order_item,
+                    quantity=item_data['quantity'],
+                    condition=item_data['condition'],
+                    condition_notes=item_data.get('condition_notes', '')
+                )
+            
+            # Validate return items
+            is_valid, error_msg = validate_return_items(return_request)
+            if not is_valid:
+                raise ValueError(error_msg)
+            
+            # Validate return condition
+            is_valid, error_msg = validate_return_condition(return_request)
+            if not is_valid:
+                raise ValueError(error_msg)
+        
+        # Send email notification
+        try:
+            send_return_request_submitted(return_request)
+        except Exception as e:
+            logger.error(f"Failed to send return request email: {e}")
+        
+        # Return created return request
+        response_serializer = ReturnRequestSerializer(return_request)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        
+    except Order.DoesNotExist:
+        return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+    except OrderItem.DoesNotExist:
+        return Response({'error': 'Order item not found'}, status=status.HTTP_404_NOT_FOUND)
+    except ValueError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error(f"Error creating return request: {e}")
+        return Response(
+            {'error': 'Failed to create return request', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+class ReturnRequestListView(generics.ListAPIView):
+    """List user's return requests"""
+    serializer_class = ReturnRequestSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return ReturnRequest.objects.filter(customer=self.request.user).select_related(
+            'order', 'customer'
+        ).prefetch_related('returnitem_set', 'returnitem_set__order_item', 'returnitem_set__order_item__product').order_by('-created_at')
+
+
+class ReturnRequestDetailView(generics.RetrieveAPIView):
+    """Get return request details"""
+    serializer_class = ReturnRequestSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return ReturnRequest.objects.filter(customer=self.request.user).select_related(
+            'order', 'customer'
+        ).prefetch_related('returnitem_set', 'returnitem_set__order_item', 'returnitem_set__order_item__product')
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def approve_return_request(request, return_id):
+    """Approve return request (admin only)"""
+    from django.contrib.auth.models import AnonymousUser
+    if not request.user.is_staff:
+        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        return_request = ReturnRequest.objects.get(id=return_id)
+        
+        if return_request.status != 'PENDING':
+            return Response(
+                {'error': f'Return request is already {return_request.status.lower()}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        from snmov.utils.returns import process_return_approval
+        from snmov.utils.email_notifications import send_return_approved
+        
+        credit_note = process_return_approval(return_request, admin_user=request.user)
+        
+        # Send email notification
+        try:
+            send_return_approved(return_request, credit_note)
+        except Exception as e:
+            logger.error(f"Failed to send return approved email: {e}")
+        
+        response_serializer = ReturnRequestSerializer(return_request)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        
+    except ReturnRequest.DoesNotExist:
+        return Response({'error': 'Return request not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error approving return request: {e}")
+        return Response(
+            {'error': 'Failed to approve return request', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reject_return_request(request, return_id):
+    """Reject return request (admin only)"""
+    if not request.user.is_staff:
+        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        return_request = ReturnRequest.objects.get(id=return_id)
+        
+        if return_request.status != 'PENDING':
+            return Response(
+                {'error': f'Return request is already {return_request.status.lower()}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        rejection_reason = request.data.get('reason', 'Return request rejected')
+        
+        from snmov.utils.returns import process_return_rejection
+        from snmov.utils.email_notifications import send_return_rejected
+        
+        process_return_rejection(return_request, rejection_reason, admin_user=request.user)
+        
+        # Send email notification
+        try:
+            send_return_rejected(return_request, rejection_reason)
+        except Exception as e:
+            logger.error(f"Failed to send return rejected email: {e}")
+        
+        response_serializer = ReturnRequestSerializer(return_request)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        
+    except ReturnRequest.DoesNotExist:
+        return Response({'error': 'Return request not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error rejecting return request: {e}")
+        return Response(
+            {'error': 'Failed to reject return request', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_return_label(request, return_id):
+    """Generate return shipping label (admin only)"""
+    if not request.user.is_staff:
+        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        return_request = ReturnRequest.objects.get(id=return_id)
+        
+        if return_request.status != 'APPROVED':
+            return Response(
+                {'error': 'Return request must be approved before generating label'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        from snmov.utils.returns import generate_return_label
+        from snmov.utils.email_notifications import send_return_label_generated
+        
+        label_info = generate_return_label(return_request)
+        
+        # Update return request with label info
+        return_request.return_label_url = label_info.get('label_url')
+        return_request.return_tracking_number = label_info.get('tracking_number')
+        return_request.save()
+        
+        # Send email notification
+        try:
+            send_return_label_generated(return_request)
+        except Exception as e:
+            logger.error(f"Failed to send return label email: {e}")
+        
+        response_serializer = ReturnRequestSerializer(return_request)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        
+    except ReturnRequest.DoesNotExist:
+        return Response({'error': 'Return request not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error generating return label: {e}")
+        return Response(
+            {'error': 'Failed to generate return label', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_invoice(request, order_id):
+    """Download invoice PDF for an order"""
+    try:
+        order = Order.objects.get(id=order_id, customer=request.user)
+        
+        # Get or create invoice
+        invoice, created = Invoice.objects.get_or_create(order=order)
+        
+        # Generate invoice if it doesn't exist
+        if not invoice.pdf_path or created:
+            from snmov.utils.pdf_generation import generate_pdf
+            pdf_path = generate_pdf(
+                template_name='pdf/invoice.html',
+                context={'order': order, 'invoice': invoice},
+                filename=f'invoice_{order.id}.pdf',
+                pdf_type='invoice'
+            )
+            invoice.pdf_path = pdf_path
+            invoice.save()
+        
+        # Return PDF file
+        from django.http import FileResponse
+        import os
+        from django.conf import settings
+        
+        pdf_full_path = os.path.join(settings.MEDIA_ROOT, invoice.pdf_path)
+        if os.path.exists(pdf_full_path):
+            return FileResponse(
+                open(pdf_full_path, 'rb'),
+                content_type='application/pdf',
+                filename=f'invoice_{invoice.invoice_number}.pdf'
+            )
+        else:
+            return Response(
+                {'error': 'Invoice PDF not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+    except Order.DoesNotExist:
+        return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error downloading invoice: {e}")
+        return Response(
+            {'error': 'Failed to download invoice', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_credit_note(request, credit_note_id):
+    """Download credit note PDF"""
+    try:
+        credit_note = CreditNote.objects.select_related('return_request', 'return_request__customer').get(
+            id=credit_note_id,
+            return_request__customer=request.user
+        )
+        
+        if not credit_note.pdf_path:
+            return Response(
+                {'error': 'Credit note PDF not available'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Return PDF file
+        from django.http import FileResponse
+        import os
+        from django.conf import settings
+        
+        pdf_full_path = os.path.join(settings.MEDIA_ROOT, credit_note.pdf_path)
+        if os.path.exists(pdf_full_path):
+            return FileResponse(
+                open(pdf_full_path, 'rb'),
+                content_type='application/pdf',
+                filename=f'credit_note_{credit_note.credit_note_number}.pdf'
+            )
+        else:
+            return Response(
+                {'error': 'Credit note PDF not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+    except CreditNote.DoesNotExist:
+        return Response({'error': 'Credit note not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error downloading credit note: {e}")
+        return Response(
+            {'error': 'Failed to download credit note', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

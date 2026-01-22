@@ -6,7 +6,10 @@ from .api_views import (
     checkout, get_shipping_rates, select_shipping_rate, payment_success,
     contact_form, get_saved_addresses, save_address, delete_saved_address,
     set_default_address, subscribe_newsletter, unsubscribe_newsletter,
-    get_newsletter_subscription, export_user_data, delete_user_data
+    get_newsletter_subscription, export_user_data, delete_user_data,
+    get_available_return_items, create_return_request, ReturnRequestListView,
+    ReturnRequestDetailView, approve_return_request, reject_return_request,
+    generate_return_label, download_invoice, download_credit_note
 )
 
 app_name = 'api'
@@ -54,4 +57,15 @@ urlpatterns = [
     # GDPR endpoints
     path('gdpr/export/', export_user_data, name='gdpr-export'),
     path('gdpr/delete/', delete_user_data, name='gdpr-delete'),
+    
+    # Return/Refund endpoints
+    path('orders/<int:order_id>/returnable-items/', get_available_return_items, name='returnable-items'),
+    path('returns/', create_return_request, name='return-create'),
+    path('returns/list/', ReturnRequestListView.as_view(), name='return-list'),
+    path('returns/<int:pk>/', ReturnRequestDetailView.as_view(), name='return-detail'),
+    path('returns/<int:return_id>/approve/', approve_return_request, name='return-approve'),
+    path('returns/<int:return_id>/reject/', reject_return_request, name='return-reject'),
+    path('returns/<int:return_id>/label/', generate_return_label, name='return-label'),
+    path('orders/<int:order_id>/invoice/', download_invoice, name='invoice-download'),
+    path('credit-notes/<int:credit_note_id>/pdf/', download_credit_note, name='credit-note-download'),
 ]

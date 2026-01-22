@@ -1,6 +1,11 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
-from .models import Product, Comment, Preference, ReachOut, About, SiteImage, Testimonials, ProductNotification, ARUsage, ModelUsage, ShippingAddress, Order, OrderItem, Profile, User, EmailPreference, EmailLog, NewsletterSubscription, SecurityLog, DataConsent
+from .models import (
+    Product, Comment, Preference, ReachOut, About, SiteImage, Testimonials, ProductNotification, 
+    ARUsage, ModelUsage, ShippingAddress, Order, OrderItem, Profile, User, EmailPreference, 
+    EmailLog, NewsletterSubscription, SecurityLog, DataConsent,
+    ReturnRequest, ReturnItem, CreditNote, Invoice, ReturnPolicy
+)
 from tinymce.widgets import TinyMCE
 from django.db import models
 from django.contrib.auth.admin import UserAdmin
@@ -293,3 +298,292 @@ class CustomUserAdmin(UserAdmin):
                 form.base_fields[f].disabled = True
 
         return form
+
+
+# ============================================================================
+# RETURN/REFUND ADMIN INTERFACES
+# ============================================================================
+
+class ReturnItemInline(admin.TabularInline):
+    """Inline admin for return items"""
+    model = ReturnItem
+    extra = 0
+    readonly_fields = ('order_item', 'product_name', 'quantity', 'condition', 'condition_notes')
+    fields = ('order_item', 'product_name', 'quantity', 'condition', 'condition_notes')
+    
+    def product_name(self, obj):
+        return obj.order_item.product.title if obj.order_item else 'N/A'
+    product_name.short_description = 'Product'
+
+
+class ReturnRequestAdmin(admin.ModelAdmin):
+    """Admin interface for return requests"""
+    list_display = (
+        'id', 'order', 'customer', 'status', 'reason_category', 
+        'refund_amount', 'created_at', 'approved_at'
+    )
+    list_filter = ('status', 'reason_category', 'created_at', 'return_shipping_paid_by')
+    search_fields = ('id', 'order__id', 'customer__username', 'customer__email', 'return_tracking_number')
+    readonly_fields = (
+        'created_at', 'updated_at', 'approved_at', 'rejected_at', 'completed_at',
+        'return_label_url', 'return_tracking_number', 'return_window_days'
+    )
+    date_hierarchy = 'created_at'
+    inlines = [ReturnItemInline]
+    
+    fieldsets = (
+        ('Return Information', {
+            'fields': ('order', 'customer', 'status', 'reason', 'reason_category', 'return_window_days')
+        }),
+        ('Shipping', {
+            'fields': ('return_shipping_cost', 'return_shipping_paid_by', 'return_label_url', 'return_tracking_number')
+        }),
+        ('Admin Notes', {
+            'fields': ('admin_notes',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'approved_at', 'rejected_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['bulk_approve', 'bulk_reject', 'generate_labels']
+    
+    def refund_amount(self, obj):
+        """Calculate and display refund amount"""
+        from snmov.utils.returns import calculate_refund_amount
+        from decimal import Decimal
+        amount = calculate_refund_amount(obj)
+        return f"${amount:.2f}"
+    refund_amount.short_description = 'Refund Amount'
+    
+    def save_model(self, request, obj, form, change):
+        """Override save to trigger emails on status change"""
+        if change:
+            old_obj = ReturnRequest.objects.get(pk=obj.pk)
+            previous_status = old_obj.status
+            
+            super().save_model(request, obj, form, change)
+            
+            # Send emails on status change
+            if obj.status != previous_status:
+                try:
+                    from snmov.utils.email_notifications import (
+                        send_return_approved, send_return_rejected
+                    )
+                    if obj.status == 'APPROVED' and hasattr(obj, 'credit_note'):
+                        send_return_approved(obj, obj.credit_note)
+                    elif obj.status == 'REJECTED':
+                        send_return_rejected(obj, obj.admin_notes or 'Return request rejected')
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to send return status email for return {obj.id}: {e}")
+        else:
+            super().save_model(request, obj, form, change)
+    
+    def bulk_approve(self, request, queryset):
+        """Bulk approve return requests"""
+        from snmov.utils.returns import process_return_approval
+        from snmov.utils.email_notifications import send_return_approved
+        
+        approved = 0
+        for return_request in queryset.filter(status='PENDING'):
+            try:
+                credit_note = process_return_approval(return_request, admin_user=request.user)
+                send_return_approved(return_request, credit_note)
+                approved += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to approve return {return_request.id}: {e}")
+        
+        self.message_user(request, f'Approved {approved} return request(s).')
+    bulk_approve.short_description = "Approve selected return requests"
+    
+    def bulk_reject(self, request, queryset):
+        """Bulk reject return requests"""
+        from snmov.utils.returns import process_return_rejection
+        from snmov.utils.email_notifications import send_return_rejected
+        
+        rejected = 0
+        for return_request in queryset.filter(status='PENDING'):
+            try:
+                process_return_rejection(return_request, 'Bulk rejection', admin_user=request.user)
+                send_return_rejected(return_request, 'Bulk rejection')
+                rejected += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to reject return {return_request.id}: {e}")
+        
+        self.message_user(request, f'Rejected {rejected} return request(s).')
+    bulk_reject.short_description = "Reject selected return requests"
+    
+    def generate_labels(self, request, queryset):
+        """Generate return labels for approved returns"""
+        from snmov.utils.returns import generate_return_label
+        from snmov.utils.email_notifications import send_return_label_generated
+        
+        generated = 0
+        for return_request in queryset.filter(status='APPROVED'):
+            try:
+                label_info = generate_return_label(return_request)
+                return_request.return_label_url = label_info.get('label_url')
+                return_request.return_tracking_number = label_info.get('tracking_number')
+                return_request.save()
+                send_return_label_generated(return_request)
+                generated += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to generate label for return {return_request.id}: {e}")
+        
+        self.message_user(request, f'Generated {generated} return label(s).')
+    generate_labels.short_description = "Generate return labels for selected returns"
+
+
+class CreditNoteAdmin(admin.ModelAdmin):
+    """Admin interface for credit notes"""
+    list_display = (
+        'id', 'credit_note_number', 'return_request', 'amount', 
+        'status', 'stripe_refund_id', 'created_at'
+    )
+    list_filter = ('status', 'created_at')
+    search_fields = ('credit_note_number', 'return_request__id', 'stripe_refund_id')
+    readonly_fields = (
+        'credit_note_number', 'created_at', 'updated_at', 'regenerated_at',
+        'stripe_refund_id', 'pdf_path'
+    )
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Credit Note Information', {
+            'fields': ('return_request', 'credit_note_number', 'amount', 'status', 'refund_method')
+        }),
+        ('Payment Processing', {
+            'fields': ('stripe_refund_id',)
+        }),
+        ('PDF Document', {
+            'fields': ('pdf_path', 'regenerated_at')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['regenerate_pdf', 'process_stripe_refund']
+    
+    def regenerate_pdf(self, request, queryset):
+        """Regenerate PDF for selected credit notes"""
+        from snmov.utils.pdf_generation import generate_pdf
+        from django.utils import timezone
+        
+        regenerated = 0
+        for credit_note in queryset:
+            try:
+                pdf_path = generate_pdf(
+                    template_name='pdf/credit_note.html',
+                    context={
+                        'credit_note': credit_note,
+                        'return_request': credit_note.return_request,
+                        'order': credit_note.return_request.order,
+                    },
+                    filename=f'credit_note_{credit_note.id}.pdf',
+                    pdf_type='credit_note'
+                )
+                credit_note.pdf_path = pdf_path
+                credit_note.regenerated_at = timezone.now()
+                credit_note.save()
+                regenerated += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to regenerate PDF for credit note {credit_note.id}: {e}")
+        
+        self.message_user(request, f'Regenerated {regenerated} credit note PDF(s).')
+    regenerate_pdf.short_description = "Regenerate PDF for selected credit notes"
+    
+    def process_stripe_refund(self, request, queryset):
+        """Process Stripe refund for selected credit notes"""
+        from snmov.utils.stripe_refunds import process_stripe_refund
+        
+        processed = 0
+        for credit_note in queryset.filter(status='ISSUED'):
+            try:
+                if credit_note.return_request.order.stripe_payment_intent_id:
+                    stripe_refund_id = process_stripe_refund(
+                        credit_note=credit_note,
+                        amount=credit_note.amount,
+                        payment_intent_id=credit_note.return_request.order.stripe_payment_intent_id
+                    )
+                    credit_note.stripe_refund_id = stripe_refund_id
+                    credit_note.status = 'REFUNDED'
+                    credit_note.save()
+                    processed += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to process Stripe refund for credit note {credit_note.id}: {e}")
+        
+        self.message_user(request, f'Processed {processed} Stripe refund(s).')
+    process_stripe_refund.short_description = "Process Stripe refund for selected credit notes"
+
+
+class InvoiceAdmin(admin.ModelAdmin):
+    """Admin interface for invoices"""
+    list_display = ('id', 'invoice_number', 'order', 'generated_at', 'regenerated_at')
+    list_filter = ('generated_at', 'regenerated_at')
+    search_fields = ('invoice_number', 'order__id')
+    readonly_fields = ('invoice_number', 'generated_at', 'regenerated_at', 'pdf_path')
+    date_hierarchy = 'generated_at'
+    
+    actions = ['regenerate_pdf']
+    
+    def regenerate_pdf(self, request, queryset):
+        """Regenerate PDF for selected invoices"""
+        from snmov.utils.pdf_generation import generate_pdf
+        from django.utils import timezone
+        
+        regenerated = 0
+        for invoice in queryset:
+            try:
+                pdf_path = generate_pdf(
+                    template_name='pdf/invoice.html',
+                    context={'order': invoice.order, 'invoice': invoice},
+                    filename=f'invoice_{invoice.order.id}.pdf',
+                    pdf_type='invoice'
+                )
+                invoice.pdf_path = pdf_path
+                invoice.regenerated_at = timezone.now()
+                invoice.save()
+                regenerated += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to regenerate PDF for invoice {invoice.id}: {e}")
+        
+        self.message_user(request, f'Regenerated {regenerated} invoice PDF(s).')
+    regenerate_pdf.short_description = "Regenerate PDF for selected invoices"
+
+
+class ReturnPolicyAdmin(admin.ModelAdmin):
+    """Admin interface for return policies"""
+    list_display = ('id', 'product', 'return_window_days', 'restocking_fee_percentage', 'created_at')
+    list_filter = ('return_window_days', 'restocking_fee_percentage', 'created_at')
+    search_fields = ('product__title',)
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def get_queryset(self, request):
+        """Show global policy first, then product-specific"""
+        qs = super().get_queryset(request)
+        return qs.order_by('product')
+
+
+# Register return/refund models
+admin.site.register(ReturnRequest, ReturnRequestAdmin)
+admin.site.register(ReturnItem)
+admin.site.register(CreditNote, CreditNoteAdmin)
+admin.site.register(Invoice, InvoiceAdmin)
+admin.site.register(ReturnPolicy, ReturnPolicyAdmin)

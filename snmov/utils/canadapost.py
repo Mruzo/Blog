@@ -633,5 +633,122 @@ def create_canadapost_label(order, service_code, use_production=None):
     return {
         'label_url': result['label_url'],
         'tracking_number': result['tracking_number'],
+        'carrier': result['carrier']
+    }
+
+
+def create_return_label(return_request, use_production=None):
+    """
+    Create return shipping label with Canada Post REST API
+    For returns, addresses are swapped (customer sends back to store)
+    
+    Args:
+        return_request: ReturnRequest object
+        use_production: Use production API if True (None = use settings)
+    
+    Returns:
+        Dict with label_url, tracking_number, carrier
+    """
+    from snmov.utils.cart import get_sender_address
+    from snmov.utils.province_codes import normalize_province_code
+    from decimal import Decimal
+    
+    order = return_request.order
+    shipping = order.shipping_address
+    if not shipping:
+        raise ValueError("Shipping address not found for this order.")
+    
+    # Get sender address (store address - where return goes TO)
+    sender_addr = get_sender_address()
+    
+    # Convert from Shippo format to Canada Post format
+    sender_state = sender_addr.get('state', '')
+    if sender_addr.get('country', sender_addr.get('country_code', 'CA')).upper() == 'CA':
+        sender_state = normalize_province_code(sender_state)
+    
+    # TO address (store - where return is going)
+    to_address = {
+        'name': sender_addr.get('name', ''),
+        'address_line_1': sender_addr.get('street1', sender_addr.get('address_line_1', '')),
+        'address_line_2': sender_addr.get('street2', sender_addr.get('address_line_2', '')),
+        'city': sender_addr.get('city', ''),
+        'state': sender_state,
+        'postal_code': sender_addr.get('zip', sender_addr.get('postal_code', '')),
+        'country_code': sender_addr.get('country', sender_addr.get('country_code', 'CA')),
+        'email': sender_addr.get('email', ''),
+        'phone': sender_addr.get('phone', ''),
+    }
+    
+    # FROM address (customer - where return is coming FROM)
+    # Normalize province codes for Canadian addresses
+    shipping_state = shipping.state
+    if shipping.country_code.upper() == 'CA':
+        shipping_state = normalize_province_code(shipping_state)
+    
+    from_address = {
+        'name': shipping.full_name,
+        'address_line_1': shipping.address_line_1,
+        'address_line_2': shipping.address_line_2 or '',
+        'city': shipping.city,
+        'state': shipping_state,
+        'postal_code': shipping.postal_code,
+        'country_code': shipping.country_code,
+        'email': shipping.user.email if shipping.user else '',
+        'phone': shipping.user.profile.phone if shipping.user and hasattr(shipping.user, 'profile') else '',
+    }
+    
+    # Calculate parcel dimensions from return items
+    total_length = Decimal("0.0")
+    total_width = Decimal("0.0")
+    total_height = Decimal("0.0")
+    total_weight = Decimal("0.0")
+    
+    for return_item in return_request.returnitem_set.all():
+        product = return_item.order_item.product
+        quantity = return_item.quantity
+        
+        product_length = Decimal(str(product.package_length or 0))
+        product_width = Decimal(str(product.package_width or 0))
+        product_height = Decimal(str(product.package_height or 0))
+        product_weight = Decimal(str(product.weight_grams or 0))
+        
+        total_length = max(total_length, product_length)
+        total_width += product_width * quantity
+        total_height = max(total_height, product_height)
+        total_weight += product_weight * quantity
+    
+    # Build parcel (dimensions in cm, weight in kg)
+    # Canada Post minimum weight is 0.1 kg (100g)
+    weight_kg = round(float(total_weight) / 1000.0, 2)
+    if weight_kg < 0.1:
+        weight_kg = 0.1
+    
+    parcel = {
+        'length': round(total_length, 2),
+        'width': round(total_width, 2),
+        'height': round(total_height, 2),
+        'weight': weight_kg,
+    }
+    
+    # Use return service code (typically same as outbound, but could be different)
+    # For now, use DOM.PC (Priority) - adjust based on your return policy
+    service_code = 'DOM.PC'  # Priority Courier - adjust as needed
+    
+    # Create label with Canada Post REST API
+    if use_production is None:
+        use_production = getattr(settings, 'CANADAPOST_USE_PRODUCTION', False)
+    
+    api = CanadaPostAPI(use_production=use_production)
+    result = api.create_shipping_label(
+        from_address=from_address,  # Customer address
+        to_address=to_address,      # Store address (swapped for returns)
+        parcel=parcel,
+        service_code=service_code,
+        order_id=f"RETURN-{return_request.id}"
+    )
+    
+    return {
+        'label_url': result['label_url'],,
+        'tracking_number': result['tracking_number'],
         'carrier': result['carrier'],
     }

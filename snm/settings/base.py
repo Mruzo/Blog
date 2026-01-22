@@ -62,6 +62,14 @@ CANADAPOST_KEY_NUMBER = CANADAPOST_DEVELOPMENT_KEY_NUMBER
 CANADAPOST_CUSTOMER_NUMBER = CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER
 
 
+# Return/Refund System Configuration
+DEFAULT_RETURN_WINDOW_DAYS = 30  # Default return window in days
+RETURN_SHIPPING_PAID_BY = 'customer'  # Options: 'customer' or 'store'
+RESTOCKING_FEE_PERCENTAGE = 0  # Default restocking fee (0-100)
+ENABLE_PARTIAL_RETURNS = True  # Allow partial returns from same order
+STRIPE_REFUND_ENABLED = True  # Enable Stripe refund processing
+
+
 META_SITE_PROTOCOL = 'http', 'https'
 
 
@@ -242,8 +250,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
-    os.path.join(BASE_DIR, 'frontend', 'build'),  # React build folder for production static files
-    os.path.join(BASE_DIR, 'frontend', 'build', 'static'),  # React static files (js, css, media)
+    os.path.join(BASE_DIR, 'frontend', 'build'),  # React build folder for production static files (includes static/ subdirectory)
 ]
 
 # Default Sender Address (fallback if admin user's address is not found)

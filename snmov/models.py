@@ -333,6 +333,20 @@ class Order(models.Model):
         subtotal = self.calculate_total_value()
         shipping = self.shipping_cost or Decimal("0.00")
         return subtotal + shipping
+    
+    def is_eligible_for_return(self):
+        """Check if order is eligible for returns"""
+        # Only delivered orders can be returned
+        if self.status != 'DELIVERED':
+            return False
+        
+        # Check if within return window
+        from django.conf import settings
+        from datetime import timedelta
+        
+        return_window = getattr(settings, 'DEFAULT_RETURN_WINDOW_DAYS', 30)
+        deadline = self.order_date + timedelta(days=return_window)
+        return timezone.now() <= deadline
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
@@ -341,8 +355,247 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product.title} (Order {self.order.id})"
+    
+    def get_returned_quantity(self):
+        """Get total quantity already returned for this order item"""
+        return sum([
+            return_item.quantity
+            for return_item in self.returnitem_set.all()
+            if return_item.return_request.status in ['APPROVED', 'PROCESSING', 'COMPLETED']
+        ])
+    
+    def get_available_for_return(self):
+        """Get quantity available for return"""
+        return self.quantity - self.get_returned_quantity()
 
 
+class ReturnPolicy(models.Model):
+    """Return policy configuration - can be global or product-specific"""
+    product = models.ForeignKey(
+        Product, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='return_policies',
+        help_text="If null, this is the global default policy"
+    )
+    return_window_days = models.PositiveIntegerField(
+        default=30,
+        help_text="Number of days from delivery to allow returns"
+    )
+    restocking_fee_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        help_text="Restocking fee as percentage (0-100)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Return Policy"
+        verbose_name_plural = "Return Policies"
+        unique_together = ['product']  # One policy per product (or one global)
+    
+    def __str__(self):
+        if self.product:
+            return f"Return Policy for {self.product.title}"
+        return "Global Return Policy"
+
+
+class ReturnRequest(models.Model):
+    """Return request model"""
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('PROCESSING', 'Processing'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+    
+    REASON_CATEGORIES = [
+        ('defective', 'Defective/Damaged'),
+        ('wrong_item', 'Wrong Item Received'),
+        ('not_as_described', 'Not as Described'),
+        ('changed_mind', 'Changed Mind'),
+        ('size_fit', 'Size/Fit Issue'),
+        ('quality', 'Quality Issue'),
+        ('other', 'Other'),
+    ]
+    
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='return_requests')
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='return_requests')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    reason = models.TextField(help_text="Customer's reason for return")
+    reason_category = models.CharField(max_length=50, choices=REASON_CATEGORIES)
+    return_window_days = models.PositiveIntegerField(
+        default=30,
+        help_text="Return window at time of request"
+    )
+    return_shipping_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Cost of return shipping"
+    )
+    return_shipping_paid_by = models.CharField(
+        max_length=20,
+        choices=[('customer', 'Customer'), ('store', 'Store')],
+        default='customer'
+    )
+    return_label_url = models.URLField(blank=True, null=True)
+    return_tracking_number = models.CharField(max_length=100, blank=True, null=True)
+    admin_notes = models.TextField(blank=True, null=True, help_text="Internal admin notes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Return Request"
+        verbose_name_plural = "Return Requests"
+    
+    def __str__(self):
+        return f"Return #{self.id} for Order {self.order.id} - {self.get_status_display()}"
+    
+    def is_within_window(self):
+        """Check if return request is within return window"""
+        if self.order.status != 'DELIVERED':
+            return False
+        
+        # Get return window from policy or use default
+        from django.conf import settings
+        from datetime import timedelta
+        
+        return_window = getattr(settings, 'DEFAULT_RETURN_WINDOW_DAYS', 30)
+        
+        # Check if product has specific policy
+        for item in self.returnitem_set.all():
+            policy = ReturnPolicy.objects.filter(product=item.order_item.product).first()
+            if policy:
+                return_window = policy.return_window_days
+                break
+        
+        # Check if order was delivered within window
+        # For now, use order_date + return_window_days
+        # In production, you'd use actual delivery date
+        delivery_date = self.order.order_date
+        deadline = delivery_date + timedelta(days=return_window)
+        return timezone.now() <= deadline
+    
+    def calculate_refund_amount(self):
+        """Calculate total refund amount"""
+        from decimal import Decimal
+        
+        # Sum of all returned items
+        total = Decimal('0.00')
+        for return_item in self.returnitem_set.all():
+            item_price = return_item.order_item.product.get_discounted_price()
+            total += item_price * return_item.quantity
+        
+        # Deduct return shipping if customer pays
+        if self.return_shipping_paid_by == 'customer':
+            total -= self.return_shipping_cost
+        
+        # Apply restocking fees if any
+        for return_item in self.returnitem_set.all():
+            policy = ReturnPolicy.objects.filter(product=return_item.order_item.product).first()
+            if policy and policy.restocking_fee_percentage > 0:
+                item_total = return_item.order_item.product.get_discounted_price() * return_item.quantity
+                restocking_fee = item_total * (policy.restocking_fee_percentage / 100)
+                total -= restocking_fee
+        
+        return max(total, Decimal('0.00'))  # Ensure non-negative
+
+
+class ReturnItem(models.Model):
+    """Items being returned"""
+    CONDITION_CHOICES = [
+        ('new', 'New/Unopened'),
+        ('like_new', 'Like New'),
+        ('good', 'Good'),
+        ('fair', 'Fair'),
+        ('poor', 'Poor'),
+        ('damaged', 'Damaged'),
+    ]
+    
+    return_request = models.ForeignKey(ReturnRequest, on_delete=models.CASCADE, related_name='returnitem_set')
+    order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='returnitem_set')
+    quantity = models.PositiveIntegerField()
+    condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='good')
+    condition_notes = models.TextField(blank=True, null=True, help_text="Additional notes about item condition")
+    
+    class Meta:
+        verbose_name = "Return Item"
+        verbose_name_plural = "Return Items"
+    
+    def __str__(self):
+        return f"{self.quantity} x {self.order_item.product.title} (Return #{self.return_request.id})"
+
+
+class Invoice(models.Model):
+    """Invoice model for orders"""
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='invoice')
+    invoice_number = models.CharField(max_length=50, unique=True)
+    pdf_path = models.CharField(max_length=500, blank=True, null=True)
+    generated_at = models.DateTimeField(auto_now_add=True)
+    regenerated_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-generated_at']
+        verbose_name = "Invoice"
+        verbose_name_plural = "Invoices"
+    
+    def __str__(self):
+        return f"Invoice {self.invoice_number} for Order {self.order.id}"
+    
+    def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            # Generate invoice number: INV-YYYYMMDD-{order_id}
+            from datetime import datetime
+            date_str = datetime.now().strftime('%Y%m%d')
+            self.invoice_number = f"INV-{date_str}-{self.order.id}"
+        super().save(*args, **kwargs)
+
+
+class CreditNote(models.Model):
+    """Credit note for refunds"""
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('ISSUED', 'Issued'),
+        ('REFUNDED', 'Refunded'),
+        ('FAILED', 'Failed'),
+    ]
+    
+    return_request = models.OneToOneField(ReturnRequest, on_delete=models.CASCADE, related_name='credit_note')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    credit_note_number = models.CharField(max_length=50, unique=True)
+    pdf_path = models.CharField(max_length=500, blank=True, null=True)
+    stripe_refund_id = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    refund_method = models.CharField(max_length=50, default='Original payment method')
+    regenerated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Credit Note"
+        verbose_name_plural = "Credit Notes"
+    
+    def __str__(self):
+        return f"Credit Note {self.credit_note_number} - ${self.amount}"
+    
+    def save(self, *args, **kwargs):
+        if not self.credit_note_number:
+            # Generate credit note number: CN-YYYYMMDD-{return_id}
+            from datetime import datetime
+            date_str = datetime.now().strftime('%Y%m%d')
+            self.credit_note_number = f"CN-{date_str}-{self.return_request.id}"
+        super().save(*args, **kwargs)
 
 
 class Preference(models.Model):

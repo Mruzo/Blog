@@ -252,4 +252,209 @@ def send_newsletter_blast(subject_text, content_html, content_text, subscription
         recipient_list=[subscription.email],
         html_message=html_message,
         fail_silently=False
+    )
+
+
+def send_return_request_submitted(return_request):
+    """Send email when return request is submitted"""
+    subject = f'Return Request Submitted - Return #{return_request.id}'
+    site_url = get_site_url()
+    
+    # Generate return detail URL (will be implemented in API)
+    return_url = f"{site_url}/product/returns/{return_request.id}/"
+    
+    context = {
+        'return_request': return_request,
+        'order': return_request.order,
+        'return_url': return_url,
+        'site_url': site_url,
+    }
+    
+    html_message = render_to_string('emails/return_request_submitted.html', context)
+    plain_message = render_to_string('emails/return_request_submitted.txt', context)
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[return_request.customer.email],
+        html_message=html_message,
+        fail_silently=False
+    )
+    """Send email when return request is approved"""
+    subject = f'Return Request Approved - Return #{return_request.id}'
+    site_url = get_site_url()
+    
+    return_url = f"{site_url}/product/returns/{return_request.id}/"
+    credit_note_url = f"{site_url}/api/credit-notes/{credit_note.id}/pdf/" if credit_note.pdf_path else None
+    
+    context = {
+        'return_request': return_request,
+        'credit_note': credit_note,
+        'order': return_request.order,
+        'return_url': return_url,
+        'credit_note_url': credit_note_url,
+        'site_url': site_url,
+    }
+    
+    html_message = render_to_string('emails/return_approved.html', context)
+    plain_message = render_to_string('emails/return_approved.txt', context)
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[return_request.customer.email],
+        html_message=html_message,
+        fail_silently=False
+    )
+
+
+def send_return_rejected(return_request, reason):
+    """Send email when return request is rejected"""
+    subject = f'Return Request Update - Return #{return_request.id}'
+    site_url = get_site_url()
+    
+    return_url = f"{site_url}/product/returns/{return_request.id}/"
+    
+    context = {
+        'return_request': return_request,
+        'order': return_request.order,
+        'rejection_reason': reason,
+        'return_url': return_url,
+        'site_url': site_url,
+    }
+    
+    html_message = render_to_string('emails/return_rejected.html', context)
+    plain_message = render_to_string('emails/return_rejected.txt', context)
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[return_request.customer.email],
+        html_message=html_message,
+        fail_silently=False
+    )
+
+
+def send_return_label_generated(return_request):
+    """Send email when return label is generated"""
+    subject = f'Return Label Ready - Return #{return_request.id}'
+    site_url = get_site_url()
+    
+    return_url = f"{site_url}/product/returns/{return_request.id}/"
+    label_url = return_request.return_label_url
+    
+    context = {
+        'return_request': return_request,
+        'order': return_request.order,
+        'return_url': return_url,
+        'label_url': label_url,
+        'tracking_number': return_request.return_tracking_number,
+        'site_url': site_url,
+    }
+    
+    html_message = render_to_string('emails/return_label_generated.html', context)
+    plain_message = render_to_string('emails/return_label_generated.txt', context)
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[return_request.customer.email],
+        html_message=html_message,
+        fail_silently=False
+    )
+
+
+def send_credit_note_issued(credit_note):
+    """Send email when credit note is issued"""
+    subject = f'Credit Note Issued - {credit_note.credit_note_number}'
+    site_url = get_site_url()
+    
+    return_request = credit_note.return_request
+    return_url = f"{site_url}/product/returns/{return_request.id}/"
+    credit_note_url = f"{site_url}/api/credit-notes/{credit_note.id}/pdf/" if credit_note.pdf_path else None
+    
+    context = {
+        'credit_note': credit_note,
+        'return_request': return_request,
+        'order': return_request.order,
+        'return_url': return_url,
+        'credit_note_url': credit_note_url,
+        'site_url': site_url,
+    }
+    
+    html_message = render_to_string('emails/credit_note_issued.html', context)
+    plain_message = render_to_string('emails/credit_note_issued.txt', context)
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[return_request.customer.email],
+        html_message=html_message,
+        fail_silently=False
+    )
+
+
+def send_stripe_refund_processed(credit_note):
+    """Send email when Stripe refund is successfully processed"""
+    subject = f'Refund Processed - {credit_note.credit_note_number}'
+    site_url = get_site_url()
+    
+    return_request = credit_note.return_request
+    return_url = f"{site_url}/product/returns/{return_request.id}/"
+    
+    context = {
+        'credit_note': credit_note,
+        'return_request': return_request,
+        'order': return_request.order,
+        'return_url': return_url,
+        'site_url': site_url,
+    }
+    
+    html_message = render_to_string('emails/stripe_refund_processed.html', context)
+    plain_message = render_to_string('emails/stripe_refund_processed.txt', context)
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[return_request.customer.email],
+        html_message=html_message,
+        fail_silently=False
+    )
+
+
+def send_stripe_refund_failed(credit_note, error_message):
+    """Send email when Stripe refund fails"""
+    subject = f'Refund Processing Issue - {credit_note.credit_note_number}'
+    site_url = get_site_url()
+    
+    return_request = credit_note.return_request
+    return_url = f"{site_url}/product/returns/{return_request.id}/"
+    support_email = getattr(settings, 'SUPPORT_EMAIL', settings.DEFAULT_FROM_EMAIL)
+    
+    context = {
+        'credit_note': credit_note,
+        'return_request': return_request,
+        'order': return_request.order,
+        'error_message': error_message,
+        'return_url': return_url,
+        'support_email': support_email,
+        'site_url': site_url,
+    }
+    
+    html_message = render_to_string('emails/stripe_refund_failed.html', context)
+    plain_message = render_to_string('emails/stripe_refund_failed.txt', context)
+    
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[return_request.customer.email],
+        html_message=html_message,
+        fail_silently=False
     ) 

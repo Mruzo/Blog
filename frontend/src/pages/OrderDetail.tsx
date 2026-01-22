@@ -380,12 +380,28 @@ const OrderDetail: React.FC = () => {
                 <i className="fas fa-times me-1"></i>Cancel Order
               </SmallButton>
             )}
+            {order.status === 'delivered' && (
+              <SmallButton 
+                variant="outline-warning"
+                to={`/product/returns/create/${order.id}/`}
+              >
+                <i className="fas fa-undo me-1"></i>Request Return
+              </SmallButton>
+            )}
             <SmallButton 
               variant="outline-primary"
               to="/product/"
             >
               <i className="fas fa-shopping-cart me-1"></i>Continue Shopping
             </SmallButton>
+            <a
+              href={`/api/orders/${order.id}/invoice/`}
+              className="btn btn-outline-secondary btn-sm subtext-btn-sm"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <i className="fas fa-file-pdf me-1"></i>Download Invoice
+            </a>
           </div>
         </div>
       </div>

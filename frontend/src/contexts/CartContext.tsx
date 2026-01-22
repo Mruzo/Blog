@@ -8,6 +8,22 @@ interface CartItem {
   item_total: number;
 }
 
+// Helper function to get CSRF token from cookies
+function getCookie(name: string): string | null {
+  let cookieValue: string | null = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === name + '=') {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
 interface CartContextType {
   cartItems: CartItem[];
   cartCount: number;
@@ -83,6 +99,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         headers['Authorization'] = `Token ${token}`;
       }
       
+      // Add CSRF token for POST requests
+      const csrfToken = getCookie('csrftoken') || 
+                       document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+      
       const response = await fetch('/api/cart/add/', {
         method: 'POST',
         headers,
@@ -134,6 +157,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       };
       if (token) {
         headers['Authorization'] = `Token ${token}`;
+      }
+      
+      // Add CSRF token for PUT requests
+      const csrfToken = getCookie('csrftoken') || 
+                       document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
       }
       
       const response = await fetch(`/api/cart/update/${productId}/`, {
@@ -205,6 +235,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         headers['Authorization'] = `Token ${token}`;
       }
       
+      // Add CSRF token for DELETE requests
+      const csrfToken = getCookie('csrftoken') || 
+                       document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+      
       const response = await fetch(`/api/cart/remove/${productId}/`, {
         method: 'DELETE',
         headers,
@@ -268,6 +305,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       };
       if (token) {
         headers['Authorization'] = `Token ${token}`;
+      }
+      
+      // Add CSRF token for DELETE requests
+      const csrfToken = getCookie('csrftoken') || 
+                       document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
       }
       
       const response = await fetch('/api/cart/clear/', {

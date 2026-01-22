@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 interface SmallButtonProps {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'outline-primary' | 'outline-secondary' | 'outline-danger' | 'success' | 'danger' | 'warning' | 'info';
+  variant?: 'primary' | 'secondary' | 'outline-primary' | 'outline-secondary' | 'outline-danger' | 'outline-warning' | 'success' | 'danger' | 'warning' | 'info';
   onClick?: (e?: React.MouseEvent) => void;
   to?: string;
   className?: string;

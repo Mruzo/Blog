@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import Product, SiteImage, Order, OrderItem, ShippingAddress, ReachOut, NewsletterSubscription
+from .models import (
+    Product, SiteImage, Order, OrderItem, ShippingAddress, ReachOut, NewsletterSubscription,
+    ReturnRequest, ReturnItem, CreditNote, Invoice, ReturnPolicy
+)
 
 
 class SiteImageSerializer(serializers.ModelSerializer):
@@ -163,3 +166,160 @@ class NewsletterSubscriptionSerializer(serializers.ModelSerializer):
             subscription.save()
         
         return subscription
+
+
+class ReturnItemSerializer(serializers.ModelSerializer):
+    """Serializer for return items"""
+    product_name = serializers.CharField(source='order_item.product.title', read_only=True)
+    product_uuid = serializers.UUIDField(source='order_item.product.uuid', read_only=True)
+    order_item_id = serializers.IntegerField(source='order_item.id', read_only=True)
+    
+    class Meta:
+        model = ReturnItem
+        fields = [
+            'id', 'order_item_id', 'product_name', 'product_uuid', 
+            'quantity', 'condition', 'condition_notes'
+        ]
+
+
+class ReturnRequestSerializer(serializers.ModelSerializer):
+    """Serializer for return requests"""
+    returnitem_set = ReturnItemSerializer(many=True, read_only=True)
+    order = OrderSerializer(read_only=True)
+    customer_name = serializers.CharField(source='customer.get_full_name', read_only=True)
+    customer_email = serializers.EmailField(source='customer.email', read_only=True)
+    refund_amount = serializers.SerializerMethodField()
+    credit_note = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ReturnRequest
+        fields = [
+            'id', 'order', 'customer', 'customer_name', 'customer_email',
+            'status', 'reason', 'reason_category', 'return_window_days',
+            'return_shipping_cost', 'return_shipping_paid_by',
+            'return_label_url', 'return_tracking_number', 'admin_notes',
+            'created_at', 'updated_at', 'approved_at', 'rejected_at', 'completed_at',
+            'returnitem_set', 'refund_amount', 'credit_note'
+        ]
+        read_only_fields = [
+            'id', 'customer', 'status', 'created_at', 'updated_at',
+            'approved_at', 'rejected_at', 'completed_at',
+            'return_label_url', 'return_tracking_number'
+        ]
+    
+    def get_refund_amount(self, obj):
+        """Calculate refund amount"""
+        from snmov.utils.returns import calculate_refund_amount
+        return float(calculate_refund_amount(obj))
+    
+    def get_credit_note(self, obj):
+        """Get credit note if exists"""
+        if hasattr(obj, 'credit_note'):
+            return {
+                'id': obj.credit_note.id,
+                'credit_note_number': obj.credit_note.credit_note_number,
+                'amount': float(obj.credit_note.amount),
+                'status': obj.credit_note.status,
+                'pdf_url': f'/api/credit-notes/{obj.credit_note.id}/pdf/' if obj.credit_note.pdf_path else None,
+            }
+        return None
+
+
+class ReturnRequestCreateSerializer(serializers.Serializer):
+    """Serializer for creating return requests"""
+    order_id = serializers.IntegerField()
+    reason = serializers.CharField(max_length=1000)
+    reason_category = serializers.ChoiceField(choices=ReturnRequest.REASON_CATEGORIES)
+    return_items = serializers.ListField(
+        child=serializers.DictField(),
+        min_length=1
+    )
+    return_shipping_paid_by = serializers.ChoiceField(
+        choices=[('customer', 'Customer'), ('store', 'Store')],
+        default='customer'
+    )
+    
+    def validate_order_id(self, value):
+        """Validate order exists and belongs to user"""
+        try:
+            order = Order.objects.get(id=value)
+        except Order.DoesNotExist:
+            raise serializers.ValidationError("Order not found")
+        
+        if self.context['request'].user != order.customer:
+            raise serializers.ValidationError("Order does not belong to you")
+        return value
+    
+    def validate_return_items(self, value):
+        """Validate return items"""
+        if not value:
+            raise serializers.ValidationError("At least one item must be returned")
+        
+        for item in value:
+            if 'order_item_id' not in item:
+                raise serializers.ValidationError("Each item must have order_item_id")
+            if 'quantity' not in item:
+                raise serializers.ValidationError("Each item must have quantity")
+            if 'condition' not in item:
+                raise serializers.ValidationError("Each item must have condition")
+            
+            quantity = item['quantity']
+            if quantity <= 0:
+                raise serializers.ValidationError("Quantity must be greater than 0")
+        
+        return value
+
+
+class CreditNoteSerializer(serializers.ModelSerializer):
+    """Serializer for credit notes"""
+    return_request_id = serializers.IntegerField(source='return_request.id', read_only=True)
+    pdf_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CreditNote
+        fields = [
+            'id', 'return_request_id', 'amount', 'credit_note_number',
+            'pdf_path', 'pdf_url', 'stripe_refund_id', 'status',
+            'refund_method', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'credit_note_number', 'pdf_path', 'stripe_refund_id',
+            'status', 'created_at', 'updated_at'
+        ]
+    
+    def get_pdf_url(self, obj):
+        """Get PDF download URL"""
+        if obj.pdf_path:
+            return f'/api/credit-notes/{obj.id}/pdf/'
+        return None
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    """Serializer for invoices"""
+    order_id = serializers.IntegerField(source='order.id', read_only=True)
+    pdf_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Invoice
+        fields = [
+            'id', 'order_id', 'invoice_number', 'pdf_path', 'pdf_url',
+            'generated_at', 'regenerated_at'
+        ]
+        read_only_fields = ['id', 'invoice_number', 'pdf_path', 'generated_at', 'regenerated_at']
+    
+    def get_pdf_url(self, obj):
+        """Get PDF download URL"""
+        if obj.pdf_path:
+            return f'/api/orders/{obj.order.id}/invoice/'
+        return None
+
+
+class AvailableReturnItemSerializer(serializers.Serializer):
+    """Serializer for available return items"""
+    order_item_id = serializers.IntegerField()
+    product_name = serializers.CharField()
+    product_uuid = serializers.UUIDField()
+    quantity_ordered = serializers.IntegerField()
+    quantity_returned = serializers.IntegerField()
+    available_quantity = serializers.IntegerField()
+    unit_price = serializers.DecimalField(max_digits=10, decimal_places=2)
