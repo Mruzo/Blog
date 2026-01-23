@@ -60,7 +60,7 @@ AWS_SECRET_ACCESS_KEY = config.get('section', 'VYBZ_SCRT_KEY')
 AWS_STORAGE_BUCKET_NAME = config.get('section', 'VYBZ_BUCKET_NAME')
 
 AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None
+AWS_DEFAULT_ACL = None  # Set per storage backend (public-read for static, private for media)
 
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
@@ -72,7 +72,7 @@ AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
 AWS_LOCATION = 'static'
 STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+STATICFILES_STORAGE = 'snm.storage_backends.StaticStorage'  # Uses custom storage with public-read ACL
 
 # Stripe API Configuration - Production
 # Override base settings to use PRODUCTION (live) keys
