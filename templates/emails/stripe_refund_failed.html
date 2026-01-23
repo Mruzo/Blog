@@ -1,0 +1,44 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>Refund Processing Issue</h1>
+    <p>We encountered an issue processing your refund</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <p>Hi {{ return_request.customer.first_name|default:return_request.customer.username }},</p>
+    
+    <p>We encountered an issue while processing your refund for Return Request #{{ return_request.id }}. Don't worry - we're working to resolve this.</p>
+    
+    <div class="order-details">
+        <h2>Refund Details</h2>
+        <p><strong>Credit Note #:</strong> {{ credit_note.credit_note_number }}</p>
+        <p><strong>Return Request #:</strong> {{ return_request.id }}</p>
+        <p><strong>Order #:</strong> {{ return_request.order.id }}</p>
+        <p><strong>Refund Amount:</strong> ${{ credit_note.amount|floatformat:2 }}</p>
+        
+        {% if error_message %}
+        <h3>Error Details:</h3>
+        <p>{{ error_message }}</p>
+        {% endif %}
+    </div>
+
+    <div class="message-box" style="border-left-color: #f44336;">
+        <p><strong>What We're Doing:</strong></p>
+        <p>Our team has been notified and is working to resolve this issue. We'll retry processing your refund automatically, or contact you if we need additional information.</p>
+        <p><strong>No Action Required:</strong> You don't need to do anything at this time. We'll send you another email once the refund has been successfully processed.</p>
+    </div>
+
+    <div class="button-center">
+        <a href="mailto:{{ support_email }}" class="button">Contact Support</a>
+        <a href="{{ return_url }}" class="button button-dark">View Return Details</a>
+    </div>
+    
+    <div class="message-box" style="margin-top: 20px;">
+        <p><strong>Questions?</strong> If you have any concerns or questions about this issue, please don't hesitate to contact our support team at <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+    </div>
+</div>
+{% endblock %}

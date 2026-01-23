@@ -267,6 +267,14 @@ const MyOrders: React.FC = () => {
                           <i className="fas fa-times me-1"></i>Cancel Order
                         </SmallButton>
                       )}
+                      {order.status === 'delivered' && (
+                        <SmallButton 
+                          variant="outline-warning"
+                          to={`/product/returns/create/${order.id}/`}
+                        >
+                          <i className="fas fa-undo me-1"></i>Request Return
+                        </SmallButton>
+                      )}
                     </div>
                     <div className="text-muted subtext-btn-sm">
                       Total: <span className="fw-bold">${order.total.toFixed(2)}</span>

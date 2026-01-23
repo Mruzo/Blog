@@ -1,0 +1,41 @@
+Return Request Approved - Return #{{ return_request.id }}
+
+Hi {{ return_request.customer.first_name|default:return_request.customer.username }},
+
+Great news! Your return request for Order #{{ return_request.order.id }} has been approved.
+
+Return Request Details:
+-----------------------
+Return Request #: {{ return_request.id }}
+Order #: {{ return_request.order.id }}
+Approved Date: {{ return_request.approved_at|date:"F j, Y" }}
+
+Refund Details:
+--------------
+Refund Amount: ${{ credit_note.amount|floatformat:2 }}
+Credit Note #: {{ credit_note.credit_note_number }}
+Refund Method: {{ credit_note.refund_method }}
+
+Items to Return:
+---------------
+{% for return_item in return_request.returnitem_set.all %}
+  - {{ return_item.quantity }}x {{ return_item.order_item.product.title }}
+{% endfor %}
+
+Next Steps:
+----------
+1. Package the items securely
+2. We'll send you a return shipping label shortly
+3. Ship the package using the provided label
+4. Once we receive your return, we'll process your refund
+
+Processing Time: Refunds typically appear in your account within 5-10 business days after we receive your return.
+
+{% if credit_note_url %}
+Download your credit note: {{ credit_note_url }}
+{% endif %}
+View return details: {{ return_url }}
+
+If you have any questions, please contact our support team.
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.

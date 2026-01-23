@@ -6,6 +6,22 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import BackButton from '../components/BackButton';
 
+// Helper function to get CSRF token from cookies
+function getCookie(name: string): string | null {
+  let cookieValue: string | null = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === name + '=') {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
 interface ShippingAddress {
   full_name: string;
   address_line_1: string;
@@ -144,6 +160,13 @@ const Checkout: React.FC = () => {
       if (token) {
         headers['Authorization'] = `Token ${token}`;
       }
+      
+      // Add CSRF token for POST requests
+      const csrfToken = getCookie('csrftoken') || 
+                       document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
 
       const response = await fetch('/api/checkout/', {
         method: 'POST',
@@ -187,12 +210,21 @@ const Checkout: React.FC = () => {
       if (saveAddress && currentUser) {
         try {
           const token = localStorage.getItem('authToken');
+          const saveHeaders: HeadersInit = {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          };
+          
+          // Add CSRF token for POST requests
+          const saveCsrfToken = getCookie('csrftoken') || 
+                               document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+          if (saveCsrfToken) {
+            saveHeaders['X-CSRFToken'] = saveCsrfToken;
+          }
+          
           await fetch('/api/addresses/save/', {
             method: 'POST',
-            headers: {
-              'Authorization': `Token ${token}`,
-              'Content-Type': 'application/json',
-            },
+            headers: saveHeaders,
             credentials: 'include',
             body: JSON.stringify({
               ...formData,

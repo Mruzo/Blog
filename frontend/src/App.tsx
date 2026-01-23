@@ -13,6 +13,9 @@ import SelectShipping from './pages/SelectShipping';
 import PaymentSuccess from './pages/PaymentSuccess';
 import MyOrders from './pages/MyOrders';
 import OrderDetail from './pages/OrderDetail';
+import ReturnRequest from './pages/ReturnRequest';
+import ReturnRequestList from './pages/ReturnRequestList';
+import ReturnRequestDetail from './pages/ReturnRequestDetail';
 import Studios from './pages/Studios';
 import StudioDetail from './pages/StudioDetail';
 import MyStudio from './pages/MyStudio';
@@ -79,6 +82,11 @@ function AppContent() {
           <Route path="/product/payment/success/" element={<PaymentSuccess />} />
           <Route path="/product/my-orders/" element={<MyOrders />} />
           <Route path="/product/order/:orderId/" element={<OrderDetail />} />
+          
+          {/* Return/Refund URLs */}
+          <Route path="/product/returns/create/:orderId/" element={<ReturnRequest />} />
+          <Route path="/product/returns/list/" element={<ReturnRequestList />} />
+          <Route path="/product/returns/:returnId/" element={<ReturnRequestDetail />} />
           
           {/* Immersive Comics URLs - Matching Django exactly */}
           <Route path="/immersivecomics/" element={<Stories />} />

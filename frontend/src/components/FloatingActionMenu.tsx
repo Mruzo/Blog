@@ -196,8 +196,8 @@ const FloatingActionMenu: React.FC = () => {
           aria-label="Toggle action menu"
         >
           <i 
-            key={isMobile ? (isExpanded ? 'arrow-down' : 'arrow-up') : 'plus'}
-            className={`fas ${isMobile ? (isExpanded ? 'fa-arrow-down' : 'fa-arrow-up') : 'fa-plus'} fab-main-icon`}
+            key={isMobile ? (isExpanded ? 'chevron-down' : 'chevron-up') : 'plus'}
+            className={`fas ${isMobile ? (isExpanded ? 'fa-chevron-down' : 'fa-chevron-up') : 'fa-plus'} fab-main-icon`}
             style={{ 
               fontSize: '28px',
               color: '#fff', 

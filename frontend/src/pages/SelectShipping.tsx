@@ -4,6 +4,22 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import BackButton from '../components/BackButton';
 
+// Helper function to get CSRF token from cookies
+function getCookie(name: string): string | null {
+  let cookieValue: string | null = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === name + '=') {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
 interface ShippingRate {
   object_id: string;
   provider: string;
@@ -100,6 +116,13 @@ const SelectShipping: React.FC = () => {
       };
       if (token) {
         headers['Authorization'] = `Token ${token}`;
+      }
+      
+      // Add CSRF token for POST requests
+      const csrfToken = getCookie('csrftoken') || 
+                       document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
       }
       
       const response = await fetch(`/api/orders/${orderId}/select-shipping/`, {
