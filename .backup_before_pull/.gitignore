@@ -1,0 +1,1201 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Django
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static_root
+/static-collected
+*.local.py
+.env
+.env.local
+.env.*.local
+local_settings.py
+settings_local.py
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+vybzenv/
+*env/
+pyvenv.cfg
+
+# Node.js / React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# React Build
+# frontend/build/  # Commented out - we want to commit build folder for production deployment
+frontend/.pnp
+frontend/.pnp.js
+
+# Testing
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
+junit.xml
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Django specific
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static_root
+/static-collected
+
+# Production static files (generated)
+vybzapp/live-static/
+vybzapp/static-root/
+live-static/
+static-root/
+
+# Archived documentation (moved by archive_historical_docs.sh)
+docs/archive/
+
+# Media files (user uploads)
+vybzapp/media/
+media/
+
+# Virtual environment artifacts in subdirectories (accidentally created)
+vybzapp/snmov/bin/
+vybzapp/snmov/lib64/
+vybzapp/snmov/pyvenv.cfg
+vybzapp/vybzapp/
+
+# Test backups and temporary test files
+test-backup-*/
+test-backup-*.*/
+*.test.js
+test-*.html
+test-*.js
+cookies.txt
+debug-*.js
+detect-*.js
+verify-*.js
+cleanup-*.js
+remove-*.js
+run-*.js
+run-*.sh
+
+# Log files (JSON logs in icvybz/logs/)
+vybzapp/icvybz/logs/
+*.json.log
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+coverage/
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Django migrations (keep migrations, but ignore if you want to reset)
+# Uncomment the line below if you want to ignore migrations
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Secrets and credentials
+secrets.json
+credentials.json
+*.pem
+*.key
+*.crt
+
+# Local configuration
+local_settings.py
+settings_local.py
+config_local.py
+
+# Database backups
+*.sql
+*.dump
+*.sql.gz
+
+# Backup files
+*.backup
+backup/
+backups/
+
+# Cache directories
+.cache/
+*.cache
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.parcel-cache
+
+# Next.js
+.next/
+out/
+
+# Nuxt.js
+.nuxt/
+dist/
+
+# Gatsby
+.cache/
+public
+
+# Storybook
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
+
+
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Django
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static_root
+/static-collected
+*.local.py
+.env
+.env.local
+.env.*.local
+local_settings.py
+settings_local.py
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+vybzenv/
+*env/
+pyvenv.cfg
+
+# Node.js / React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# React Build
+# frontend/build/  # Commented out - we want to commit build folder for production deployment
+frontend/.pnp
+frontend/.pnp.js
+
+# Testing
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
+junit.xml
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Django specific
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static_root
+/static-collected
+
+# Production static files (generated)
+vybzapp/live-static/
+vybzapp/static-root/
+live-static/
+static-root/
+
+# Archived documentation (moved by archive_historical_docs.sh)
+docs/archive/
+
+# Media files (user uploads)
+vybzapp/media/
+media/
+
+# Virtual environment artifacts in subdirectories (accidentally created)
+vybzapp/snmov/bin/
+vybzapp/snmov/lib64/
+vybzapp/snmov/pyvenv.cfg
+vybzapp/vybzapp/
+
+# Test backups and temporary test files
+test-backup-*/
+test-backup-*.*/
+*.test.js
+test-*.html
+test-*.js
+cookies.txt
+debug-*.js
+detect-*.js
+verify-*.js
+cleanup-*.js
+remove-*.js
+run-*.js
+run-*.sh
+
+# Log files (JSON logs in icvybz/logs/)
+vybzapp/icvybz/logs/
+*.json.log
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+coverage/
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Django migrations (keep migrations, but ignore if you want to reset)
+# Uncomment the line below if you want to ignore migrations
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Secrets and credentials
+secrets.json
+credentials.json
+*.pem
+*.key
+*.crt
+
+# Local configuration
+local_settings.py
+settings_local.py
+config_local.py
+
+# Database backups
+*.sql
+*.dump
+*.sql.gz
+
+# Backup files
+*.backup
+backup/
+backups/
+
+# Cache directories
+.cache/
+*.cache
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.parcel-cache
+
+# Next.js
+.next/
+out/
+
+# Nuxt.js
+.nuxt/
+dist/
+
+# Gatsby
+.cache/
+public
+
+# Storybook
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
+
+
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Django
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static_root
+/static-collected
+*.local.py
+.env
+.env.local
+.env.*.local
+local_settings.py
+settings_local.py
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+vybzenv/
+*env/
+pyvenv.cfg
+
+# Node.js / React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# React Build
+# frontend/build/  # Commented out - we want to commit build folder for production deployment
+frontend/.pnp
+frontend/.pnp.js
+
+# Testing
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
+junit.xml
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Django specific
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static_root
+/static-collected
+
+# Production static files (generated)
+vybzapp/live-static/
+vybzapp/static-root/
+live-static/
+static-root/
+
+# Archived documentation (moved by archive_historical_docs.sh)
+docs/archive/
+
+# Media files (user uploads)
+vybzapp/media/
+media/
+
+# Virtual environment artifacts in subdirectories (accidentally created)
+vybzapp/snmov/bin/
+vybzapp/snmov/lib64/
+vybzapp/snmov/pyvenv.cfg
+vybzapp/vybzapp/
+
+# Test backups and temporary test files
+test-backup-*/
+test-backup-*.*/
+*.test.js
+test-*.html
+test-*.js
+cookies.txt
+debug-*.js
+detect-*.js
+verify-*.js
+cleanup-*.js
+remove-*.js
+run-*.js
+run-*.sh
+
+# Log files (JSON logs in icvybz/logs/)
+vybzapp/icvybz/logs/
+*.json.log
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+coverage/
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Django migrations (keep migrations, but ignore if you want to reset)
+# Uncomment the line below if you want to ignore migrations
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Secrets and credentials
+secrets.json
+credentials.json
+*.pem
+*.key
+*.crt
+
+# Local configuration
+local_settings.py
+settings_local.py
+config_local.py
+
+# Database backups
+*.sql
+*.dump
+*.sql.gz
+
+# Backup files
+*.backup
+backup/
+backups/
+
+# Cache directories
+.cache/
+*.cache
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.parcel-cache
+
+# Next.js
+.next/
+out/
+
+# Nuxt.js
+.nuxt/
+dist/
+
+# Gatsby
+.cache/
+public
+
+# Storybook
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
+
+
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Django
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static_root
+/static-collected
+*.local.py
+.env
+.env.local
+.env.*.local
+local_settings.py
+settings_local.py
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+vybzenv/
+*env/
+pyvenv.cfg
+
+# Node.js / React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# React Build
+# frontend/build/  # Commented out - we want to commit build folder for production deployment
+frontend/.pnp
+frontend/.pnp.js
+
+# Testing
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
+junit.xml
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Django specific
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static_root
+/static-collected
+
+# Production static files (generated)
+vybzapp/live-static/
+vybzapp/static-root/
+live-static/
+static-root/
+
+# Archived documentation (moved by archive_historical_docs.sh)
+docs/archive/
+
+# Media files (user uploads)
+vybzapp/media/
+media/
+
+# Virtual environment artifacts in subdirectories (accidentally created)
+vybzapp/snmov/bin/
+vybzapp/snmov/lib64/
+vybzapp/snmov/pyvenv.cfg
+vybzapp/vybzapp/
+
+# Test backups and temporary test files
+test-backup-*/
+test-backup-*.*/
+*.test.js
+test-*.html
+test-*.js
+cookies.txt
+debug-*.js
+detect-*.js
+verify-*.js
+cleanup-*.js
+remove-*.js
+run-*.js
+run-*.sh
+
+# Log files (JSON logs in icvybz/logs/)
+vybzapp/icvybz/logs/
+*.json.log
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+coverage/
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Django migrations (keep migrations, but ignore if you want to reset)
+# Uncomment the line below if you want to ignore migrations
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Secrets and credentials
+secrets.json
+credentials.json
+*.pem
+*.key
+*.crt
+
+# Local configuration
+local_settings.py
+settings_local.py
+config_local.py
+
+# Database backups
+*.sql
+*.dump
+*.sql.gz
+
+# Backup files
+*.backup
+backup/
+backups/
+
+# Cache directories
+.cache/
+*.cache
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.parcel-cache
+
+# Next.js
+.next/
+out/
+
+# Nuxt.js
+.nuxt/
+dist/
+
+# Gatsby
+.cache/
+public
+
+# Storybook
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
+

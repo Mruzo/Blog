@@ -1,0 +1,64 @@
+JUSTVYBZ
+Done fixing crispy forms
+Done making www.justvybz.com work
+    copy and paste etc/siet/settings.ini
+    add domain name to droplet
+    create postgres database on server
+    env/bin/pip install --upgrade pip
+    create etc/nginx/sites-available/site
+    enable nginx site; sudo ln -s /etc/nginx/sites-available/site /etc/nginx/sites-enabled
+    systemctl status nginx.service
+    make migrations, collect static
+    run gunicorn
+Done designing the UI?
+    Find complimentary font for headings and titles
+    Match logo border color to other border colors
+        Replace logo
+        update colors
+        change navbar hover from fill to border
+        Change footer from fill to border
+        center logo with absolute positioning
+        Replace animation with "welcome" text, add image/graphic, add order now
+        update all buttons to #ffbc00(yellow) and #dc2229(red)
+        add category to database
+        fill in product 1 with images
+        fix mobile hamburger menu - created another one on the opposite side, and adjusted opacity to 0
+        button to amazon page
+    Done centralizing the landing message
+    Done fixing the carousel animation
+    Done updating other pages?
+        #Story: serif font
+        Contact
+        Products
+        
+    Update views
+Done setting up the email
+Done prototyping the AR feature
+Done including a 3-step process to using AR feature
+Done updating the AR feature for iphones?
+
+ADAMADUKA
+Done setting up UI
+Done deploying
+	install virtual env
+	init git
+	install requirements.txt in venv
+	Pull website to server
+	update config parser in the settings.pro file for environment variables
+	run migration
+	Create socket
+	Make migrations
+	Collectstatic
+	Run systemd service
+	Run service
+		env/bin/python manage.py runsever --settings 'snm.settings.pro'
+Done figuring out the categories and subcategories?
+Done figuring out the contact link?
+
+
+	
+
+MISTERUZO
+Done uzo di mma, a gba ya mbeozo
+Done getting the s3 links to work: cloned the bucket to create a new link
+
