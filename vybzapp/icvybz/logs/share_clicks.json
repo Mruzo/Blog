@@ -1,0 +1,42 @@
+[
+  {
+    "timestamp": "2025-08-06T23:17:20.768669",
+    "platform": "facebook",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/"
+  },
+  {
+    "timestamp": "2025-08-06T23:17:21.265544",
+    "platform": "x_twitter",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/"
+  },
+  {
+    "timestamp": "2025-08-06T23:17:22.140498",
+    "platform": "linkedin",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/"
+  },
+  {
+    "timestamp": "2025-08-06T23:17:22.806887",
+    "platform": "reddit",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/"
+  },
+  {
+    "timestamp": "2025-08-06T23:17:23.384482",
+    "platform": "copy_link",
+    "episode_id": 1,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+    "referrer": "http://127.0.0.1:8000/immersivecomics/seasons/1/episodes/1/"
+  }
+]

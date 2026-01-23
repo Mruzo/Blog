@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Add Season to {{ story.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4" style="max-width: 1200px;">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">Add Season to "{{ story.title }}"</h1>
+            <p class="text-muted mb-0">Create a new season with 3D models and episodes</p>
+        </div>
+        <a href="{% url 'immersivecomics:story_manage' pk=story.pk %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Story
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-layer-group me-2"></i>Season Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-4">
+                                    <label for="{{ form.season_number.id_for_label }}" class="form-label fw-bold">
+                                        {{ form.season_number.label }}
+                                    </label>
+                                    {{ form.season_number }}
+                                    {% if form.season_number.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.season_number.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Sequential number for this season</div>
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <div class="mb-4">
+                                    <label for="{{ form.title.id_for_label }}" class="form-label fw-bold">
+                                        {{ form.title.label }}
+                                    </label>
+                                    {{ form.title }}
+                                    {% if form.title.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.title.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">
+                                {{ form.description.label }}
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.description.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Describe what happens in this season</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="{{ form.model_gltf.id_for_label }}" class="form-label fw-bold">
+                                        {{ form.model_gltf.label }}
+                                    </label>
+                                    {{ form.model_gltf }}
+                                    {% if form.model_gltf.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.model_gltf.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">3D model in GLTF/GLB format for web viewing</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label for="{{ form.model_usdz.id_for_label }}" class="form-label fw-bold">
+                                        {{ form.model_usdz.label }}
+                                    </label>
+                                    {{ form.model_usdz }}
+                                    {% if form.model_usdz.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.model_usdz.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">3D model in USDZ format for AR viewing on iOS</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Create Season
+                            </button>
+                            <a href="{% url 'immersivecomics:story_manage' pk=story.pk %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-cube me-2"></i>3D Model Requirements</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-primary">GLTF/GLB Format</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-1"></i>Web-compatible format</li>
+                            <li><i class="fas fa-check text-success me-1"></i>Supports animations</li>
+                            <li><i class="fas fa-check text-success me-1"></i>Optimized for performance</li>
+                            <li><i class="fas fa-check text-success me-1"></i>Maximum 50MB limit</li>
+                            <li><i class="fas fa-exclamation-triangle text-warning me-1"></i>Avoid Draco compression for iOS compatibility</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-primary">USDZ Format</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-1"></i>iOS AR compatibility</li>
+                            <li><i class="fas fa-check text-success me-1"></i>Apple's preferred format</li>
+                            <li><i class="fas fa-check text-success me-1"></i>Smaller file sizes</li>
+                            <li><i class="fas fa-check text-success me-1"></i>Maximum 25MB recommended</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning alert-sm">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Note:</strong> Both formats are optional, but recommended for the best user experience.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Season Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Clear Structure:</strong> Each season should have a distinct story arc
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Consistent Models:</strong> Use the same 3D models throughout the season
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Episode Planning:</strong> Plan your episodes before creating them
+                        </li>
+                        <li>
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Quality Assets:</strong> Use high-quality 3D models for better immersion
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.form-label {
+    color: #495057;
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.alert-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
+

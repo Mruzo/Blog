@@ -1,0 +1,29 @@
+Return Request Update - Return #{{ return_request.id }}
+
+Hi {{ return_request.customer.first_name|default:return_request.customer.username }},
+
+We've reviewed your return request for Order #{{ return_request.order.id }}, and unfortunately, we're unable to approve it at this time.
+
+Return Request Details:
+-----------------------
+Return Request #: {{ return_request.id }}
+Order #: {{ return_request.order.id }}
+Request Date: {{ return_request.created_at|date:"F j, Y" }}
+Status: {{ return_request.get_status_display }}
+
+{% if rejection_reason %}
+Reason for Rejection:
+--------------------
+{{ rejection_reason }}
+{% endif %}
+
+What You Can Do:
+---------------
+If you believe this decision was made in error, or if you have additional information that might help us reconsider, please contact our support team. We're here to help!
+
+View return request: {{ return_url }}
+Contact support: Justvybz@justvybz.com
+
+If you have any questions, please contact our support team.
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.

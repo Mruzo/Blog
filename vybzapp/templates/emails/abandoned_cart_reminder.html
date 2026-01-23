@@ -1,0 +1,60 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>Don't Forget Your Cart!</h1>
+    <p>You have items waiting for you</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <p>Hi {{ user.first_name|default:user.username }},</p>
+    
+    <p>We noticed you added some items to your cart but haven't completed your purchase yet.</p>
+    
+    <div class="order-details">
+        <h2>Your Cart Items:</h2>
+        <ul>
+        {% for item in cart_items %}
+            <li>
+                <strong>{{ item.product.title }}</strong> - 
+                Quantity: {{ item.quantity }} - 
+                ${{ item.product.get_discounted_price|floatformat:2 }} each
+            </li>
+        {% endfor %}
+        </ul>
+        
+        <p><strong>Total:</strong> ${{ total_price|floatformat:2 }}</p>
+    </div>
+
+    <div class="button-center">
+        <a href="{{ cart_url }}" class="button">Complete Your Purchase</a>
+    </div>
+    
+    {% if days_abandoned == 1 %}
+    <p>Complete your purchase within the next 48 hours to secure these items!</p>
+    {% elif days_abandoned >= 3 %}
+    <p>These items are still available, but stock is limited. Complete your purchase soon!</p>
+    {% else %}
+    <p>Don't miss out! Complete your purchase to secure these items.</p>
+    {% endif %}
+    
+    <div class="message-box">
+        <p><strong>Need help?</strong> If you have any questions about these items or need assistance, our support team is here to help.</p>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+

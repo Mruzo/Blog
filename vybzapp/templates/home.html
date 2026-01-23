@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block meta_extend %}
+  <meta property="og:image" content="{{ random_image_url }}">
+  <meta name="twitter:image" content="{{ random_image_url }}">
+
+  <!-- Fallback if no image is available -->
+  {% if random_image_url == "https://default_image_url.jpg" %}
+    <meta property="og:image" content="https://default_image_url.jpg">
+    <meta name="twitter:image" content="https://default_image_url.jpg">
+  {% endif %}
+{% endblock %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Test smooth navigation functionality
+    var testBtn = document.getElementById('testSmoothNav');
+    if (testBtn) {
+        testBtn.addEventListener('click', function() {
+            console.log('Test button clicked - testing smooth navigation...');
+            
+            // Test loading spinner
+            var spinner = document.getElementById('loadingSpinner');
+            if (spinner) {
+                spinner.classList.add('show');
+                console.log('Loading spinner shown');
+                
+                // Hide after 2 seconds
+                setTimeout(function() {
+                    spinner.classList.remove('show');
+                    console.log('Loading spinner hidden');
+                }, 2000);
+            } else {
+                console.log('Loading spinner not found');
+            }
+            
+            // Test page transition
+            var pageContent = document.querySelector('.page-content');
+            if (pageContent) {
+                pageContent.classList.add('page-transitioning');
+                console.log('Page transition effect added');
+                
+                // Remove after 1 second
+                setTimeout(function() {
+                    pageContent.classList.remove('page-transitioning');
+                    console.log('Page transition effect removed');
+                }, 1000);
+            } else {
+                console.log('Page content wrapper not found');
+            }
+        });
+    }
+    
+    // Check if smooth navigation elements exist
+    console.log('=== Smooth Navigation Debug ===');
+    console.log('Page content wrapper:', document.querySelector('.page-content'));
+    console.log('Loading spinner:', document.getElementById('loadingSpinner'));
+    console.log('Spinner element:', document.querySelector('.spinner'));
+    console.log('Internal links found:', document.querySelectorAll('a[href^="/"]').length);
+    console.log('================================');
+    
+    // Add manual test function to global scope
+    window.testSmoothNav = function() {
+        console.log('=== Manual Smooth Navigation Test ===');
+        
+        // Test if the function exists
+        if (typeof window.initSmoothNavigation === 'function') {
+            console.log('initSmoothNavigation function found, calling it...');
+            window.initSmoothNavigation();
+        } else {
+            console.log('initSmoothNavigation function NOT found!');
+        }
+        
+        // Test finding links
+        var links = document.querySelectorAll('a[href^="/"]');
+        console.log('Found', links.length, 'internal links');
+        
+        links.forEach(function(link, index) {
+            console.log('Link', index + 1, ':', link.href, 'Text:', link.textContent.trim());
+            console.log('Has smooth nav attached:', link.hasAttribute('data-smooth-nav-attached'));
+        });
+        
+        console.log('=== End Manual Test ===');
+    };
+    
+    console.log('Manual test function available: window.testSmoothNav()');
+});
+</script>
+{% endblock %}
+
+
+{% block content %}
+
+
+
+
+
+<section class="row my-3 position-relative" style="background-color: inherit; display: flex; justify-content: center; align-items: center; min-height: 22vh;">
+    <div class="col card mx-auto position-relative rounded-0 border-0 d-flex justify-content-center align-items-center" style="background-color:inherit;">
+
+        <div class="text-center land-border" id="" style="opacity: 1">
+
+            <h2 class="landtext">
+                    VIBRANT COMFORT FOR YOUR WORK OR PLAY SPACE
+            </h2>
+            
+            <!-- Test button for smooth navigation -->
+            <div class="mt-3">
+                <button id="testSmoothNav" class="btn btn-primary">
+                    Test Smooth Navigation
+                </button>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+
+
+    <!-- <div id="ar" class="row my-2">
+        <div class="col-md-6 d-flex flex-column align-items-center justify-content-center mx-auto">
+
+            <div class="card w-100 border-0">
+                <div class="card-header subtext-md text-center py-0" style="background-color: #343a40; color: #fcfbfb;">
+                    see it on your desk
+                </div>
+                <ol class="list-group list-group-numbered">
+                    <li class="list-group-item subtext-sm">1. Touch <b>"START AR"</b> and allow Camera access</li>
+                    <li class="list-group-item subtext-sm">2. Point Camera at desk </li>
+                    <li class="list-group-item subtext-sm">3. Wait for the reticle(white circle) to appear</li>
+                    <li class="list-group-item subtext-sm">4. Tap the screen</li>
+                </ol>
+            </div>
+
+            <div id="canvas" class="mx-1"></div>
+            <div id="ar-button" class="d-flex justify-content-center my-0">
+                
+            </div>
+        </div>
+    </div> -->
+
+
+
+
+
+
+
+
+
+
+    <div class="row border-top bd-light mt-5 mx-auto">
+
+        <div class="container text-center test-border mx-auto" id="" style="opacity: 1">
+
+            <h5 class="subtext my-2">
+                about us
+            </h5>
+        </div>
+        
+        <div class="container text-center my-1 mx-auto" id="" style="opacity: 1">
+            <div class="card col-md-6 mx-auto bg-light border-0">
+                <div class="card-body p-0">
+                    <!-- Use 'white-space: pre-wrap' to preserve line breaks and wrap text -->
+                    <pre class="card-text subtext-sm" style="white-space: pre-wrap;">
+                        {{ about.body|safe }}
+                    </pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row border-top bd-light mb-5 mx-auto">
+
+        <div class="container text-center test-border mt-0 mx-auto" id="" style="opacity: 1">
+
+            <h5 class="subtext my-2">
+                for feedback & enquiries
+            </h5>
+        </div>
+        
+        <div class="container text-center my-3 mx-auto" style="opacity: 1">
+            <div class="card mt-2 col-6 col-md-4 col-lg-2 mx-auto bg-light border-0 p-0">
+                <a class="btn subtext-btn-sm shadow p-1 mb-5 bg-body-tertiary justify-content-center font-weight-bolder text-dark rounded-5 my-auto" 
+                   role="button" 
+                   aria-disabled="true" 
+                   style="background-color: #FFBC00;" 
+                   href="/contact"  
+                   target="_blank">
+                    <strong>email us</strong>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

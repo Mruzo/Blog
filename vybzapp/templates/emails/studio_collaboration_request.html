@@ -1,0 +1,30 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>New Collaboration Request</h1>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <p>Hello {{ studio.owner.first_name|default:studio.owner.username }},</p>
+    
+    <p><strong>{{ request.requester.first_name|default:request.requester.username }}</strong> ({{ request.requester.email }}) has requested to collaborate on your studio <strong>"{{ studio.name }}"</strong>.</p>
+    
+    <div class="message-box">
+        <p><strong>Requested Role:</strong> {{ request.get_role_display }}</p>
+        {% if request.message %}
+        <p><strong>Message:</strong></p>
+        <p>{{ request.message }}</p>
+        {% endif %}
+    </div>
+
+    <div class="button-center">
+        <a href="{{ accept_url }}" class="button">Accept Request</a>
+        <a href="{{ decline_url }}" class="button button-decline">Decline</a>
+    </div>
+
+    <p>You can also manage all collaboration requests from your studio dashboard.</p>
+</div>
+{% endblock %}

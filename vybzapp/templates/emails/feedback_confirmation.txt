@@ -1,0 +1,30 @@
+Thank You for Your Feedback
+
+Hi {{ feedback.full_name }},
+
+Thank you for reaching out to us! We've successfully received your feedback and will get back to you as soon as possible.
+
+Your Message:
+Subject: {{ feedback.subject }}
+{{ feedback.content }}
+
+Our support team typically responds within 24-48 hours. If your inquiry is urgent, please don't hesitate to contact us directly at Justvybz@justvybz.com.
+
+We appreciate your feedback and look forward to helping you!
+
+If you have any questions, please contact our support team at Justvybz@justvybz.com.
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.
+
+
+
+
+
+
+
+
+
+
+
+
+

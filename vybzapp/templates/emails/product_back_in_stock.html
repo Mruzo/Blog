@@ -1,0 +1,56 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>Product Back in Stock!</h1>
+    <p>Great news - the product you were waiting for is now available</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <p>Hi {{ notification.first_name }},</p>
+    
+    <p>Great news! The product you requested to be notified about is now back in stock.</p>
+    
+    <div class="order-details">
+        <h2>{{ notification.product.title }}</h2>
+        {% if notification.product.description %}
+        <p>{{ notification.product.description }}</p>
+        {% endif %}
+        
+        <p><strong>Price:</strong> ${{ notification.product.get_discounted_price|floatformat:2 }}</p>
+        {% if notification.product.discount_percentage > 0 %}
+        <p><strong>Original Price:</strong> <span style="text-decoration: line-through;">${{ notification.product.price|floatformat:2 }}</span></p>
+        <p><strong>Discount:</strong> {{ notification.product.discount_percentage }}% off</p>
+        {% endif %}
+        
+        {% if notification.product.stock %}
+        <p><strong>Stock Available:</strong> {{ notification.product.stock }} units</p>
+        {% endif %}
+    </div>
+
+    <div class="button-center">
+        <a href="{{ product_url }}" class="button">View Product</a>
+    </div>
+    
+    <p>Hurry! Stock is limited and this product may sell out quickly.</p>
+    
+    <div class="message-box">
+        <p><strong>Note:</strong> You will only receive this notification once. If you'd like to be notified again when this product goes out of stock and comes back, please sign up for notifications again on the product page.</p>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+

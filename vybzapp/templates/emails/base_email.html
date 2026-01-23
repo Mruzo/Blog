@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Email Client Reset */
+        body, table, td, p, a, li, blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            outline: none;
+            text-decoration: none;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        /* Base Styles */
+        body {
+            font-family: 'Quicksand', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            width: 100% !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            background: #f4f4f4;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 24px;
+            font-family: 'Quicksand', Arial, sans-serif;
+            font-weight: 600;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            color: #666;
+        }
+        
+        /* Content */
+        .content {
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .content p {
+            margin: 10px 0;
+        }
+        
+        /* Message Box */
+        .message-box {
+            background: #f9f9f9;
+            padding: 15px;
+            border-left: 4px solid #4CAF50;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        /* Order Details Box */
+        .order-details {
+            background: #f9f9f9;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .order-details h2,
+        .order-details h3 {
+            margin-top: 0;
+            color: #333;
+            font-family: 'Quicksand', Arial, sans-serif;
+            font-weight: 600;
+        }
+        
+        .order-details ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        /* Buttons */
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+            font-family: 'Quicksand', Arial, sans-serif;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .button:hover {
+            background: #45a049;
+        }
+        
+        .button-decline,
+        .cancel-button {
+            background: #f44336;
+        }
+        
+        .button-decline:hover,
+        .cancel-button:hover {
+            background: #da190b;
+        }
+        
+        .button-center {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 30px;
+        }
+        
+        .footer p {
+            margin: 5px 0;
+        }
+        
+        /* Links */
+        a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Lists */
+        ol, ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        /* Text Utilities */
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-small {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        /* Logo */
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+        
+        /* Warning Box */
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        
+        /* Social Links */
+        .social-links {
+            margin: 20px 0;
+        }
+        
+        .social-links a {
+            margin: 0 10px;
+            color: #414042;
+            text-decoration: none;
+        }
+        
+        /* Dark Button Variant */
+        .button-dark {
+            background-color: #414042;
+        }
+        
+        .button-dark:hover {
+            background-color: #2d2e2f;
+        }
+        
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 10px !important;
+                margin: 0 !important;
+            }
+            
+            .header {
+                padding: 15px 10px !important;
+            }
+            
+            .header h1 {
+                font-size: 20px !important;
+            }
+            
+            .content {
+                padding: 15px 10px !important;
+            }
+            
+            .button {
+                display: block !important;
+                width: 100% !important;
+                margin: 10px 0 !important;
+                padding: 12px 20px !important;
+                box-sizing: border-box !important;
+            }
+            
+            .footer {
+                padding: 15px 10px !important;
+            }
+        }
+    </style>
+    {% block extra_style %}{% endblock %}
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; width: 100%; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4; margin: 0; padding: 0;">
+        <tr>
+            <td align="center" style="padding: 20px 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+                    <tr>
+                        <td style="padding: 0 10px;">
+                            <div class="container" style="max-width: 600px; width: 100%; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+                                {% block header %}{% endblock %}
+                                
+                                {% block content %}{% endblock %}
+                                
+                    {% block footer %}
+                    <div class="footer">
+                        <p>If you have any questions, please contact our support team at <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a>.</p>
+                        <p>
+                            <a href="{{ site_url|default:'https://www.justvybz.com' }}{% url 'privacy' %}">Privacy Policy</a> |
+                            <a href="{{ site_url|default:'https://www.justvybz.com' }}{% url 'terms' %}">Terms of Service</a> |
+                            <a href="{{ site_url|default:'https://www.justvybz.com' }}{% url 'cookie_policy' %}">Cookie Policy</a>
+                        </p>
+                        {% if unsubscribe_url %}
+                        <p style="font-size: 11px; color: #999; margin-top: 15px;">
+                            <a href="{{ unsubscribe_url }}" style="color: #999; text-decoration: underline;">Unsubscribe from these emails</a>
+                        </p>
+                        {% endif %}
+                        <p>© {% now "Y" %} Justvybz Inc. All rights reserved.</p>
+                    </div>
+                    {% endblock %}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
