@@ -254,7 +254,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
-    os.path.join(BASE_DIR, 'frontend', 'build'),  # React build folder for production static files (includes static/ subdirectory)
+    os.path.join(BASE_DIR, 'frontend', 'build', 'static'),  # React build static files (js, css, media) - point directly to static/ subdirectory to avoid double "static/" in S3 path
 ]
 
 # Default Sender Address (fallback if admin user's address is not found)
