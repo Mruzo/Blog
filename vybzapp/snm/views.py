@@ -99,9 +99,22 @@ class ReactAppView(TemplateView):
         except FileNotFoundError:
             return HttpResponse('React app not found. Please build the frontend.', status=404)
 class HomePageView(FormView, TemplateView):
-    # Server-rendered homepage (React SPA is served via catch-all where needed)
-    template_name = "home.html"
+    template_name = None  # We'll serve React directly
     form_class = ProductNotificationForm
+    
+    def get(self, request, *args, **kwargs):
+        """Serve React index.html for homepage"""
+        import os
+        from django.conf import settings
+        from django.http import HttpResponse
+        
+        index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html')
+        except FileNotFoundError:
+            return HttpResponse('React app not found. Please build the frontend.', status=404)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
