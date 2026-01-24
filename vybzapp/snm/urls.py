@@ -39,23 +39,28 @@ handler500 = 'snm.views.custom_500'
 urlpatterns = [
     path('', HomePageView.as_view(), name='homepage'),
     path('new-article/', article_create_view, name='article_create'),
-    path('product/', include(('snmov.urls', 'snmov'), namespace='product')),
+    # Commented out: React handles all product/store routes via client-side routing
+    # Django views are still accessible via API endpoints, but templates are not served
+    # The namespace is still available for reverse() calls in views, tests, and email templates via snmov.urls
+    # path('product/', include(('snmov.urls', 'snmov'), namespace='product')),
     path('api/', include(('snmov.api_urls', 'api'), namespace='api')),
     path('api/icvybz/', include(('icvybz.api_urls', 'icvybz-api'), namespace='icvybz-api')),
     path('api/feedback/', include(('feedback.urls', 'feedback'), namespace='feedback-api')),
     # Include immersivecomics URLs with namespace for reverse() lookups
-    # Note: Django views will handle these routes (they render Django templates).
-    # React handles client-side routing for the frontend, but Django views are still accessible.
-    # The namespace is required for reverse() calls in views, tests, and email templates.
-    path('immersivecomics/', include(('icvybz.urls', 'icvybz'), namespace='immersivecomics')),
-    # Commented out: React handles these routes via catch-all
-    # path('about/', about_page, name='about'),
-    path('privacy/', privacy_page, name='privacy'),  # Required for email templates
-    path('terms/', terms_page, name='terms'),  # Required for email templates
-    path('cookies/', cookie_page, name='cookie_policy'),  # Required for email templates
-    path('contact/', contact_page, name='contact'),
-    path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'), name='login_req'),
-    path('register/', register_view, name='register'),
+    # NOTE: Commented out - React handles all immersivecomics routes via client-side routing
+    # Django views are still accessible via API endpoints, but templates are not served
+    # The namespace is still available for reverse() calls in views, tests, and email templates via icvybz.urls
+    # path('immersivecomics/', include(('icvybz.urls', 'icvybz'), namespace='immersivecomics')),
+    # These routes serve React but keep URL names for email template reverse() calls
+    # React handles the actual rendering via client-side routing
+    path('about/', ReactAppView.as_view(), name='about'),
+    path('privacy/', ReactAppView.as_view(), name='privacy'),
+    path('terms/', ReactAppView.as_view(), name='terms'),
+    path('cookies/', ReactAppView.as_view(), name='cookie_policy'),
+    # Commented out: React handles these routes via client-side routing
+    # path('contact/', contact_page, name='contact'),
+    # path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'), name='login_req'),
+    # path('register/', register_view, name='register'),
     path('track-ar-usage/', track_ar_usage, name='track-ar-usage'),
     path('track-model-usage/', track_model_usage, name='track-ar-usage'),
     path('logout/', logout_request, name='logout_req'),
@@ -97,7 +102,7 @@ if settings.DEBUG:
 
 # Add catch-all route AFTER media/static patterns (in development) or at the end (in production)
 # IMPORTANT: Exclude API endpoints from catch-all - they must be handled by Django
-# Note: immersivecomics/ Django views are included above and will be matched first.
+# Note: Most Django template routes are commented out above - React handles client-side routing
 # Routes that don't match Django views will fall through to this catch-all for React.
 # Use regex with negative lookahead to exclude /api/ paths
 # The pattern matches any path that doesn't start with 'api/'
