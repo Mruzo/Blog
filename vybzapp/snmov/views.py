@@ -56,10 +56,25 @@ except (ImportError, AttributeError):
 
 
 class ProductListView(generic.ListView):
+    """Product list - Now serves React instead of Django template"""
     model = Product
-    template_name = 'snmov/list.html'
+    template_name = None  # Serve React instead
     context_object_name = 'products'
     paginate_by = 4
+    
+    def get(self, request, *args, **kwargs):
+        """Serve React index.html for product list"""
+        import os
+        from django.conf import settings
+        from django.http import HttpResponse
+        
+        index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html')
+        except FileNotFoundError:
+            return HttpResponse('React app not found. Please build the frontend.', status=404)
 
     def get_queryset(self):
         products = Product.objects.order_by('publish_date')

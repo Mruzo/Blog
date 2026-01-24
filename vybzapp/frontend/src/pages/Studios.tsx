@@ -252,7 +252,9 @@ const Studios: React.FC = () => {
                 <div className="card-body d-flex flex-column p-2">
                   {/* Studio Info */}
                   <div className="mb-1 border-bottom">
-                    <h5 className="subtext-btn-sm mb-1">{studio.name}</h5>
+                    <Link to={`/immersivecomics/studio/${studio.id}/`} className="text-decoration-none">
+                      <h5 className="subtext-btn-sm mb-1">{studio.name}</h5>
+                    </Link>
                     <p className="subtext-btn-sm text-muted mb-1">{studio.description}</p>
                   </div>
 

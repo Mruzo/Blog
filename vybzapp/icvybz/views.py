@@ -22,24 +22,24 @@ from django.conf import settings
 
 
 class ComicView(ListView):
+    """Stories list - Now serves React instead of Django template"""
     model = Comic
-    template_name = 'icvybz/titles.html'
+    template_name = None  # Serve React instead
     context_object_name = 'comics'
-
-    def get_queryset(self):
-        return Comic.objects.filter(
-            is_public=True, 
-            moderation_status='approved'
-        ).prefetch_related('seasons__episodes').all()
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Filter episodes to only show published ones
-        for comic in context['comics']:
-            for season in comic.seasons.all():
-                # Create a custom property to filter episodes and order by episode_number
-                season.published_episodes = season.episodes.filter(is_published=True).order_by('episode_number')
-        return context
+    
+    def get(self, request, *args, **kwargs):
+        """Serve React index.html for stories list"""
+        import os
+        from django.conf import settings
+        from django.http import HttpResponse
+        
+        index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html')
+        except FileNotFoundError:
+            return HttpResponse('React app not found. Please build the frontend.', status=404)
 
 
 class SeasonDetailView(DetailView):
@@ -1098,11 +1098,25 @@ class DialogueDeleteView(LoginRequiredMixin, DeleteView):
 
 # Studio Views
 class StudioListView(ListView):
-    """List all public studios"""
+    """List all public studios - Now serves React instead of Django template"""
     model = Studio
-    template_name = 'icvybz/studio_list.html'
+    template_name = None  # Serve React instead
     context_object_name = 'studios'
     paginate_by = 12
+    
+    def get(self, request, *args, **kwargs):
+        """Serve React index.html for studio list"""
+        import os
+        from django.conf import settings
+        from django.http import HttpResponse
+        
+        index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html')
+        except FileNotFoundError:
+            return HttpResponse('React app not found. Please build the frontend.', status=404)
     
     def get_queryset(self):
         return Studio.objects.filter(is_public=True).prefetch_related('collaborators__user').annotate(
@@ -1118,10 +1132,24 @@ class StudioListView(ListView):
 
 
 class StudioDetailView(DetailView):
-    """View a specific studio"""
+    """View a specific studio - Now serves React instead of Django template"""
     model = Studio
-    template_name = 'icvybz/studio_detail.html'
+    template_name = None  # Serve React instead
     context_object_name = 'studio'
+    
+    def get(self, request, *args, **kwargs):
+        """Serve React index.html for studio detail"""
+        import os
+        from django.conf import settings
+        from django.http import HttpResponse
+        
+        index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html')
+        except FileNotFoundError:
+            return HttpResponse('React app not found. Please build the frontend.', status=404)
     
     def get_queryset(self):
         return Studio.objects.filter(is_public=True).prefetch_related(
@@ -1149,7 +1177,30 @@ class StudioDetailView(DetailView):
 
 
 class MyStudioView(LoginRequiredMixin, DetailView):
-    """User's personal studio dashboard"""
+    """User's personal studio dashboard - Now serves React instead of Django template"""
+    model = Studio
+    template_name = None  # Serve React instead
+    
+    def get_object(self, queryset=None):
+        """Get or create studio for current user"""
+        studio, created = Studio.objects.get_or_create(owner=self.request.user)
+        return studio
+    
+    def get(self, request, *args, **kwargs):
+        """Serve React index.html for my studio"""
+        # Ensure studio exists for user
+        self.get_object()
+        import os
+        from django.conf import settings
+        from django.http import HttpResponse
+        
+        index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html')
+        except FileNotFoundError:
+            return HttpResponse('React app not found. Please build the frontend.', status=404)
     model = Studio
     template_name = 'icvybz/my_studio.html'
     context_object_name = 'studio'

@@ -39,18 +39,17 @@ handler500 = 'snm.views.custom_500'
 urlpatterns = [
     path('', HomePageView.as_view(), name='homepage'),
     path('new-article/', article_create_view, name='article_create'),
-    # Commented out: React handles all product/store routes via client-side routing
-    # Django views are still accessible via API endpoints, but templates are not served
-    # The namespace is still available for reverse() calls in views, tests, and email templates via snmov.urls
-    # path('product/', include(('snmov.urls', 'snmov'), namespace='product')),
+    # Product routes: Keep namespace for reverse() but serve React instead of Django templates
+    # We include the URLs but override key routes to serve React
+    # This maintains namespace for reverse() calls in tests and email templates
+    path('product/', include(('snmov.urls', 'snmov'), namespace='product')),
     path('api/', include(('snmov.api_urls', 'api'), namespace='api')),
     path('api/icvybz/', include(('icvybz.api_urls', 'icvybz-api'), namespace='icvybz-api')),
     path('api/feedback/', include(('feedback.urls', 'feedback'), namespace='feedback-api')),
-    # Include immersivecomics URLs with namespace for reverse() lookups
-    # NOTE: Commented out - React handles all immersivecomics routes via client-side routing
-    # Django views are still accessible via API endpoints, but templates are not served
-    # The namespace is still available for reverse() calls in views, tests, and email templates via icvybz.urls
-    # path('immersivecomics/', include(('icvybz.urls', 'icvybz'), namespace='immersivecomics')),
+    # Immersivecomics routes: Keep namespace for reverse() but serve React instead of Django templates
+    # We include the URLs but override key routes to serve React
+    # This maintains namespace for reverse() calls in views, tests, and email templates
+    path('immersivecomics/', include(('icvybz.urls', 'icvybz'), namespace='immersivecomics')),
     # These routes serve React but keep URL names for email template reverse() calls
     # React handles the actual rendering via client-side routing
     path('about/', ReactAppView.as_view(), name='about'),
