@@ -748,7 +748,7 @@ def create_return_label(return_request, use_production=None):
     )
     
     return {
-        'label_url': result['label_url'],,
+        'label_url': result['label_url'],
         'tracking_number': result['tracking_number'],
         'carrier': result['carrier'],
     }

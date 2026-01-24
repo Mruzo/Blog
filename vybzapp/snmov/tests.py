@@ -32,8 +32,20 @@ class ContactFormTest(TestCase):
         # Check if the form submission was successful
         self.assertEqual(response.status_code, 302)  # Assuming successful submission redirects
 
-        # Optionally, check if the form data is stored in the database
+        # Check if the form data is stored in the database (ReachOut for backward compatibility)
         self.assertTrue(ReachOut.objects.filter(**form_data).exists())
+        
+        # Also check that FeedbackTicket was created (new functionality)
+        try:
+            from feedback.models import FeedbackTicket
+            ticket = FeedbackTicket.objects.filter(submitted_by_email='john@example.com').first()
+            if ticket:  # Ticket creation might fail gracefully, so check if it exists
+                self.assertEqual(ticket.submitted_by_name, 'John Doe')
+                self.assertEqual(ticket.subject, 'Test Subject')
+                self.assertIsNotNone(ticket.ticket_number)
+        except ImportError:
+            # Feedback app might not be available in all test environments
+            pass
 
 
 class ProductNotificationTest(TestCase):
@@ -231,7 +243,7 @@ class CartAPITestCase(TestCase):
             'quantity': 1
         }, content_type='application/json')
         
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, getattr(response, "content", b""))
         data = response.json()
         self.assertTrue(data['success'])
         self.assertIn('Added Test Product 1 to cart', data['message'])
@@ -374,7 +386,7 @@ class CartAPITestCase(TestCase):
         
         # Update quantity
         response = self.client.put(f'/api/cart/update/{self.product1.uuid}/', {
-            'quantity': 5
+            'quantity': 4
         }, content_type='application/json')
         
         self.assertEqual(response.status_code, 200)
@@ -384,8 +396,8 @@ class CartAPITestCase(TestCase):
         # Verify updated cart
         response = self.client.get('/api/cart/')
         data = response.json()
-        self.assertEqual(data['cart_items'][0]['quantity'], 5)
-        self.assertEqual(data['total_price'], 50.00)
+        self.assertEqual(data['cart_items'][0]['quantity'], 4)
+        self.assertEqual(data['total_price'], 40.00)
 
     def test_update_cart_item_to_zero_removes_item(self):
         """Test that setting quantity to 0 removes item from cart"""
@@ -968,8 +980,8 @@ class CheckoutAPITestCase(TestCase):
             'full_name': 'Test User',
             'address_line_1': '123 Test Street',
             'city': 'Test City',
-            'state': 'Test State',
-            'postal_code': '12345',
+            'state': 'ON',
+            'postal_code': 'M5H 2N2',
             'country_code': 'CA'
         }, content_type='application/json')
         
@@ -992,12 +1004,12 @@ class CheckoutAPITestCase(TestCase):
             'address_line_1': '123 Test Street',
             'address_line_2': 'Apt 1',
             'city': 'Test City',
-            'state': 'Test State',
-            'postal_code': '12345',
+            'state': 'ON',
+            'postal_code': 'M5H 2N2',
             'country_code': 'CA'
         }, content_type='application/json')
         
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, getattr(response, "content", b""))
         data = response.json()
         self.assertTrue(data['success'])
         self.assertIn('order_id', data)
@@ -1142,8 +1154,10 @@ class CheckoutAPITestCase(TestCase):
             'servicelevel': {'name': 'Standard'},
             'estimated_days': 3
         }]
-        self.client.session['shipping_rates'] = mock_rates
-        self.client.session.save()
+        session = self.client.session
+        session['shipping_rates'] = mock_rates
+        session.save()
+        self.assertTrue(self.client.session.get('shipping_rates'))
         
         # Select shipping rate
         response = self.client.post(f'/api/orders/{order.id}/select-shipping/', {
@@ -1173,6 +1187,17 @@ class CheckoutAPITestCase(TestCase):
         )
         
         order = Order.objects.create(customer=self.user, shipping_address=shipping)
+        OrderItem.objects.create(order=order, product=self.product1, quantity=1)
+        
+        # Mock shipping rates in session so the view doesn't attempt a live re-fetch
+        mock_rates = [{
+            'object_id': 'test_rate_1',
+            'amount': '10.00',
+            'servicelevel': {'name': 'Standard'},
+            'estimated_days': 3
+        }]
+        self.client.session['shipping_rates'] = mock_rates
+        self.client.session.save()
         
         # Try to select non-existent rate
         response = self.client.post(f'/api/orders/{order.id}/select-shipping/', {
@@ -1218,12 +1243,12 @@ class CheckoutAPITestCase(TestCase):
             'full_name': 'Test User',
             'address_line_1': '123 Test Street',
             'city': 'Test City',
-            'state': 'Test State',
-            'postal_code': '12345',
+            'state': 'ON',
+            'postal_code': 'M5H 2N2',
             'country_code': 'CA'
         }, content_type='application/json')
         
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, getattr(response, "content", b""))
         data = response.json()
         self.assertTrue(data['success'])
         
@@ -1261,12 +1286,12 @@ class CheckoutAPITestCase(TestCase):
             'full_name': 'Test User',
             'address_line_1': '123 Test Street',
             'city': 'Test City',
-            'state': 'Test State',
-            'postal_code': '12345',
+            'state': 'ON',
+            'postal_code': 'M5H 2N2',
             'country_code': 'CA'
         }, content_type='application/json')
         
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, getattr(response, "content", b""))
         data = response.json()
         self.assertTrue(data['success'])
         

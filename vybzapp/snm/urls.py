@@ -42,6 +42,7 @@ urlpatterns = [
     path('product/', include(('snmov.urls', 'snmov'), namespace='product')),
     path('api/', include(('snmov.api_urls', 'api'), namespace='api')),
     path('api/icvybz/', include(('icvybz.api_urls', 'icvybz-api'), namespace='icvybz-api')),
+    path('api/feedback/', include(('feedback.urls', 'feedback'), namespace='feedback-api')),
     # Include immersivecomics URLs with namespace for reverse() lookups
     # Note: Django views will handle these routes (they render Django templates).
     # React handles client-side routing for the frontend, but Django views are still accessible.
@@ -52,9 +53,9 @@ urlpatterns = [
     path('privacy/', privacy_page, name='privacy'),  # Required for email templates
     path('terms/', terms_page, name='terms'),  # Required for email templates
     path('cookies/', cookie_page, name='cookie_policy'),  # Required for email templates
-    # path('contact/', contact_page, name='contact'),
-    # path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'), name='login_req'),
-    # path('register/', register_view, name='register'),
+    path('contact/', contact_page, name='contact'),
+    path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'), name='login_req'),
+    path('register/', register_view, name='register'),
     path('track-ar-usage/', track_ar_usage, name='track-ar-usage'),
     path('track-model-usage/', track_model_usage, name='track-ar-usage'),
     path('logout/', logout_request, name='logout_req'),

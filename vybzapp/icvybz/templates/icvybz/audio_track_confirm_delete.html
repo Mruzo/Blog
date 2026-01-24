@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block head_title %}Delete Audio Track{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2>Delete Audio Track</h2>
+  <p>Are you sure you want to delete <strong>{{ object.name }}</strong>?</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <a class="btn btn-outline-secondary" href="{% url 'immersivecomics:audio_track_list' %}">Cancel</a>
+    <button type="submit" class="btn btn-danger">Delete</button>
+  </form>
+</div>
+{% endblock %}

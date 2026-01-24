@@ -5,6 +5,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from .models import Studio, StudioCollaborator
+import uuid
 
 
 class StudioCollaboratorRoleSelectionTestCase(APITestCase):
@@ -12,23 +13,25 @@ class StudioCollaboratorRoleSelectionTestCase(APITestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Use unique usernames to avoid conflicts
+        unique_suffix = str(uuid.uuid4())[:8]
         self.owner = User.objects.create_user(
-            username='owner',
-            email='owner@example.com',
+            username=f'owner_{unique_suffix}',
+            email=f'owner_{unique_suffix}@example.com',
             password='testpass123',
             first_name='Studio',
             last_name='Owner'
         )
         self.user1 = User.objects.create_user(
-            username='user1',
-            email='user1@example.com',
+            username=f'user1_{unique_suffix}',
+            email=f'user1_{unique_suffix}@example.com',
             password='testpass123',
             first_name='User',
             last_name='One'
         )
         self.user2 = User.objects.create_user(
-            username='user2',
-            email='user2@example.com',
+            username=f'user2_{unique_suffix}',
+            email=f'user2_{unique_suffix}@example.com',
             password='testpass123',
             first_name='User',
             last_name='Two'
@@ -146,23 +149,25 @@ class RemoveStudioCollaboratorTestCase(APITestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Use unique usernames to avoid conflicts
+        unique_suffix = str(uuid.uuid4())[:8]
         self.owner = User.objects.create_user(
-            username='owner',
-            email='owner@example.com',
+            username=f'owner_{unique_suffix}',
+            email=f'owner_{unique_suffix}@example.com',
             password='testpass123',
             first_name='Studio',
             last_name='Owner'
         )
         self.collaborator_user = User.objects.create_user(
-            username='collaborator',
-            email='collab@example.com',
+            username=f'collaborator_{unique_suffix}',
+            email=f'collab_{unique_suffix}@example.com',
             password='testpass123',
             first_name='Collaborator',
             last_name='User'
         )
         self.other_user = User.objects.create_user(
-            username='other',
-            email='other@example.com',
+            username=f'other_{unique_suffix}',
+            email=f'other_{unique_suffix}@example.com',
             password='testpass123'
         )
         

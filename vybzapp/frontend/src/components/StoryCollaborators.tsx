@@ -273,15 +273,12 @@ const StoryCollaborators: React.FC = () => {
                                   className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
                                   style={{ width: '40px', height: '40px', fontSize: '1rem' }}
                                 >
-                                  {(collab.user.first_name || collab.user.username || 'U').charAt(0).toUpperCase()}
+                                  {(collab.user.username || 'U').charAt(0).toUpperCase()}
                                 </div>
                               )}
                             </div>
                             <div className="flex-grow-1" style={{ minWidth: 0 }}>
                               <div className="subtext-btn-sm fw-bold font-quicksand mb-0" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {collab.user.first_name} {collab.user.last_name}
-                              </div>
-                              <div className="subtext-btn-sm text-muted font-quicksand" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 @{collab.user.username}
                               </div>
                             </div>

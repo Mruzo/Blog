@@ -8,6 +8,7 @@ Tests critical fixes and high-priority features:
 - Cart expiration
 """
 from django.test import TestCase, Client
+from django.test.utils import override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
@@ -27,6 +28,7 @@ from snmov.utils.email_notifications import send_order_confirmation
 User = get_user_model()
 
 
+@override_settings(MAX_CART_ITEMS_PER_PRODUCT=1000)
 class StockValidationTestCase(APITestCase):
     """Test stock validation throughout cart and checkout flow"""
     

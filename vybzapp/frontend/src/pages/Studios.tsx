@@ -189,9 +189,7 @@ const Studios: React.FC = () => {
     // If owner is just a number, we don't have user details
     return {
       id: typeof studio.owner === 'number' ? studio.owner : 0,
-      username: 'Unknown',
-      first_name: 'Unknown',
-      last_name: 'User'
+      username: 'Unknown'
     };
   };
 
@@ -201,16 +199,12 @@ const Studios: React.FC = () => {
       return {
         id: collaborator.user.id || collaborator.id,
         username: collaborator.user.username || collaborator.username || 'Unknown',
-        first_name: collaborator.user.first_name || collaborator.first_name || 'Unknown',
-        last_name: collaborator.user.last_name || collaborator.last_name || 'User',
         role: collaborator.role || 'collaborator'
       };
     }
     return {
       id: collaborator.id,
       username: collaborator.username || 'Unknown',
-      first_name: collaborator.first_name || 'Unknown',
-      last_name: collaborator.last_name || 'User',
       role: collaborator.role || 'collaborator'
     };
   };
@@ -272,8 +266,7 @@ const Studios: React.FC = () => {
                         return (
                           <div className="d-flex align-items-center mb-1">
                             <i className="fas fa-crown text-warning me-2"></i>
-                            <span className="subtext-btn-sm fw-bold">&nbsp;{ownerInfo.first_name} {ownerInfo.last_name}</span>
-                            <span className="text-muted ms-1">(@{ownerInfo.username})</span>
+                            <span className="subtext-btn-sm fw-bold">&nbsp;@{ownerInfo.username}</span>
                           </div>
                         );
                       })()}
@@ -289,7 +282,7 @@ const Studios: React.FC = () => {
                                 {collaboratorInfo.role.replace('_', ' ').toUpperCase()}
                               </span>
                             )}
-                            <span className="subtext-btn-sm">{collaboratorInfo.first_name} {collaboratorInfo.last_name}</span>
+                            <span className="subtext-btn-sm">@{collaboratorInfo.username}</span>
                           </div>
                         );
                       })}

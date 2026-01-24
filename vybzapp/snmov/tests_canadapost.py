@@ -60,44 +60,22 @@ class CanadaPostAPITestCase(TestCase):
             quantity=2
         )
     
+    @override_settings(
+        CANADAPOST_KEY_NUMBER='dev_user:dev_pass',
+        CANADAPOST_CUSTOMER_NUMBER='123456',
+    )
     def test_canadapost_api_initialization_dev(self):
         """Test: API client initializes with development credentials"""
-        with patch('snmov.utils.canadapost.getattr') as mock_getattr:
-            def getattr_side_effect(obj, name, default=None):
-                if name == 'CANADAPOST_USERNAME':
-                    return 'dev_user'
-                elif name == 'CANADAPOST_PASSWORD':
-                    return 'dev_pass'
-                elif name == 'CANADAPOST_CUSTOMER_NUMBER':
-                    return '123456'
-                elif name == 'CANADAPOST_DEVELOPMENT_USERNAME':
-                    return 'dev_user'
-                elif name == 'CANADAPOST_DEVELOPMENT_PASSWORD':
-                    return 'dev_pass'
-                elif name == 'CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER':
-                    return '123456'
-                return default
-            
-            with patch('snmov.utils.canadapost.settings') as mock_settings:
-                # Use type() to create a mock that supports getattr properly
-                type(mock_settings).CANADAPOST_USERNAME = 'dev_user'
-                type(mock_settings).CANADAPOST_PASSWORD = 'dev_pass'
-                type(mock_settings).CANADAPOST_CUSTOMER_NUMBER = '123456'
-                type(mock_settings).CANADAPOST_DEVELOPMENT_USERNAME = 'dev_user'
-                type(mock_settings).CANADAPOST_DEVELOPMENT_PASSWORD = 'dev_pass'
-                type(mock_settings).CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER = '123456'
-                
-                api = CanadaPostAPI(use_production=False)
-                
-                self.assertEqual(api.username, 'dev_user')
-                self.assertEqual(api.password, 'dev_pass')
-                self.assertEqual(api.customer_number, '123456')
-                self.assertFalse(api.use_production)
-                self.assertIn('ct.soa-gw.canadapost.ca', api.base_url)
+        api = CanadaPostAPI(use_production=False)
+        
+        self.assertEqual(api.username, 'dev_user')
+        self.assertEqual(api.password, 'dev_pass')
+        self.assertEqual(api.customer_number, '123456')
+        self.assertFalse(api.use_production)
+        self.assertIn('ct.soa-gw.canadapost.ca', api.base_url)
     
     @override_settings(
-        CANADAPOST_PRODUCTION_USERNAME='prod_user',
-        CANADAPOST_PRODUCTION_PASSWORD='prod_pass',
+        CANADAPOST_PRODUCTION_KEY_NUMBER='prod_user:prod_pass',
         CANADAPOST_PRODUCTION_CUSTOMER_NUMBER='789012'
     )
     def test_canadapost_api_initialization_prod(self):
@@ -111,12 +89,8 @@ class CanadaPostAPITestCase(TestCase):
         self.assertIn('soa-gw.canadapost.ca', api.base_url)
     
     @override_settings(
-        CANADAPOST_USERNAME='testuser',
-        CANADAPOST_PASSWORD='testpass',
+        CANADAPOST_KEY_NUMBER='testuser:testpass',
         CANADAPOST_CUSTOMER_NUMBER='123456',
-        CANADAPOST_DEVELOPMENT_USERNAME='testuser',
-        CANADAPOST_DEVELOPMENT_PASSWORD='testpass',
-        CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER='123456'
     )
     def test_auth_header_creation(self):
         """Test: Basic auth header is created correctly"""
@@ -335,10 +309,7 @@ class CanadaPostAPITestCase(TestCase):
     @override_settings(
         CANADAPOST_CUSTOMER_NUMBER='123456',
         CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER='123456',
-        CANADAPOST_USERNAME='dev_user',
-        CANADAPOST_PASSWORD='dev_pass',
-        CANADAPOST_DEVELOPMENT_USERNAME='dev_user',
-        CANADAPOST_DEVELOPMENT_PASSWORD='dev_pass'
+        CANADAPOST_KEY_NUMBER='dev_user:dev_pass',
     )
     def test_build_rates_xml(self):
         """Test: XML request for rates is built correctly"""
@@ -352,11 +323,13 @@ class CanadaPostAPITestCase(TestCase):
         
         # Parse and verify XML structure
         root = ET.fromstring(xml)
-        self.assertEqual(root.tag, 'mailing-scenario')
-        self.assertEqual(root.find('customer-number').text, '123456')
-        self.assertEqual(root.find('parcel-characteristics/weight').text, '1.5')
-        self.assertEqual(root.find('origin-postal-code').text, 'M5H1A1')
-        self.assertEqual(root.find('destination/domestic/postal-code').text, 'M5H2N2')
+        # Canada Post XML uses namespaces
+        ns = {'cp': 'http://www.canadapost.ca/ws/ship/rate-v4'}
+        self.assertEqual(root.tag.split('}', 1)[-1], 'mailing-scenario')
+        self.assertEqual(root.find('cp:customer-number', ns).text, '123456')
+        self.assertEqual(root.find('cp:parcel-characteristics/cp:weight', ns).text, '1.5')
+        self.assertEqual(root.find('cp:origin-postal-code', ns).text, 'M5H1A1')
+        self.assertEqual(root.find('cp:destination/cp:domestic/cp:postal-code', ns).text, 'M5H2N2')
 
 
 class CanadaPostIntegrationTestCase(TestCase):
@@ -440,8 +413,8 @@ class CanadaPostIntegrationTestCase(TestCase):
                 
                 # Verify rates were returned
                 self.assertEqual(len(rates), 1)
-                self.assertEqual(rates[0]['service_code'], 'DOM.EP')
-                self.assertEqual(rates[0]['amount'], Decimal('12.50'))
+                self.assertEqual(rates[0]['object_id'], 'DOM.EP')
+                self.assertEqual(Decimal(rates[0]['amount']), Decimal('12.50'))
     
     @patch('snmov.utils.canadapost.CanadaPostAPI.create_shipping_label')
     def test_create_canadapost_label_integration(self, mock_create_label):

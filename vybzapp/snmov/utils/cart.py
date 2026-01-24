@@ -133,24 +133,41 @@ def get_cart_for_session(request, clean_expired=True):
     }
 
 def get_sender_address():
+    """
+    Return the sender (store) address used for shipping rate/label APIs.
+
+    Prefer a real DB-backed sender user/address when available, but fall back to
+    settings defaults so local dev/tests don't require a hard-coded user.
+    """
+    from django.conf import settings
+
     try:
         sender_user = User.objects.get(username='chris')
         sender_address = ShippingAddress.objects.filter(user=sender_user).latest('id')
-    except User.DoesNotExist:
-        raise ValueError("Sender user 'chris' does not exist.")
-    except ShippingAddress.DoesNotExist:
-        raise ValueError("No shipping address found for sender user.")
-
-    return {
-        "name": f"{sender_user.first_name} {sender_user.last_name}".strip(),
-        "street1": sender_address.address_line_1,
-        "city": sender_address.city,
-        "state": sender_address.state,
-        "zip": sender_address.postal_code,
-        "country": sender_address.country_code,
-        "email": sender_user.email,
-        "phone": sender_address.phone if hasattr(sender_address, "phone") else "",  # Optional
-    }
+        return {
+            "name": f"{sender_user.first_name} {sender_user.last_name}".strip() or sender_user.username,
+            "street1": sender_address.address_line_1,
+            "street2": getattr(sender_address, "address_line_2", "") or "",
+            "city": sender_address.city,
+            "state": sender_address.state,
+            "zip": sender_address.postal_code,
+            "country": sender_address.country_code,
+            "email": sender_user.email,
+            "phone": getattr(sender_address, "phone", "") or "",
+        }
+    except (User.DoesNotExist, ShippingAddress.DoesNotExist):
+        # Fallback for tests / local dev
+        return {
+            "name": getattr(settings, "DEFAULT_SENDER_NAME", "Justvybz"),
+            "street1": getattr(settings, "DEFAULT_SENDER_STREET1", ""),
+            "street2": getattr(settings, "DEFAULT_SENDER_STREET2", ""),
+            "city": getattr(settings, "DEFAULT_SENDER_CITY", ""),
+            "state": getattr(settings, "DEFAULT_SENDER_STATE", ""),
+            "zip": getattr(settings, "DEFAULT_SENDER_ZIP", ""),
+            "country": getattr(settings, "DEFAULT_SENDER_COUNTRY", "CA"),
+            "email": getattr(settings, "DEFAULT_FROM_EMAIL", ""),
+            "phone": "",
+        }
 
 
 

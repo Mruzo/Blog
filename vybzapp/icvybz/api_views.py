@@ -798,12 +798,8 @@ def invite_studio_user(request, studio_id):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Check if user is the owner
-            if invitee_user == studio.owner:
-                return Response(
-                    {'detail': 'Cannot invite the studio owner'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            # Allow owner to add themselves as collaborator with multiple roles
+            # (The model supports multiple roles per user via unique_together on studio, user, role)
             
             # Check if user already has this specific role
             if StudioCollaborator.objects.filter(studio=studio, user=invitee_user, role=role).exists():
@@ -944,12 +940,8 @@ def invite_studio_by_email(request, studio_id):
             try:
                 invitee_user = User.objects.get(email=email)
                 
-                # Check if user is the owner
-                if invitee_user == studio.owner:
-                    return Response(
-                        {'detail': 'Cannot invite the studio owner'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                # Allow owner to add themselves as collaborator with multiple roles
+                # (The model supports multiple roles per user via unique_together on studio, user, role)
                 
                 # Check if user is already a collaborator
                 if StudioCollaborator.objects.filter(studio=studio, user=invitee_user).exists():
@@ -1382,6 +1374,16 @@ def get_current_user_api(request):
         # Update user profile
         first_name = request.data.get('first_name')
         last_name = request.data.get('last_name')
+        username = request.data.get('username')
+        
+        # Validate username uniqueness if provided
+        if username is not None:
+            if username != user.username:  # Only check if username is being changed
+                if User.objects.filter(username=username).exclude(id=user.id).exists():
+                    return Response({
+                        'error': 'Username already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                user.username = username
         
         if first_name is not None:
             user.first_name = first_name

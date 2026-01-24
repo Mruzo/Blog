@@ -1,8 +1,9 @@
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+from rest_framework.authentication import TokenAuthentication
 from snmov.utils.security import rate_limit_check, log_security_event, validate_file_upload, sanitize_filename
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
@@ -158,8 +159,8 @@ def add_to_cart(request):
             # Log for debugging
             logger.info(f"Add to cart - Product: {product_id_str}, Current quantity: {current_quantity}, Adding: {quantity}, New quantity: {new_quantity}")
             
-            # Enforce maximum of 4 items per product
-            MAX_ITEMS_PER_PRODUCT = 4
+            # Enforce maximum items per product (configurable)
+            MAX_ITEMS_PER_PRODUCT = getattr(settings, 'MAX_CART_ITEMS_PER_PRODUCT', 4)
             if new_quantity > MAX_ITEMS_PER_PRODUCT:
                 max_allowed = MAX_ITEMS_PER_PRODUCT - current_quantity
                 if max_allowed <= 0:
@@ -292,8 +293,8 @@ def update_cart_item(request, product_id):
                     continue
         
         if product_id_str in cart:
-            # Enforce maximum of 4 items per product
-            MAX_ITEMS_PER_PRODUCT = 4
+            # Enforce maximum items per product (configurable)
+            MAX_ITEMS_PER_PRODUCT = getattr(settings, 'MAX_CART_ITEMS_PER_PRODUCT', 4)
             if quantity > MAX_ITEMS_PER_PRODUCT:
                 return Response({
                     'success': False,
@@ -621,7 +622,8 @@ class OrderListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Order.objects.filter(customer=self.request.user).order_by('-ordered_date')
+        # Order model uses `order_date` (not `ordered_date`)
+        return Order.objects.filter(customer=self.request.user).order_by('-order_date')
 
 
 class OrderDetailView(generics.RetrieveAPIView):
@@ -954,8 +956,10 @@ def select_shipping_rate(request, order_id):
             logger.error(f"Error re-fetching shipping rates: {e}")
             return Response({
                 'success': False,
-                'error': f'Failed to fetch shipping rates: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                # Treat this as a client-visible problem (can't validate the selected rate)
+                'error': 'Selected shipping rate not found.',
+                'details': f'Failed to fetch shipping rates: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
     
     # Find selected rate
     selected_rate = next((r for r in session_rates if r.get("object_id") == rate_id), None)
@@ -1061,11 +1065,12 @@ def payment_success(request):
         
         # CRITICAL FIX: Send order confirmation email
         try:
-            from snmov.utils.email_notifications import send_order_confirmation, send_order_status_update
+            # Use the module-level import so tests can patch `snmov.api_views.send_order_confirmation`
             send_order_confirmation(order)
             
             # Send status update email if status changed and tracking is available
             if order.status != previous_status and order.tracking_number:
+                from snmov.utils.email_notifications import send_order_status_update
                 send_order_status_update(order)
         except Exception as e:
             # Log email error but don't fail the request
@@ -1241,6 +1246,7 @@ def set_default_address(request, address_id):
 
 
 @api_view(['POST'])
+@authentication_classes([])  # Disable authentication (and CSRF) for this endpoint
 @permission_classes([AllowAny])
 def contact_form(request):
     """
@@ -1300,16 +1306,69 @@ def contact_form(request):
     serializer = ReachOutSerializer(data=request.data)
     
     if serializer.is_valid():
-        # Save the contact form submission
+        # Save the contact form submission (for backward compatibility)
         reach_out = serializer.save()
+        
+        # Also create a FeedbackTicket
+        try:
+            from feedback.models import FeedbackTicket
+            from feedback.email_notifications import send_ticket_confirmation_email
+            
+            # Determine source
+            source = 'feedback_modal' if request.data.get('source') == 'feedback_modal' else 'contact_form'
+            
+            # Try to infer category from subject
+            subject_lower = (reach_out.subject or '').lower()
+            category = 'other'
+            if any(word in subject_lower for word in ['bug', 'error', 'broken', 'issue']):
+                category = 'bug'
+            elif any(word in subject_lower for word in ['feature', 'suggestion', 'improvement']):
+                category = 'feature_request'
+            elif any(word in subject_lower for word in ['question', 'help', 'how']):
+                category = 'question'
+            elif any(word in subject_lower for word in ['order', 'payment', 'billing', 'refund']):
+                category = 'billing'
+            
+            # Get user if authenticated
+            user = request.user if request.user.is_authenticated else None
+            
+            # Create ticket
+            ticket = FeedbackTicket.objects.create(
+                user=user,
+                submitted_by_name=reach_out.full_name,
+                submitted_by_email=reach_out.email,
+                subject=reach_out.subject or 'Contact Form Submission',
+                message=reach_out.content,
+                category=category,
+                source=source,
+                ip_address=client_ip,
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            # Send ticket confirmation email
+            try:
+                send_ticket_confirmation_email(ticket, request)
+            except Exception as e:
+                print(f"Failed to send ticket confirmation email: {e}")
+            
+            ticket_number = ticket.ticket_number
+        except Exception as e:
+            # If ticket creation fails, still proceed with ReachOut
+            # Log error but don't fail the request
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to create feedback ticket: {e}")
+            ticket_number = None
         
         # Increment rate limit counter
         cache.set(rate_limit_key, submission_count + 1, 3600)  # 1 hour expiry
         
-        # Send email notification to support
+        # Send email notification to support (keep existing behavior)
         try:
             subject = 'Contact Form'
             message = f"Name: {reach_out.full_name}\nEmail: {reach_out.email}\n\nSubject: {reach_out.subject}\n\nMessage: {reach_out.content}"
+            if ticket_number:
+                message += f"\n\nTicket Number: {ticket_number}"
             from_email = DEFAULT_FROM_EMAIL
             to_email = SUPPORT_EMAIL
             
@@ -1318,7 +1377,7 @@ def contact_form(request):
             # Log email error but don't fail the request
             print(f"Failed to send contact form email: {e}")
         
-        # Send confirmation email to user
+        # Send confirmation email to user (keep existing behavior for backward compatibility)
         try:
             from snmov.utils.email_notifications import send_feedback_confirmation
             send_feedback_confirmation(reach_out)
@@ -1326,10 +1385,14 @@ def contact_form(request):
             # Log email error but don't fail the request
             print(f"Failed to send feedback confirmation email: {e}")
         
-        return Response({
+        response_data = {
             'success': True,
             'message': 'Thanks for reaching out. Your message has been sent.'
-        }, status=status.HTTP_201_CREATED)
+        }
+        if ticket_number:
+            response_data['ticket_number'] = ticket_number
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
     
     return Response({
         'success': False,
@@ -1338,6 +1401,7 @@ def contact_form(request):
 
 
 @api_view(['POST'])
+@authentication_classes([])  # Disable authentication (and CSRF) for this endpoint
 @permission_classes([AllowAny])
 def subscribe_newsletter(request):
     """
@@ -1373,6 +1437,7 @@ def subscribe_newsletter(request):
 
 
 @api_view(['POST'])
+@authentication_classes([])  # Disable authentication (and CSRF) for this endpoint
 @permission_classes([AllowAny])
 def unsubscribe_newsletter(request, token):
     """

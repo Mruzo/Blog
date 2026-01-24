@@ -281,12 +281,15 @@ def send_return_request_submitted(return_request):
         html_message=html_message,
         fail_silently=False
     )
+
+
+def send_return_approved(return_request, credit_note):
     """Send email when return request is approved"""
     subject = f'Return Request Approved - Return #{return_request.id}'
     site_url = get_site_url()
     
     return_url = f"{site_url}/product/returns/{return_request.id}/"
-    credit_note_url = f"{site_url}/api/credit-notes/{credit_note.id}/pdf/" if credit_note.pdf_path else None
+    credit_note_url = f"{site_url}/api/credit-notes/{credit_note.id}/pdf/" if getattr(credit_note, 'pdf_path', None) else None
     
     context = {
         'return_request': return_request,

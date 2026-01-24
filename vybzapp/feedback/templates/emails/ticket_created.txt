@@ -1,0 +1,12 @@
+Hi {{ ticket.submitted_by_name }},
+
+Thank you for contacting us. We've received your feedback:
+
+Ticket Number: {{ ticket.ticket_number }}
+Subject: {{ ticket.subject }}
+Category: {{ ticket.get_category_display }}
+
+Your request has been logged and we'll review it soon. We'll notify you once your request has been addressed.
+
+Best regards,
+Vybz Support Team

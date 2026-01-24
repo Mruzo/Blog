@@ -73,7 +73,10 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True, source='orderitem_set')
     shipping_address = ShippingAddressSerializer(read_only=True)
     user = serializers.SerializerMethodField()
-    order_number = serializers.CharField(source='ref_code', read_only=True)
+    # Backwards-compatible fields expected by the frontend / older API clients
+    ref_code = serializers.SerializerMethodField()
+    order_number = serializers.SerializerMethodField()
+    ordered_date = serializers.DateTimeField(source='order_date', read_only=True)
     
     class Meta:
         model = Order
@@ -91,6 +94,13 @@ class OrderSerializer(serializers.ModelSerializer):
             'username': obj.customer.username,
             'email': obj.customer.email
         }
+
+    def get_ref_code(self, obj):
+        # Provide a stable, human-readable reference without requiring a DB field
+        return f"ORD-{obj.id}"
+
+    def get_order_number(self, obj):
+        return self.get_ref_code(obj)
 
 
 class CartItemSerializer(serializers.Serializer):
@@ -185,6 +195,8 @@ class ReturnItemSerializer(serializers.ModelSerializer):
 class ReturnRequestSerializer(serializers.ModelSerializer):
     """Serializer for return requests"""
     returnitem_set = ReturnItemSerializer(many=True, read_only=True)
+    # Backwards/forwards compatible alias (nicer API name for clients)
+    return_items = ReturnItemSerializer(source='returnitem_set', many=True, read_only=True)
     order = OrderSerializer(read_only=True)
     customer_name = serializers.CharField(source='customer.get_full_name', read_only=True)
     customer_email = serializers.EmailField(source='customer.email', read_only=True)
@@ -199,7 +211,7 @@ class ReturnRequestSerializer(serializers.ModelSerializer):
             'return_shipping_cost', 'return_shipping_paid_by',
             'return_label_url', 'return_tracking_number', 'admin_notes',
             'created_at', 'updated_at', 'approved_at', 'rejected_at', 'completed_at',
-            'returnitem_set', 'refund_amount', 'credit_note'
+            'returnitem_set', 'return_items', 'refund_amount', 'credit_note'
         ]
         read_only_fields = [
             'id', 'customer', 'status', 'created_at', 'updated_at',
@@ -241,13 +253,16 @@ class ReturnRequestCreateSerializer(serializers.Serializer):
     
     def validate_order_id(self, value):
         """Validate order exists and belongs to user"""
+        from rest_framework.exceptions import NotFound, PermissionDenied
         try:
             order = Order.objects.get(id=value)
         except Order.DoesNotExist:
-            raise serializers.ValidationError("Order not found")
+            # Use 404 (not 400) for non-existent orders
+            raise NotFound("Order not found")
         
         if self.context['request'].user != order.customer:
-            raise serializers.ValidationError("Order does not belong to you")
+            # Use 403 for unauthorized access
+            raise PermissionDenied("Order does not belong to you")
         return value
     
     def validate_return_items(self, value):

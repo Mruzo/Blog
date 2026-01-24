@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block head_title %}My Audio Tracks{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="mb-0">My Audio Tracks</h2>
+    <a class="btn btn-primary" href="{% url 'immersivecomics:audio_track_create' %}">New Audio Track</a>
+  </div>
+
+  {% if audio_tracks %}
+    <div class="list-group">
+      {% for track in audio_tracks %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <div class="font-weight-bold">{{ track.name }}</div>
+            <small class="text-muted">{{ track.get_audio_type_display }}{% if track.is_public %} • Public{% endif %}</small>
+          </div>
+          <div class="btn-group">
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'immersivecomics:audio_track_edit' track.pk %}">Edit</a>
+            <a class="btn btn-sm btn-outline-danger" href="{% url 'immersivecomics:audio_track_delete' track.pk %}">Delete</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">No audio tracks yet.</div>
+  {% endif %}
+
+  {% if is_paginated %}
+    <nav class="mt-3">
+      <ul class="pagination">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+</div>
+{% endblock %}

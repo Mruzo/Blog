@@ -236,7 +236,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ show, onClose, context })
       >
         <div className="modal-dialog modal-dialog-centered modal-lg">
           <div className="modal-content">
-            <div className="modal-header border-bottom d-flex justify-content-between align-items-center">
+            <div className="modal-header border-bottom d-flex justify-content-between align-items-center p-2">
               <h5 className="modal-title subtext-btn mb-0">
                 Need Help or Have Feedback?
               </h5>
@@ -261,18 +261,18 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ show, onClose, context })
               />
 
               <p className="subtext-btn-sm text-muted mb-3">
-                We're here to help! Send us your questions or feedback and we'll get back to you as soon as possible.
+                Here to help! Send us your questions or feedback and we'll get back to you as soon as possible.
               </p>
 
               <form onSubmit={handleSubmit} className="needs-validation" noValidate>
                 <div className="row">
                   <div className="col-12 col-md-6 mb-2">
-                    <label htmlFor="feedback_full_name" className="form-label subtext-btn-sm">
+                    <label htmlFor="feedback_full_name" className="form-label subtext-btn-sm m-0">
                       Full Name <span className="text-danger">*</span>
                     </label>
                     <input
                       type="text"
-                      className={`form-control subtext-btn-sm ${errors.full_name ? 'is-invalid' : ''}`}
+                      className={`form-control p-1 subtext-btn-sm ${errors.full_name ? 'is-invalid' : ''}`}
                       id="feedback_full_name"
                       name="full_name"
                       value={formData.full_name}
@@ -286,12 +286,12 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ show, onClose, context })
                   </div>
 
                   <div className="col-12 col-md-6 mb-2">
-                    <label htmlFor="feedback_email" className="form-label subtext-btn-sm">
+                    <label htmlFor="feedback_email" className="form-label subtext-btn-sm m-0">
                       Email <span className="text-danger">*</span>
                     </label>
                     <input
                       type="email"
-                      className={`form-control subtext-btn-sm ${errors.email ? 'is-invalid' : ''}`}
+                      className={`form-control px-1 subtext-btn-sm ${errors.email ? 'is-invalid' : ''}`}
                       id="feedback_email"
                       name="email"
                       value={formData.email}
@@ -307,12 +307,12 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ show, onClose, context })
                 </div>
 
                 <div className="mb-2">
-                  <label htmlFor="feedback_subject" className="form-label subtext-btn-sm">
+                  <label htmlFor="feedback_subject" className="form-label subtext-btn-sm m-0">
                     Subject <span className="text-danger">*</span>
                   </label>
                   <input
                     type="text"
-                    className={`form-control subtext-btn-sm ${errors.subject ? 'is-invalid' : ''}`}
+                    className={`form-control p-1 subtext-btn-sm ${errors.subject ? 'is-invalid' : ''}`}
                     id="feedback_subject"
                     name="subject"
                     value={formData.subject}
@@ -326,11 +326,11 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ show, onClose, context })
                 </div>
 
                 <div className="mb-4">
-                  <label htmlFor="feedback_content" className="form-label subtext-btn-sm">
+                  <label htmlFor="feedback_content" className="form-label subtext-btn-sm m-0">
                     Message <span className="text-danger">*</span>
                   </label>
                   <textarea
-                    className={`form-control subtext-btn-sm ${errors.content ? 'is-invalid' : ''}`}
+                    className={`form-control p-1 subtext-btn-sm ${errors.content ? 'is-invalid' : ''}`}
                     id="feedback_content"
                     name="content"
                     rows={6}

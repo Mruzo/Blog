@@ -3,7 +3,9 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 import json
+import uuid
 
 from .models import Comic, Season, Character, Episode, Dialogue, POV
 
@@ -11,9 +13,11 @@ from .models import Comic, Season, Character, Episode, Dialogue, POV
 class StoryCreationAPITestCase(APITestCase):
     def setUp(self):
         """Set up test data"""
+        # Use unique username to avoid conflicts
+        unique_suffix = str(uuid.uuid4())[:8]
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
+            username=f'testuser_{unique_suffix}',
+            email=f'test_{unique_suffix}@example.com',
             password='testpass123'
         )
         # Use session authentication instead of token

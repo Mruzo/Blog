@@ -509,7 +509,7 @@ const MyStudio: React.FC = () => {
         role: role
       });
       
-      setMessage(`Successfully invited ${user.first_name || user.username} ${user.last_name || ''} to your studio`);
+      setMessage(`Successfully invited @${user.username} to your studio`);
       setMessageType('success');
       setShowMessage(true);
       
@@ -675,11 +675,11 @@ const MyStudio: React.FC = () => {
                         className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2"
                         style={{ width: '40px', height: '40px', fontSize: '1rem' }}
                       >
-                        {(currentUser?.first_name || currentUser?.username || 'U').charAt(0).toUpperCase()}
+                        {(currentUser?.username || 'U').charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div className="ml-1">
-                      <div className="subtext-btn-sm fw-bold">{currentUser?.first_name || currentUser?.username || 'User'}</div>
+                      <div className="subtext-btn-sm fw-bold">@{currentUser?.username || 'User'}</div>
                       <div className="subtext-btn-sm text-muted">Owner</div>
                     </div>
                   </div>
@@ -776,11 +776,11 @@ const MyStudio: React.FC = () => {
                       <div className="subtext-btn-sm fw-bold">
                         {(() => {
                           if (!currentUser || !myStudio) {
-                            return currentUser?.first_name || currentUser?.username || 'User';
+                            return currentUser?.username || 'User';
                           }
                           const ownerId = typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner;
                           const isOwner = Number(currentUser.id) === Number(ownerId);
-                          return isOwner ? 'Me' : (currentUser?.first_name || currentUser?.username || 'User');
+                          return isOwner ? 'Me' : (currentUser?.username || 'User');
                         })()}
                       </div>
                     </div>
@@ -797,7 +797,7 @@ const MyStudio: React.FC = () => {
                       activeCollaborators.map((collaborator: any) => {
                         // Handle both nested user object and flat structure
                         const user = collaborator.user || collaborator;
-                        const userName = user?.first_name || user?.username || 'Unknown';
+                        const userName = user?.username || 'Unknown';
                         const userLastName = user?.last_name || '';
                         const userUsername = user?.username || 'unknown';
                         const role = collaborator.role || 'writer';
@@ -814,8 +814,7 @@ const MyStudio: React.FC = () => {
                               &nbsp;{role.replace('_', ' ').toUpperCase()}
                             </span>
                             <div className="text-center">
-                              <div className="subtext-btn-sm">{userName} {userLastName}</div>
-                              {/* <div className="subtext-btn-sm text-muted">@{userUsername}</div> */}
+                              <div className="subtext-btn-sm">@{userUsername}</div>
                             </div>
                             {/* Remove Button - Only show if current user is owner and collaborator is not the owner */}
                             {isOwner && !isCollaboratorOwner && myStudio && (
@@ -1112,7 +1111,7 @@ const MyStudio: React.FC = () => {
                         console.error('Request missing requester:', request);
                         return null;
                       }
-                      const requesterName = requester.first_name || requester.username || 'Unknown';
+                      const requesterName = requester.username || 'Unknown';
                       const requesterLastName = requester.last_name || '';
                       const requesterUsername = requester.username || 'unknown';
                       return (
@@ -1122,9 +1121,8 @@ const MyStudio: React.FC = () => {
                       >
                         <div className="d-flex justify-content-between align-items-center mb-2">
                           <div className="d-flex align-items-center gap-2">
-                            <div className="text-muted subtext-btn-sm fw-bold">@{requesterUsername}</div>
                             <div className="fw-bold subtext-btn-sm">
-                              {requesterName} {requesterLastName}
+                              @{requesterUsername}
                             </div>
                           </div>
                           <div className="text-muted subtext-btn-sm">

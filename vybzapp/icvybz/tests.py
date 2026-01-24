@@ -1005,7 +1005,11 @@ class DynamicNavbarTests(TestCase):
         response = self.client.get(reverse('homepage'))
         
         # Check home button in profile navbar has onclick handler
-        self.assertContains(response, 'onclick="switchToDefaultNavbar(event)"')
+        self.assertContains(
+            response,
+            'onclick="switchToDefaultNavbar(event)"',
+            msg_prefix=response.content.decode('utf-8', errors='ignore')[:3000]
+        )
     
     def test_navbar_javascript_functions_available(self):
         """Test that navbar switching JavaScript functions are loaded"""

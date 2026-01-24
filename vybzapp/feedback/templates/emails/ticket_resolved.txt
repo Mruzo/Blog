@@ -1,0 +1,14 @@
+Hi {{ ticket.submitted_by_name }},
+
+Your request has been addressed:
+
+Ticket: {{ ticket.ticket_number }}
+Subject: {{ ticket.subject }}
+
+Resolution:
+{{ ticket.resolution_notes }}
+
+If you have any further questions, please create a new ticket.
+
+Best regards,
+Vybz Support Team

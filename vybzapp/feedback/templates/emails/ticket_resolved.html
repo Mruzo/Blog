@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Request Addressed</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4a90e2;">Your Request Has Been Addressed</h2>
+        
+        <p>Hi {{ ticket.submitted_by_name }},</p>
+        
+        <p>Your request has been addressed:</p>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>Ticket:</strong> {{ ticket.ticket_number }}</p>
+            <p><strong>Subject:</strong> {{ ticket.subject }}</p>
+        </div>
+        
+        <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #4caf50;">
+            <h3 style="margin-top: 0; color: #2e7d32;">Resolution:</h3>
+            <p style="white-space: pre-wrap;">{{ ticket.resolution_notes }}</p>
+        </div>
+        
+        <p>If you have any further questions, please create a new ticket.</p>
+        
+        <p>Best regards,<br>Vybz Support Team</p>
+    </div>
+</body>
+</html>

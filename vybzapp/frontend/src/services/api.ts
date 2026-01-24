@@ -39,12 +39,15 @@ api.interceptors.request.use(
     // Only exclude auth token for truly public endpoints:
     // - /stories/public/ (public stories list)
     // - /studios/ (public studios list - GET only, no path after /studios/)
+    // - /contact/ (contact form - public POST)
+    // - /feedback/ (feedback/ticket creation - public POST)
     // But NOT for authenticated endpoints like:
     // - /studios/{id}/collaboration-requests/ (requires auth)
     // - /studios/{id}/collaborators/ (requires auth)
     const isPublicStoriesEndpoint = url.includes('/stories/public/');
     const isPublicStudiosListEndpoint = url.match(/\/studios\/$/) && method === 'GET';
-    const isPublicEndpoint = isPublicStoriesEndpoint || isPublicStudiosListEndpoint;
+    const isContactEndpoint = url.includes('/contact/') || url.includes('/feedback/');
+    const isPublicEndpoint = isPublicStoriesEndpoint || isPublicStudiosListEndpoint || isContactEndpoint;
     
     if (!isPublicEndpoint) {
       const token = localStorage.getItem('authToken');

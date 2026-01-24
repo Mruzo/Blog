@@ -24,13 +24,14 @@ def search_users(request):
         return Response({'results': []})
     
     # Search for active users only (exclude inactive/deactivated accounts)
+    # Allow users to search for themselves (needed for studio owners to add themselves as collaborators)
     users = User.objects.filter(
         Q(username__icontains=query) |
         Q(email__icontains=query) |
         Q(first_name__icontains=query) |
         Q(last_name__icontains=query),
         is_active=True  # Only show active registered users
-    ).exclude(id=request.user.id)[:10]  # Exclude current user, limit to 10 results
+    )[:10]  # Limit to 10 results
     
     serializer = UserSerializer(users, many=True)
     return Response({'results': serializer.data})

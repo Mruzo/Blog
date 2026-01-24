@@ -150,7 +150,14 @@ def calculate_refund_amount(return_request):
     
     # Deduct return shipping if customer pays
     if return_request.return_shipping_paid_by == 'customer':
-        total -= return_request.return_shipping_cost
+        # Defensive: DecimalField default may be set as float on the in-memory instance
+        # (e.g. default=0.00). Ensure we always subtract a Decimal.
+        shipping_cost = return_request.return_shipping_cost
+        if shipping_cost is None:
+            shipping_cost = Decimal('0.00')
+        elif not isinstance(shipping_cost, Decimal):
+            shipping_cost = Decimal(str(shipping_cost))
+        total -= shipping_cost
     
     # Apply restocking fees if any
     for return_item in return_request.returnitem_set.all():
@@ -179,11 +186,13 @@ def get_available_return_items(order):
         available = order_item.get_available_for_return()
         if available > 0:
             available_items.append({
-                'order_item': order_item,
-                'available_quantity': available,
-                'product': order_item.product,
+                'order_item_id': order_item.id,
+                'product_name': order_item.product.title,
+                'product_uuid': order_item.product.uuid,
                 'quantity_ordered': order_item.quantity,
                 'quantity_returned': order_item.get_returned_quantity(),
+                'available_quantity': available,
+                'unit_price': order_item.product.get_discounted_price(),
             })
     
     return available_items
@@ -299,6 +308,16 @@ def generate_return_label(return_request):
     Returns:
         dict: Label info with url, tracking_number
     """
-    # Placeholder - will be implemented when extending Canada Post
     from snmov.utils.canadapost import create_return_label
-    return create_return_label(return_request)
+    result = create_return_label(return_request)
+
+    # Persist label info on the return request for later downloads / emails
+    label_url = result.get('label_url')
+    tracking_number = result.get('tracking_number')
+    if label_url:
+        return_request.return_label_url = label_url
+    if tracking_number:
+        return_request.return_tracking_number = tracking_number
+    return_request.save(update_fields=['return_label_url', 'return_tracking_number', 'updated_at'])
+
+    return result

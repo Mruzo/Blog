@@ -316,6 +316,14 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} by {self.customer.username}"
+
+    @property
+    def ref_code(self):
+        """
+        Backwards-compatible reference code for older serializers/clients.
+        Historically this was a DB field; now we derive it from the PK.
+        """
+        return f"ORD-{self.id}"
     
     def calculate_total_weight(self):
         return sum([

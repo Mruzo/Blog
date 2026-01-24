@@ -350,7 +350,7 @@ const StudioDetail: React.FC = () => {
     if (!studio) return null;
     return typeof studio.owner === 'object' && studio.owner !== null
       ? studio.owner
-      : { id: typeof studio.owner === 'number' ? studio.owner : 0, username: 'Unknown', first_name: 'Unknown', last_name: 'User' };
+      : { id: typeof studio.owner === 'number' ? studio.owner : 0, username: 'Unknown' };
   }, [studio]);
 
   // Debug: Log comparison values
@@ -438,7 +438,7 @@ const StudioDetail: React.FC = () => {
                 <div>
                   <i className="fas fa-crown text-warning me-2"></i>
                   <span className="subtext-btn-sm">
-                    <strong>Owner:</strong> {ownerInfo?.first_name || 'Unknown'} {ownerInfo?.last_name || 'User'} (@{ownerInfo?.username || 'Unknown'})
+                    <strong>Owner:</strong> @{ownerInfo?.username || 'Unknown'}
                   </span>
                 </div>
                 {studio.collaborators && studio.collaborators.length > 0 && (

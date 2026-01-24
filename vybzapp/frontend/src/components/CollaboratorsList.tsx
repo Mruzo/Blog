@@ -117,7 +117,7 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
                     style={{ width: '40px', height: '40px' }}
                   >
                     {collaborator.invitee_user ? 
-                      collaborator.invitee_user.first_name.charAt(0).toUpperCase() :
+                      (collaborator.invitee_user.username || 'U').charAt(0).toUpperCase() :
                       collaborator.invitee_email.charAt(0).toUpperCase()
                     }
                   </div>
@@ -128,7 +128,7 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
               <div>
                 <h6 className="subtext-btn mb-1">
                   {collaborator.invitee_user ? 
-                    `${collaborator.invitee_user.first_name} ${collaborator.invitee_user.last_name}` :
+                    `@${collaborator.invitee_user.username}` :
                     collaborator.invitee_email
                   }
                 </h6>
