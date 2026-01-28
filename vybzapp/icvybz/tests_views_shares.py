@@ -358,7 +358,8 @@ class ViewsCountIntegrationTestCase(APITestCase):
             title='Test Story',
             description='A test story',
             user=self.user,
-            is_public=True
+            is_public=True,
+            moderation_status='approved'  # Required for public API access
         )
         
         self.season = Season.objects.create(
@@ -428,6 +429,46 @@ class ViewsCountIntegrationTestCase(APITestCase):
         found_episodes = [ep_id for ep_id in created_episode_ids if ep_id in episode_ids]
         self.assertGreater(len(found_episodes), 0, 
                           f"None of our created episodes ({created_episode_ids}) found in API response ({episode_ids})")
+    
+    def test_public_episodes_api_filters_unpublished(self):
+        """Test that public episode API only returns published episodes"""
+        # Create an unpublished episode
+        unpublished_episode = Episode.objects.create(
+            season=self.season,
+            title='Unpublished Episode',
+            episode_number=4,
+            description='This should not appear in public API',
+            is_published=False,
+            view_count=0
+        )
+        
+        # Test as unauthenticated user (public access)
+        self.client.force_authenticate(user=None)  # Remove authentication
+        
+        url = reverse('icvybz-api:episode-list-create', kwargs={'season_id': self.season.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Handle paginated or non-paginated responses
+        episodes = response.data.get('results', response.data) if isinstance(response.data, dict) else response.data
+        
+        # Verify unpublished episode is NOT in the response
+        episode_ids = [ep['id'] for ep in episodes]
+        self.assertNotIn(unpublished_episode.id, episode_ids, 
+                         "Unpublished episode should not appear in public API")
+        
+        # Verify all published episodes ARE in the response
+        published_episode_ids = [self.episode1.id, self.episode2.id, self.episode3.id]
+        for ep_id in published_episode_ids:
+            self.assertIn(ep_id, episode_ids, 
+                         f"Published episode {ep_id} should appear in public API")
+        
+        # Verify all returned episodes are published
+        for episode_data in episodes:
+            # The API should only return published episodes for public access
+            episode = Episode.objects.get(id=episode_data['id'])
+            self.assertTrue(episode.is_published, 
+                          f"Episode {episode_data['id']} in public API should be published")
 
 
 class IncrementEpisodeViewTestCase(APITestCase):
@@ -686,6 +727,38 @@ class TotalViewsAnnotationTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('total_views', response.data)
         self.assertEqual(response.data['total_views'], 45)  # 10 + 20 + 15
+    
+    def test_season_list_includes_total_views(self):
+        """Test that SeasonListCreateView includes total_views annotation per season"""
+        url = reverse('icvybz-api:season-list-create', kwargs={'story_id': self.story.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        seasons = response.data if isinstance(response.data, list) else response.data.get('results', [])
+        
+        # Find our seasons
+        season1_data = next((s for s in seasons if s['id'] == self.season1.id), None)
+        season2_data = next((s for s in seasons if s['id'] == self.season2.id), None)
+        
+        self.assertIsNotNone(season1_data, "Season 1 not found in API response")
+        self.assertIsNotNone(season2_data, "Season 2 not found in API response")
+        
+        # Season 1 should have total_views = 30 (10 + 20)
+        self.assertIn('total_views', season1_data)
+        self.assertEqual(season1_data['total_views'], 30)
+        
+        # Season 2 should have total_views = 15
+        self.assertIn('total_views', season2_data)
+        self.assertEqual(season2_data['total_views'], 15)
+    
+    def test_season_detail_includes_total_views(self):
+        """Test that SeasonDetailView includes total_views annotation"""
+        url = reverse('icvybz-api:season-detail', kwargs={'pk': self.season1.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('total_views', response.data)
+        self.assertEqual(response.data['total_views'], 30)  # 10 + 20 (only episodes in season1)
 
 
 class SeasonPublicVisibilityTestCase(APITestCase):

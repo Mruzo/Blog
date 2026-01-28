@@ -94,10 +94,13 @@ class PublicStoriesView(generics.ListAPIView):
     def get_queryset(self):
         try:
             # Only show stories that are both public AND approved (published)
+            # Include total_views annotation (sum of all episode views) for consistency with authenticated views
             queryset = Comic.objects.filter(
                 is_public=True,
                 moderation_status='approved'
-            ).select_related('user').order_by('-created_at')
+            ).select_related('user').annotate(
+                total_views=Sum('seasons__episodes__view_count', default=0)
+            ).order_by('-created_at')
             return queryset
         except Exception as e:
             # Log the error and return empty queryset instead of crashing
@@ -123,64 +126,53 @@ class SeasonListCreateView(generics.ListCreateAPIView):
         
         # If story is public AND user is NOT the owner, only show public seasons to unauthenticated users
         if story and story.is_public and story.moderation_status == 'approved' and not is_owner:
-            # Check cache first
-            cache_key = f"seasons_public_{story_id}"
-            cached_queryset = cache.get(cache_key)
-            if cached_queryset:
-                return cached_queryset
-            
             # Only return seasons that are both in a public story AND are themselves public
+            # Include total_views annotation (sum of all episode views in this season)
             queryset = Season.objects.filter(
                 comic_id=story_id,
                 is_public=True
-            ).select_related('comic', 'comic__user')
-            # Cache for 5 minutes
-            cache.set(cache_key, queryset, 60 * 5)
+            ).select_related('comic', 'comic__user').annotate(
+                total_views=Sum('episodes__view_count', default=0)
+            ).order_by('season_number')
+            # Note: Don't cache annotated querysets as annotations may not persist
+            # Cache is cleared when episodes are modified anyway
             return queryset
         
         # For story owners or authenticated users accessing their own stories, require authentication
         if not self.request.user.is_authenticated:
             return Season.objects.none()
         
-        # Check cache first
-        cache_key = f"seasons_{story_id}_{self.request.user.id}"
-        cached_queryset = cache.get(cache_key)
-        if cached_queryset:
-            return cached_queryset
-        
         # Story owners can see ALL seasons in their own stories (regardless of public status)
-        queryset = Season.objects.filter(comic_id=story_id, comic__user=self.request.user).select_related('comic', 'comic__user')
-        # Cache for 5 minutes
-        cache.set(cache_key, queryset, 60 * 5)
+        # Include total_views annotation (sum of all episode views in this season)
+        queryset = Season.objects.filter(comic_id=story_id, comic__user=self.request.user).select_related('comic', 'comic__user').annotate(
+            total_views=Sum('episodes__view_count', default=0)
+        ).order_by('season_number')
+        # Note: Don't cache annotated querysets as annotations may not persist
+        # Cache is cleared when episodes are modified anyway
         return queryset
     
     def perform_create(self, serializer):
         story_id = self.kwargs.get('story_id')
         story = Comic.objects.get(id=story_id, user=self.request.user)
         serializer.save(comic=story)
-        # Clear cache when new season is created
-        cache_key = f"seasons_{story_id}_{self.request.user.id}"
-        cache.delete(cache_key)
-        # Also clear public cache if story is public
-        if story.is_public and story.moderation_status == 'approved':
-            cache.delete(f"seasons_public_{story_id}")
+        # Note: Cache clearing not needed since we don't cache annotated querysets
 
 class SeasonDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = SeasonSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Season.objects.filter(comic__user=self.request.user).select_related('comic', 'comic__user')
+        # Include total_views annotation (sum of all episode views in this season)
+        return Season.objects.filter(comic__user=self.request.user).select_related('comic', 'comic__user').annotate(
+            total_views=Sum('episodes__view_count', default=0)
+        )
     
     def perform_update(self, serializer):
         season = serializer.save()
-        # Clear cache when season is updated (both public and private caches)
-        story_id = season.comic.id
-        cache.delete(f"seasons_public_{story_id}")
-        cache.delete(f"seasons_{story_id}_{self.request.user.id}")
-        # Also clear episodes cache for this season
+        # Clear episodes cache for this season (when season is updated, episodes may change)
         cache.delete(f"episodes_public_{season.id}")
         cache.delete(f"episodes_{season.id}_{self.request.user.id}")
+        # Note: Season cache clearing not needed since we don't cache annotated querysets
 
 # Character API Views
 class CharacterListCreateView(generics.ListCreateAPIView):
@@ -268,7 +260,11 @@ class EpisodeListCreateView(generics.ListCreateAPIView):
             if cached_queryset:
                 return cached_queryset
             
-            queryset = Episode.objects.filter(season_id=season_id).select_related('season', 'season__comic', 'season__comic__user')
+            # Only return published episodes for public stories
+            queryset = Episode.objects.filter(
+                season_id=season_id,
+                is_published=True
+            ).select_related('season', 'season__comic', 'season__comic__user')
             # Cache for 5 minutes
             cache.set(cache_key, queryset, 60 * 5)
             return queryset
@@ -360,12 +356,15 @@ def increment_episode_view(request, episode_id):
         # Clear cache for episodes list to reflect updated view count
         from django.core.cache import cache
         season_id = episode.season.id
+        story_id = episode.season.comic.id
         cache.delete(f"episodes_public_{season_id}")
         # Also clear private cache for story owner
         if episode.season.comic.user:
             cache.delete(f"episodes_{season_id}_{episode.season.comic.user.id}")
             # Clear user stories cache so total_views updates in My Studio
             cache.delete(f"user_comics_{episode.season.comic.user.id}")
+        # Note: PublicStoriesView doesn't use cache (annotated querysets aren't cached),
+        # so the updated total_views will be reflected on next API call
         
         return Response({
             'success': True,

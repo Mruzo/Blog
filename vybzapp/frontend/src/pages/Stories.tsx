@@ -31,6 +31,7 @@ interface Comic {
   user: number; // User ID
   user_username?: string; // Username of the owner
   characters?: Character[]; // Characters associated with this story
+  total_views?: number; // Total view count across all episodes (calculated by backend)
 }
 
 const Stories: React.FC = () => {
@@ -439,6 +440,7 @@ const Stories: React.FC = () => {
               updated_at: story.updated_at,
               user: story.user,
               user_username: story.user_username || 'Unknown',
+              total_views: story.total_views || 0, // Include total_views from API
       characters: [] // Load on demand if needed
     }));
     
@@ -788,36 +790,54 @@ const Stories: React.FC = () => {
                         onEpisodeSelect={(episode) => {
                           handleEpisodeSelect(comic.id, episode);
                         }}
+                        onViewIncremented={(storyId) => {
+                          console.log('[Stories] ========== onViewIncremented CALLED ==========');
+                          console.log('[Stories] storyId:', storyId);
+                          console.log('[Stories] Current comics state:', comics);
+                          
+                          // Update the comic's total_views when an episode view is incremented
+                          setComics(prev => {
+                            console.log('[Stories] setComics called with prev:', prev);
+                            const updated = prev.map(c => {
+                              if (c.id === storyId) {
+                                const newTotal = (c.total_views || 0) + 1;
+                                console.log('[Stories] ✅ Updating comic', storyId, 'total_views from', c.total_views, 'to', newTotal);
+                                return { ...c, total_views: newTotal };
+                              }
+                              return c;
+                            });
+                            console.log('[Stories] Updated comics:', updated);
+                            return updated;
+                          });
+                          
+                          // Also update filteredStories so the value persists when useEffect runs
+                          setFilteredStories(prev => prev.map(s => 
+                            s.id === storyId 
+                              ? { ...s, total_views: (s.total_views || 0) + 1 }
+                              : s
+                          ));
+                          
+                          console.log('[Stories] ========== State update complete ==========');
+                        }}
                       />
                     </div>
                   )}
                   
                   {/* Views Count Section - Above Collaborators */}
-                  {storyData.has(comic.id) && (() => {
-                    const episodes = storyData.get(comic.id)?.episodes || [];
-                    const totalViews = episodes.reduce((sum: number, episode: any) => {
-                      // Handle both view_count (from API) and viewCount (camelCase) for compatibility
-                      const views = episode.view_count || episode.viewCount || 0;
-                      return sum + (typeof views === 'number' ? views : 0);
-                    }, 0);
-                    // Always show the views count section, even if 0, to match the pattern
-                    return (
-                      <div className="d-flex justify-content-start align-items-center mb-2">
-                        <span 
-                          className="badge" 
-                          style={{ 
-                            background: 'transparent', 
-                            color: '#111e7f',
-                            fontSize: '0.85rem',
-                            padding: '0.35rem 0.65rem'
-                          }}
-                        >
-                          
-                          {totalViews} views
-                              </span>
-                      </div>
-                    );
-                  })()}
+                  {/* Use total_views from API (calculated by backend) instead of frontend calculation */}
+                  <div className="d-flex justify-content-start align-items-center mb-2">
+                    <span 
+                      className="badge" 
+                      style={{ 
+                        background: 'transparent', 
+                        color: '#111e7f',
+                        fontSize: '0.85rem',
+                        padding: '0.35rem 0.65rem'
+                      }}
+                    >
+                      {comic.total_views || 0} views
+                    </span>
+                  </div>
                   
                   {/* Collaborators Section - Below 3D Viewer */}
                   {storyData.has(comic.id) && (

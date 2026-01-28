@@ -196,6 +196,7 @@ export interface Season {
   model_usdz?: string;
   created_at: string;
   updated_at: string;
+  total_views?: number; // Total view count across all episodes in this season (calculated by backend)
 }
 
 export interface SeasonCreateData {

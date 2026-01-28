@@ -604,7 +604,7 @@ const StoryManage: React.FC = () => {
                               
                               <div className="d-flex align-items-center text-muted subtext-btn-sm">
                                 <i className="fas fa-eye me-1"></i>
-                                &nbsp;<strong>{(allEpisodes.filter(ep => ep.season === season.id).reduce((sum, ep) => sum + ((ep as any).view_count || 0), 0))}</strong>
+                                &nbsp;<strong>{(season as any).total_views ?? (allEpisodes.filter(ep => ep.season === season.id).reduce((sum, ep) => sum + ((ep as any).view_count || 0), 0))}</strong>
                               </div>
                               
                               <div className="d-flex align-items-center">
@@ -672,7 +672,7 @@ const StoryManage: React.FC = () => {
                               
                               <div className="d-flex align-items-center text-muted subtext-btn-sm">
                                 <i className="fas fa-eye me-1"></i>
-                                &nbsp;<strong>{(allEpisodes.filter(ep => ep.season === season.id).reduce((sum, ep) => sum + ((ep as any).view_count || 0), 0))}</strong>
+                                &nbsp;<strong>{(season as any).total_views ?? (allEpisodes.filter(ep => ep.season === season.id).reduce((sum, ep) => sum + ((ep as any).view_count || 0), 0))}</strong>
                               </div>
                               
                               <div className="d-flex align-items-center">

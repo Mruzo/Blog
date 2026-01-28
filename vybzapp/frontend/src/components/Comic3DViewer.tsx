@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Episode, Dialogue, Season } from '../services/api';
 import apiService from '../services/api';
 import AnimationController from './AnimationController';
+import logger from '../utils/logger';
 
 // Extend JSX.IntrinsicElements for model-viewer
 declare module 'react' {
@@ -20,6 +21,7 @@ interface Comic3DViewerProps {
   seasonId?: number;
   onEpisodeSelect?: (episode: Episode) => void;
   onDialogueUpdate?: (dialogueId: number, data: Partial<Dialogue>) => void;
+  onViewIncremented?: (storyId: number) => void; // Callback when an episode view is incremented
   readOnly?: boolean; // Hide edit controls and show only 3D viewer with navigation
 }
 
@@ -44,6 +46,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   seasonId,
   onEpisodeSelect,
   onDialogueUpdate,
+  onViewIncremented,
   readOnly = false
 }) => {
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
@@ -117,7 +120,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         // Add the hotspot to the model-viewer
         modelViewer.appendChild(hotspot);
         
-        console.log('Comic3DViewer: Created hotspot for character', baseCharacterName, 'at position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
+        logger.log('Comic3DViewer: Created hotspot for character', baseCharacterName, 'at position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
       }
     });
   }, [dialogueData]);
@@ -159,15 +162,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   // Initialize model viewer when component mounts
   useEffect(() => {
-    console.log('Comic3DViewer: Initializing model-viewer script');
+    logger.log('Comic3DViewer: Initializing model-viewer script');
     const script = document.createElement('script');
     script.type = 'module';
     script.src = 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js';
     script.onload = () => {
-      console.log('Comic3DViewer: Model-viewer script loaded successfully');
+      logger.log('Comic3DViewer: Model-viewer script loaded successfully');
     };
     script.onerror = () => {
-      console.error('Comic3DViewer: Failed to load model-viewer script');
+      logger.error('Comic3DViewer: Failed to load model-viewer script');
     };
     document.head.appendChild(script);
 
@@ -185,21 +188,21 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
     // Prevent starting animations multiple times
     if (animationsStartedRef.current) {
-      console.log('Comic3DViewer: Animations already started, skipping');
+      logger.log('Comic3DViewer: Animations already started, skipping');
       return;
     }
 
     try {
       const animations = modelViewer.availableAnimations || [];
-      console.log('Comic3DViewer: Available animations:', animations);
+      logger.log('Comic3DViewer: Available animations:', animations);
 
       if (animations.length === 0) {
-        console.log('Comic3DViewer: No animations available in this model');
+        logger.log('Comic3DViewer: No animations available in this model');
         return;
       }
 
       animationsStartedRef.current = true;
-      console.log('Comic3DViewer: Starting all animations sequentially');
+      logger.log('Comic3DViewer: Starting all animations sequentially');
       
       // Function to play animations sequentially
       const playNextAnimation = (index: number) => {
@@ -210,7 +213,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         }
 
         const animationName = animations[index];
-        console.log(`Comic3DViewer: Starting animation ${index + 1}/${animations.length}: ${animationName}`);
+        logger.log(`Comic3DViewer: Starting animation ${index + 1}/${animations.length}: ${animationName}`);
         
         try {
           // Play the animation
@@ -220,10 +223,10 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
             // When animation completes, play the next one
             if (typeof animationPlay.then === 'function') {
               animationPlay.then(() => {
-                console.log(`Comic3DViewer: Animation "${animationName}" completed`);
+                logger.log(`Comic3DViewer: Animation "${animationName}" completed`);
                 playNextAnimation(index + 1);
               }).catch((error: any) => {
-                console.error(`Comic3DViewer: Error playing animation "${animationName}":`, error);
+                logger.error(`Comic3DViewer: Error playing animation "${animationName}":`, error);
                 playNextAnimation(index + 1); // Continue to next animation even on error
               });
             } else {
@@ -240,7 +243,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
             }, 3000);
           }
         } catch (error) {
-          console.error(`Comic3DViewer: Error starting animation "${animationName}":`, error);
+          logger.error(`Comic3DViewer: Error starting animation "${animationName}":`, error);
           playNextAnimation(index + 1); // Continue to next animation even on error
         }
       };
@@ -250,14 +253,14 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         playNextAnimation(0);
       }, 500);
     } catch (error) {
-      console.error('Comic3DViewer: Error starting animations:', error);
+      logger.error('Comic3DViewer: Error starting animations:', error);
     }
   }, []);
 
   // Handle model load event
   const handleModelReady = useCallback(() => {
-    console.log('Comic3DViewer: Model loaded and ready');
-    console.log('Comic3DViewer: Model viewer ref:', modelViewerRef.current);
+    logger.log('Comic3DViewer: Model loaded and ready');
+    logger.log('Comic3DViewer: Model viewer ref:', modelViewerRef.current);
     setIsModelReady(true);
     
     // Start all available animations
@@ -267,7 +270,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   // Handle model visibility event
   const handleModelVisibility = useCallback((event: any) => {
     if (event.detail.visible) {
-      console.log('Comic3DViewer: Model and hotspots ready');
+      logger.log('Comic3DViewer: Model and hotspots ready');
       setIsModelReady(true);
       
       // Create hotspots from POV data
@@ -281,7 +284,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   // Handle camera change event
   const handleCameraChange = useCallback(() => {
     if (!isAnimating) {
-      console.log('Comic3DViewer: Camera changed');
+      logger.camera('Comic3DViewer: Camera changed');
       // Update pointer if needed
     }
   }, [isAnimating]);
@@ -289,18 +292,18 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   // Add event listeners for model-viewer events
   useEffect(() => {
     if (isStarted && selectedEpisode && getModelFromSeason(selectedEpisode)) {
-      console.log('Comic3DViewer: Setting up event listeners, isEditMode:', isEditMode);
+      logger.log('Comic3DViewer: Setting up event listeners, isEditMode:', isEditMode);
       // Wait for the model-viewer element to be created
       const timer = setTimeout(() => {
         const modelViewer = modelViewerRef.current;
-        console.log('Comic3DViewer: Setting up event listeners, modelViewer:', modelViewer);
+        logger.log('Comic3DViewer: Setting up event listeners, modelViewer:', modelViewer);
         if (modelViewer) {
-          console.log('Comic3DViewer: Adding event listeners to model viewer');
+          logger.log('Comic3DViewer: Adding event listeners to model viewer');
           modelViewer.addEventListener('load', handleModelReady);
           modelViewer.addEventListener('model-visibility', handleModelVisibility);
           modelViewer.addEventListener('camera-change', handleCameraChange);
         } else {
-          console.log('Comic3DViewer: No model viewer element found');
+          logger.log('Comic3DViewer: No model viewer element found');
         }
       }, 100);
 
@@ -309,7 +312,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         // Capture the ref value at the time of effect creation
         const currentRef = modelViewerRef.current;
         if (currentRef) {
-          console.log('Comic3DViewer: Removing event listeners');
+          logger.log('Comic3DViewer: Removing event listeners');
           currentRef.removeEventListener('load', handleModelReady);
           currentRef.removeEventListener('model-visibility', handleModelVisibility);
           currentRef.removeEventListener('camera-change', handleCameraChange);
@@ -330,11 +333,11 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   // Start episode playback
   const startEpisode = () => {
-    console.log('Comic3DViewer: Start button clicked');
-    console.log('Comic3DViewer: Selected episode:', selectedEpisode);
-    console.log('Comic3DViewer: Episode has model:', selectedEpisode ? getModelFromSeason(selectedEpisode) : null);
-    console.log('Comic3DViewer: Model URL:', selectedEpisode ? getModelFromSeason(selectedEpisode) : null);
-    console.log('Comic3DViewer: Episode dialogues length:', episodeDialogues.length);
+    logger.log('Comic3DViewer: Start button clicked');
+    logger.log('Comic3DViewer: Selected episode:', selectedEpisode);
+    logger.log('Comic3DViewer: Episode has model:', selectedEpisode ? getModelFromSeason(selectedEpisode) : null);
+    logger.log('Comic3DViewer: Model URL:', selectedEpisode ? getModelFromSeason(selectedEpisode) : null);
+    logger.log('Comic3DViewer: Episode dialogues length:', episodeDialogues.length);
     
     // Always set isStarted to true - this will trigger model-viewer to render
     setIsStarted(true);
@@ -347,11 +350,30 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     
     // If dialogues are not loaded yet, wait for them
     if (episodeDialogues.length === 0 && selectedEpisode) {
-      console.log('Comic3DViewer: Dialogues not loaded yet, showing summary while waiting...');
+      logger.log('Comic3DViewer: Dialogues not loaded yet, showing summary while waiting...');
       setIsWaitingForDialogues(true);
     } else {
       setIsWaitingForDialogues(false);
-      console.log('Comic3DViewer: Starting with summary (dialogues available, user can click Next to proceed)');
+      logger.log('Comic3DViewer: Starting with summary (dialogues available, user can click Next to proceed)');
+      
+      // If episode has no dialogues at all (not just loading), increment view when user clicks Start
+      // (since they can't complete it by going through dialogues)
+      if (episodeDialogues.length === 0 && readOnly && selectedEpisode && selectedEpisode.is_published) {
+        if (!trackedEpisodesRef.current.has(selectedEpisode.id)) {
+          trackedEpisodesRef.current.add(selectedEpisode.id);
+          logger.log('[Comic3DViewer] Episode has no dialogues - incrementing view on Start:', selectedEpisode.id);
+          apiService.incrementEpisodeView(selectedEpisode.id)
+            .then((response) => {
+              logger.log('[Comic3DViewer] Episode view incremented successfully:', response);
+              if (onViewIncremented) {
+                onViewIncremented(storyId);
+              }
+            })
+            .catch((error) => {
+              logger.error('[Comic3DViewer] Error incrementing episode view:', error);
+            });
+        }
+      }
     }
     
     // Don't start auto-play immediately - let user control with navigation buttons
@@ -363,13 +385,34 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     // If we're waiting for dialogues and they just became available, keep showing summary
     // User will click Next to proceed to first dialogue
     if (isWaitingForDialogues && isStarted && selectedEpisode && episodeDialogues.length > 0) {
-      console.log('Comic3DViewer: Dialogues loaded after Start clicked, keeping summary visible (user can click Next)');
+      logger.log('Comic3DViewer: Dialogues loaded after Start clicked, keeping summary visible (user can click Next)');
       setIsWaitingForDialogues(false);
       // Keep summary visible - don't auto-switch to dialogue
       // Summary stays visible until user clicks Next
     }
+    
+    // If dialogues finished loading and episode has no dialogues, increment view
+    // (episode is effectively "complete" since there's nothing to view)
+    if (isWaitingForDialogues && isStarted && selectedEpisode && episodeDialogues.length === 0 && readOnly && selectedEpisode.is_published) {
+      logger.log('Comic3DViewer: Dialogues finished loading - episode has no dialogues, incrementing view');
+      setIsWaitingForDialogues(false);
+      if (!trackedEpisodesRef.current.has(selectedEpisode.id)) {
+        trackedEpisodesRef.current.add(selectedEpisode.id);
+        logger.log('[Comic3DViewer] Episode has no dialogues - incrementing view:', selectedEpisode.id);
+        apiService.incrementEpisodeView(selectedEpisode.id)
+          .then((response) => {
+            logger.log('[Comic3DViewer] Episode view incremented successfully:', response);
+            if (onViewIncremented) {
+              onViewIncremented(storyId);
+            }
+          })
+          .catch((error) => {
+            logger.error('[Comic3DViewer] Error incrementing episode view:', error);
+          });
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [episodeDialogues.length, isWaitingForDialogues, isStarted, selectedEpisode]);
+  }, [episodeDialogues.length, isWaitingForDialogues, isStarted, selectedEpisode, readOnly, storyId, onViewIncremented]);
 
 
 
@@ -381,20 +424,20 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const updateCameraDebounced = useCallback((dialogueId: number, data: Partial<Dialogue>) => {
     // Validate dialogue ID
     if (!dialogueId || dialogueId <= 0) {
-      console.error('Comic3DViewer: Invalid dialogue ID:', dialogueId);
+      logger.error('Comic3DViewer: Invalid dialogue ID:', dialogueId);
       return;
     }
     
     // Validate data
     if (!data || Object.keys(data).length === 0) {
-      console.error('Comic3DViewer: No data provided for dialogue update');
+      logger.error('Comic3DViewer: No data provided for dialogue update');
       return;
     }
     
-    console.log('Comic3DViewer: Updating dialogue', dialogueId, 'with data:', data);
-    console.log('Comic3DViewer: Data type:', typeof data);
-    console.log('Comic3DViewer: Data keys:', Object.keys(data));
-    console.log('Comic3DViewer: Data values:', Object.values(data));
+    logger.log('Comic3DViewer: Updating dialogue', dialogueId, 'with data:', data);
+    logger.log('Comic3DViewer: Data type:', typeof data);
+    logger.log('Comic3DViewer: Data keys:', Object.keys(data));
+    logger.log('Comic3DViewer: Data values:', Object.values(data));
     
     // Clear any existing timeout
     if (updateTimeoutRef.current) {
@@ -404,13 +447,13 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     // Set new timeout
     updateTimeoutRef.current = setTimeout(() => {
       try {
-        console.log('Comic3DViewer: Calling onDialogueUpdate with:', { dialogueId, data });
+        logger.log('Comic3DViewer: Calling onDialogueUpdate with:', { dialogueId, data });
         onDialogueUpdate?.(dialogueId, data);
-        console.log('Comic3DViewer: Dialogue update successful');
+        logger.log('Comic3DViewer: Dialogue update successful');
       } catch (error: any) {
-        console.error('Comic3DViewer: Error updating dialogue:', error);
-        console.error('Comic3DViewer: Error details:', error.message);
-        console.error('Comic3DViewer: Error stack:', error.stack);
+        logger.error('Comic3DViewer: Error updating dialogue:', error);
+        logger.error('Comic3DViewer: Error details:', error.message);
+        logger.error('Comic3DViewer: Error stack:', error.stack);
       }
       
       // Update model-viewer in real-time (matching Django pattern)
@@ -609,7 +652,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       setTimeout(() => setSaveMessage(null), 3000);
       
     } catch (error) {
-      console.error('Error saving camera changes:', error);
+      logger.camera('Error saving camera changes:', error);
       setSaveMessage({ type: 'error', text: 'Error saving changes' });
     } finally {
       setIsSaving(false);
@@ -674,15 +717,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   // Load dialogue data from hidden container (Django pattern)
   const loadDialogue = (index: number) => {
-    console.log('Comic3DViewer: Loading dialogue data for index:', index);
+    logger.log('Comic3DViewer: Loading dialogue data for index:', index);
     
     if (!episodeDialogues || !episodeDialogues[index]) {
-      console.log('Comic3DViewer: No dialogue data found for index:', index);
+      logger.log('Comic3DViewer: No dialogue data found for index:', index);
       return null;
     }
     
     const dialogue = episodeDialogues[index];
-    console.log('Comic3DViewer: Loaded dialogue data:', dialogue);
+    logger.log('Comic3DViewer: Loaded dialogue data:', dialogue);
     
     return {
       dialogue_id: dialogue.id,
@@ -703,7 +746,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const updateDialsFromDialogue = (dialogue: DialogueData) => {
     if (!isEditMode) return;
     
-    console.log('Comic3DViewer: Updating dials from dialogue:', dialogue);
+    logger.log('Comic3DViewer: Updating dials from dialogue:', dialogue);
     
     // Parse camera orbit (format: "azimuthdeg polardeg radiusm")
     const orbitParts = dialogue.camera_orbit.split(' ');
@@ -727,28 +770,28 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     setSliderValue('fieldOfView', dialogue.field_of_view, 10, 90);
     setSliderValue('zoomSpeed', dialogue.zoom_speed, 0.1, 3);
     
-    console.log('Comic3DViewer: Dials updated to match dialogue values');
+    logger.log('Comic3DViewer: Dials updated to match dialogue values');
   };
 
   // Show dialogue with camera animation (Django pattern) - with custom dialogue data
   const showDialogueWithData = (index: number, customDialogueData: DialogueData[]) => {
-    console.log('Comic3DViewer: showDialogueWithData called with index:', index);
-    console.log('Comic3DViewer: customDialogueData length:', customDialogueData?.length);
-    console.log('Comic3DViewer: customDialogueData:', customDialogueData);
+    logger.log('Comic3DViewer: showDialogueWithData called with index:', index);
+    logger.log('Comic3DViewer: customDialogueData length:', customDialogueData?.length);
+    logger.log('Comic3DViewer: customDialogueData:', customDialogueData);
     
     if (!customDialogueData || !customDialogueData[index]) {
-      console.log('Comic3DViewer: No dialogue found for index:', index);
+      logger.log('Comic3DViewer: No dialogue found for index:', index);
       return;
     }
 
-    console.log('Comic3DViewer: Showing dialogue:', index);
+    logger.log('Comic3DViewer: Showing dialogue:', index);
     
     // Update current dialogue index
     setCurrentDialogueIndex(index);
     
     // Use the provided dialogue data
     const currentDialogue = customDialogueData[index];
-    console.log('Comic3DViewer: Current dialogue:', currentDialogue);
+    logger.log('Comic3DViewer: Current dialogue:', currentDialogue);
     
     // Update dialogue text in speech bubble (Django pattern: <strong>Character:</strong> text)
     const dialogueText = `
@@ -756,38 +799,38 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         <strong>${currentDialogue.character}:</strong> ${currentDialogue.text}
       </div>
     `;
-    console.log('Comic3DViewer: Setting dialogue text:', dialogueText);
+    logger.log('Comic3DViewer: Setting dialogue text:', dialogueText);
     setCurrentDialogueText(dialogueText);
     
     // Animate camera position (Django pattern - exact implementation)
-    console.log('Comic3DViewer: === CAMERA UPDATE DEBUG ===');
-    console.log('Comic3DViewer: Dialogue index:', index);
-    console.log('Comic3DViewer: modelViewerRef.current:', !!modelViewerRef.current);
-    console.log('Comic3DViewer: isModelReady:', isModelReady);
-    console.log('Comic3DViewer: currentDialogue:', currentDialogue);
+    logger.camera('Comic3DViewer: === CAMERA UPDATE DEBUG ===');
+    logger.log('Comic3DViewer: Dialogue index:', index);
+    logger.log('Comic3DViewer: modelViewerRef.current:', !!modelViewerRef.current);
+    logger.log('Comic3DViewer: isModelReady:', isModelReady);
+    logger.log('Comic3DViewer: currentDialogue:', currentDialogue);
     
     if (modelViewerRef.current) {
-      console.log('Comic3DViewer: Camera target before:', modelViewerRef.current.cameraTarget);
-      console.log('Comic3DViewer: Camera orbit before:', modelViewerRef.current.cameraOrbit);
-      console.log('Comic3DViewer: New camera target:', currentDialogue.camera_target);
-      console.log('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
-      console.log('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
+      logger.camera('Comic3DViewer: Camera target before:', modelViewerRef.current.cameraTarget);
+      logger.camera('Comic3DViewer: Camera orbit before:', modelViewerRef.current.cameraOrbit);
+      logger.camera('Comic3DViewer: New camera target:', currentDialogue.camera_target);
+      logger.camera('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
+      logger.camera('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
       
       // First set the target (Django pattern)
       modelViewerRef.current.cameraTarget = currentDialogue.camera_target;
-      console.log('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
+      logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
       
       // Set field of view (Django pattern)
       modelViewerRef.current.fieldOfView = currentDialogue.field_of_view + "deg";
-      console.log('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
+      logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
       
       // Try setting camera orbit directly first (Django pattern)
       modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
-      console.log('Comic3DViewer: Camera orbit after direct setting:', modelViewerRef.current.cameraOrbit);
+      logger.camera('Comic3DViewer: Camera orbit after direct setting:', modelViewerRef.current.cameraOrbit);
       
       // Use the animation system for smooth camera movement (Django pattern)
-      console.log('Comic3DViewer: About to animate with orbit value:', currentDialogue.camera_orbit);
-      console.log('Comic3DViewer: Type of orbit value:', typeof currentDialogue.camera_orbit);
+      logger.camera('Comic3DViewer: About to animate with orbit value:', currentDialogue.camera_orbit);
+      logger.camera('Comic3DViewer: Type of orbit value:', typeof currentDialogue.camera_orbit);
       
       try {
         const animation = modelViewerRef.current.animate({
@@ -797,25 +840,25 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
           easing: 'ease-in-out'
         });
         
-        console.log('Comic3DViewer: Animation started with orbit:', currentDialogue.camera_orbit);
-        console.log('Comic3DViewer: Animation object:', animation);
+        logger.camera('Comic3DViewer: Animation started with orbit:', currentDialogue.camera_orbit);
+        logger.log('Comic3DViewer: Animation object:', animation);
         
         // Wait for animation to complete (Django pattern)
         if (animation && animation.onfinish) {
           animation.onfinish = () => {
-            console.log('Comic3DViewer: Camera animation complete');
+            logger.camera('Comic3DViewer: Camera animation complete');
           };
         }
         
         // Update dials to match the dialogue values (bidirectional sync)
         updateDialsFromDialogue(currentDialogue);
       } catch (error) {
-        console.error('Comic3DViewer: Error animating camera:', error);
+        logger.camera('Comic3DViewer: Error animating camera:', error);
         // Still update dials even if animation fails
         updateDialsFromDialogue(currentDialogue);
       }
     } else {
-      console.log('Comic3DViewer: Cannot animate camera - modelViewerRef is null');
+      logger.camera('Comic3DViewer: Cannot animate camera - modelViewerRef is null');
       // Update dials even if no model viewer
       updateDialsFromDialogue(currentDialogue);
     }
@@ -823,23 +866,23 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   // Show dialogue with camera animation (Django pattern)
   const showDialogue = (index: number) => {
-    console.log('Comic3DViewer: showDialogue called with index:', index);
-    console.log('Comic3DViewer: dialogueData length:', dialogueData?.length);
-    console.log('Comic3DViewer: dialogueData:', dialogueData);
+    logger.log('Comic3DViewer: showDialogue called with index:', index);
+    logger.log('Comic3DViewer: dialogueData length:', dialogueData?.length);
+    logger.log('Comic3DViewer: dialogueData:', dialogueData);
     
     if (!dialogueData || !dialogueData[index]) {
-      console.log('Comic3DViewer: No dialogue found for index:', index);
+      logger.log('Comic3DViewer: No dialogue found for index:', index);
       return;
     }
 
-    console.log('Comic3DViewer: Showing dialogue:', index);
+    logger.log('Comic3DViewer: Showing dialogue:', index);
     
     // Update current dialogue index
     setCurrentDialogueIndex(index);
     
     // Use the updated dialogue data from state
     const currentDialogue = dialogueData[index];
-    console.log('Comic3DViewer: Current dialogue:', currentDialogue);
+    logger.log('Comic3DViewer: Current dialogue:', currentDialogue);
     
     // Update dialogue text in speech bubble (Django pattern: <strong>Character:</strong> text)
     const dialogueText = `
@@ -847,38 +890,38 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         <strong>${currentDialogue.character}:</strong> ${currentDialogue.text}
       </div>
     `;
-    console.log('Comic3DViewer: Setting dialogue text:', dialogueText);
+    logger.log('Comic3DViewer: Setting dialogue text:', dialogueText);
     setCurrentDialogueText(dialogueText);
     
     // Animate camera position (Django pattern - exact implementation)
-    console.log('Comic3DViewer: === CAMERA UPDATE DEBUG ===');
-    console.log('Comic3DViewer: Dialogue index:', index);
-    console.log('Comic3DViewer: modelViewerRef.current:', !!modelViewerRef.current);
-    console.log('Comic3DViewer: isModelReady:', isModelReady);
-    console.log('Comic3DViewer: currentDialogue:', currentDialogue);
+    logger.camera('Comic3DViewer: === CAMERA UPDATE DEBUG ===');
+    logger.log('Comic3DViewer: Dialogue index:', index);
+    logger.log('Comic3DViewer: modelViewerRef.current:', !!modelViewerRef.current);
+    logger.log('Comic3DViewer: isModelReady:', isModelReady);
+    logger.log('Comic3DViewer: currentDialogue:', currentDialogue);
     
     if (modelViewerRef.current) {
-      console.log('Comic3DViewer: Camera target before:', modelViewerRef.current.cameraTarget);
-      console.log('Comic3DViewer: Camera orbit before:', modelViewerRef.current.cameraOrbit);
-      console.log('Comic3DViewer: New camera target:', currentDialogue.camera_target);
-      console.log('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
-      console.log('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
+      logger.camera('Comic3DViewer: Camera target before:', modelViewerRef.current.cameraTarget);
+      logger.camera('Comic3DViewer: Camera orbit before:', modelViewerRef.current.cameraOrbit);
+      logger.camera('Comic3DViewer: New camera target:', currentDialogue.camera_target);
+      logger.camera('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
+      logger.camera('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
       
       // First set the target (Django pattern)
       modelViewerRef.current.cameraTarget = currentDialogue.camera_target;
-      console.log('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
+      logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
       
       // Set field of view (Django pattern)
       modelViewerRef.current.fieldOfView = currentDialogue.field_of_view + "deg";
-      console.log('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
+      logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
       
       // Try setting camera orbit directly first (Django pattern)
       modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
-      console.log('Comic3DViewer: Camera orbit after direct setting:', modelViewerRef.current.cameraOrbit);
+      logger.camera('Comic3DViewer: Camera orbit after direct setting:', modelViewerRef.current.cameraOrbit);
       
       // Use the animation system for smooth camera movement (Django pattern)
-      console.log('Comic3DViewer: About to animate with orbit value:', currentDialogue.camera_orbit);
-      console.log('Comic3DViewer: Type of orbit value:', typeof currentDialogue.camera_orbit);
+      logger.camera('Comic3DViewer: About to animate with orbit value:', currentDialogue.camera_orbit);
+      logger.camera('Comic3DViewer: Type of orbit value:', typeof currentDialogue.camera_orbit);
       
       try {
         const animation = modelViewerRef.current.animate({
@@ -888,25 +931,25 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
           easing: 'ease-in-out'
         });
         
-        console.log('Comic3DViewer: Animation started with orbit:', currentDialogue.camera_orbit);
-        console.log('Comic3DViewer: Animation object:', animation);
+        logger.camera('Comic3DViewer: Animation started with orbit:', currentDialogue.camera_orbit);
+        logger.log('Comic3DViewer: Animation object:', animation);
         
         // Wait for animation to complete (Django pattern)
         if (animation && animation.onfinish) {
           animation.onfinish = () => {
-            console.log('Comic3DViewer: Camera animation complete');
+            logger.camera('Comic3DViewer: Camera animation complete');
           };
         }
         
         // Update dials to match the dialogue values (bidirectional sync)
         updateDialsFromDialogue(currentDialogue);
       } catch (error) {
-        console.error('Comic3DViewer: Error animating camera:', error);
+        logger.camera('Comic3DViewer: Error animating camera:', error);
         // Still update dials even if animation fails
         updateDialsFromDialogue(currentDialogue);
       }
     } else {
-      console.log('Comic3DViewer: Cannot animate camera - modelViewerRef is null');
+      logger.camera('Comic3DViewer: Cannot animate camera - modelViewerRef is null');
       // Update dials even if no model viewer
       updateDialsFromDialogue(currentDialogue);
     }
@@ -914,7 +957,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   // Navigation functions (Django pattern)
   const goToPreviousDialogue = () => {
-    console.log('Comic3DViewer: Previous button clicked, current index:', currentDialogueIndex);
+    logger.log('Comic3DViewer: Previous button clicked, current index:', currentDialogueIndex);
     
     if (isShowingSummary) {
       // If showing summary, go back to last dialogue
@@ -923,22 +966,76 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       showDialogue(currentDialogueIndex);
     } else if (currentDialogueIndex > 0) {
       const newIndex = currentDialogueIndex - 1;
-      console.log('Comic3DViewer: Moving to previous dialogue, new index:', newIndex);
+      logger.log('Comic3DViewer: Moving to previous dialogue, new index:', newIndex);
       loadDialogue(newIndex);
       showDialogue(newIndex);
     } else {
-      console.log('Comic3DViewer: Already at first dialogue');
+      logger.log('Comic3DViewer: Already at first dialogue');
     }
   };
 
+  // Helper function to increment episode view when completed
+  const incrementEpisodeViewIfNeeded = useCallback(() => {
+    logger.log('[Comic3DViewer] incrementEpisodeViewIfNeeded called');
+    logger.log('[Comic3DViewer] selectedEpisode:', selectedEpisode);
+    logger.log('[Comic3DViewer] readOnly:', readOnly);
+    logger.log('[Comic3DViewer] storyId:', storyId);
+    logger.log('[Comic3DViewer] onViewIncremented:', onViewIncremented);
+    
+    if (!selectedEpisode) {
+      logger.warn('[Comic3DViewer] Cannot increment view - no selectedEpisode');
+      return;
+    }
+    
+    if (!readOnly) {
+      logger.warn('[Comic3DViewer] Cannot increment view - not in readOnly mode');
+      return;
+    }
+    
+    // Only track once per episode per session
+    if (trackedEpisodesRef.current.has(selectedEpisode.id)) {
+      logger.log('[Comic3DViewer] Episode', selectedEpisode.id, 'already tracked in this session');
+      return;
+    }
+    
+    trackedEpisodesRef.current.add(selectedEpisode.id);
+    
+    logger.log('[Comic3DViewer] User completed episode - incrementing view for episode:', selectedEpisode.id, 'storyId:', storyId);
+    logger.log('[Comic3DViewer] Note: Backend will validate if episode is published');
+    
+    // Increment view count via API
+    // Backend will handle validation (is_published, is_public, etc.)
+    apiService.incrementEpisodeView(selectedEpisode.id)
+      .then((response) => {
+        logger.log('[Comic3DViewer] Episode view incremented successfully:', response);
+        // Notify parent component that a view was incremented so it can update the story's total_views
+        if (onViewIncremented) {
+          logger.log('[Comic3DViewer] Calling onViewIncremented callback with storyId:', storyId);
+          onViewIncremented(storyId);
+        } else {
+          logger.warn('[Comic3DViewer] onViewIncremented callback not provided');
+        }
+      })
+      .catch((error) => {
+        // Backend will return 403 if episode is not published or story/season is not public
+        // This is expected behavior - just log and don't interrupt user experience
+        if (error.response?.status === 403) {
+          logger.log('[Comic3DViewer] View increment blocked by backend (episode not published or story/season not public)');
+        } else {
+          logger.error('[Comic3DViewer] Error incrementing episode view:', error);
+          logger.error('[Comic3DViewer] Error details:', error.response?.data || error.message);
+        }
+      });
+  }, [selectedEpisode, readOnly, storyId, onViewIncremented]);
+
   const goToNextDialogue = () => {
-    console.log('Comic3DViewer: Next button clicked, current index:', currentDialogueIndex);
-    console.log('Comic3DViewer: isShowingSummary:', isShowingSummary);
-    console.log('Comic3DViewer: episodeDialogues.length:', episodeDialogues.length);
+    logger.log('Comic3DViewer: Next button clicked, current index:', currentDialogueIndex);
+    logger.log('Comic3DViewer: isShowingSummary:', isShowingSummary);
+    logger.log('Comic3DViewer: episodeDialogues.length:', episodeDialogues.length);
     
     // If showing summary, move to first dialogue
     if (isShowingSummary && episodeDialogues.length > 0) {
-      console.log('Comic3DViewer: Moving from summary to first dialogue');
+      logger.log('Comic3DViewer: Moving from summary to first dialogue');
       setIsShowingSummary(false);
       setCurrentDialogueIndex(0);
       loadDialogue(0);
@@ -947,14 +1044,28 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }
     
     // Otherwise, move to next dialogue
+    logger.log('Comic3DViewer: Checking if at last dialogue...');
+    logger.log('Comic3DViewer: currentDialogueIndex:', currentDialogueIndex);
+    logger.log('Comic3DViewer: episodeDialogues.length:', episodeDialogues.length);
+    logger.log('Comic3DViewer: Condition check: currentDialogueIndex < episodeDialogues.length - 1');
+    logger.log('Comic3DViewer: Result:', currentDialogueIndex < episodeDialogues.length - 1);
+    
     if (currentDialogueIndex < episodeDialogues.length - 1) {
       const newIndex = currentDialogueIndex + 1;
-      console.log('Comic3DViewer: Moving to next dialogue, new index:', newIndex);
+      logger.log('Comic3DViewer: Moving to next dialogue, new index:', newIndex);
       loadDialogue(newIndex);
       showDialogue(newIndex);
     } else {
-      console.log('Comic3DViewer: At last dialogue - showing episode summary');
+      // User has reached the last dialogue and clicked Next - they completed the episode!
+      logger.verbose('Comic3DViewer: ========== AT LAST DIALOGUE - COMPLETING EPISODE ==========');
+      logger.log('Comic3DViewer: currentDialogueIndex:', currentDialogueIndex);
+      logger.log('Comic3DViewer: episodeDialogues.length:', episodeDialogues.length);
+      logger.log('Comic3DViewer: Setting isShowingSummary to true');
       setIsShowingSummary(true);
+      
+      // Increment view count when user completes the episode
+      logger.log('Comic3DViewer: About to call incrementEpisodeViewIfNeeded');
+      incrementEpisodeViewIfNeeded();
     }
   };
 
@@ -962,18 +1073,18 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const startPlayback = () => {
     if (isPlaying) return;
     
-    console.log('Comic3DViewer: Starting auto-play');
+    logger.log('Comic3DViewer: Starting auto-play');
     setIsPlaying(true);
     
     // Start auto-play interval
     playIntervalRef.current = setInterval(() => {
       // Use callback to get current index value
       setCurrentDialogueIndex(currentIndex => {
-        console.log('Comic3DViewer: Auto-play tick, current index:', currentIndex);
+        logger.log('Comic3DViewer: Auto-play tick, current index:', currentIndex);
         
         if (currentIndex < episodeDialogues.length - 1) {
           const newIndex = currentIndex + 1;
-          console.log('Comic3DViewer: Auto-play moving to next dialogue:', newIndex);
+          logger.log('Comic3DViewer: Auto-play moving to next dialogue:', newIndex);
           
           // Load dialogue data first (Django pattern)
           loadDialogue(newIndex);
@@ -983,10 +1094,17 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
           
           return newIndex; // Update the index
         } else {
-          console.log('Comic3DViewer: Auto-play reached end - showing summary');
+          logger.log('Comic3DViewer: Auto-play reached end - showing summary');
           // End of dialogues, show summary
           setIsShowingSummary(true);
           pausePlayback();
+          
+          // Increment view count when auto-play completes the episode
+          // Use setTimeout to ensure we access the latest values from the closure
+          setTimeout(() => {
+            incrementEpisodeViewIfNeeded();
+          }, 0);
+          
           return currentIndex; // Keep current index
         }
       });
@@ -1013,7 +1131,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   useEffect(() => {
     if (episodes.length > 0 && !selectedEpisode) {
       // Select first episode (Django pattern - model comes from season)
-      console.log('Comic3DViewer: Auto-selecting first episode (Django pattern):', episodes[0]);
+      logger.log('Comic3DViewer: Auto-selecting first episode (Django pattern):', episodes[0]);
       const firstEpisode = episodes[0];
       setSelectedEpisode(firstEpisode);
       // CRITICAL: Also call onEpisodeSelect to trigger dialogue loading in parent
@@ -1021,36 +1139,10 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }
   }, [episodes, selectedEpisode, onEpisodeSelect]);
 
-  // Track episode view when episode is selected (only in read-only/public mode)
-  useEffect(() => {
-    if (selectedEpisode && readOnly && selectedEpisode.is_published) {
-      // Only track once per episode per session
-      if (!trackedEpisodesRef.current.has(selectedEpisode.id)) {
-        trackedEpisodesRef.current.add(selectedEpisode.id);
-        
-        // Increment view count via API
-        apiService.incrementEpisodeView(selectedEpisode.id)
-          .then((response) => {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Episode view incremented:', response);
-            }
-            // Update the episode's view_count in local state if needed
-            // The view count will be updated on next data fetch
-          })
-          .catch((error) => {
-            // Silently fail - don't interrupt user experience
-            if (process.env.NODE_ENV === 'development') {
-              console.error('Error incrementing episode view:', error);
-            }
-          });
-      }
-    }
-  }, [selectedEpisode, readOnly]);
-
   // Handle model switching when episode changes
   useEffect(() => {
     if (selectedEpisode) {
-      console.log('Comic3DViewer: Episode changed, resetting model state');
+      logger.log('Comic3DViewer: Episode changed, resetting model state');
       setIsModelReady(false);
       setIsStarted(false);
       setCurrentDialogueIndex(0);
@@ -1072,9 +1164,9 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     if (selectedEpisode) {
       const currentModel = getModelFromSeason(selectedEpisode);
       if (currentModel !== previousModel) {
-        console.log('Comic3DViewer: Model changed, resetting state');
-        console.log('Comic3DViewer: Previous model:', previousModel);
-        console.log('Comic3DViewer: Current model:', currentModel);
+        logger.log('Comic3DViewer: Model changed, resetting state');
+        logger.log('Comic3DViewer: Previous model:', previousModel);
+        logger.log('Comic3DViewer: Current model:', currentModel);
         setIsModelReady(false);
         setIsStarted(false);
         animationsStartedRef.current = false; // Reset animations flag
@@ -1164,7 +1256,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   {/* Debug logging */}
                   {(() => {
-                    console.log('Comic3DViewer: Rendering model viewer, isEditMode:', isEditMode, 'isStarted:', isStarted);
+                    logger.log('Comic3DViewer: Rendering model viewer, isEditMode:', isEditMode, 'isStarted:', isStarted);
                     return null;
                   })()}
                   
@@ -1427,15 +1519,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       backgroundColor: !isEditMode ? '#111e7f' : 'transparent'
                     }}
                   >
-                    <i className="fas fa-eye me-1"></i>Preview Mode
+                    <i className="fas fa-eye me-1"></i>&nbsp;Preview Mode
                   </button>
                   <button
                     type="button"
                     className={`btn ${isEditMode ? 'btn-outline-warning active' : 'btn-outline-warning'} mode-toggle-btn`}
                     onClick={() => {
-                      console.log('Edit Mode button clicked, current isEditMode:', isEditMode);
-                      console.log('Current isStarted:', isStarted);
-                      console.log('Current isModelReady:', isModelReady);
+                      logger.log('Edit Mode button clicked, current isEditMode:', isEditMode);
+                      logger.log('Current isStarted:', isStarted);
+                      logger.log('Current isModelReady:', isModelReady);
                       setIsEditMode(true);
                     }}
                     style={{
@@ -1444,7 +1536,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       backgroundColor: isEditMode ? '#f9a602' : 'transparent'
                     }}
                   >
-                    <i className="fas fa-edit me-1"></i>Edit Mode
+                    <i className="fas fa-edit me-1"></i>&nbsp;Edit Mode
                   </button>
                 </div>
               </div>
@@ -1468,7 +1560,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       {/* Edit Controls */}
       {/* Edit Controls - Hidden in read-only mode */}
       {!readOnly && isEditMode && selectedEpisode && dialogueData.length > 0 && (() => {
-        console.log('Rendering edit controls, isEditMode:', isEditMode, 'selectedEpisode:', selectedEpisode, 'dialogueData length:', dialogueData.length);
+        logger.log('Rendering edit controls, isEditMode:', isEditMode, 'selectedEpisode:', selectedEpisode, 'dialogueData length:', dialogueData.length);
         return (
           <div className="row mt-2">
             <div className="col-12">
@@ -1511,7 +1603,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     }}
                   >
                     <i className="fas fa-save me-1"></i>
-                    {isSaving ? 'Saving...' : 'Save'}
+                    &nbsp;{isSaving ? 'Saving...' : 'Save'}
                   </button>
                 </div>
                 <div className="col-6">
@@ -1525,7 +1617,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       padding: '0.5rem 1rem'
                     }}
                   >
-                    <i className="fas fa-undo me-1"></i>Reset
+                    <i className="fas fa-undo me-1"></i>&nbsp;Reset
                   </button>
                 </div>
               </div>
@@ -1562,7 +1654,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           
                           // Validate current dialogue data
                           if (!current || !current.dialogue_id || !current.camera_orbit) {
-                            console.error('Comic3DViewer: Invalid dialogue data for azimuth update:', current);
+                            logger.error('Comic3DViewer: Invalid dialogue data for azimuth update:', current);
                             return;
                           }
                           
@@ -1577,7 +1669,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraOrbit = newOrbit;
-                            console.log('Comic3DViewer: Real-time camera orbit update:', newOrbit);
+                            logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
                           }
                           
                           // Update value badge
@@ -1622,7 +1714,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraOrbit = newOrbit;
-                            console.log('Comic3DViewer: Real-time camera orbit update:', newOrbit);
+                            logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
                           }
                           
                           // Update value badge
@@ -1639,7 +1731,10 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   </div>
                   
                   <div className="form-group mb-3">
-                    <label htmlFor="orbitRadius" className="form-label">Radius</label>
+                    <label htmlFor="orbitRadius" className="form-label">
+                      <span className="material-symbols-outlined" style={{ fontSize: '1.5rem', fontVariationSettings: "'FILL' 0, 'GRAD' 0", verticalAlign: 'middle', marginRight: '0.5rem' }}>clock_loader_90</span>
+                      Radius
+                    </label>
                     <div className="slider-row">
                       <input
                         type="range"
@@ -1664,7 +1759,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraOrbit = newOrbit;
-                            console.log('Comic3DViewer: Real-time camera orbit update:', newOrbit);
+                            logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
                           }
                           
                           // Update value badge
@@ -1680,8 +1775,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     </div>
                   </div>
                   
-                  {/* Field of View (Left Column) */}
-                  <div className="form-group mb-3">
+                  {/* Field of View (Left Column) - Hidden for now */}
+                  {/* <div className="form-group mb-3" style={{ display: 'none' }}>
                     <label htmlFor="fieldOfView" className="form-label">Field of View</label>
                     <div className="slider-row">
                       <input
@@ -1706,7 +1801,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.fieldOfView = `${fov}deg`;
-                            console.log('Comic3DViewer: Real-time field of view update:', fov);
+                            logger.camera('Comic3DViewer: Real-time field of view update:', fov);
                           }
                           
                           // Update value badge
@@ -1720,7 +1815,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                         45°
                       </span>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
                 
                 {/* Camera Target (Right Column) */}
@@ -1730,7 +1825,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   </div>
                   
                   <div className="form-group mb-3">
-                    <label htmlFor="targetX" className="form-label">X</label>
+                  <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}>arrow_range</span>
+                  <span> X</span>
                     <div className="slider-row">
                       <input
                         type="range"
@@ -1755,7 +1851,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
-                            console.log('Comic3DViewer: Real-time camera target update:', newTarget);
+                            logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           
                           // Update value badge
@@ -1800,7 +1896,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
-                            console.log('Comic3DViewer: Real-time camera target update:', newTarget);
+                            logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           
                           // Update value badge
@@ -1845,7 +1941,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
-                            console.log('Comic3DViewer: Real-time camera target update:', newTarget);
+                            logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           
                           // Update value badge
@@ -1861,8 +1957,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     </div>
                   </div>
                   
-                  {/* Zoom Speed (Right Column) */}
-                  <div className="form-group mb-3">
+                  {/* Zoom Speed (Right Column) - Hidden for now */}
+                  {/* <div className="form-group mb-3">
                     <label htmlFor="zoomSpeed" className="form-label">Zoom Speed</label>
                     <div className="slider-row">
                       <input
@@ -1886,7 +1982,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           
                           // Note: Zoom speed doesn't directly affect the 3D model camera
                           // It's used for animation speed, so no real-time update needed
-                          console.log('Comic3DViewer: Zoom speed updated:', speed);
+                          logger.log('Comic3DViewer: Zoom speed updated:', speed);
                           
                           // Update value badge
                           const valueBadge = document.getElementById('zoomSpeedValue');
@@ -1899,7 +1995,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                         1.0x
                       </span>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
                 
                 {/* Current Values (Full Width) */}
@@ -1911,13 +2007,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     fontSize: '0.98em',
                     color: '#333',
                     marginTop: '0.5rem',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
+                    fontFamily: 'animeace, Comic, sans-serif'
                   }}>
-                    <h6 className="text-primary mb-2">Current Values (Last Saved)</h6>
+                    <h6 className="text-primary mb-2" style={{ fontFamily: 'quicksand, sans-serif' }}>Current Values (Last Saved)</h6>
                     <div><strong>Camera Orbit:</strong> <span id="currentOrbit">{originalValues?.camera_orbit || '0deg 75deg 3m'}</span></div>
                     <div><strong>Camera Target:</strong> <span id="currentTarget">{originalValues?.camera_target || '0m 1.6m 0m'}</span></div>
-                    <div><strong>Field of View:</strong> <span id="currentFOV">{originalValues?.field_of_view || 45}°</span></div>
-                    <div><strong>Zoom Speed:</strong> <span id="currentZoom">{originalValues?.zoom_speed || 1.0}</span></div>
+                    {/* Field of View and Zoom Speed hidden for now */}
+                    {/* <div><strong>Field of View:</strong> <span id="currentFOV">{originalValues?.field_of_view || 45}°</span></div>
+                    <div><strong>Zoom Speed:</strong> <span id="currentZoom">{originalValues?.zoom_speed || 1.0}</span></div> */}
                   </div>
                 </div>
                 
@@ -1952,7 +2050,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     autoPlay={false} // Don't auto-play in edit mode
                     showControls={true} // Show controls in edit mode
                     onAnimationChange={(animationName) => {
-                      console.log('Comic3DViewer Edit Mode: Animation changed to:', animationName);
+                      logger.log('Comic3DViewer Edit Mode: Animation changed to:', animationName);
                     }}
                   />
                 </div>

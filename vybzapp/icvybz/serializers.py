@@ -27,13 +27,15 @@ class ComicSerializer(serializers.ModelSerializer):
         return value
 
 class SeasonSerializer(serializers.ModelSerializer):
+    total_views = serializers.IntegerField(read_only=True)
+    
     class Meta:
         model = Season
         fields = [
             'id', 'title', 'season_number', 'description', 'release_date', 'is_public',
-            'model_gltf', 'model_usdz', 'comic', 'created_at', 'updated_at'
+            'model_gltf', 'model_usdz', 'comic', 'created_at', 'updated_at', 'total_views'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'total_views']
     
     def validate_title(self, value):
         """Validate title length"""
