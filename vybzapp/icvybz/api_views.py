@@ -7,6 +7,7 @@ from rest_framework.authtoken.serializers import AuthTokenSerializer
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
+from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.db import connection
 from django.db.models import Q, Sum
@@ -1214,6 +1215,7 @@ def decline_studio_collaboration_request(request, studio_id, request_id):
 
 
 # Authentication API Views
+@csrf_exempt  # Exempt from CSRF since we use Token authentication, not Session
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_api(request):
@@ -1286,6 +1288,7 @@ def login_api(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@csrf_exempt  # Exempt from CSRF since this is a public API endpoint
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def password_reset_api(request):
@@ -1402,6 +1405,7 @@ def get_current_user_api(request):
     })
 
 
+@csrf_exempt  # Exempt from CSRF since this is a public API endpoint
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_api(request):

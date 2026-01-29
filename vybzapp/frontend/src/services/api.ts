@@ -41,13 +41,16 @@ api.interceptors.request.use(
     // - /studios/ (public studios list - GET only, no path after /studios/)
     // - /contact/ (contact form - public POST)
     // - /feedback/ (feedback/ticket creation - public POST)
+    // - /auth/login/ (login endpoint - no token needed before login)
+    // - /auth/register/ (registration endpoint - no token needed)
     // But NOT for authenticated endpoints like:
     // - /studios/{id}/collaboration-requests/ (requires auth)
     // - /studios/{id}/collaborators/ (requires auth)
     const isPublicStoriesEndpoint = url.includes('/stories/public/');
     const isPublicStudiosListEndpoint = url.match(/\/studios\/$/) && method === 'GET';
     const isContactEndpoint = url.includes('/contact/') || url.includes('/feedback/');
-    const isPublicEndpoint = isPublicStoriesEndpoint || isPublicStudiosListEndpoint || isContactEndpoint;
+    const isAuthEndpoint = url.includes('/auth/login/') || url.includes('/auth/register/') || url.includes('/auth/password-reset/');
+    const isPublicEndpoint = isPublicStoriesEndpoint || isPublicStudiosListEndpoint || isContactEndpoint || isAuthEndpoint;
     
     if (!isPublicEndpoint) {
       const token = localStorage.getItem('authToken');
