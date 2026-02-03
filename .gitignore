@@ -29,6 +29,9 @@ snm/settings/local.py
 !vybzapp/frontend/build/
 !vybzapp/frontend/build/**
 !vybzapp/frontend/build/static/js/main.*.js
+# Ignore source maps and license files in build (only commit runtime assets)
+vybzapp/frontend/build/**/*.map
+vybzapp/frontend/build/**/*.LICENSE.txt
 # Build directories (except vybzapp/frontend/build/)
 build/
 !vybzapp/frontend/
