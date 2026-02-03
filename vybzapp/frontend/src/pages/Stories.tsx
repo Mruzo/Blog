@@ -651,7 +651,7 @@ const Stories: React.FC = () => {
   }
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '1200px' }}>
+    <div className="container mt-4 stories-container" style={{ maxWidth: '1200px' }}>
       <MetaTags
         title="Immersive Stories"
         description="Browse all published interactive & immersive stories"
@@ -678,7 +678,7 @@ const Stories: React.FC = () => {
               </p>
               <Link 
                 to="/immersivecomics/story/create/" 
-                className="btn btn-primary subtext-btn-sm"
+                className="btn btn-primary subtext-btn-sm create-story-btn"
               >
                 <i className="fas fa-plus me-1"></i>Create Your First Story
               </Link>

@@ -41,6 +41,8 @@ import CookiePolicy from './pages/CookiePolicy';
 import { CartProvider } from './contexts/CartContext';
 import { ApiProvider, useApi } from './contexts/ApiContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
+import { GuideProvider } from './contexts/GuideContext';
+import InteractiveGuide from './components/InteractiveGuide';
 import './App.css';
 
 // Inner component that has access to ApiContext
@@ -49,11 +51,12 @@ function AppContent() {
 
   return (
     <Router>
-      <Layout user={currentUser ? {
-        first_name: currentUser.first_name,
-        username: currentUser.username
-      } : null}>
-        <Routes>
+      <GuideProvider>
+        <Layout user={currentUser ? {
+          first_name: currentUser.first_name,
+          username: currentUser.username
+        } : null}>
+          <Routes>
           {/* Homepage */}
           <Route path="/" element={<Home />} />
           
@@ -114,7 +117,9 @@ function AppContent() {
           {/* Catch-all route for 404 - show dedicated 404 page */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <InteractiveGuide />
       </Layout>
+      </GuideProvider>
     </Router>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FeedbackModal from './FeedbackModal';
 import { FeedbackContext } from '../contexts/FeedbackContext';
+import { useGuide } from '../contexts/GuideContext';
 
 const FloatingActionMenu: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -9,6 +10,7 @@ const FloatingActionMenu: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const feedbackContext = useContext(FeedbackContext);
+  const { startGuide, availableGuide } = useGuide();
   
   // Track authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -47,6 +49,13 @@ const FloatingActionMenu: React.FC = () => {
       navigate('/immersivecomics/story/create/');
     }
     setIsExpanded(false);
+  };
+
+  const handleStartGuide = () => {
+    if (availableGuide) {
+      startGuide(availableGuide.id);
+      setIsExpanded(false); // Close menu when starting guide
+    }
   };
 
   // Build context from FeedbackContext and current location
@@ -102,7 +111,7 @@ const FloatingActionMenu: React.FC = () => {
   return (
     <>
       <div 
-        className="floating-action-menu"
+        className={`floating-action-menu ${availableGuide ? 'fab-has-guide' : ''}`}
         style={getMenuStyle()}
         onMouseEnter={() => !isMobile && setIsExpanded(true)}
         onMouseLeave={() => !isMobile && setIsExpanded(false)}
@@ -143,6 +152,32 @@ const FloatingActionMenu: React.FC = () => {
               <i className="fas fa-question-circle" style={{ fontSize: '24px', color: '#000' }}></i>
             </button>
 
+            {/* Interactive Guide Button (only show if guide available for current page) */}
+            {availableGuide && (
+              <button
+                onClick={handleStartGuide}
+                className="btn btn-info shadow-lg fab-menu-item"
+                style={{
+                  borderRadius: '50%',
+                  width: '50px',
+                  height: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#17a2b8',
+                  borderColor: '#17a2b8',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer',
+                  border: 'none'
+                }}
+                title={`Start ${availableGuide.name}`}
+                aria-label="Start interactive guide"
+              >
+                <i className="fas fa-book" style={{ fontSize: '24px', color: '#fff' }}></i>
+              </button>
+            )}
+
             {/* Create Story Button (only show on Stories page) */}
             {isStoriesPage && (
               <button
@@ -173,43 +208,72 @@ const FloatingActionMenu: React.FC = () => {
           </div>
         )}
 
-        {/* Main Toggle Button */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={`btn btn-primary shadow-lg fab-main-button ${isExpanded ? 'expanded' : ''}`}
-          style={{
-            borderRadius: '50%',
-            width: isExpanded ? '56px' : '60px',
-            height: isExpanded ? '56px' : '60px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: '#111e7f',
-            borderColor: '#111e7f',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-            transition: 'all 0.3s ease',
-            cursor: 'pointer',
-            border: 'none',
-            transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)'
-          }}
-          title={isExpanded ? "Close menu" : "Open menu"}
-          aria-label="Toggle action menu"
-        >
-          <i 
-            key={isMobile ? (isExpanded ? 'chevron-down' : 'chevron-up') : 'plus'}
-            className={`fas ${isMobile ? (isExpanded ? 'fa-chevron-down' : 'fa-chevron-up') : 'fa-plus'} fab-main-icon`}
-            style={{ 
-              fontSize: '28px',
-              color: '#fff', 
-              transition: 'transform 0.3s ease'
+        {/* Main Toggle Button - wrap in glow ring when guide available */}
+        <div className={availableGuide ? 'fab-main-button-wrap fab-guide-glow-wrap' : 'fab-main-button-wrap'}>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`btn btn-primary shadow-lg fab-main-button ${isExpanded ? 'expanded' : ''}`}
+            style={{
+              borderRadius: '50%',
+              width: isExpanded ? '56px' : '60px',
+              height: isExpanded ? '56px' : '60px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#111e7f',
+              borderColor: '#111e7f',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              border: 'none',
+              transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)'
             }}
-          ></i>
-        </button>
+            title={isExpanded ? "Close menu" : "Open menu"}
+            aria-label="Toggle action menu"
+          >
+            <i 
+              key={isMobile ? (isExpanded ? 'chevron-down' : 'chevron-up') : 'plus'}
+              className={`fas ${isMobile ? (isExpanded ? 'fa-chevron-down' : 'fa-chevron-up') : 'fa-plus'} fab-main-icon`}
+              style={{ 
+                fontSize: '28px',
+                color: '#fff', 
+                transition: 'transform 0.3s ease'
+              }}
+            ></i>
+          </button>
+        </div>
       </div>
 
       <FeedbackModal show={showModal} onClose={handleCloseModal} context={context} />
 
       <style>{`
+        .fab-main-button-wrap {
+          display: flex;
+          border-radius: 50%;
+          position: relative;
+        }
+
+        /* Light animated glow ring around the button when a page tour is available */
+        @keyframes guideGlow {
+          0%, 100% {
+            box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.5);
+          }
+          50% {
+            box-shadow: 0 0 0 8px rgba(23, 162, 184, 0.25), 0 0 16px 4px rgba(23, 162, 184, 0.2);
+          }
+        }
+
+        .fab-guide-glow-wrap {
+          border-radius: 50%;
+          padding: 0px;
+          animation: guideGlow 2s ease-in-out infinite;
+        }
+
+        .fab-guide-glow-wrap:hover {
+          animation: none;
+          box-shadow: none;
+        }
+
         @keyframes fadeInUp {
           from {
             opacity: 0;

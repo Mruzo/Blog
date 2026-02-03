@@ -634,17 +634,16 @@ const MyStudio: React.FC = () => {
       <div className="row mb-1">
         <div className="col-lg-9 p-2">
           <div className="card border-0 shadow-sm">
-            <div className="card-header bg-inherit text-white d-flex justify-content-between align-items-center p-2 p-md-3">
-              <h4 className="mb-0 subtext font-gillsans"><i className="fas fa-clapperboard me-2 align-middle"></i>&nbsp;studio manager</h4>
+            <div className="card-header bg-transparent border-0 d-flex justify-content-between align-items-center p-1 border rounded">
+              <h3 className="subtext font-gillsans mb-0"><i className="fas fa-clapperboard me-2 align-middle"></i>&nbsp;My Studio</h3>
               <div className="d-flex gap-2">
-                
                 {myStudio && (
                   <Link 
                     to={`/immersivecomics/studio/${myStudio.id}/edit/`}
-                    className="btn btn-sm btn-light border"
+                    className="btn btn-primary subtext-btn-sm border-0"
                     title="Edit Studio"
                   >
-                    <i className="fas fa-edit"></i>
+                    <i className="fas fa-edit me-1"></i> Edit
                   </Link>
                 )}
                 {currentUser && (
@@ -659,34 +658,37 @@ const MyStudio: React.FC = () => {
               </div>
             </div>
             <div className="card-body p-2 p-md-">
-              {/* Row 1: Studio Title */}
-              <div className="row mb-2 ">
-                <div className="col-4 border-right">
-                  <div className="d-flex align-items-center">
+              {/* Row 1: Studio Title — stacked on mobile, side-by-side on md+ (studio name first, then owner) */}
+              <div className="row mb-2">
+                <div className="col-12 col-md-8 border-end text-start mb-2 mb-md-0">
+                  <h4 className="subtext-btn-md fw-bold text-dark mb-1">{myStudio?.name || "My Studio"}</h4>
+                  <p className="subtext-btn-sm text-muted mb-0" style={{ lineHeight: 1.4 }}>{myStudio?.description || "A collaborative space for immersive 3D storytelling."}</p>
+                </div>
+                <div className="col-12 col-md-4 text-start">
+                  <div className="d-flex align-items-stretch">
                     {currentUser?.avatar ? (
                       <img
                         src={currentUser.avatar}
                         alt={currentUser.username}
-                        className="rounded-circle me-2"
-                        style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                        className="rounded me-2 flex-shrink-0"
+                        style={{ width: '4.5rem', height: '4.5rem', objectFit: 'cover' }}
                       />
                     ) : (
                       <div
-                        className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2"
-                        style={{ width: '40px', height: '40px', fontSize: '1rem' }}
+                        className="rounded bg-secondary text-white d-flex align-items-center justify-content-center me-2 flex-shrink-0"
+                        style={{ width: '4.5rem', height: '4.5rem', fontSize: '1.25rem' }}
                       >
                         {(currentUser?.username || 'U').charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <div className="ml-1">
+                    <div className="ml-1 d-flex flex-column justify-content-center">
                       <div className="subtext-btn-sm fw-bold">@{currentUser?.username || 'User'}</div>
+                      <div className="subtext-btn-sm text-muted">
+                        {[currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(' ') || '—'}
+                      </div>
                       <div className="subtext-btn-sm text-muted">Owner</div>
                     </div>
                   </div>
-                </div>
-                <div className="col-8">
-                  <h4 className="subtext-btn-md mb-0">{myStudio?.name || "My Studio"}</h4>
-                  <p className="subtext-btn-sm mb-0">{myStudio?.description || "A collaborative space for immersive 3D storytelling."}</p>
                 </div>
               </div>
               
@@ -728,15 +730,13 @@ const MyStudio: React.FC = () => {
         
         <div className="col-lg-3 p-2 ">
           <div className="card border-0 shadow-sm">
-            <div className="card-header bg-inherit text-white d-flex justify-content-between align-items-center p-2 p-md-3">
-              <h5 className="mb-0 subtext font-gillsans"><i className="fas fa-users me-2"></i>&nbsp;team</h5>
-              <div className="d-flex gap-1">
+            <div className="card-header bg-transparent border-0 d-flex justify-content-between align-items-center p-1 border rounded">
+              <h3 className="subtext font-gillsans mb-0"><i className="fas fa-users me-2"></i>&nbsp;My Team</h3>
+              <div className="d-flex gap-2">
                 <button
-                  className={`btn btn-sm border position-relative mr-2 ${collaborationRequests.length > 0 ? 'btn-warning' : 'btn-light'}`}
+                  className={`btn btn-sm border position-relative ${collaborationRequests.length > 0 ? 'btn-warning' : 'btn-light'}`}
                   onClick={async () => {
-                    // Refresh requests before showing modal
                     await loadCollaborationRequests();
-                    // Small delay to ensure state is updated
                     setTimeout(() => {
                       if (collaborationRequests.length > 0) {
                         setShowRequestsModal(true);
@@ -746,7 +746,7 @@ const MyStudio: React.FC = () => {
                   title={collaborationRequests.length > 0 ? `View ${collaborationRequests.length} collaboration request${collaborationRequests.length > 1 ? 's' : ''}` : 'No pending collaboration requests'}
                   disabled={collaborationRequests.length === 0 && !isLoadingRequests}
                 >
-                  <i className="fas fa-bell"></i>
+                  <i className="fas fa-bell me-1"></i> Requests
                   {collaborationRequests.length > 0 && (
                     <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                       {collaborationRequests.length}
@@ -754,11 +754,11 @@ const MyStudio: React.FC = () => {
                   )}
                 </button>
                 <button
-                  className="btn btn-sm btn-light border"
+                  className="btn btn-success subtext-btn-sm border-0"
                   onClick={() => setShowInviteModal(true)}
                   title="Invite collaborator"
                 >
-                  <i className="fas fa-plus"></i>
+                  <i className="fas fa-plus me-1"></i> Invite
                 </button>
               </div>
             </div>

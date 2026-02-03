@@ -498,7 +498,7 @@ const StoryCreationWizard: React.FC = () => {
       </div>
 
       {/* Step Content */}
-      <div className="card border-0 shadow-sm">
+      <div className="card border-0 shadow-sm" data-step={steps[currentStep]?.id}>
         <div className="card-body p-2">
           {isLoading ? (
             <LoadingSpinner />
