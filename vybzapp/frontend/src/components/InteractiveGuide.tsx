@@ -1,17 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { useGuide } from '../contexts/GuideContext';
 
+// Uses shared .guide-modal classes (see App.css) for uniform padding/margins. Use the same for new guide/documentation modals.
+
 // FAB is bottom: 30px (desktop) / 20px (mobile), height ~60px → top of FAB ~90px / 80px from viewport bottom.
 // Position tooltip by bottom so it always sits above the FAB with a gap.
 const TOOLTIP_BOTTOM_PX = 100; // tooltip bottom edge = 100px from viewport bottom (above FAB)
 
-/** Renders summary text with **bold** segments as <strong>. */
-function renderSummary(text: string): React.ReactNode {
+/** Renders inline text with **bold** segments as <strong>. */
+function renderBold(text: string): React.ReactNode {
   const parts = text.split(/(\*\*.+?\*\*)/g);
   return parts.map((part, i) => {
     const match = part.match(/\*\*(.+?)\*\*/);
     return match ? <strong key={i}>{match[1]}</strong> : part;
   });
+}
+
+/** Renders summary text: supports newlines and "Edit Mode" as a subheading. */
+function renderSummary(text: string): React.ReactNode {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  return (
+    <>
+      {lines.map((line, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <br />}
+          {line === 'Edit Mode' ? (
+            <span style={{ fontWeight: 600, textDecoration: 'underline', display: 'block', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Edit Mode</span>
+          ) : (
+            renderBold(line)
+          )}
+        </React.Fragment>
+      ))}
+    </>
+  );
 }
 
 const InteractiveGuide: React.FC = () => {
@@ -65,60 +86,36 @@ const InteractiveGuide: React.FC = () => {
       />
 
       <div
-        className="font-quicksand"
+        className="guide-modal font-quicksand"
         style={{
           position: 'fixed',
           bottom: `${tooltipPosition.bottom}px`,
           left: `${tooltipPosition.left}px`,
           transform: 'translateX(-50%)',
-          backgroundColor: '#fff',
-          borderRadius: '10px',
-          padding: isMobile ? 18 : 28,
-          width: isMobile ? `calc(80% - 16px)` : undefined,
-          maxWidth: isMobile ? `calc(100% - 16px)` : 360,
-          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.2)',
+          width: isMobile ? 'calc(80% - 16px)' : 440,
+          maxWidth: isMobile ? 'calc(100% - 16px)' : 440,
           zIndex: 10000,
           pointerEvents: 'auto',
-          fontFamily: 'quicksand, sans-serif',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="subtext-btn-xs"
-          style={{
-            color: '#414042',
-            marginBottom: '10px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            borderBottom: '1px solid #414042',
-          }}
-        >
+        <div className="guide-modal__header subtext-btn-xs">
           {currentGuide.name}
         </div>
 
-        <div
-          className="subtext-sm"
-          style={{
-            color: '#414042',
-            lineHeight: 1.55,
-            marginBottom: '18px',
-            
-          }}
-        >
+        <div className="guide-modal__body subtext-sm">
           {renderSummary(currentGuide.summary)}
         </div>
 
-        <button
-          type="button"
-          onClick={stopGuide}
-          className="btn btn-primary"
-          style={{
-            padding: '10px 16px',
-            cursor: 'pointer',
-          }}
-        >
-          Got it
-        </button>
+        <div className="guide-modal__actions">
+          <button
+            type="button"
+            onClick={stopGuide}
+            className="btn btn-primary"
+          >
+            Got it
+          </button>
+        </div>
       </div>
     </>
   );

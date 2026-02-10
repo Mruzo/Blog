@@ -27,6 +27,16 @@
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
+
+  /* Guide / documentation modal – use for all help/guide modals for uniform spacing */
+  --guide-modal-padding: 1.25rem;
+  --guide-modal-padding-mobile: 1rem;
+  --guide-modal-gap: 1rem;
+  --guide-modal-radius: 10px;
+  --guide-modal-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  --guide-modal-header-color: #414042;
+  --guide-modal-btn-padding: 0.625rem 1rem;
+  --guide-modal-max-width-desktop: 440px;
 }
 
 /* Reset and base styles */
@@ -230,6 +240,53 @@ h2 {
 .alert {
   font-family: var(--font-primary);
   border-radius: 0.5rem;
+}
+
+/* ============================================
+   GUIDE / DOCUMENTATION MODAL (uniform styling)
+   Use .guide-modal, .guide-modal__header, .guide-modal__body, .guide-modal__actions
+   for future help/guide modals so padding and margins stay consistent.
+   ============================================ */
+.guide-modal {
+  font-family: var(--font-primary);
+  background-color: #fff;
+  border-radius: var(--guide-modal-radius);
+  box-shadow: var(--guide-modal-shadow);
+  padding: var(--guide-modal-padding);
+  color: var(--guide-modal-header-color);
+}
+
+.guide-modal__header {
+  margin: 0 0 var(--guide-modal-gap) 0;
+  padding: 0;
+  color: var(--guide-modal-header-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--guide-modal-header-color);
+  padding-bottom: var(--guide-modal-gap);
+}
+
+.guide-modal__body {
+  margin: 0 0 var(--guide-modal-gap) 0;
+  padding: 0;
+  line-height: 1.55;
+  color: var(--guide-modal-header-color);
+}
+
+.guide-modal__body:last-child {
+  margin-bottom: 0;
+}
+
+.guide-modal__actions .btn,
+.guide-modal .guide-modal__actions button {
+  padding: var(--guide-modal-btn-padding);
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .guide-modal {
+    padding: var(--guide-modal-padding-mobile);
+  }
 }
 
 /* ============================================
@@ -1071,4 +1128,53 @@ input[type="range"].modern-slider:focus {
 
 .share-btn:hover i {
   color: #ffffff !important;
+}
+
+/* Dialogue card metadata – indicators only, not buttons */
+.dialogue-card__order {
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  font-weight: var(--font-weight-semibold);
+  color: #6c757d;
+  background: transparent;
+  padding: 0;
+  margin-right: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+/* Character indicator: left border + light background */
+.dialogue-card__character {
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  font-weight: var(--font-weight-semibold);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  border-left: 3px solid currentColor;
+  background-color: rgba(0, 0, 0, 0.05);
+  color: inherit;
+  cursor: default;
+  display: inline-block;
+}
+
+/* Alternative: colored dot + name only (no border/background) */
+.dialogue-card__character--dot {
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  font-weight: var(--font-weight-semibold);
+  color: #414042;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dialogue-card__character-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }

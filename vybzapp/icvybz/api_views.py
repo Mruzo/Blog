@@ -396,13 +396,13 @@ class DialogueListCreateView(generics.ListCreateAPIView):
         if episode and episode.season and episode.season.comic and \
            episode.season.comic.is_public and episode.season.comic.moderation_status == 'approved' and \
            episode.season.is_public:
-            return Dialogue.objects.filter(episode_id=episode_id).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic')
+            return Dialogue.objects.filter(episode_id=episode_id).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic').prefetch_related('character__povs')
         
         # For private stories or authenticated users, require authentication
         if not self.request.user.is_authenticated:
             return Dialogue.objects.none()
         
-        return Dialogue.objects.filter(episode_id=episode_id, episode__season__comic__user=self.request.user).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user')
+        return Dialogue.objects.filter(episode_id=episode_id, episode__season__comic__user=self.request.user).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user').prefetch_related('character__povs')
     
     def perform_create(self, serializer):
         episode_id = self.kwargs.get('episode_id')
@@ -414,7 +414,7 @@ class DialogueDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Dialogue.objects.filter(episode__season__comic__user=self.request.user).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user')
+        return Dialogue.objects.filter(episode__season__comic__user=self.request.user).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user').prefetch_related('character__povs')
 
 # Studio API Views
 class StudioListCreateView(generics.ListCreateAPIView):
@@ -772,6 +772,7 @@ def get_studio_collaborators(request, studio_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt  # Token auth used; CSRF cookie is HttpOnly in production so frontend cannot send X-CSRFToken
 def invite_studio_user(request, studio_id):
     """Invite an existing user to collaborate on a studio"""
     try:
@@ -919,6 +920,7 @@ def remove_studio_collaborator(request, studio_id, collaborator_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt  # Token auth used; CSRF cookie is HttpOnly in production so frontend cannot send X-CSRFToken
 def invite_studio_by_email(request, studio_id):
     """Invite a user by email address to collaborate on a studio"""
     try:

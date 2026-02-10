@@ -42,6 +42,22 @@ export const guides: GuideConfig[] = [
     summary: 'This is your studio. **Give it a name**, **build stories**, **advance your draft stories**, **invite collaborators** to build with you',
   },
   {
+    id: 'season-edit',
+    name: 'Season Edit',
+    route: '/immersivecomics/season/',
+    pathContains: '/edit/',
+    showOnFirstVisit: false,
+    summary: 'Name your **Season**, describe the **Story**, upload your **3D model**, and choose to **make it public**, or **keep it private**.',
+  },
+  {
+    id: 'episodes-page',
+    name: 'Episodes',
+    route: '/immersivecomics/season/',
+    pathContains: '/episodes/',
+    showOnFirstVisit: false,
+    summary: 'Add episodes to your season, and **dynamically add the dialogue**. Just select the episode of interest, and add your dialogue.',
+  },
+  {
     id: 'episode-management',
     name: 'Episode Management',
     route: '/immersivecomics/season/',
@@ -54,7 +70,7 @@ export const guides: GuideConfig[] = [
     route: '/immersivecomics/story/',
     pathContains: '/manage/',
     showOnFirstVisit: false,
-    summary: 'This is where you update your **story name**, **description**, and **characters**. Here, you can also **add, preview, and edit seasons** to your series. Just select a season, and hit **Preview Mode** or **Edit Mode** below.',
+    summary: 'This is where you update your **story name**, **description**, and **characters**. Here, you can also **add, preview, and edit seasons** to your series. Just select a season, and hit **Preview Mode** or **Edit Mode** below.\n\b\n**Edit Mode**\n**Camera Orbit** — **Azimuth**, **Polar**, **Radius**: position the camera around the target (horizontal angle, vertical angle, distance in metres).\n**Camera Target** — **X**, **Y**, **Z**: the point the camera looks at. X moves left/right, Y moves up/down, Z moves forward/back.',
   },
   {
     id: 'story-management',

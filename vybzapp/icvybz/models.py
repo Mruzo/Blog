@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import F
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.template.loader import render_to_string
@@ -95,9 +96,12 @@ class Episode(models.Model):
         return self.is_published
     
     def increment_view(self):
-        """Increment the view count for this episode"""
-        self.view_count += 1
-        self.save(update_fields=['view_count', 'last_viewed'])
+        """Increment the view count for this episode (atomic for production concurrency)."""
+        Episode.objects.filter(pk=self.pk).update(
+            view_count=F('view_count') + 1,
+            last_viewed=timezone.now()
+        )
+        self.refresh_from_db()
 
     class Meta:
         app_label = 'icvybz'

@@ -100,24 +100,33 @@ class POVAdmin(admin.ModelAdmin):
 
 @admin.register(Dialogue)
 class DialogueAdmin(admin.ModelAdmin):
-    list_display = ('episode', 'comic', 'character', 'order', 'text', 'camera_target', 'camera_orbit','shot_type')
+    list_display = ('comic', 'episode_display', 'character', 'order', 'text', 'camera_target', 'camera_orbit', 'shot_type')
     list_filter = ('episode__season__comic', 'character', 'shot_type', 'episode')
     search_fields = ('text', 'character__name', 'episode__season__comic__title')
-    ordering = ('order','episode')
+    ordering = ('episode__season__comic__title', 'episode__season__season_number', 'episode__episode_number', 'order')
 
     formfield_overrides = {
         models.TextField: {'widget': TinyMCE(attrs={'style': 'height:10px;',})},
     }
 
     exclude = ('scene_title', 'scene_description')
-    
+
     def comic(self, obj):
-        """Return the comic title for this dialogue"""
+        """Return the comic (story) title for this dialogue"""
         if obj.episode and obj.episode.season and obj.episode.season.comic:
             return obj.episode.season.comic.title
         return '-'
-    comic.short_description = 'Comic'
+    comic.short_description = 'Story'
     comic.admin_order_field = 'episode__season__comic__title'
+
+    def episode_display(self, obj):
+        """Show season/episode with story context (e.g. S1 E1) so rows aren't ambiguous."""
+        if not obj.episode:
+            return '-'
+        s = obj.episode.season
+        return f"S{s.season_number} E{obj.episode.episode_number}"
+    episode_display.short_description = 'Episode'
+    episode_display.admin_order_field = 'episode__episode_number'
 
 
 @admin.register(Intersection)

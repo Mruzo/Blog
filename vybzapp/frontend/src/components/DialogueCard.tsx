@@ -29,15 +29,22 @@ interface Character {
   updated_at: string;
 }
 
+/** 'dot' = colored dot + name (default). 'accent' = left border + light background. */
 interface DialogueCardProps {
   dialogue: Dialogue;
-  characters: Character[]; // Add characters array to get character name
+  characters: Character[];
   onEdit: (dialogue: Dialogue) => void;
   onDelete: (dialogueId: number) => void;
   showActions?: boolean;
   className?: string;
   showCameraInfo?: boolean;
+  characterStyle?: 'dot' | 'accent';
 }
+
+const CHARACTER_COLORS = [
+  '#0d6efd', '#198754', '#0dcaf0', '#fd7e14', '#dc3545',
+  '#6f42c1', '#414042', '#20c997', '#6c757d', '#e83e8c'
+];
 
 const DialogueCard: React.FC<DialogueCardProps> = ({ 
   dialogue, 
@@ -46,43 +53,50 @@ const DialogueCard: React.FC<DialogueCardProps> = ({
   onDelete, 
   showActions = true,
   className = '',
-  showCameraInfo = true
+  showCameraInfo = true,
+  characterStyle = 'dot'
 }) => {
-  // Get character name from POV ID
   const character = characters.find(char => char.id === dialogue.character);
   const characterName = character ? character.name : `Character ${dialogue.character}`;
-  
-  // Function to strip HTML tags and render as plain text
+  // One color per character: use index in list so each character is distinct
+  const characterIndex = characters.findIndex(char => char.id === dialogue.character);
+  const characterColor = CHARACTER_COLORS[characterIndex >= 0 ? characterIndex % CHARACTER_COLORS.length : 0];
+
   const stripHtmlTags = (html: string): string => {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
     return tempDiv.textContent || tempDiv.innerText || '';
-  };
-  
-  const getCharacterColor = (characterName: string) => {
-    // Simple hash function to generate consistent colors
-    let hash = 0;
-    for (let i = 0; i < characterName.length; i++) {
-      hash = characterName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const colors = [
-      'bg-primary', 'bg-success', 'bg-info', 'bg-warning', 'bg-danger',
-      'bg-secondary', 'bg-dark', 'bg-light text-dark'
-    ];
-    return colors[Math.abs(hash) % colors.length];
   };
 
   return (
     <div className={`card mb-2 border-0 ${className}`}>
       <div className="card-body p-0 border-0">
         <div className="d-flex justify-content-between align-items-start mb-2">
-          <div className="d-flex align-items-center">
-            <span className="badge bg-secondary me-2 subtext-btn-sm">
-              {dialogue.order}
+          <div className="d-flex align-items-center flex-wrap gap-1">
+            <span className="dialogue-card__order" aria-label={`Order ${dialogue.order}`}>
+              #{dialogue.order}
             </span>
-            <span className={`badge ${getCharacterColor(characterName)} subtext-btn-sm`}>
-              {characterName}
-            </span>
+            {characterStyle === 'dot' ? (
+              <span
+                className="dialogue-card__character dialogue-card__character--dot subtext-btn-sm"
+                aria-label={`Character: ${characterName}`}
+              >
+                <span
+                  className="dialogue-card__character-dot"
+                  style={{ backgroundColor: characterColor }}
+                  aria-hidden
+                />
+                {characterName}
+              </span>
+            ) : (
+              <span
+                className="dialogue-card__character subtext-btn-sm"
+                style={{ color: characterColor }}
+                aria-label={`Character: ${characterName}`}
+              >
+                {characterName}
+              </span>
+            )}
           </div>
           {showActions && (
             <div className="d-flex gap-2">
@@ -116,18 +130,13 @@ const DialogueCard: React.FC<DialogueCardProps> = ({
         {showCameraInfo && (
           <div className="mt-2">
             <small className="text-muted subtext-btn-sm">
-              <i className="fas fa-camera me-1"></i>
-              {dialogue.shot_type} | Orbit: {dialogue.camera_orbit} | FOV: {dialogue.field_of_view}°
+              <i className="fas fa-camera me-1">&nbsp;</i>
+               Orbit: {dialogue.camera_orbit} | Target: {dialogue.camera_target}
             </small>
           </div>
         )}
         
-        <div className="mt-2">
-          <small className="text-muted subtext-btn-sm">
-            <i className="fas fa-clock me-1"></i>
-            {new Date(dialogue.created_at).toLocaleDateString()}
-          </small>
-        </div>
+        
       </div>
     </div>
   );

@@ -127,19 +127,41 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   // Update dialogueData when episodeDialogues changes
   useEffect(() => {
-    const newDialogueData: DialogueData[] = episodeDialogues.map(d => ({
-      dialogue_id: d.id,
-      character: d.character_name || d.character?.toString() || 'Unknown',
-      text: d.text,
-      camera_orbit: d.camera_orbit,
-      camera_target: d.camera_target,
-      field_of_view: d.field_of_view,
-      zoom_speed: d.zoom_speed,
-      // Use POV head position if available, otherwise use defaults
-      head_x: d.pov_data?.head_x ?? 0,
-      head_y: d.pov_data?.head_y ?? 1.6,
-      head_z: d.pov_data?.head_z ?? 0
-    }));
+    // Build fallback head position per character from any dialogue that has pov_data
+    // (so when a dialogue has no POV linked, we still place the hotspot correctly)
+    const characterHeadFallback: Record<string, { head_x: number; head_y: number; head_z: number }> = {};
+    episodeDialogues.forEach((d) => {
+      const name = (d.character_name || d.character?.toString() || 'Unknown').replace(/\s*\d+$/, '');
+      if (d.pov_data?.head_x != null && d.pov_data?.head_y != null && d.pov_data?.head_z != null && !characterHeadFallback[name]) {
+        characterHeadFallback[name] = {
+          head_x: d.pov_data.head_x,
+          head_y: d.pov_data.head_y,
+          head_z: d.pov_data.head_z
+        };
+      }
+    });
+
+    const newDialogueData: DialogueData[] = episodeDialogues.map(d => {
+      const character = d.character_name || d.character?.toString() || 'Unknown';
+      const baseName = character.replace(/\s*\d+$/, '');
+      const fallback = characterHeadFallback[baseName];
+      // Use POV head position if available; else same character's fallback; else match sm.js defaults (head_y 0)
+      const head_x = d.pov_data?.head_x ?? fallback?.head_x ?? 0;
+      const head_y = d.pov_data?.head_y ?? fallback?.head_y ?? 0;
+      const head_z = d.pov_data?.head_z ?? fallback?.head_z ?? 0;
+      return {
+        dialogue_id: d.id,
+        character,
+        text: d.text,
+        camera_orbit: d.camera_orbit,
+        camera_target: d.camera_target,
+        field_of_view: d.field_of_view,
+        zoom_speed: d.zoom_speed,
+        head_x,
+        head_y,
+        head_z
+      };
+    });
     setDialogueData(newDialogueData);
   }, [episodeDialogues]);
   
@@ -1017,13 +1039,12 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         }
       })
       .catch((error) => {
-        // Backend will return 403 if episode is not published or story/season is not public
-        // This is expected behavior - just log and don't interrupt user experience
+        // Backend returns 403 if episode not published or story/season not public
+        const msg = error.response?.data?.error || error.message;
         if (error.response?.status === 403) {
-          logger.log('[Comic3DViewer] View increment blocked by backend (episode not published or story/season not public)');
+          logger.warn('[Comic3DViewer] View increment blocked:', msg, '(Check episode is published, story & season are public)');
         } else {
-          logger.error('[Comic3DViewer] Error incrementing episode view:', error);
-          logger.error('[Comic3DViewer] Error details:', error.response?.data || error.message);
+          logger.error('[Comic3DViewer] Error incrementing episode view:', error.response?.data || error.message);
         }
       });
   }, [selectedEpisode, readOnly, storyId, onViewIncremented]);
@@ -1033,13 +1054,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     logger.log('Comic3DViewer: isShowingSummary:', isShowingSummary);
     logger.log('Comic3DViewer: episodeDialogues.length:', episodeDialogues.length);
     
-    // If showing summary, move to first dialogue
+    // If showing summary, move to first dialogue (count as view once they start reading)
     if (isShowingSummary && episodeDialogues.length > 0) {
       logger.log('Comic3DViewer: Moving from summary to first dialogue');
       setIsShowingSummary(false);
       setCurrentDialogueIndex(0);
       loadDialogue(0);
       showDialogue(0);
+      // Count view when user starts reading (first dialogue), not only when they reach the end
+      incrementEpisodeViewIfNeeded();
       return;
     }
     
@@ -2000,17 +2023,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 
                 {/* Current Values (Full Width) */}
                 <div className="col-md-6 mt-2" style={{ gridColumn: '1 / -1' }}>
-                  <div className="current-values-box" style={{
-                    background: '#f8f9fa',
-                    borderRadius: '8px',
-                    padding: '0.75rem 1rem',
-                    fontSize: '0.98em',
-                    color: '#333',
-                    marginTop: '0.5rem',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
-                    fontFamily: 'animeace, Comic, sans-serif'
-                  }}>
-                    <h6 className="text-primary mb-2" style={{ fontFamily: 'quicksand, sans-serif' }}>Current Values (Last Saved)</h6>
+                  <div className="current-values-box">
+                    <h6 className="text-primary mb-2 font-quicksand" style={{ fontSize: '1.2em', fontWeight: 600 }}>Values (Last Saved)</h6>
                     <div><strong>Camera Orbit:</strong> <span id="currentOrbit">{originalValues?.camera_orbit || '0deg 75deg 3m'}</span></div>
                     <div><strong>Camera Target:</strong> <span id="currentTarget">{originalValues?.camera_target || '0m 1.6m 0m'}</span></div>
                     {/* Field of View and Zoom Speed hidden for now */}

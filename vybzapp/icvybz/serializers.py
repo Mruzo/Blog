@@ -100,15 +100,19 @@ class DialogueSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'episode', 'created_at', 'updated_at']
     
     def get_pov_data(self, obj):
-        """Return POV data if POV exists"""
-        if obj.pov:
+        """Return POV data from dialogue's POV, or fall back to character's first POV for hotspot positioning."""
+        pov = obj.pov
+        if not pov and obj.character:
+            # Use character's first POV so head position is per-character (avoids all names at 0,0,0)
+            pov = obj.character.povs.first()
+        if pov:
             return {
-                'id': obj.pov.id,
-                'head_x': obj.pov.head_x,
-                'head_y': obj.pov.head_y,
-                'head_z': obj.pov.head_z,
-                'default_camera_target': obj.pov.default_camera_target,
-                'character': obj.pov.character.id if obj.pov.character else None
+                'id': pov.id,
+                'head_x': pov.head_x,
+                'head_y': pov.head_y,
+                'head_z': pov.head_z,
+                'default_camera_target': pov.default_camera_target,
+                'character': pov.character.id if pov.character else None
             }
         return None
 

@@ -13,6 +13,7 @@ import { Episode as ApiEpisode, apiService, Season, Story } from '../services/ap
 
 interface Dialogue {
   id: number;
+  pov?: number | null; // POV ID (whose view / camera target)
   character: number; // Character ID (who is speaking)
   text: string;
   order: number;
@@ -38,6 +39,7 @@ interface EpisodeFormData {
 
 interface DialogueFormData {
   character: number; // Character ID (who is speaking)
+  pov: number | null; // POV ID (whose view / camera target)
   text: string;
   order: number;
   scene_title: string;
@@ -85,7 +87,8 @@ const EpisodeManage: React.FC = () => {
   });
   
   const [dialogueFormData, setDialogueFormData] = useState<DialogueFormData>({
-    character: (characters.length > 0 && characters[0].id !== undefined) ? characters[0].id! : 0, // Use first character's ID as default
+    character: (characters.length > 0 && characters[0].id !== undefined) ? characters[0].id! : 0,
+    pov: (characters.length > 0 && characters[0].pov_data?.id != null) ? characters[0].pov_data!.id : null,
     text: '',
     order: 1,
     scene_title: '',
@@ -226,14 +229,20 @@ const EpisodeManage: React.FC = () => {
 
   const handleDialogueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setDialogueFormData(prev => ({
-      ...prev,
-      [name]: name === 'order' ? parseInt(value) || 1 : 
-              name === 'character' ? parseInt(value) || 0 :
-              name === 'field_of_view' ? parseFloat(value) || 45.0 :
-              name === 'zoom_speed' ? parseFloat(value) || 1.0 :
-              value
-    }));
+    setDialogueFormData(prev => {
+      const charId = name === 'character' ? parseInt(value) || 0 : prev.character;
+      const selectedChar = name === 'character' ? characters.find(c => c.id === charId) : null;
+      return {
+        ...prev,
+        [name]: name === 'order' ? parseInt(value) || 1 :
+                name === 'character' ? charId :
+                name === 'pov' ? (value === '' ? null : parseInt(value, 10)) :
+                name === 'field_of_view' ? parseFloat(value) || 45.0 :
+                name === 'zoom_speed' ? parseFloat(value) || 1.0 :
+                value,
+        ...(name === 'character' ? { pov: selectedChar?.pov_data?.id ?? null } : {})
+      };
+    });
   };
 
   const handleEpisodeSubmit = async (e: React.FormEvent) => {
@@ -279,11 +288,12 @@ const EpisodeManage: React.FC = () => {
     }
 
     try {
+      const payload = { ...dialogueFormData, pov: dialogueFormData.pov ?? undefined };
       if (editingDialogue) {
-        await updateDialogue(editingDialogue.id, dialogueFormData);
+        await updateDialogue(editingDialogue.id, payload);
         setMessage('Dialogue updated successfully!');
       } else {
-        await createDialogue(selectedEpisode.id, dialogueFormData);
+        await createDialogue(selectedEpisode.id, payload);
         setMessage('Dialogue created successfully!');
       }
       
@@ -315,6 +325,7 @@ const EpisodeManage: React.FC = () => {
     setEditingDialogue(dialogue);
     setDialogueFormData({
       character: dialogue.character,
+      pov: dialogue.pov ?? null,
       text: dialogue.text,
       order: dialogue.order,
       scene_title: dialogue.scene_title,
@@ -385,7 +396,8 @@ const EpisodeManage: React.FC = () => {
 
   const resetDialogueForm = () => {
     setDialogueFormData({
-      character: (characters.length > 0 && characters[0].id !== undefined) ? characters[0].id! : 0, // Use first character's ID as default
+      character: (characters.length > 0 && characters[0].id !== undefined) ? characters[0].id! : 0,
+      pov: (characters.length > 0 && characters[0].pov_data?.id != null) ? characters[0].pov_data!.id : null,
       text: '',
       order: 1,
       scene_title: '',
@@ -702,6 +714,33 @@ const EpisodeManage: React.FC = () => {
                     </select>
                   </div>
                   <div className="mb-3">
+                    <label htmlFor="dialoguePov" className="form-label subtext-btn-sm">POV (Camera target character)</label>
+                    <select
+                      className="form-select form-select-sm"
+                      id="dialoguePov"
+                      name="pov"
+                      value={dialogueFormData.pov ?? ''}
+                      onChange={handleDialogueInputChange}
+                    >
+                      <option value="">— Select POV —</option>
+                      {(() => {
+                        const fromCharacters = characters
+                          .filter(c => c.pov_data?.id != null)
+                          .map(c => ({ value: c.pov_data!.id, label: c.name }));
+                        const currentPovId = editingDialogue?.pov ?? dialogueFormData.pov;
+                        const hasCurrent = currentPovId != null && fromCharacters.some(o => o.value === currentPovId);
+                        if (currentPovId != null && !hasCurrent) {
+                          const charName = characters.find(c => c.id === (editingDialogue?.character ?? dialogueFormData.character))?.name ?? 'Character';
+                          fromCharacters.push({ value: currentPovId, label: `${charName}'s POV` });
+                        }
+                        return fromCharacters.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ));
+                      })()}
+                    </select>
+                    <small className="text-muted">Whose view the camera targets (character head position)</small>
+                  </div>
+                  <div className="mb-3">
                     <label htmlFor="dialogueText" className="form-label subtext-btn-sm">Dialogue Text</label>
                     <textarea
                       className="form-control form-control-sm"
@@ -753,26 +792,7 @@ const EpisodeManage: React.FC = () => {
                       placeholder="Describe the scene"
                     />
                   </div>
-                  
-                  {/* Shot Type */}
-                  <div className="mb-3">
-                    <label htmlFor="dialogueShotType" className="form-label subtext-btn-sm">Shot Type</label>
-                    <select
-                      className="form-select form-select-sm"
-                      id="dialogueShotType"
-                      name="shot_type"
-                      value={dialogueFormData.shot_type}
-                      onChange={handleDialogueInputChange}
-                    >
-                      <option value="wideShot">Wide Shot</option>
-                      <option value="mediumShot">Medium Shot</option>
-                      <option value="closeUp">Close Up</option>
-                      <option value="extremeCloseUp">Extreme Close Up</option>
-                      <option value="overShoulder">Over Shoulder</option>
-                      <option value="lowAngle">Low Angle</option>
-                      <option value="highAngle">High Angle</option>
-                    </select>
-                  </div>
+              
                   
                   {/* Camera Controls */}
                   <div className="mb-3">
@@ -807,48 +827,7 @@ const EpisodeManage: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="mb-3">
-                    <div className="row">
-                      <div className="col-md-6">
-                        <label htmlFor="dialogueFieldOfView" className="form-label subtext-btn-sm">Field of View</label>
-                        <input
-                          type="range"
-                          className="form-range"
-                          id="dialogueFieldOfView"
-                          name="field_of_view"
-                          min="10"
-                          max="120"
-                          step="1"
-                          value={dialogueFormData.field_of_view}
-                          onChange={handleDialogueInputChange}
-                        />
-                        <div className="d-flex justify-content-between">
-                          <small className="text-muted">10°</small>
-                          <span className="badge bg-primary">{dialogueFormData.field_of_view}°</span>
-                          <small className="text-muted">120°</small>
-                        </div>
-                      </div>
-                      <div className="col-md-6">
-                        <label htmlFor="dialogueZoomSpeed" className="form-label subtext-btn-sm">Zoom Speed</label>
-                        <input
-                          type="range"
-                          className="form-range"
-                          id="dialogueZoomSpeed"
-                          name="zoom_speed"
-                          min="0.1"
-                          max="5.0"
-                          step="0.1"
-                          value={dialogueFormData.zoom_speed}
-                          onChange={handleDialogueInputChange}
-                        />
-                        <div className="d-flex justify-content-between">
-                          <small className="text-muted">0.1x</small>
-                          <span className="badge bg-primary">{dialogueFormData.zoom_speed}x</span>
-                          <small className="text-muted">5.0x</small>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+
                   
                   <div className="mb-3">
                     <label htmlFor="dialogueRotation" className="form-label subtext-btn-sm">Rotation</label>

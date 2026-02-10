@@ -172,28 +172,35 @@ module.exports = function(app) {
     next();
   });
   
-  // Proxy Django admin requests to Django backend
+  // Proxy Django admin requests to Django backend (must be before catch-all)
+  // Match any path starting with /uno so /uno, /uno/, /uno/icvybz/... all get proxied
   app.use(
-    ['/uno', '/uno/'],
+    '/uno',
     createProxyMiddleware({
-      target: 'http://localhost:8000',
+      target: 'http://127.0.0.1:8000',
       changeOrigin: true,
       secure: false,
-      ws: true, // Enable websocket proxying
+      ws: true,
       logLevel: 'debug',
+      // Express strips mount path: req.url is '/' or '/icvybz/...'. Restore /uno for Django.
+      pathRewrite: (path) => (path === '/' || path === '') ? '/uno/' : '/uno' + path,
       onProxyReq: (proxyReq, req, res) => {
-        console.log('[PROXY] /uno request:', req.method, req.url);
-        // Preserve original headers
+        console.log('[PROXY] /uno request:', req.method, req.url, '->', 'http://127.0.0.1:8000' + proxyReq.path);
         proxyReq.setHeader('X-Forwarded-Host', req.headers.host);
         proxyReq.setHeader('X-Forwarded-Proto', req.protocol || 'http');
+        if (req.headers.cookie) {
+          proxyReq.setHeader('Cookie', req.headers.cookie);
+        }
       },
       onError: (err, req, res) => {
         console.error('[PROXY ERROR] /uno:', err.message);
+        if (!res.headersSent) {
+          res.status(502).send('Proxy to Django failed. Is the backend running on http://127.0.0.1:8000?');
+        }
       },
-      // Keep the /uno prefix as-is - no pathRewrite needed
     })
   );
-  console.log('[PROXY SETUP] Admin proxy registered for /uno/*');
+  console.log('[PROXY SETUP] Admin proxy registered for /uno -> http://127.0.0.1:8000/uno');
   console.log('[PROXY SETUP] Proxy configuration complete');
 };
 
