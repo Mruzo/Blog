@@ -21,7 +21,6 @@ jsmin==3.0.1
 Pillow==9.5.0
 pytz==2023.3
 requests==2.27.1
-shippo==2.1.2
 simplejson==3.17.2
 soupsieve==2.4.1
 sqlparse==0.4.4

@@ -10,6 +10,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from snmov.utils.email_notifications import send_order_confirmation
+from snmov.utils.canadapost import fulfill_order_shipping_label
 
 logger = logging.getLogger(__name__)
 
@@ -184,9 +185,7 @@ def complete_order_from_stripe_checkout_session(order, session):
     shipping_success = bool(order.label_url and order.tracking_number)
     if not shipping_success:
         try:
-            from snmov.views import create_shipping_label
-
-            shipping_info = create_shipping_label(order)
+            shipping_info = fulfill_order_shipping_label(order)
             order.label_url = shipping_info['label_url']
             order.tracking_number = shipping_info['tracking_number']
             order.shipping_provider = shipping_info['carrier']

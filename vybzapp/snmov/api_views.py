@@ -33,7 +33,6 @@ from .forms import ShippingAddressForm
 from django.urls import reverse
 import stripe
 import requests
-# import shippo  # Replaced with Canada Post
 from django.conf import settings
 import logging
 
@@ -194,7 +193,7 @@ def add_to_cart(request):
                 if available_stock <= 0:
                     return Response({
                         'success': False,
-                        'error': f'Sorry, {product.title} is out of stock. Only {product.stock} items available.',
+                        'error': f'Sorry, {product.title} is out of stock.',
                         'available_stock': product.stock,
                         'current_cart_quantity': current_quantity
                     }, status=status.HTTP_400_BAD_REQUEST)

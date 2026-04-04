@@ -1,7 +1,6 @@
 from django.shortcuts import get_object_or_404
 from snmov.models import Product, ShippingAddress
 import requests
-# import shippo  # Replaced with Canada Post
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from decimal import Decimal

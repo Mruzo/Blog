@@ -133,6 +133,11 @@ check_*.py
 run_*.py
 *_test.py.bak
 
+# Mistaken exports / tooling drops (add similar patterns here as needed)
+MagicMock
+MagicMock.py
+**/MagicMock.py
+
 # Database files (already covered but being explicit)
 *.sqlite3
 *.db

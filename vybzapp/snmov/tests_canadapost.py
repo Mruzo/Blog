@@ -8,6 +8,8 @@ from decimal import Decimal
 from unittest.mock import patch, MagicMock, Mock
 import xml.etree.ElementTree as ET
 import requests
+import shutil
+import tempfile
 
 from snmov.models import Product, Order, OrderItem, ShippingAddress
 from snmov.utils.canadapost import (
@@ -376,7 +378,12 @@ class CanadaPostIntegrationTestCase(TestCase):
             product=self.product,
             quantity=2
         )
-    
+        self.temp_media = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_media, ignore_errors=True)
+        super().tearDown()
+
     @patch('snmov.utils.canadapost.CanadaPostAPI.get_shipping_rates')
     def test_get_canadapost_rates_integration(self, mock_get_rates):
         """Test: get_canadapost_rates function with order"""
@@ -458,7 +465,16 @@ class CanadaPostIntegrationTestCase(TestCase):
         """Test: get_canadapost_rates uses CANADAPOST_USE_PRODUCTION from settings"""
         with patch('snmov.utils.canadapost.CanadaPostAPI') as mock_api_class:
             mock_api = Mock()
-            mock_api.get_shipping_rates.return_value = []
+            mock_api.get_shipping_rates.return_value = [
+                {
+                    'service_code': 'DOM.EP',
+                    'service_name': 'Expedited Parcel',
+                    'amount': Decimal('10.00'),
+                    'currency': 'CAD',
+                    'estimated_delivery': '',
+                    'object_id': 'DOM.EP',
+                }
+            ]
             mock_api_class.return_value = mock_api
             
             with patch('snmov.utils.canadapost.settings') as mock_settings:
@@ -477,12 +493,16 @@ class CanadaPostIntegrationTestCase(TestCase):
             mock_api.create_shipping_label.return_value = {
                 'label_url': '/test.pdf',
                 'tracking_number': '123',
-                'carrier': 'Canada Post'
+                'carrier': 'Canada Post',
+                'shipment_id': 'ship-test-1',
+                'label_pdf': b'%PDF-1.4',
             }
             mock_api_class.return_value = mock_api
             
             with patch('snmov.utils.canadapost.settings') as mock_settings:
                 mock_settings.CANADAPOST_USE_PRODUCTION = False
+                mock_settings.MEDIA_ROOT = self.temp_media
+                mock_settings.MEDIA_URL = '/media/'
                 
                 with patch('snmov.utils.cart.get_sender_address'):
                     create_canadapost_label(self.order, 'DOM.EP', use_production=None)
@@ -539,7 +559,16 @@ class CanadaPostIntegrationTestCase(TestCase):
         
         with patch('snmov.utils.canadapost.CanadaPostAPI') as mock_api_class:
             mock_api = Mock()
-            mock_api.get_shipping_rates.return_value = []
+            mock_api.get_shipping_rates.return_value = [
+                {
+                    'service_code': 'DOM.EP',
+                    'service_name': 'Expedited Parcel',
+                    'amount': Decimal('10.00'),
+                    'currency': 'CAD',
+                    'estimated_delivery': '',
+                    'object_id': 'DOM.EP',
+                }
+            ]
             mock_api_class.return_value = mock_api
             
             with patch('snmov.utils.canadapost.settings') as mock_settings:

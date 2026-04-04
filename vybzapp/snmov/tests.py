@@ -12,6 +12,7 @@ from django.core import mail
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator, default_token_generator
 from decimal import Decimal
+from unittest.mock import patch
 import re
 import json
 
@@ -1079,18 +1080,29 @@ class CheckoutAPITestCase(TestCase):
         order = Order.objects.create(customer=self.user, shipping_address=shipping)
         OrderItem.objects.create(order=order, product=self.product1, quantity=1)
         
-        # Mock the shipping rates function to avoid external API calls
-        with self.settings(SHIPPO_API_TOKEN='test_token'):
+        with patch('snmov.api_views.get_shipping_rates_for_order') as mock_rates:
+            mock_rates.return_value = [
+                {
+                    'object_id': 'DOM.EP',
+                    'servicelevel': {'name': 'Expedited Parcel'},
+                    'amount': '12.00',
+                    'currency': 'CAD',
+                    'estimated_days': 3,
+                    'courier_name': 'Canada Post',
+                    'provider': 'Canada Post',
+                    'provider_image_200': '',
+                    'shipment_charge': {'amount': '12.00', 'currency': 'CAD'},
+                    '_canadapost_service_code': 'DOM.EP',
+                    '_canadapost_service_name': 'Expedited Parcel',
+                }
+            ]
             response = self.client.get(f'/api/orders/{order.id}/shipping/')
-            
-            # This will likely fail due to missing Shippo configuration, but we can test the structure
             if response.status_code == 200:
                 data = response.json()
                 self.assertTrue(data['success'])
                 self.assertIn('order', data)
                 self.assertIn('rates', data)
             else:
-                # Expected to fail in test environment due to missing Shippo config
                 self.assertIn(response.status_code, [500, 400])
 
     def test_get_shipping_rates_api_nonexistent_order(self):

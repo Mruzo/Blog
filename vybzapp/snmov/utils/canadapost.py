@@ -2,6 +2,7 @@
 Canada Post Developer Portal REST API Integration
 REST API uses XML payloads (not JSON) with REST HTTP methods
 """
+import os
 import requests
 import base64
 from decimal import Decimal
@@ -629,12 +630,51 @@ def create_canadapost_label(order, service_code, use_production=None):
     
     api = CanadaPostAPI(use_production=use_production)
     result = api.create_shipping_label(from_address, to_address, parcel, service_code, order.id)
-    
+
+    label_pdf = result.get('label_pdf')
+    shipment_id = result.get('shipment_id')
+    if label_pdf and shipment_id:
+        rel_dir = 'shipping-labels'
+        dest_dir = os.path.join(settings.MEDIA_ROOT, rel_dir)
+        os.makedirs(dest_dir, exist_ok=True)
+        filename = f'{shipment_id}.pdf'
+        dest_path = os.path.join(dest_dir, filename)
+        with open(dest_path, 'wb') as f:
+            f.write(label_pdf)
+        base = settings.MEDIA_URL or '/media/'
+        if not base.endswith('/'):
+            base = f'{base}/'
+        label_url = f'{base}{rel_dir}/{filename}'
+    else:
+        label_url = result.get('label_url', '')
+
     return {
-        'label_url': result['label_url'],
+        'label_url': label_url,
         'tracking_number': result['tracking_number'],
-        'carrier': result['carrier']
+        'carrier': result['carrier'],
     }
+
+
+def resolve_canadapost_service_code(order):
+    """
+    Service code from checkout (Canada Post), e.g. DOM.EP, DOM.PC.
+    Stored on order by select-shipping as shipping_service / shipping_rate_id.
+    """
+    code = (order.shipping_service or '').strip() or (order.shipping_rate_id or '').strip()
+    if not code:
+        code = (getattr(settings, 'CANADAPOST_DEFAULT_SERVICE_CODE', None) or '').strip()
+    if not code:
+        raise ValueError(
+            'No Canada Post service code on this order. '
+            'The customer must select a shipping option before payment.'
+        )
+    return code
+
+
+def fulfill_order_shipping_label(order, use_production=None):
+    """Buy a Canada Post label and persist the PDF under MEDIA_ROOT/shipping-labels/."""
+    service_code = resolve_canadapost_service_code(order)
+    return create_canadapost_label(order, service_code, use_production=use_production)
 
 
 def create_return_label(return_request, use_production=None):

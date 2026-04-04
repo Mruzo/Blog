@@ -25,10 +25,10 @@ import json, inspect, uuid, logging
 from uuid import UUID
 from django.contrib.contenttypes.models import ContentType
 from snmov.utils.cart import get_cart_for_session, get_shipping_rates, get_sender_address
+from snmov.utils.canadapost import fulfill_order_shipping_label
 from django.conf import settings
 import requests
 import stripe
-import shippo
 from decimal import Decimal
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -46,13 +46,6 @@ Cart = get_cart_class()
 # shipping_address = ShippingAddress.objects.get(user=user)
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
-
-# Shippo replaced with Canada Post - keeping for backward compatibility
-try:
-    import shippo
-    shippo.config.api_key = getattr(settings, 'SHIPPO_API_KEY', None)
-except (ImportError, AttributeError):
-    pass  # Shippo not used anymore
 
 
 class ProductListView(generic.ListView):
@@ -495,106 +488,6 @@ def select_shipping(request, order_id):
         return redirect(checkout_session.url, code=303)
 
 
-
-def create_shipping_label(order):
-    """
-    Creates a shipping label for an order using Shippo API.
-    Returns a dict with label_url, tracking_number, and carrier if successful.
-    Raises an exception with a descriptive message if label creation fails.
-    """
-    try:
-        # Build sender and recipient from order/shipping_address
-        recipient = {
-            "name": f"{order.customer.first_name} {order.customer.last_name}",
-            "street1": order.shipping_address.street,
-            "city": order.shipping_address.city,
-            "state": order.shipping_address.state,
-            "zip": order.shipping_address.zip_code,
-            "country": order.shipping_address.country,
-            "email": order.customer.email,
-        }
-
-        # Use reusable helper for sender address
-        sender = get_sender_address()
-
-        # Calculate total dimensions and weight from products
-        total_length = Decimal("0.0")
-        total_width = Decimal("0.0")
-        total_height = Decimal("0.0")
-        total_weight = Decimal("0.0")
-
-        for item in order.items.all():
-            product = item.product
-            quantity = item.quantity
-
-            # Evaluate the model fields by converting them to Decimal
-            product_length = Decimal(str(product.package_length or 0))
-            product_width = Decimal(str(product.package_width or 0))
-            product_height = Decimal(str(product.package_height or 0))
-            product_weight = Decimal(str(product.weight_grams or 0))
-
-            # Use the evaluated values
-            total_length = max(total_length, product_length)  # Use longest length
-            total_width += product_width * quantity
-            total_height = max(total_height, product_height)  # Use tallest height
-            total_weight += product_weight * quantity
-
-        # Create parcel with calculated dimensions
-        parcel = {
-            "length": str(round(total_length, 2)),
-            "width": str(round(total_width, 2)),
-            "height": str(round(total_height, 2)),
-            "distance_unit": "cm",
-            "weight": str(round(total_weight / 1000, 2)),
-            "mass_unit": "kg",
-        }
-
-        # Create shipment
-        shipment = shippo.Shipment.create(
-            address_from=sender,
-            address_to=recipient,
-            parcels=[parcel],
-            async_=False,
-        )
-
-        if not shipment.rates:
-            raise ValueError("No shipping rates available for this order")
-
-        # Match selected rate
-        rate = next((r for r in shipment.rates if r.object_id == order.shipping_rate_id), None)
-        if not rate:
-            raise ValueError("Selected shipping rate not found in available rates")
-
-        # Create transaction for label
-        transaction = shippo.Transaction.create(
-            rate=rate.object_id,
-            label_file_type="PDF",
-            async_=False,
-        )
-
-        if transaction.status != "SUCCESS":
-            error_msg = transaction.messages[0].get('text') if transaction.messages else "Unknown error"
-            raise ValueError(f"Label creation failed: {error_msg}")
-
-        # Update order with successful label creation
-        order.shipping_label_created_at = timezone.now()
-        order.status = "LABEL_CREATED"
-        order.save()
-
-        return {
-            "label_url": transaction.label_url,
-            "tracking_number": transaction.tracking_number,
-            "carrier": transaction.tracking_provider,
-        }
-
-    except Exception as e:
-        # Log the error and update order
-        logger.error(f"Failed to create shipping label for order {order.id}: {str(e)}")
-        order.shipping_label_error = str(e)
-        order.status = "FAILED"
-        order.save()
-        raise
-
 @login_required
 def payment_success(request):
     session_id = request.GET.get("session_id")
@@ -613,8 +506,7 @@ def payment_success(request):
         order.status = "ORDERED"  # Update order status first
 
         try:
-            # Create shipping label
-            shipping_info = create_shipping_label(order)
+            shipping_info = fulfill_order_shipping_label(order)
             
             # Update order with shipping information
             order.label_url = shipping_info["label_url"]
@@ -818,23 +710,8 @@ def cancel_order(request, order_id):
             messages.error(request, "Cannot cancel an order that has already been shipped or delivered.")
             return redirect('order_detail', order_id=order_id)
 
-        # If there's a shipping label, try to void it with Shippo
-        if order.label_url and order.tracking_number:
-            try:
-                # Request a refund/void for the transaction
-                refund = shippo.Refund.create(
-                    transaction=order.shipping_rate_id,
-                    async_=False
-                )
-
-                if refund.status == 'SUCCESS':
-                    logger.info(f"Successfully voided shipping label for order {order_id}")
-                else:
-                    logger.error(f"Failed to void shipping label for order {order_id}: {refund.messages}")
-                    messages.warning(request, "Order cancelled but there was an issue voiding the shipping label. Our team will handle this manually.")
-            except Exception as e:
-                logger.error(f"Error voiding shipping label for order {order_id}: {str(e)}")
-                messages.warning(request, "Order cancelled but there was an issue voiding the shipping label. Our team will handle this manually.")
+        # Canada Post label void/refund is not automated here; handle in Canada Post
+        # merchant tools if the label was already purchased.
 
         # Update order status and clear shipping-related fields
         order.status = 'CANCELLED'

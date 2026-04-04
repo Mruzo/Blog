@@ -91,3 +91,8 @@ snmov/migrations_backup/
 vybzenv310/
 snmov/migrations/_old_backup_phase2/
 
+# Mistaken exports / tooling drops (add similar patterns here as needed)
+MagicMock
+MagicMock.py
+**/MagicMock.py
+

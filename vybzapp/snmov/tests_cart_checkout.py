@@ -265,11 +265,11 @@ class OrderConfirmationEmailTestCase(APITestCase):
             mock_session.amount_total = 9999
             mock_stripe.return_value = mock_session
             
-            with patch('snmov.views.create_shipping_label') as mock_label:
+            with patch('snmov.utils.checkout_fulfillment.fulfill_order_shipping_label') as mock_label:
                 mock_label.return_value = {
                     'label_url': 'http://test.com/label',
                     'tracking_number': 'TRACK123',
-                    'carrier': 'USPS'
+                    'carrier': 'Canada Post'
                 }
                 
                 response = self.client.get(
@@ -312,12 +312,12 @@ class OrderConfirmationEmailTestCase(APITestCase):
             mock_session.amount_total = 5000
             mock_stripe.return_value = mock_session
             
-            with patch('snmov.views.create_shipping_label') as mock_label:
+            with patch('snmov.utils.checkout_fulfillment.fulfill_order_shipping_label') as mock_label:
                 # Mock label creation to succeed (not raise exception)
                 mock_label.return_value = {
                     'label_url': 'http://test.com/label',
                     'tracking_number': 'TRACK123',
-                    'carrier': 'USPS'
+                    'carrier': 'Canada Post'
                 }
                 response = self.client.get(
                     reverse('api:payment-success') + '?session_id=test_session'
