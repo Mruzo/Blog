@@ -34,6 +34,14 @@ def get_return_window_days(order):
     return getattr(settings, 'DEFAULT_RETURN_WINDOW_DAYS', 30)
 
 
+def is_order_eligible_for_return_start(order):
+    """Whether the order status allows starting a return (policy)."""
+    allowed = getattr(settings, 'RETURN_ELIGIBLE_STATUSES', ('DELIVERED', 'SHIPPED'))
+    if isinstance(allowed, str):
+        allowed = (allowed,)
+    return order.status in tuple(allowed)
+
+
 def validate_return_window(order, return_window_days=None):
     """
     Validate if order is within return window.
@@ -45,15 +53,16 @@ def validate_return_window(order, return_window_days=None):
     Returns:
         tuple: (is_valid, error_message)
     """
-    if order.status != 'DELIVERED':
-        return False, "Order must be delivered before returns can be requested."
+    if not is_order_eligible_for_return_start(order):
+        return False, (
+            "This order is not eligible for a return yet. "
+            "Returns open after the order is shipped or delivered."
+        )
     
     if return_window_days is None:
         return_window_days = get_return_window_days(order)
     
-    # Calculate deadline (using order_date as delivery date proxy)
-    # In production, you'd use actual delivery_date if tracked
-    delivery_date = order.order_date
+    delivery_date = order.delivered_at or order.order_date
     deadline = delivery_date + timedelta(days=return_window_days)
     
     if timezone.now() > deadline:
@@ -117,18 +126,21 @@ def validate_return_condition(return_request):
 
 def calculate_return_shipping_cost(return_request):
     """
-    Calculate return shipping cost.
-    This is a placeholder - in production, you'd integrate with shipping API.
-    
-    Args:
-        return_request: ReturnRequest instance
-        
-    Returns:
-        Decimal: Return shipping cost
+    Estimate return shipping (integrate carrier API in production).
+    Uses total weight of returned lines when available.
     """
-    # Placeholder: return fixed cost or calculate based on weight/dimensions
-    # In production, integrate with Canada Post or other shipping provider
-    return Decimal('10.00')  # Default $10 return shipping
+    if return_request is None or not return_request.pk:
+        return Decimal('10.00')
+    weight_g = 0
+    for ri in return_request.returnitem_set.select_related('order_item__product').all():
+        w = getattr(ri.order_item.product, 'weight_grams', None) or 0
+        weight_g += int(w) * ri.quantity
+    if weight_g <= 0:
+        weight_g = 200
+    base = Decimal('8.00')
+    per_kg = Decimal('2.50')
+    extra = (Decimal(weight_g) / Decimal('1000')) * per_kg
+    return (base + extra).quantize(Decimal('0.01'))
 
 
 def calculate_refund_amount(return_request):
@@ -170,6 +182,40 @@ def calculate_refund_amount(return_request):
     return max(total, Decimal('0.00'))  # Ensure non-negative
 
 
+def get_total_refunded_amount(order):
+    """Sum of completed Stripe refunds for this order (credit notes)."""
+    from django.db.models import Sum
+    total = CreditNote.objects.filter(
+        return_request__order=order,
+        status='REFUNDED',
+    ).aggregate(s=Sum('amount'))['s']
+    return total if total is not None else Decimal('0.00')
+
+
+def get_max_refundable_amount(order):
+    """Remaining amount that can be refunded (matches charged total when available)."""
+    refunded = get_total_refunded_amount(order)
+    if order.amount_paid_cents is not None:
+        paid = Decimal(order.amount_paid_cents) / Decimal('100')
+        return paid - refunded
+    paid = order.calculate_grand_total()
+    if getattr(settings, 'TAX_ENABLED', True) and getattr(settings, 'STRIPE_CHECKOUT_INCLUDE_TAX', True):
+        sub = order.calculate_total_value() or Decimal('0')
+        ship = order.shipping_cost or Decimal('0')
+        rate = Decimal(str(getattr(settings, 'TAX_RATE', 0) or 0))
+        paid = paid + (sub + ship) * rate
+    return (paid - refunded).quantize(Decimal('0.01'))
+
+
+def assert_refund_within_payment_limits(order, refund_amount):
+    """Raise ValueError if refund exceeds amount paid minus prior refunds."""
+    max_amt = get_max_refundable_amount(order)
+    if refund_amount > max_amt + Decimal('0.02'):
+        raise ValueError(
+            f'Refund of ${refund_amount} exceeds remaining refundable balance (${max_amt}).'
+        )
+
+
 def get_available_return_items(order):
     """
     Get order items available for return with quantities.
@@ -180,6 +226,9 @@ def get_available_return_items(order):
     Returns:
         list: List of dicts with order_item, available_quantity
     """
+    if not is_order_eligible_for_return_start(order):
+        return []
+
     available_items = []
     
     for order_item in order.orderitem_set.all():
@@ -224,6 +273,7 @@ def process_return_approval(return_request, admin_user=None):
     
     # Calculate refund amount
     refund_amount = calculate_refund_amount(return_request)
+    assert_refund_within_payment_limits(return_request.order, refund_amount)
     
     # Create credit note
     credit_note = CreditNote.objects.create(

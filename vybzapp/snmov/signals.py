@@ -29,6 +29,11 @@ def send_order_status_update_email(sender, instance, created, **kwargs):
     # Skip if this is a new order (will be handled by order confirmation)
     if created:
         return
+
+    # Record first time order is marked delivered (return window / customer comms)
+    if instance.status == 'DELIVERED' and not instance.delivered_at:
+        from django.utils import timezone
+        Order.objects.filter(pk=instance.pk, delivered_at__isnull=True).update(delivered_at=timezone.now())
     
     # Get previous status
     previous_status = _previous_order_status.get(instance.pk)

@@ -141,6 +141,11 @@ run_*.py
 .env.local
 .env.*.local
 *.env
+# Never commit a copy of production secrets (app reads /etc/vybz/settings.ini)
+settings.ini
+**/settings.ini
+# Virtualenv metadata (path-specific)
+pyvenv.cfg
 
 # Python cache (already covered but being explicit)
 **/__pycache__/

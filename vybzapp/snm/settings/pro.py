@@ -84,3 +84,6 @@ STRIPE_SECRET_KEY = STRIPE_PRODUCTION_SECRET_KEY
 CANADAPOST_USE_PRODUCTION = True
 CANADAPOST_KEY_NUMBER = CANADAPOST_PRODUCTION_KEY_NUMBER
 CANADAPOST_CUSTOMER_NUMBER = CANADAPOST_PRODUCTION_CUSTOMER_NUMBER
+
+# Production storefront (emails, Stripe redirects). Override in /etc/vybz/settings.ini [section] FRONTEND_URL if needed.
+FRONTEND_URL = config.get('section', 'FRONTEND_URL', fallback='https://www.justvybz.com')

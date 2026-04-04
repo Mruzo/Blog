@@ -6,7 +6,9 @@ from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from rest_framework.authentication import TokenAuthentication
 from snmov.utils.security import rate_limit_check, log_security_event, validate_file_upload, sanitize_filename
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.db import transaction
+from django.db.models import F
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.auth import get_user_model
@@ -26,7 +28,6 @@ from .serializers import (
 )
 from snm.settings.base import DEFAULT_FROM_EMAIL, SUPPORT_EMAIL
 from django.core.mail import send_mail
-from snmov.utils.email_notifications import send_order_confirmation
 from .utils.cart import get_cart_for_session, get_shipping_rates as get_shipping_rates_for_order, get_sender_address
 from .forms import ShippingAddressForm
 from django.urls import reverse
@@ -39,6 +40,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+class _CheckoutTransactionError(Exception):
+    """Rollback checkout DB transaction and map to HTTP response."""
+    def __init__(self, message, http_status=status.HTTP_400_BAD_REQUEST):
+        self.message = message
+        self.http_status = http_status
+        super().__init__(message)
 
 
 class ProductListView(generics.ListAPIView):
@@ -792,34 +801,47 @@ def checkout(request):
     # Create shipping address
     form = ShippingAddressForm(request.data)
     if form.is_valid():
-        shipping = form.save(commit=False)
-        shipping.user = request.user
-        shipping.save()
-        
-        # Create order
-        order = Order.objects.create(customer=request.user, shipping_address=shipping)
-        
-        # Add items to the order and decrement stock
-        for item in cart_items:
-            try:
-                product = Product.objects.get(uuid=item['uuid'], available=True)
-                
-                # Double-check stock before creating order item
-                if product.stock >= item['quantity']:
+        try:
+            with transaction.atomic():
+                uuids = [item['uuid'] for item in cart_items]
+                locked = Product.objects.select_for_update().filter(uuid__in=uuids, available=True)
+                by_uuid = {str(p.uuid): p for p in locked}
+                for item in cart_items:
+                    uid = str(item['uuid'])
+                    p = by_uuid.get(uid)
+                    if not p or p.stock < item['quantity']:
+                        raise _CheckoutTransactionError(
+                            'Inventory changed while checking out. Refresh your cart and try again.',
+                            status.HTTP_409_CONFLICT,
+                        )
+
+                shipping = form.save(commit=False)
+                shipping.user = request.user
+                shipping.save()
+                order = Order.objects.create(customer=request.user, shipping_address=shipping)
+
+                for item in cart_items:
+                    p = by_uuid[str(item['uuid'])]
                     OrderItem.objects.create(
                         order=order,
-                        product=product,
-                        quantity=item['quantity']
+                        product=p,
+                        quantity=item['quantity'],
                     )
-                    # Decrement stock
-                    product.stock -= item['quantity']
-                    product.save(update_fields=['stock'])
-                else:
-                    # This shouldn't happen due to validation above, but handle it
-                    continue
-            except Product.DoesNotExist:
-                continue
-        
+                    updated = Product.objects.filter(
+                        pk=p.pk, stock__gte=item['quantity']
+                    ).update(stock=F('stock') - item['quantity'])
+                    if updated != 1:
+                        raise _CheckoutTransactionError(
+                            'Inventory changed while checking out. Please try again.',
+                            status.HTTP_409_CONFLICT,
+                        )
+        except _CheckoutTransactionError as e:
+            return Response({'success': False, 'error': e.message}, status=e.http_status)
+
+        request.session['cart'] = {}
+        request.session.modified = True
+        request.session.save()
+
         return Response({
             'success': True,
             'order_id': order.id,
@@ -878,6 +900,9 @@ def get_shipping_rates(request, order_id):
         if hasattr(request, 'session'):
             request.session['shipping_rates'] = rates
             request.session.modified = True
+
+        from snmov.utils.checkout_fulfillment import snapshot_shipping_rates_on_order
+        snapshot_shipping_rates_on_order(order, rates)
         
         return Response({
             'success': True,
@@ -938,25 +963,23 @@ def select_shipping_rate(request, order_id):
         }, status=status.HTTP_404_NOT_FOUND)
     
     rate_id = request.data.get('rate_id')
-    session_rates = request.session.get('shipping_rates', [])
+    session_rates = order.shipping_rates_snapshot or request.session.get('shipping_rates', [])
     
     # CRITICAL FIX: If session rates not found (Token Auth issue), re-fetch them
     if not session_rates:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(f"Shipping rates not found in session for order {order_id}, re-fetching...")
+        logger.warning("Shipping rates not found for order %s (session/snapshot); re-fetching...", order_id)
         try:
             from snmov.utils.cart import get_shipping_rates as get_shipping_rates_func
             session_rates = get_shipping_rates_func(order)
-            # Save to session for next time
             request.session['shipping_rates'] = session_rates
             request.session.modified = True
             request.session.save()
+            from snmov.utils.checkout_fulfillment import snapshot_shipping_rates_on_order
+            snapshot_shipping_rates_on_order(order, session_rates)
         except Exception as e:
             logger.error(f"Error re-fetching shipping rates: {e}")
             return Response({
                 'success': False,
-                # Treat this as a client-visible problem (can't validate the selected rate)
                 'error': 'Selected shipping rate not found.',
                 'details': f'Failed to fetch shipping rates: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
@@ -975,35 +998,22 @@ def select_shipping_rate(request, order_id):
     # Store Canada Post service code for label creation
     order.shipping_service = selected_rate.get('_canadapost_service_code', rate_id)
     order.save()
-    
-    # Build Stripe line items
-    line_items = [
-        {
-            'price_data': {
-                'currency': 'cad',
-                'product_data': {'name': item.product.title},
-                'unit_amount': int(item.product.get_discounted_price() * 100),
-            },
-            'quantity': item.quantity,
-        }
-        for item in order.orderitem_set.all()
-    ]
-    line_items.append({
-        'price_data': {
-            'currency': 'cad',
-            'product_data': {'name': 'Shipping'},
-            'unit_amount': int(order.shipping_cost * 100),
-        },
-        'quantity': 1,
-    })
-    
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    if order.stripe_checkout_session_id:
+        try:
+            stripe.checkout.Session.expire(order.stripe_checkout_session_id)
+        except Exception as ex:
+            logger.warning('Could not expire prior Stripe session %s: %s', order.stripe_checkout_session_id, ex)
+
+    from snmov.utils.checkout_fulfillment import build_checkout_line_items
+    line_items = build_checkout_line_items(order)
+
     try:
-        # Redirect to React app's payment success page after Stripe checkout
-        # Use settings to get frontend URL (for production compatibility)
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
         success_url = f'{frontend_url}/product/payment/success/?session_id={{CHECKOUT_SESSION_ID}}'
         cancel_url = f'{frontend_url}/product/cart/checkout/'
-        
+
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=line_items,
@@ -1011,9 +1021,11 @@ def select_shipping_rate(request, order_id):
             success_url=success_url,
             cancel_url=cancel_url,
             customer_email=request.user.email,
-            metadata={'order_id': order.id},
+            metadata={'order_id': str(order.id)},
         )
-        
+        order.stripe_checkout_session_id = checkout_session.id
+        order.save(update_fields=['stripe_checkout_session_id'])
+
         return Response({
             'success': True,
             'checkout_url': checkout_session.url
@@ -1028,94 +1040,113 @@ def select_shipping_rate(request, order_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def payment_success(request):
-    """Handle successful payment"""
+    """Handle successful payment (browser redirect); idempotent with Stripe webhook."""
     session_id = request.GET.get('session_id')
     if not session_id:
         return Response({
             'success': False,
             'error': 'No session ID provided'
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    from snmov.utils.checkout_fulfillment import complete_order_from_stripe_checkout_session
+
     try:
         stripe.api_key = settings.STRIPE_SECRET_KEY
         session = stripe.checkout.Session.retrieve(session_id)
-        
         order_id = session.metadata.get('order_id')
-        order = Order.objects.get(id=order_id, customer=request.user)
-        
-        # Save Stripe payment intent ID
-        order.stripe_payment_intent_id = session.payment_intent
-        order.status = "ORDERED"
-        
-        # Create shipping label
-        previous_status = order.status
-        try:
-            from .views import create_shipping_label
-            shipping_info = create_shipping_label(order)
-            
-            order.label_url = shipping_info["label_url"]
-            order.tracking_number = shipping_info["tracking_number"]
-            order.shipping_provider = shipping_info["carrier"]
-            order.status = "PROCESSING"
-            shipping_success = True
-        except Exception as e:
-            shipping_success = False
-        
-        order.save()
-        
-        # CRITICAL FIX: Send order confirmation email
-        try:
-            # Use the module-level import so tests can patch `snmov.api_views.send_order_confirmation`
-            send_order_confirmation(order)
-            
-            # Send status update email if status changed and tracking is available
-            if order.status != previous_status and order.tracking_number:
-                from snmov.utils.email_notifications import send_order_status_update
-                send_order_status_update(order)
-        except Exception as e:
-            # Log email error but don't fail the request
-            print(f"Failed to send order email: {e}")
-        
-        # Clean up session
-        request.session.pop("cart", None)
-        request.session.pop("shipping_rates", None)
-        request.session.modified = True
-        
-        return Response({
-            'success': True,
-            'order': {
-                'id': order.id,
-                'order_date': order.order_date,
-                'status': order.status,
-                'shipping_cost': float(order.shipping_cost),
-                'tracking_number': order.tracking_number,
-                'label_url': order.label_url,
-                'shipping_provider': order.shipping_provider,
-                'orderitem_set': [
-                    {
-                        'product': {'title': item.product.title},
-                        'quantity': item.quantity
-                    }
-                    for item in order.orderitem_set.all()
-                ],
-                'shipping_address': {
-                    'full_name': order.shipping_address.full_name,
-                    'address_line_1': order.shipping_address.address_line_1,
-                    'address_line_2': order.shipping_address.address_line_2,
-                    'city': order.shipping_address.city,
-                    'state': order.shipping_address.state,
-                    'postal_code': order.shipping_address.postal_code,
-                    'country_code': order.shipping_address.country_code,
-                }
-            },
-            'shipping_success': shipping_success
-        })
-        
+        order = Order.objects.get(id=int(order_id), customer=request.user)
+        payload = complete_order_from_stripe_checkout_session(order, session)
+    except ValueError as e:
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Order.DoesNotExist:
+        return Response({'success': False, 'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
+        logger.exception('payment_success failed: %s', e)
         return Response({
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    request.session.pop('cart', None)
+    request.session.pop('shipping_rates', None)
+    request.session.modified = True
+
+    return Response(payload)
+
+
+@csrf_exempt
+def stripe_checkout_webhook(request):
+    """
+    Stripe webhook: checkout.session.completed (authoritative when browser never hits success URL).
+    Configure STRIPE_WEBHOOK_SECRET and point Stripe Dashboard to POST /api/stripe/webhook/
+    """
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+
+    secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', '') or ''
+    if not secret:
+        logger.error('stripe_checkout_webhook: STRIPE_WEBHOOK_SECRET is not configured')
+        return HttpResponse(status=503)
+
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, secret)
+    except ValueError:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)
+
+    if event['type'] != 'checkout.session.completed':
+        return HttpResponse(status=200)
+
+    from snmov.utils.checkout_fulfillment import complete_order_from_stripe_checkout_session
+
+    session_data = event['data']['object']
+    session_id = session_data.get('id')
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    try:
+        session = stripe.checkout.Session.retrieve(session_id, expand=['payment_intent'])
+    except Exception as e:
+        logger.exception('Webhook retrieve session failed: %s', e)
+        return HttpResponse(status=500)
+
+    meta = session.metadata or {}
+    order_id = meta.get('order_id')
+    if not order_id:
+        return HttpResponse(status=200)
+
+    try:
+        order = Order.objects.get(id=int(order_id))
+    except (Order.DoesNotExist, ValueError, TypeError):
+        logger.warning('Webhook: order %s not found', order_id)
+        return HttpResponse(status=200)
+
+    email_session = (getattr(session, 'customer_email', None) or '').strip().lower()
+    if not email_session:
+        cd = getattr(session, 'customer_details', None)
+        if isinstance(cd, dict):
+            email_session = (cd.get('email') or '').strip().lower()
+        elif cd is not None and getattr(cd, 'email', None):
+            email_session = str(cd.email).strip().lower()
+    if email_session and order.customer.email.strip().lower() != email_session:
+        logger.warning(
+            'Webhook: email mismatch for order %s (session=%s order=%s)',
+            order.id, email_session, order.customer.email,
+        )
+        return HttpResponse(status=400)
+
+    try:
+        complete_order_from_stripe_checkout_session(order, session)
+    except ValueError as e:
+        logger.warning('Webhook fulfillment rejected: %s', e)
+        return HttpResponse(status=400)
+    except Exception as e:
+        logger.exception('Webhook fulfillment failed: %s', e)
+        return HttpResponse(status=500)
+
+    return HttpResponse(status=200)
 
 
 @api_view(['GET'])
@@ -1644,18 +1675,15 @@ def create_return_request(request):
         if not is_valid:
             return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Calculate return shipping cost
-        return_shipping_cost = calculate_return_shipping_cost(None)  # Will be calculated properly
-        
         with transaction.atomic():
-            # Create return request
+            # Create return request (shipping cost set after line items exist)
             return_request = ReturnRequest.objects.create(
                 order=order,
                 customer=request.user,
                 reason=serializer.validated_data['reason'],
                 reason_category=serializer.validated_data['reason_category'],
                 return_window_days=return_window_days,
-                return_shipping_cost=return_shipping_cost,
+                return_shipping_cost=Decimal('0.00'),
                 return_shipping_paid_by=serializer.validated_data.get('return_shipping_paid_by', 'customer'),
                 status='PENDING'
             )
@@ -1689,6 +1717,9 @@ def create_return_request(request):
             is_valid, error_msg = validate_return_condition(return_request)
             if not is_valid:
                 raise ValueError(error_msg)
+
+            return_request.return_shipping_cost = calculate_return_shipping_cost(return_request)
+            return_request.save(update_fields=['return_shipping_cost'])
         
         # Send email notification
         try:

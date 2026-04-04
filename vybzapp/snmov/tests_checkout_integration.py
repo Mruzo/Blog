@@ -518,6 +518,7 @@ class CheckoutEndToEndTestCase(APITestCase):
         # Mock Stripe checkout session
         mock_stripe_session = MagicMock()
         mock_stripe_session.url = 'https://checkout.stripe.com/test-session'
+        mock_stripe_session.id = 'cs_test_integration'
         mock_stripe_create.return_value = mock_stripe_session
         
         # Mock shipping rates (already formatted by cart utility)
@@ -630,7 +631,7 @@ class CheckoutEndToEndTestCase(APITestCase):
         self.assertIn('/product/cart/checkout/', call_args[1]['cancel_url'])
     
     def test_checkout_preserves_cart_until_order_created(self):
-        """Test: Cart is preserved until order is successfully created"""
+        """Test: Cart is cleared after a successful checkout (order created)"""
         # Manually set cart in session
         session = self.client.session
         session['cart'] = {
@@ -659,9 +660,6 @@ class CheckoutEndToEndTestCase(APITestCase):
             format='json'
         )
         
-        # Cart should still exist (not cleared until payment)
-        # This is by design - cart is cleared after payment success
-        # The important thing is order was created successfully
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
         
@@ -669,4 +667,7 @@ class CheckoutEndToEndTestCase(APITestCase):
         order_id = response.data['order_id']
         order = Order.objects.get(id=order_id)
         self.assertEqual(order.customer, self.user)
+
+        self.client.session.load()
+        self.assertEqual(self.client.session.get('cart', {}), {})
 

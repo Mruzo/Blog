@@ -203,19 +203,36 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     };
   }, []);
 
-  // Helper function to start all available animations
+  // Helper function to start all available animations - re-query to get full GLB list, then play each
   const startAllAnimations = useCallback(() => {
     const modelViewer = modelViewerRef.current;
     if (!modelViewer) return;
 
-    // Prevent starting animations multiple times
     if (animationsStartedRef.current) {
       logger.log('Comic3DViewer: Animations already started, skipping');
       return;
     }
 
-    try {
-      const animations = modelViewer.availableAnimations || [];
+    const collectAnimations = (): string[] => {
+      try {
+        const list = modelViewer.availableAnimations || [];
+        return Array.isArray(list) ? [...list] : [];
+      } catch {
+        return [];
+      }
+    };
+
+    // Re-query at several delays so we catch all animations (model-viewer may populate async)
+    let best: string[] = [];
+    const check = () => {
+      const list = collectAnimations();
+      if (list.length > best.length) best = list;
+    };
+    [0, 200, 500].forEach((delay) => setTimeout(check, delay));
+
+    setTimeout(() => {
+      check();
+      const animations = best.length > 0 ? best : collectAnimations();
       logger.log('Comic3DViewer: Available animations:', animations);
 
       if (animations.length === 0) {
@@ -225,64 +242,57 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
       animationsStartedRef.current = true;
       logger.log('Comic3DViewer: Starting all animations sequentially');
-      
-      // Function to play animations sequentially
+
       const playNextAnimation = (index: number) => {
         if (index >= animations.length) {
-          // Loop back to the first animation
           playNextAnimation(0);
           return;
         }
 
         const animationName = animations[index];
         logger.log(`Comic3DViewer: Starting animation ${index + 1}/${animations.length}: ${animationName}`);
-        
+
         try {
-          // Play the animation
-          const animationPlay = modelViewer.play({ animationName });
-          
-          if (animationPlay) {
-            // When animation completes, play the next one
-            if (typeof animationPlay.then === 'function') {
-              animationPlay.then(() => {
-                logger.log(`Comic3DViewer: Animation "${animationName}" completed`);
-                playNextAnimation(index + 1);
-              }).catch((error: any) => {
-                logger.error(`Comic3DViewer: Error playing animation "${animationName}":`, error);
-                playNextAnimation(index + 1); // Continue to next animation even on error
-              });
-            } else {
-              // If play() doesn't return a promise, use a timeout based on animation duration
-              const duration = modelViewer.getDuration?.(animationName) || 3000;
-              setTimeout(() => {
-                playNextAnimation(index + 1);
-              }, duration);
-            }
+          if (typeof modelViewer.playAnimation === 'function') {
+            modelViewer.playAnimation(animationName, false);
           } else {
-            // Fallback: wait a bit and move to next animation
-            setTimeout(() => {
-              playNextAnimation(index + 1);
-            }, 3000);
+            modelViewer.animationName = animationName;
+            modelViewer.play();
           }
+
+          let advanced = false;
+          const advance = () => {
+            if (advanced) return;
+            advanced = true;
+            modelViewer.removeEventListener('finished', onFinished);
+            logger.log(`Comic3DViewer: Animation "${animationName}" completed`);
+            playNextAnimation(index + 1);
+          };
+          const onFinished = () => advance();
+          modelViewer.addEventListener('finished', onFinished);
+          const duration = modelViewer.getDuration?.(animationName) ?? 4000;
+          setTimeout(advance, duration);
         } catch (error) {
           logger.error(`Comic3DViewer: Error starting animation "${animationName}":`, error);
-          playNextAnimation(index + 1); // Continue to next animation even on error
+          playNextAnimation(index + 1);
         }
       };
 
-      // Start playing animations after a short delay to ensure model is fully ready
-      setTimeout(() => {
-        playNextAnimation(0);
-      }, 500);
-    } catch (error) {
-      logger.error('Comic3DViewer: Error starting animations:', error);
-    }
+      setTimeout(() => playNextAnimation(0), 300);
+    }, 600);
   }, []);
+
+  // Slower animation playback to better match Blender (default 1x can feel too fast in browser)
+  const DEFAULT_ANIMATION_TIME_SCALE = 0.5;
 
   // Handle model load event
   const handleModelReady = useCallback(() => {
     logger.log('Comic3DViewer: Model loaded and ready');
-    logger.log('Comic3DViewer: Model viewer ref:', modelViewerRef.current);
+    const mv = modelViewerRef.current;
+    if (mv && typeof mv.timeScale !== 'undefined') {
+      mv.timeScale = DEFAULT_ANIMATION_TIME_SCALE;
+      logger.log('Comic3DViewer: Set animation timeScale to', DEFAULT_ANIMATION_TIME_SCALE);
+    }
     setIsModelReady(true);
     
     // Start all available animations
@@ -293,6 +303,10 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const handleModelVisibility = useCallback((event: any) => {
     if (event.detail.visible) {
       logger.log('Comic3DViewer: Model and hotspots ready');
+      const mv = modelViewerRef.current;
+      if (mv && typeof mv.timeScale !== 'undefined') {
+        mv.timeScale = DEFAULT_ANIMATION_TIME_SCALE;
+      }
       setIsModelReady(true);
       
       // Create hotspots from POV data

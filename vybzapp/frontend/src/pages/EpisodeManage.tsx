@@ -321,12 +321,27 @@ const EpisodeManage: React.FC = () => {
     setShowEpisodeForm(true);
   };
 
+  /** Strip TinyMCE/admin HTML so the edit textarea shows plain text. */
+  const stripHtmlForEdit = (raw: string): string => {
+    if (!raw || typeof raw !== 'string') return '';
+    const withNewlines = raw
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n');
+    if (typeof document !== 'undefined') {
+      const div = document.createElement('div');
+      div.innerHTML = withNewlines;
+      const out = (div.textContent ?? div.innerText ?? withNewlines).trim();
+      return out.replace(/\n{3,}/g, '\n\n');
+    }
+    return withNewlines.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  };
+
   const handleEditDialogue = (dialogue: Dialogue) => {
     setEditingDialogue(dialogue);
     setDialogueFormData({
       character: dialogue.character,
       pov: dialogue.pov ?? null,
-      text: dialogue.text,
+      text: stripHtmlForEdit(dialogue.text),
       order: dialogue.order,
       scene_title: dialogue.scene_title,
       scene_description: dialogue.scene_description,
@@ -698,7 +713,7 @@ const EpisodeManage: React.FC = () => {
               <form onSubmit={handleDialogueSubmit}>
                 <div className="modal-body">
                   <div className="mb-3">
-                    <label htmlFor="dialogueCharacter" className="form-label subtext-btn-sm">Character</label>
+                    <label htmlFor="dialogueCharacter" className="form-label subtext-btn-sm">Character</label>&nbsp;
                     <select
                       className="form-select form-select-sm"
                       id="dialogueCharacter"
@@ -714,7 +729,7 @@ const EpisodeManage: React.FC = () => {
                     </select>
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="dialoguePov" className="form-label subtext-btn-sm">POV (Camera target character)</label>
+                    <label htmlFor="dialoguePov" className="form-label subtext-btn-sm">POV (Target character) </label>&nbsp;
                     <select
                       className="form-select form-select-sm"
                       id="dialoguePov"

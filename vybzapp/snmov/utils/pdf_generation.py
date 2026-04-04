@@ -1,103 +1,307 @@
 """
 PDF generation utility for invoices and credit notes
-Requires: pip install reportlab
+Requires: pip install reportlab svglib
 """
+import html
 import os
-from django.conf import settings
-from django.template.loader import render_to_string
 from io import BytesIO
 from datetime import datetime
 import logging
 
+from django.conf import settings
+
 logger = logging.getLogger(__name__)
 
 try:
-    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib.pagesizes import letter
     from reportlab.lib.units import inch
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Flowable
     from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+    from reportlab.graphics import renderPDF
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
-    logger.warning("reportlab not installed. PDF generation will not work. Install with: pip install reportlab")
+    Flowable = object  # type: ignore
+    renderPDF = None  # type: ignore
+    logger.warning("reportlab not installed. PDF generation will not work.")
+
+try:
+    from svglib.svglib import svg2rlg
+    SVGLIB_AVAILABLE = True
+except ImportError:
+    SVGLIB_AVAILABLE = False
+    svg2rlg = None  # type: ignore
+    logger.warning("svglib not installed. Invoice header image will be skipped. pip install svglib")
+
+
+def _find_brand_header_svg():
+    """Resolve path to jv_header 1.2.svg (static) or INVOICE_HEADER_SVG override."""
+    override = getattr(settings, 'INVOICE_HEADER_SVG', None)
+    if override and os.path.isfile(override):
+        return override
+    try:
+        from django.contrib.staticfiles import finders
+        path = finders.find('snmov/img/jv_header 1.2.svg')
+        if path and os.path.isfile(path):
+            return path
+    except Exception as e:
+        logger.debug("staticfiles find for header svg: %s", e)
+    fallback = os.path.join(
+        settings.BASE_DIR, 'static', 'snmov', 'img', 'jv_header 1.2.svg'
+    )
+    if os.path.isfile(fallback):
+        return fallback
+    return None
+
+
+class SVGHeaderImage(Flowable):
+    """Render an SVG in a platypus flow (scaled to display_width)."""
+
+    def __init__(self, filepath, display_width=2.8 * inch):
+        Flowable.__init__(self)
+        self.filepath = filepath
+        self._drawing = svg2rlg(filepath)
+        if self._drawing is None:
+            raise ValueError(f"Could not parse SVG: {filepath}")
+        dw = self._drawing.width
+        dh = self._drawing.height
+        if not dw or dw <= 0:
+            dw, dh = 238.0, 55.32
+        self._scale = float(display_width) / float(dw)
+        self.width = display_width
+        self.height = float(dh) * self._scale
+
+    def draw(self):
+        self.canv.saveState()
+        self.canv.scale(self._scale, self._scale)
+        renderPDF.draw(self._drawing, self.canv, 0, 0, showBoundary=False)
+        self.canv.restoreState()
+
+
+def _p(text, style):
+    """Table cell: ReportLab Paragraph parses a small HTML subset (<b>, <i>, <br/>)."""
+    return Paragraph(text, style)
+
+
+def _esc(s):
+    return html.escape(str(s), quote=False)
+
+
+def _format_discount_pct(product):
+    pct = float(product.discount_percentage or 0)
+    if pct <= 0:
+        return '—'
+    if abs(pct - round(pct)) < 1e-6:
+        return f'{int(round(pct))}%'
+    s = f'{pct:.2f}'.rstrip('0').rstrip('.')
+    return f'{s}%'
+
+
+def _find_quicksand_vf():
+    """Path to Quicksand variable TTF (bundled under static/snmov/fonts/)."""
+    override = getattr(settings, 'INVOICE_PDF_FONT_TTF', None)
+    if override and os.path.isfile(override):
+        return override
+    try:
+        from django.contrib.staticfiles import finders
+        for rel in ('snmov/fonts/Quicksand-VF.ttf',):
+            p = finders.find(rel)
+            if p and os.path.isfile(p):
+                return p
+    except Exception as e:
+        logger.debug('staticfiles find Quicksand: %s', e)
+    fallback = os.path.join(settings.BASE_DIR, 'static', 'snmov', 'fonts', 'Quicksand-VF.ttf')
+    return fallback if os.path.isfile(fallback) else None
+
+
+def _register_pdf_fonts():
+    """
+    Register Quicksand (Google Fonts variable TTF) for invoice/credit PDFs.
+    Same file is registered as normal + bold so <b> and bold styles resolve.
+    Falls back to Helvetica if loading fails.
+    """
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    path = _find_quicksand_vf()
+    if not path:
+        return 'Helvetica', 'Helvetica-Bold'
+    try:
+        reg = pdfmetrics.getRegisteredFontNames()
+        if 'Quicksand' not in reg:
+            pdfmetrics.registerFont(TTFont('Quicksand', path))
+        if 'Quicksand-Bold' not in reg:
+            pdfmetrics.registerFont(TTFont('Quicksand-Bold', path))
+        pdfmetrics.registerFontFamily(
+            'Quicksand',
+            normal='Quicksand',
+            bold='Quicksand-Bold',
+            italic='Quicksand',
+            boldItalic='Quicksand-Bold',
+        )
+        return 'Quicksand', 'Quicksand-Bold'
+    except Exception as e:
+        logger.warning('PDF: Quicksand font unavailable, using Helvetica: %s', e)
+        return 'Helvetica', 'Helvetica-Bold'
 
 
 def generate_pdf(template_name, context, filename, pdf_type='invoice'):
     """
     Generate PDF document for invoice or credit note.
-    
+
     Args:
         template_name: Template name (for reference, not used with reportlab)
         context: Context dict with order/invoice/credit_note data
         filename: Output filename (without extension)
         pdf_type: 'invoice' or 'credit_note'
-        
+
     Returns:
         str: Path to generated PDF file
     """
     if not REPORTLAB_AVAILABLE:
         raise ImportError("reportlab is required for PDF generation. Install with: pip install reportlab")
-    
-    # Create media directory if it doesn't exist
+
     if pdf_type == 'invoice':
         pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
-    else:  # credit_note
+    else:
         pdf_dir = os.path.join(settings.MEDIA_ROOT, 'credit-notes')
-    
+
     os.makedirs(pdf_dir, exist_ok=True)
-    
-    # Full path to PDF file
+
     pdf_path = os.path.join(pdf_dir, f'{filename}')
-    # Ensure we have the correct full path
     if pdf_path.startswith(settings.MEDIA_ROOT):
         full_pdf_path = pdf_path
     else:
         full_pdf_path = os.path.join(settings.MEDIA_ROOT, pdf_path.lstrip('/'))
-    
-    # Create PDF document
+
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
-    
-    # Container for PDF elements
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        topMargin=0.5 * inch,
+        bottomMargin=0.5 * inch,
+        leftMargin=0.5 * inch,
+        rightMargin=0.5 * inch,
+    )
+    content_width = doc.width
+
     elements = []
-    
-    # Styles - Using Helvetica as it's similar to Quicksand (sans-serif, clean)
-    # ReportLab doesn't have Quicksand built-in, but Helvetica is a good alternative
+
     styles = getSampleStyleSheet()
-    
-    # Try to use a font similar to Quicksand - Helvetica is clean and modern
-    font_name = 'Helvetica'
-    
+    font_name, font_bold_name = _register_pdf_fonts()
+
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
         fontName=font_name,
         fontSize=24,
         textColor=colors.HexColor('#333333'),
-        spaceAfter=30,
-        alignment=TA_CENTER
+        spaceAfter=16,
+        alignment=TA_CENTER,
     )
-    
+
     heading_style = ParagraphStyle(
         'CustomHeading',
         parent=styles['Heading2'],
-        fontName=font_name,
+        fontName=font_bold_name,
         fontSize=14,
         textColor=colors.HexColor('#333333'),
         spaceAfter=12,
-        spaceBefore=12
+        spaceBefore=12,
     )
-    
+
     normal_style = ParagraphStyle(
         'CustomNormal',
         parent=styles['Normal'],
         fontName=font_name,
-        fontSize=10
+        fontSize=10,
     )
-    
-    # Title
+
+    table_label_style = ParagraphStyle(
+        'TblLabel',
+        parent=normal_style,
+        fontName=font_name,
+        alignment=TA_LEFT,
+    )
+    table_value_style = ParagraphStyle(
+        'TblValue',
+        parent=normal_style,
+        alignment=TA_LEFT,
+    )
+    items_hdr_left = ParagraphStyle(
+        'ItemsHdrL',
+        parent=normal_style,
+        fontName=font_bold_name,
+        fontSize=10,
+        alignment=TA_LEFT,
+    )
+    items_hdr_center = ParagraphStyle(
+        'ItemsHdrC',
+        parent=normal_style,
+        fontName=font_bold_name,
+        fontSize=10,
+        alignment=TA_CENTER,
+    )
+    items_hdr_right = ParagraphStyle(
+        'ItemsHdrR',
+        parent=normal_style,
+        fontName=font_bold_name,
+        fontSize=10,
+        alignment=TA_RIGHT,
+    )
+    items_cell_left = ParagraphStyle(
+        'ItemsCellL',
+        parent=normal_style,
+        alignment=TA_LEFT,
+    )
+    items_cell_center = ParagraphStyle(
+        'ItemsCellC',
+        parent=normal_style,
+        alignment=TA_CENTER,
+    )
+    items_cell_right = ParagraphStyle(
+        'ItemsCellR',
+        parent=normal_style,
+        alignment=TA_RIGHT,
+    )
+    items_cell_bold_right = ParagraphStyle(
+        'ItemsCellBR',
+        parent=normal_style,
+        fontName=font_bold_name,
+        alignment=TA_RIGHT,
+    )
+    from_to_hdr = ParagraphStyle(
+        'FromToHdr',
+        parent=normal_style,
+        fontName=font_bold_name,
+        alignment=TA_LEFT,
+    )
+
+    # Brand header (SVG)
+    svg_path = _find_brand_header_svg()
+    if svg_path and SVGLIB_AVAILABLE and svg2rlg is not None:
+        try:
+            logo_w = min(3.2 * inch, content_width * 0.72)
+            logo = SVGHeaderImage(svg_path, display_width=logo_w)
+            logo_table = Table([[logo]], colWidths=[content_width], hAlign='CENTER')
+            logo_table.setStyle(
+                TableStyle(
+                    [
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('TOPPADDING', (0, 0), (-1, -1), 0),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                    ]
+                )
+            )
+            elements.append(logo_table)
+        except Exception as e:
+            logger.warning('Invoice header SVG not drawn: %s', e)
+
     if pdf_type == 'invoice':
         title = "INVOICE"
         invoice = context.get('invoice')
@@ -108,7 +312,7 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
             doc_number = str(order.id)
         else:
             doc_number = ''
-    else:  # credit_note
+    else:
         title = "CREDIT NOTE"
         credit_note = context.get('credit_note')
         return_request = context.get('return_request')
@@ -118,39 +322,50 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
             doc_number = str(return_request.id)
         else:
             doc_number = ''
-    
+
     elements.append(Paragraph(title, title_style))
-    elements.append(Spacer(1, 0.2*inch))
-    
-    # Document number and date
+    elements.append(Spacer(1, 0.12 * inch))
+
     doc_info_data = [
-        [f'<b>{title} #:</b>', doc_number],
-        [f'<b>Date:</b>', datetime.now().strftime('%B %d, %Y')],
+        [_p(f'<b>{title} #:</b>', table_label_style), _p(_esc(doc_number), table_value_style)],
+        [_p('<b>Date:</b>', table_label_style), _p(_esc(datetime.now().strftime('%B %d, %Y')), table_value_style)],
     ]
-    
+
     if pdf_type == 'invoice':
         order = context.get('order')
         if order:
-            doc_info_data.append([f'<b>Order #:</b>', str(order.id)])
-            doc_info_data.append([f'<b>Order Date:</b>', order.order_date.strftime('%B %d, %Y') if hasattr(order.order_date, 'strftime') else str(order.order_date)])
-    else:  # credit_note
+            od = order.order_date.strftime('%B %d, %Y') if hasattr(order.order_date, 'strftime') else str(order.order_date)
+            doc_info_data.append(
+                [_p('<b>Order #:</b>', table_label_style), _p(_esc(str(order.id)), table_value_style)]
+            )
+            doc_info_data.append([_p('<b>Order Date:</b>', table_label_style), _p(_esc(od), table_value_style)])
+    else:
         return_request = context.get('return_request')
         if return_request:
-            doc_info_data.append([f'<b>Return #:</b>', str(return_request.id)])
-            doc_info_data.append([f'<b>Return Date:</b>', return_request.created_at.strftime('%B %d, %Y') if hasattr(return_request.created_at, 'strftime') else str(return_request.created_at)])
-    
-    doc_info_table = Table(doc_info_data, colWidths=[2*inch, 3*inch])
-    doc_info_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (0, -1), font_name + '-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-    ]))
+            rd = (
+                return_request.created_at.strftime('%B %d, %Y')
+                if hasattr(return_request.created_at, 'strftime')
+                else str(return_request.created_at)
+            )
+            doc_info_data.append(
+                [_p('<b>Return #:</b>', table_label_style), _p(_esc(str(return_request.id)), table_value_style)]
+            )
+            doc_info_data.append([_p('<b>Return Date:</b>', table_label_style), _p(_esc(rd), table_value_style)])
+
+    doc_info_table = Table(doc_info_data, colWidths=[2 * inch, content_width - 2 * inch])
+    doc_info_table.setStyle(
+        TableStyle(
+            [
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
     elements.append(doc_info_table)
-    elements.append(Spacer(1, 0.3*inch))
-    
-    # Customer/Company info
+    elements.append(Spacer(1, 0.3 * inch))
+
     if pdf_type == 'invoice':
         order = context.get('order')
         if order and hasattr(order, 'customer'):
@@ -160,7 +375,7 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
         else:
             customer_name = "Customer"
             customer_email = ""
-    else:  # credit_note
+    else:
         return_request = context.get('return_request')
         if return_request and hasattr(return_request, 'customer'):
             customer = return_request.customer
@@ -169,157 +384,240 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
         else:
             customer_name = "Customer"
             customer_email = ""
-    
-    # Company info (from settings)
+
     company_name = getattr(settings, 'DEFAULT_SENDER_NAME', 'Justvybz Inc.')
-    company_address = f"{getattr(settings, 'DEFAULT_SENDER_STREET1', '')}\n{getattr(settings, 'DEFAULT_SENDER_CITY', '')}, {getattr(settings, 'DEFAULT_SENDER_STATE', '')} {getattr(settings, 'DEFAULT_SENDER_ZIP', '')}"
-    
-    # Two column layout for company and customer
+    company_address = (
+        f"{getattr(settings, 'DEFAULT_SENDER_STREET1', '')}\n"
+        f"{getattr(settings, 'DEFAULT_SENDER_CITY', '')}, "
+        f"{getattr(settings, 'DEFAULT_SENDER_STATE', '')} "
+        f"{getattr(settings, 'DEFAULT_SENDER_ZIP', '')}"
+    )
+
     info_data = [
-        ['<b>From:</b>', '<b>To:</b>'],
-        [company_name, customer_name],
-        [company_address, customer_email],
+        [_p('<b>From:</b>', from_to_hdr), _p('<b>To:</b>', from_to_hdr)],
+        [_p(_esc(company_name), table_value_style), _p(_esc(customer_name), table_value_style)],
+        [_p(_esc(company_address).replace('\n', '<br/>'), table_value_style), _p(_esc(customer_email), table_value_style)],
     ]
-    
-    info_table = Table(info_data, colWidths=[3.5*inch, 3.5*inch])
-    info_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), font_name + '-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-    ]))
+
+    half = (content_width - 0.25 * inch) / 2
+    info_table = Table(info_data, colWidths=[half, half])
+    info_table.setStyle(
+        TableStyle(
+            [
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
     elements.append(info_table)
-    elements.append(Spacer(1, 0.3*inch))
-    
-    # Items table
-    elements.append(Paragraph('<b>Items</b>', heading_style))
-    
+    elements.append(Spacer(1, 0.3 * inch))
+
+    elements.append(Paragraph('Items', heading_style))
+
     if pdf_type == 'invoice':
         order = context.get('order')
-        items_data = [['Description', 'Quantity', 'Unit Price', 'Total']]
+        items_data = [
+            [
+                _p('Description', items_hdr_left),
+                _p('Qty', items_hdr_center),
+                _p('List', items_hdr_right),
+                _p('Discount', items_hdr_center),
+                _p('Price', items_hdr_right),
+                _p('Amount', items_hdr_right),
+            ]
+        ]
         total = 0
-        # Try both orderitem_set and orderitem (depending on related_name)
         order_items = None
-        if hasattr(order, 'orderitem_set'):
+        if order is not None and hasattr(order, 'orderitem_set'):
             order_items = order.orderitem_set.all()
-        elif hasattr(order, 'orderitem'):
-            # If it's a manager/property, get all items
+        elif order is not None and hasattr(order, 'orderitem'):
             if hasattr(order.orderitem, 'all'):
                 order_items = order.orderitem.all()
             else:
-                # It might be a single item, convert to list
                 order_items = [order.orderitem] if order.orderitem else []
-        
+
         if order_items:
             for item in order_items:
-                unit_price = float(item.product.get_discounted_price())
+                p = item.product
+                list_unit = float(p.price)
+                unit_charged = float(p.get_discounted_price())
                 quantity = item.quantity
-                item_total = unit_price * quantity
+                item_total = unit_charged * quantity
                 total += item_total
-                items_data.append([
-                    item.product.title,
-                    str(quantity),
-                    f"${unit_price:.2f}",
-                    f"${item_total:.2f}"
-                ])
-        
-        # Calculate subtotal
+                items_data.append(
+                    [
+                        _p(_esc(p.title), items_cell_left),
+                        _p(_esc(str(quantity)), items_cell_center),
+                        _p(_esc(f'${list_unit:.2f}'), items_cell_right),
+                        _p(_esc(_format_discount_pct(p)), items_cell_center),
+                        _p(_esc(f'${unit_charged:.2f}'), items_cell_right),
+                        _p(_esc(f'${item_total:.2f}'), items_cell_right),
+                    ]
+                )
+
+        # Subtotal = merchandise only; shipping & tax appear once in the summary block below
         subtotal = total
-        
-        # Add shipping if applicable
         shipping_cost = float(order.shipping_cost) if order and hasattr(order, 'shipping_cost') else 0
-        if shipping_cost > 0:
-            items_data.append(['Shipping', '1', f"${shipping_cost:.2f}", f"${shipping_cost:.2f}"])
-            total += shipping_cost
-        
-        # Add tax if enabled
-        tax_rate = getattr(settings, 'TAX_RATE', 0.13)  # Default 13% (HST in Ontario)
+        tax_rate = getattr(settings, 'TAX_RATE', 0.13)
         tax_enabled = getattr(settings, 'TAX_ENABLED', True)
-        tax_amount = 0
-        tax_percentage = 0
+        tax_amount = 0.0
+        tax_percentage = 0.0
         if tax_enabled and tax_rate > 0:
-            # Calculate tax on subtotal + shipping
-            tax_amount = subtotal * float(tax_rate)
+            taxable_base = subtotal + shipping_cost
+            tax_amount = taxable_base * float(tax_rate)
             tax_percentage = float(tax_rate) * 100
-            items_data.append([f'Tax (HST {tax_percentage:.1f}%)', '1', f"${tax_amount:.2f}", f"${tax_amount:.2f}"])
-            total += tax_amount
-        
-        # Add subtotal row
-        items_data.append(['', '', '<b>Subtotal:</b>', f'<b>${subtotal:.2f}</b>'])
+        total = subtotal + shipping_cost + tax_amount
+
+        items_data.append(
+            [
+                _p('', items_cell_left),
+                _p('', items_cell_center),
+                _p('', items_cell_right),
+                _p('', items_cell_center),
+                _p('<b>Subtotal:</b>', items_cell_bold_right),
+                _p(f'<b>${subtotal:.2f}</b>', items_cell_bold_right),
+            ]
+        )
         if shipping_cost > 0:
-            items_data.append(['', '', 'Shipping:', f'${shipping_cost:.2f}'])
+            items_data.append(
+                [
+                    _p('', items_cell_left),
+                    _p('', items_cell_center),
+                    _p('', items_cell_right),
+                    _p('', items_cell_center),
+                    _p(_esc('Shipping:'), items_cell_right),
+                    _p(_esc(f'${shipping_cost:.2f}'), items_cell_right),
+                ]
+            )
         if tax_enabled and tax_amount > 0:
-            items_data.append(['', '', f'Tax (HST {tax_percentage:.1f}%):', f'${tax_amount:.2f}'])
-        items_data.append(['', '', '<b>Total:</b>', f'<b>${total:.2f}</b>'])
-    else:  # credit_note
+            items_data.append(
+                [
+                    _p('', items_cell_left),
+                    _p('', items_cell_center),
+                    _p('', items_cell_right),
+                    _p('', items_cell_center),
+                    _p(_esc(f'Tax (HST {tax_percentage:.1f}%):'), items_cell_right),
+                    _p(_esc(f'${tax_amount:.2f}'), items_cell_right),
+                ]
+            )
+        items_data.append(
+            [
+                _p('', items_cell_left),
+                _p('', items_cell_center),
+                _p('', items_cell_right),
+                _p('', items_cell_center),
+                _p('<b>Total:</b>', items_cell_bold_right),
+                _p(f'<b>${total:.2f}</b>', items_cell_bold_right),
+            ]
+        )
+    else:
         return_request = context.get('return_request')
         credit_note = context.get('credit_note')
-        items_data = [['Description', 'Quantity', 'Unit Price', 'Refund Amount']]
+        items_data = [
+            [
+                _p('Description', items_hdr_left),
+                _p('Qty', items_hdr_center),
+                _p('List', items_hdr_right),
+                _p('Discount', items_hdr_center),
+                _p('Price', items_hdr_right),
+                _p('Amount', items_hdr_right),
+            ]
+        ]
         total = 0
         if return_request and hasattr(return_request, 'returnitem_set'):
             for return_item in return_request.returnitem_set.all():
-                unit_price = float(return_item.order_item.product.get_discounted_price())
+                p = return_item.order_item.product
+                list_unit = float(p.price)
+                unit_price = float(p.get_discounted_price())
                 quantity = return_item.quantity
                 item_total = unit_price * quantity
                 total += item_total
-                items_data.append([
-                    return_item.order_item.product.title,
-                    str(quantity),
-                    f"${unit_price:.2f}",
-                    f"${item_total:.2f}"
-                ])
-        
-        # Deduct return shipping if customer pays
+                items_data.append(
+                    [
+                        _p(_esc(p.title), items_cell_left),
+                        _p(_esc(str(quantity)), items_cell_center),
+                        _p(_esc(f'${list_unit:.2f}'), items_cell_right),
+                        _p(_esc(_format_discount_pct(p)), items_cell_center),
+                        _p(_esc(f'${unit_price:.2f}'), items_cell_right),
+                        _p(_esc(f'${item_total:.2f}'), items_cell_right),
+                    ]
+                )
+
         if return_request and return_request.return_shipping_paid_by == 'customer':
             shipping_cost = float(return_request.return_shipping_cost)
             if shipping_cost > 0:
-                items_data.append(['Return Shipping', '1', f"${shipping_cost:.2f}", f"-${shipping_cost:.2f}"])
+                items_data.append(
+                    [
+                        _p(_esc('Return Shipping'), items_cell_left),
+                        _p('1', items_cell_center),
+                        _p(_esc(f'${shipping_cost:.2f}'), items_cell_right),
+                        _p('—', items_cell_center),
+                        _p(_esc(f'${shipping_cost:.2f}'), items_cell_right),
+                        _p(_esc(f'-${shipping_cost:.2f}'), items_cell_right),
+                    ]
+                )
                 total -= shipping_cost
-        
+
         refund_amount = float(credit_note.amount) if credit_note else total
-        items_data.append(['', '', '<b>Refund Amount:</b>', f'<b>${refund_amount:.2f}</b>'])
-        total = refund_amount
-    
-    items_table = Table(items_data, colWidths=[3*inch, 1*inch, 1.5*inch, 1.5*inch])
-    items_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f0f0f0')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#333333')),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
-        ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), font_name + '-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -2), 1, colors.HexColor('#cccccc')),
-        ('LINEBELOW', (0, -2), (-1, -2), 2, colors.HexColor('#333333')),
-        ('FONTNAME', (0, -1), (-1, -1), font_name + '-Bold'),
-    ]))
+        items_data.append(
+            [
+                _p('', items_cell_left),
+                _p('', items_cell_center),
+                _p('', items_cell_right),
+                _p('', items_cell_center),
+                _p('<b>Refund Amount:</b>', items_cell_bold_right),
+                _p(f'<b>${refund_amount:.2f}</b>', items_cell_bold_right),
+            ]
+        )
+
+    col_w = [2.35 * inch, 0.48 * inch, 0.78 * inch, 0.68 * inch, 0.82 * inch, 0.89 * inch]
+    scale = content_width / sum(col_w)
+    col_w = [c * scale for c in col_w]
+
+    items_table = Table(items_data, colWidths=col_w, repeatRows=1)
+    items_table.setStyle(
+        TableStyle(
+            [
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f0f0f0')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#333333')),
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+                ('ALIGN', (3, 0), (3, -1), 'CENTER'),
+                ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                ('ALIGN', (4, 0), (-1, -1), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -2), 1, colors.HexColor('#cccccc')),
+                ('LINEBELOW', (0, -2), (-1, -2), 2, colors.HexColor('#333333')),
+            ]
+        )
+    )
     elements.append(items_table)
-    elements.append(Spacer(1, 0.3*inch))
-    
-    # Notes
+    elements.append(Spacer(1, 0.3 * inch))
+
     if pdf_type == 'credit_note':
-        notes = "This credit note represents a refund for returned items. The refund will be processed to your original payment method."
+        notes = (
+            "This credit note represents a refund for returned items. "
+            "The refund will be processed to your original payment method."
+        )
     else:
         notes = "Thank you for your order!"
-    
-    elements.append(Paragraph(f'<b>Notes:</b>', normal_style))
-    elements.append(Paragraph(notes, normal_style))
-    
-    # Build PDF
+
+    elements.append(_p('<b>Notes:</b>', normal_style))
+    elements.append(_p(_esc(notes), normal_style))
+
     doc.build(elements)
-    
-    # Save to file
+
     with open(full_pdf_path, 'wb') as f:
         f.write(buffer.getvalue())
-    
-    # Return relative path from MEDIA_ROOT (for storage in database)
-    # Remove MEDIA_ROOT prefix if present, otherwise return path relative to MEDIA_ROOT
+
     if full_pdf_path.startswith(settings.MEDIA_ROOT):
         relative_path = os.path.relpath(full_pdf_path, settings.MEDIA_ROOT)
     else:
         relative_path = pdf_path.replace(settings.MEDIA_ROOT + '/', '').lstrip('/')
-    
+
     return relative_path

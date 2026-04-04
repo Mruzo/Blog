@@ -1234,7 +1234,7 @@ def login_api(request):
     is_allowed, remaining, reset_time = rate_limit_check(
         request, 
         'login_attempt', 
-        max_requests=5,  # 5 login attempts per hour
+        max_requests=10,  # 10 login attempts per hour
         window_seconds=3600
     )
     

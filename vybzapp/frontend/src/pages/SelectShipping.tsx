@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import BackButton from '../components/BackButton';
+import { parseJsonApiError } from '../utils/parseJsonApiError';
 
 // Helper function to get CSRF token from cookies
 function getCookie(name: string): string | null {
@@ -133,7 +134,9 @@ const SelectShipping: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to select shipping rate');
+        throw new Error(
+          await parseJsonApiError(response.clone(), 'Failed to select shipping rate')
+        );
       }
 
       const data = await response.json();

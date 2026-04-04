@@ -4,6 +4,7 @@ from .api_views import (
     update_cart_item, remove_from_cart, clear_cart,
     OrderListView, OrderDetailView, user_profile, check_auth,
     checkout, get_shipping_rates, select_shipping_rate, payment_success,
+    stripe_checkout_webhook,
     contact_form, get_saved_addresses, save_address, delete_saved_address,
     set_default_address, subscribe_newsletter, unsubscribe_newsletter,
     get_newsletter_subscription, export_user_data, delete_user_data,
@@ -39,6 +40,7 @@ urlpatterns = [
     path('orders/<int:order_id>/shipping/', get_shipping_rates, name='shipping-rates'),
     path('orders/<int:order_id>/select-shipping/', select_shipping_rate, name='select-shipping'),
     path('payment/success/', payment_success, name='payment-success'),
+    path('stripe/webhook/', stripe_checkout_webhook, name='stripe-webhook'),
     
     # Contact form endpoint
     path('contact/', contact_form, name='contact-form'),

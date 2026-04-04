@@ -23,7 +23,6 @@ from unittest.mock import patch, MagicMock
 
 from snmov.models import Product, Order, OrderItem, ShippingAddress
 from snmov.utils.cart import get_cart_for_session
-from snmov.utils.email_notifications import send_order_confirmation
 
 User = get_user_model()
 
@@ -229,8 +228,9 @@ class OrderConfirmationEmailTestCase(APITestCase):
             uuid=uuid.uuid4()
         )
     
-    @patch('snmov.api_views.send_order_confirmation')
-    def test_order_confirmation_email_sent(self, mock_send_email):
+    @patch('snmov.utils.pdf_generation.generate_pdf', return_value='invoices/test.pdf')
+    @patch('snmov.utils.checkout_fulfillment.send_order_confirmation')
+    def test_order_confirmation_email_sent(self, mock_send_email, _mock_pdf):
         """Test: Order confirmation email is sent after successful payment"""
         # Create order
         shipping = ShippingAddress.objects.create(
@@ -257,8 +257,12 @@ class OrderConfirmationEmailTestCase(APITestCase):
         # Simulate payment success
         with patch('stripe.checkout.Session.retrieve') as mock_stripe:
             mock_session = MagicMock()
-            mock_session.metadata = {'order_id': order.id}
+            mock_session.metadata = {'order_id': str(order.id)}
             mock_session.payment_intent = 'pi_test123'
+            mock_session.payment_status = 'paid'
+            mock_session.mode = 'payment'
+            mock_session.id = 'cs_test'
+            mock_session.amount_total = 9999
             mock_stripe.return_value = mock_session
             
             with patch('snmov.views.create_shipping_label') as mock_label:
@@ -272,12 +276,13 @@ class OrderConfirmationEmailTestCase(APITestCase):
                     reverse('api:payment-success') + '?session_id=test_session'
                 )
         
-        # Verify email was called
-        mock_send_email.assert_called_once_with(order)
+        mock_send_email.assert_called_once()
+        self.assertEqual(mock_send_email.call_args[0][0].pk, order.pk)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
     
-    @patch('snmov.api_views.send_order_confirmation')
-    def test_order_confirmation_email_failure_doesnt_block(self, mock_send_email):
+    @patch('snmov.utils.pdf_generation.generate_pdf', return_value='invoices/test.pdf')
+    @patch('snmov.utils.checkout_fulfillment.send_order_confirmation')
+    def test_order_confirmation_email_failure_doesnt_block(self, mock_send_email, _mock_pdf):
         """Test: Email failure doesn't block order completion"""
         mock_send_email.side_effect = Exception("Email service down")
         
@@ -299,8 +304,12 @@ class OrderConfirmationEmailTestCase(APITestCase):
         
         with patch('stripe.checkout.Session.retrieve') as mock_stripe:
             mock_session = MagicMock()
-            mock_session.metadata = {'order_id': order.id}
+            mock_session.metadata = {'order_id': str(order.id)}
             mock_session.payment_intent = 'pi_test123'
+            mock_session.payment_status = 'paid'
+            mock_session.mode = 'payment'
+            mock_session.id = 'cs_test'
+            mock_session.amount_total = 5000
             mock_stripe.return_value = mock_session
             
             with patch('snmov.views.create_shipping_label') as mock_label:

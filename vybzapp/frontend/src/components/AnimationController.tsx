@@ -20,47 +20,65 @@ const AnimationController: React.FC<AnimationControllerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const [isModelReady, setIsModelReady] = useState(false);
+  const [animationSpeed, setAnimationSpeed] = useState<number>(0.5);
 
-  // Initialize animations when model is ready
+  // Initialize animations when model is ready - re-query at multiple delays to catch all GLB animations
   useEffect(() => {
     const modelViewer = modelViewerRef.current;
     if (!modelViewer) return;
 
-    const handleModelLoad = () => {
-      console.log('AnimationController: Model loaded, initializing animations...');
-      
-      // Wait a bit for the model to fully load
-      setTimeout(() => {
-        try {
-          const animations = modelViewer.availableAnimations || [];
-          console.log('AnimationController: Available animations:', animations);
-          
-          setAvailableAnimations(animations);
-          setIsModelReady(true);
-          
-          // Auto-play first animation if available and autoPlay is enabled
-          if (animations.length > 0 && autoPlay) {
-            const firstAnimation = animations[0];
-            console.log('AnimationController: Auto-playing first animation:', firstAnimation);
-            
-            modelViewer.play({ animationName: firstAnimation });
-            setCurrentAnimation(firstAnimation);
-            setIsPlaying(true);
-            
-            if (onAnimationChange) {
-              onAnimationChange(firstAnimation);
-            }
-          }
-        } catch (error) {
-          console.error('AnimationController: Error initializing animations:', error);
-        }
-      }, 500); // Small delay to ensure model is fully loaded
+    const collectAnimations = (): string[] => {
+      try {
+        const list = modelViewer.availableAnimations || [];
+        return Array.isArray(list) ? [...list] : [];
+      } catch {
+        return [];
+      }
     };
 
-    // Listen for model load event
+    const handleModelLoad = () => {
+      console.log('AnimationController: Model loaded, initializing animations...');
+      const delays = [0, 150, 400, 800];
+      let best: string[] = [];
+
+      delays.forEach((delay) => {
+        setTimeout(() => {
+          const animations = collectAnimations();
+          if (animations.length > best.length) {
+            best = animations;
+            console.log('AnimationController: Available animations:', best);
+            setAvailableAnimations(best);
+          }
+          setIsModelReady(true);
+        }, delay);
+      });
+
+      setTimeout(() => {
+        const final = collectAnimations();
+        if (final.length > best.length) {
+          best = final;
+          setAvailableAnimations(best);
+        }
+        if (best.length > 0 && autoPlay) {
+          const firstAnimation = best[0];
+          try {
+            if (typeof modelViewer.playAnimation === 'function') {
+              modelViewer.playAnimation(firstAnimation, true);
+            } else {
+              modelViewer.animationName = firstAnimation;
+              modelViewer.play();
+            }
+            setCurrentAnimation(firstAnimation);
+            setIsPlaying(true);
+            onAnimationChange?.(firstAnimation);
+          } catch (e) {
+            console.warn('AnimationController: Auto-play failed', e);
+          }
+        }
+      }, 900);
+    };
+
     modelViewer.addEventListener('load', handleModelLoad);
-    
-    // Also check if model is already loaded
     if (modelViewer.loaded) {
       handleModelLoad();
     }
@@ -70,19 +88,31 @@ const AnimationController: React.FC<AnimationControllerProps> = ({
     };
   }, [modelViewerRef, autoPlay, onAnimationChange]);
 
-  // Handle animation selection
+  // Apply animation speed (timeScale) when model is ready or speed changes
+  useEffect(() => {
+    const modelViewer = modelViewerRef.current;
+    if (!modelViewer || typeof modelViewer.timeScale === 'undefined') return;
+    modelViewer.timeScale = animationSpeed;
+  }, [modelViewerRef, animationSpeed, isModelReady]);
+
+  // Handle animation selection - use animationName + play() for compatibility with all GLB clips
   const handleAnimationSelect = (animationName: string) => {
     const modelViewer = modelViewerRef.current;
     if (!modelViewer || !animationName) return;
 
     console.log('AnimationController: Playing animation:', animationName);
-    
-    modelViewer.play({ animationName });
-    setCurrentAnimation(animationName);
-    setIsPlaying(true);
-    
-    if (onAnimationChange) {
-      onAnimationChange(animationName);
+    try {
+      if (typeof modelViewer.playAnimation === 'function') {
+        modelViewer.playAnimation(animationName, true);
+      } else {
+        modelViewer.animationName = animationName;
+        modelViewer.play();
+      }
+      setCurrentAnimation(animationName);
+      setIsPlaying(true);
+      onAnimationChange?.(animationName);
+    } catch (e) {
+      console.warn('AnimationController: play failed', e);
     }
   };
 
@@ -150,6 +180,26 @@ const AnimationController: React.FC<AnimationControllerProps> = ({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Animation Speed - match Blender timing (slower = smoother / less "way too fast") */}
+        <div className="col-12">
+          <label className="form-label" style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+            Speed
+          </label>
+          <select
+            value={animationSpeed}
+            onChange={(e) => setAnimationSpeed(Number(e.target.value))}
+            className="form-select form-select-sm"
+            style={{ fontSize: '0.9rem' }}
+            disabled={!isModelReady}
+          >
+            <option value={0.25}>0.25× (slowest)</option>
+            <option value={0.5}>0.5× (smoother)</option>
+            <option value={1}>1× (normal)</option>
+            <option value={1.5}>1.5×</option>
+          </select>
+          <small className="text-muted" style={{ fontSize: '0.75rem' }}>Lower speed often matches Blender playback better.</small>
         </div>
         
         {/* Control Buttons */}

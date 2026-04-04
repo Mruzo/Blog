@@ -42,6 +42,11 @@ STRIPE_PRODUCTION_SECRET_KEY = config.get('section', 'STRIPE_PROD_SECRET_KEY', f
 # Production settings (pro.py) will override to use production keys
 STRIPE_PUBLIC_KEY = STRIPE_DEVELOPMENT_PUBLIC_KEY
 STRIPE_SECRET_KEY = STRIPE_DEVELOPMENT_SECRET_KEY
+# Stripe webhook signing secret (Dashboard → Developers → Webhooks). Required in production for reliable fulfillment.
+STRIPE_WEBHOOK_SECRET = config.get('section', 'STRIPE_WEBHOOK_SECRET', fallback='')
+
+# Public URL of the React app (order links in emails, Stripe success/cancel URLs)
+FRONTEND_URL = config.get('section', 'FRONTEND_URL', fallback='http://localhost:3000')
 
 
 # Canada Post Developer Portal API Configuration
@@ -72,6 +77,13 @@ STRIPE_REFUND_ENABLED = True  # Enable Stripe refund processing
 # Tax Configuration
 TAX_RATE = 0.13  # Default tax rate (13% for HST in Ontario, Canada) - can be overridden per province
 TAX_ENABLED = True  # Enable tax calculation on invoices
+# When True, Stripe Checkout includes a separate line item for tax (must match invoice PDF logic)
+STRIPE_CHECKOUT_INCLUDE_TAX = True
+
+# Returns: order statuses that may start a return (adjust per policy)
+RETURN_ELIGIBLE_STATUSES = ('DELIVERED', 'SHIPPED')
+# Abandon unpaid orders created at checkout (hours); management command uses this default
+STALE_PENDING_ORDER_HOURS = 72
 
 
 META_SITE_PROTOCOL = 'http', 'https'

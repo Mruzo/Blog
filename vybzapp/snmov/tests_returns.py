@@ -496,7 +496,9 @@ class ReturnEmailNotificationsTestCase(TestCase):
             customer=self.user,
             shipping_address=self.shipping_address,
             status='DELIVERED',
-            shipping_cost=Decimal('10.00')
+            shipping_cost=Decimal('10.00'),
+            stripe_payment_intent_id='pi_test123',
+            amount_paid_cents=100000,
         )
         
         self.order_item = OrderItem.objects.create(
@@ -510,7 +512,8 @@ class ReturnEmailNotificationsTestCase(TestCase):
             customer=self.user,
             reason='Changed my mind',
             reason_category='changed_mind',
-            status='PENDING'
+            status='PENDING',
+            return_shipping_cost=Decimal('0.00'),
         )
         
         ReturnItem.objects.create(
@@ -530,8 +533,9 @@ class ReturnEmailNotificationsTestCase(TestCase):
         self.assertIn('return request', email.subject.lower())
         self.assertIn(str(self.return_request.id), email.body)
     
+    @patch('snmov.utils.pdf_generation.generate_pdf', return_value='cn/email.pdf')
     @patch('snmov.utils.stripe_refunds.process_stripe_refund')
-    def test_send_return_approved_email(self, mock_stripe_refund):
+    def test_send_return_approved_email(self, mock_stripe_refund, _pdf):
         """Test: Return approved email is sent"""
         mock_stripe_refund.return_value = 're_test123'
         
@@ -693,7 +697,8 @@ class ReturnStripeRefundTestCase(TestCase):
             shipping_address=self.shipping_address,
             status='DELIVERED',
             shipping_cost=Decimal('10.00'),
-            stripe_payment_intent_id='pi_test123'
+            stripe_payment_intent_id='pi_test123',
+            amount_paid_cents=100000,
         )
         
         self.order_item = OrderItem.objects.create(
@@ -707,7 +712,8 @@ class ReturnStripeRefundTestCase(TestCase):
             customer=self.user,
             reason='Test',
             reason_category='changed_mind',
-            status='APPROVED'
+            status='PENDING',
+            return_shipping_cost=Decimal('0.00'),
         )
         
         ReturnItem.objects.create(
@@ -717,8 +723,9 @@ class ReturnStripeRefundTestCase(TestCase):
             condition='unopened'
         )
     
+    @patch('snmov.utils.pdf_generation.generate_pdf', return_value='cn/refund.pdf')
     @patch('snmov.utils.stripe_refunds.process_stripe_refund')
-    def test_stripe_refund_processing(self, mock_stripe_refund):
+    def test_stripe_refund_processing(self, mock_stripe_refund, _pdf):
         """Test: Stripe refund is processed during return approval"""
         mock_stripe_refund.return_value = 're_test123'
         
@@ -736,8 +743,9 @@ class ReturnStripeRefundTestCase(TestCase):
         self.assertEqual(credit_note.stripe_refund_id, 're_test123')
         self.assertEqual(credit_note.status, 'REFUNDED')
     
+    @patch('snmov.utils.pdf_generation.generate_pdf', return_value='cn/fail.pdf')
     @patch('snmov.utils.stripe_refunds.process_stripe_refund')
-    def test_stripe_refund_failure_rolls_back(self, mock_stripe_refund):
+    def test_stripe_refund_failure_rolls_back(self, mock_stripe_refund, _pdf):
         """Test: Stripe refund failure rolls back transaction"""
         mock_stripe_refund.side_effect = Exception('Stripe API error')
         
@@ -751,9 +759,9 @@ class ReturnStripeRefundTestCase(TestCase):
         
         self.assertIn('Stripe refund failed', str(context.exception))
         
-        # Verify return request status was set to APPROVED (happens before transaction)
+        # Full atomic block rolls back; status stays PENDING
         self.return_request.refresh_from_db()
-        self.assertEqual(self.return_request.status, 'APPROVED')
+        self.assertEqual(self.return_request.status, 'PENDING')
         
         # Verify no new credit note was created (transaction rolled back)
         final_count = CreditNote.objects.filter(return_request=self.return_request).count()
@@ -795,7 +803,8 @@ class ReturnIntegrationTestCase(APITestCase):
             shipping_address=self.shipping_address,
             status='DELIVERED',
             shipping_cost=Decimal('10.00'),
-            stripe_payment_intent_id='pi_test123'
+            stripe_payment_intent_id='pi_test123',
+            amount_paid_cents=200000,
         )
         
         self.order_item = OrderItem.objects.create(
@@ -806,10 +815,11 @@ class ReturnIntegrationTestCase(APITestCase):
         
         self.client.force_authenticate(user=self.user)
     
+    @patch('snmov.utils.pdf_generation.generate_pdf', return_value='cn/workflow.pdf')
     @patch('snmov.utils.email_notifications.send_return_request_submitted')
     @patch('snmov.utils.returns.generate_return_label')
     @patch('snmov.utils.stripe_refunds.process_stripe_refund')
-    def test_complete_return_workflow(self, mock_stripe_refund, mock_generate_label, mock_send_email):
+    def test_complete_return_workflow(self, mock_stripe_refund, mock_generate_label, mock_send_email, _pdf):
         """Test: Complete return workflow from creation to refund"""
         # Step 1: Create return request
         return_data = {

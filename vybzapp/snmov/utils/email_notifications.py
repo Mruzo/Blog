@@ -1,13 +1,23 @@
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
-from django.urls import reverse
 from django.contrib.sites.models import Site
 
 def get_site_url():
     """Get the site's base URL"""
     current_site = Site.objects.get_current()
     return f"https://{current_site.domain}"
+
+
+def get_customer_facing_base_url():
+    """
+    Base URL for storefront links in transactional email (React app).
+    Falls back to Django Sites framework when FRONTEND_URL is unset.
+    """
+    u = (getattr(settings, 'FRONTEND_URL', None) or '').strip()
+    if u:
+        return u.rstrip('/')
+    return get_site_url()
 
 def send_registration_email(user):
     """Send welcome email to newly registered users"""
@@ -31,16 +41,15 @@ def send_order_confirmation(order):
     """Send order confirmation email"""
     subject = f'Order Confirmation - Order #{order.id}'
     
-    # Generate order detail URL
-    site_url = get_site_url()
-    order_url = f"{site_url}{reverse('snmov:order_detail', args=[order.id])}"
-    cancel_url = f"{site_url}{reverse('snmov:cancel_order', args=[order.id])}"
+    base = get_customer_facing_base_url()
+    order_url = f"{base}/product/order/{order.id}/"
+    cancel_url = f"{base}/product/order/{order.id}/cancel/"
     
     context = {
         'order': order,
         'order_url': order_url,
         'cancel_url': cancel_url,
-        'site_url': site_url,
+        'site_url': base,
     }
     
     html_message = render_to_string('emails/order_confirmation.html', context)
@@ -58,13 +67,13 @@ def send_order_status_update(order):
     """Send email when order status changes"""
     subject = f'Order Status Update - Order #{order.id}'
     
-    site_url = get_site_url()
-    order_url = f"{site_url}{reverse('snmov:order_detail', args=[order.id])}"
+    base = get_customer_facing_base_url()
+    order_url = f"{base}/product/order/{order.id}/"
     
     context = {
         'order': order,
         'order_url': order_url,
-        'site_url': site_url,
+        'site_url': base,
     }
     
     html_message = render_to_string('emails/order_status_update.html', context)

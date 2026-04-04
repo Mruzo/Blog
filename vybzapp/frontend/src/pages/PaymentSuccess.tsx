@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
+import { parseJsonApiError } from '../utils/parseJsonApiError';
 
 interface Order {
   id: number;
@@ -66,7 +67,9 @@ const PaymentSuccess: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch order details');
+        throw new Error(
+          await parseJsonApiError(response.clone(), 'Failed to fetch order details')
+        );
       }
 
       const data = await response.json();

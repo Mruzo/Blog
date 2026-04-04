@@ -310,6 +310,16 @@ class Order(models.Model):
     tracking_number = models.CharField(max_length=100, blank=True, null=True)
     label_url = models.URLField(blank=True, null=True)
     stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True, null=True)
+    payment_completed_at = models.DateTimeField(null=True, blank=True)
+    order_confirmation_sent_at = models.DateTimeField(null=True, blank=True)
+    amount_paid_cents = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Total charged via Stripe Checkout (in cents), for refunds and reconciliation",
+    )
+    shipping_rates_snapshot = models.JSONField(default=list, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
     shipping_label_created_at = models.DateTimeField(null=True, blank=True)  # New field
     shipping_label_error = models.TextField(blank=True, null=True)  # New field for storing error messages
     
@@ -344,16 +354,14 @@ class Order(models.Model):
     
     def is_eligible_for_return(self):
         """Check if order is eligible for returns"""
-        # Only delivered orders can be returned
-        if self.status != 'DELIVERED':
+        from snmov.utils.returns import is_order_eligible_for_return_start
+        if not is_order_eligible_for_return_start(self):
             return False
-        
-        # Check if within return window
         from django.conf import settings
         from datetime import timedelta
-        
         return_window = getattr(settings, 'DEFAULT_RETURN_WINDOW_DAYS', 30)
-        deadline = self.order_date + timedelta(days=return_window)
+        start = self.delivered_at or self.order_date
+        deadline = start + timedelta(days=return_window)
         return timezone.now() <= deadline
 
 class OrderItem(models.Model):
@@ -471,26 +479,18 @@ class ReturnRequest(models.Model):
     
     def is_within_window(self):
         """Check if return request is within return window"""
-        if self.order.status != 'DELIVERED':
+        from snmov.utils.returns import is_order_eligible_for_return_start
+        if not is_order_eligible_for_return_start(self.order):
             return False
-        
-        # Get return window from policy or use default
         from django.conf import settings
         from datetime import timedelta
-        
         return_window = getattr(settings, 'DEFAULT_RETURN_WINDOW_DAYS', 30)
-        
-        # Check if product has specific policy
         for item in self.returnitem_set.all():
             policy = ReturnPolicy.objects.filter(product=item.order_item.product).first()
             if policy:
                 return_window = policy.return_window_days
                 break
-        
-        # Check if order was delivered within window
-        # For now, use order_date + return_window_days
-        # In production, you'd use actual delivery date
-        delivery_date = self.order.order_date
+        delivery_date = self.order.delivered_at or self.order.order_date
         deadline = delivery_date + timedelta(days=return_window)
         return timezone.now() <= deadline
     

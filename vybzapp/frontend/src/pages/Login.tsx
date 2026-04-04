@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
+import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import BackButton from '../components/BackButton';
@@ -67,10 +68,10 @@ const Login: React.FC = () => {
     } catch (error: any) {
       console.error('Login error:', error);
       setIsLoggingIn(false);
-      const errorMessage = error?.response?.data?.non_field_errors?.[0] || 
-                          error?.response?.data?.message || 
-                          error?.message || 
-                          'Invalid username or password. Please try again.';
+      const errorMessage = getApiErrorMessage(
+        error,
+        'Invalid username or password. Please try again.'
+      );
       setMessage(errorMessage);
       setMessageType('danger');
       setShowMessage(true);
