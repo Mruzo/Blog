@@ -170,9 +170,33 @@ class ProductNotification(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(null=True)
+    notification_sent = models.BooleanField(default=False)
+    notification_sent_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.product.title} Notification"
+
+    def send_back_in_stock_notification(self):
+        """Send back-in-stock email once; sets tracking flags on success."""
+        if self.notification_sent:
+            return False
+        import logging
+        from snmov.utils.email_notifications import send_product_back_in_stock_notification
+
+        logger = logging.getLogger(__name__)
+        try:
+            send_product_back_in_stock_notification(self)
+        except Exception:
+            logger.exception(
+                'Back-in-stock email failed for ProductNotification id=%s',
+                self.pk,
+            )
+            return False
+        self.notification_sent = True
+        self.notification_sent_at = timezone.now()
+        self.is_active = False
+        self.save(update_fields=['notification_sent', 'notification_sent_at', 'is_active'])
+        return True
 
 class ReachOut(models.Model):
     full_name = models.CharField(max_length=30)

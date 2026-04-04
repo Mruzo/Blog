@@ -93,15 +93,27 @@ def send_back_in_stock_notifications(sender, instance, created, **kwargs):
     )
     
     if became_available:
-        # Find all active notifications for this product that haven't been sent
-        notifications = ProductNotification.objects.filter(
-            product=instance,
-            is_active=True,
-            notification_sent=False
-        )
-        
-        for notification in notifications:
-            notification.send_back_in_stock_notification()
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            notifications = ProductNotification.objects.filter(
+                product=instance,
+                is_active=True,
+                notification_sent=False
+            )
+            for notification in notifications:
+                try:
+                    notification.send_back_in_stock_notification()
+                except Exception as e:
+                    logger.error(
+                        'Back-in-stock handler failed for notification %s: %s',
+                        notification.pk,
+                        e,
+                    )
+        except Exception as e:
+            logger.exception(
+                'Back-in-stock batch failed for product %s: %s', instance.pk, e
+            )
     
     # Clean up stored status
     if instance.pk in _previous_product_availability:
