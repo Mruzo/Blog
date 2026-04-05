@@ -99,6 +99,7 @@ class ProductDetailView(generics.RetrieveAPIView):
 
 
 @api_view(['GET'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([AllowAny])
 def get_cart(request):
     """Get current cart contents"""
@@ -147,6 +148,7 @@ def get_cart(request):
 
 
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([AllowAny])
 def add_to_cart(request):
     """Add product to cart"""
@@ -269,6 +271,7 @@ def add_to_cart(request):
 
 
 @api_view(['PUT'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([AllowAny])
 def update_cart_item(request, product_id):
     """Update cart item quantity"""
@@ -414,6 +417,7 @@ def update_cart_item(request, product_id):
 
 
 @api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([AllowAny])
 def remove_from_cart(request, product_id):
     """Remove product from cart"""
@@ -637,6 +641,7 @@ def remove_from_cart(request, product_id):
 
 
 @api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([AllowAny])
 def clear_cart(request):
     """Clear entire cart"""
