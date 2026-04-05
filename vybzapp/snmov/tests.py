@@ -1062,7 +1062,7 @@ class CheckoutAPITestCase(TestCase):
             'country_code': 'CA'
         }, content_type='application/json')
         
-        self.assertEqual(response.status_code, 403)  # DRF returns 403 for unauthenticated requests
+        self.assertIn(response.status_code, (401, 403))  # DRF: unauthenticated may be 401 or 403
 
     def test_get_shipping_rates_api(self):
         """Test getting shipping rates for an order"""

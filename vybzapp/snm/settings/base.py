@@ -300,9 +300,11 @@ ALLOWED_HOSTS = [
 
 # Django REST Framework configuration
 REST_FRAMEWORK = {
+    # Token first: SPA sends Authorization; avoids SessionAuthentication CSRF on unsafe methods
+    # when a Django session cookie exists (e.g. admin). Session remains for tests / session-only clients.
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
