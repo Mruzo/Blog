@@ -41,6 +41,24 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+def _first_serializer_error_message(serializer_errors):
+    """Single user-facing string for JSON `error` (DRF ErrorDict may be nested)."""
+    if not serializer_errors:
+        return 'Invalid request'
+    for key, msgs in serializer_errors.items():
+        if isinstance(msgs, dict):
+            nested = _first_serializer_error_message(msgs)
+            if nested != 'Invalid request':
+                return nested
+        elif isinstance(msgs, (list, tuple)):
+            for m in msgs:
+                if m is not None and str(m).strip():
+                    return str(m)
+        elif msgs is not None and str(msgs).strip():
+            return str(msgs)
+    return 'Invalid request'
+
+
 class _CheckoutTransactionError(Exception):
     """Rollback checkout DB transaction and map to HTTP response."""
     def __init__(self, message, http_status=status.HTTP_400_BAD_REQUEST):
@@ -241,7 +259,13 @@ def add_to_cart(request):
                 'error': 'Product not found or not available'
             }, status=status.HTTP_404_NOT_FOUND)
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        {
+            'success': False,
+            'error': _first_serializer_error_message(serializer.errors),
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 @api_view(['PUT'])
@@ -380,7 +404,13 @@ def update_cart_item(request, product_id):
                 'error': 'Product not in cart'
             }, status=status.HTTP_404_NOT_FOUND)
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        {
+            'success': False,
+            'error': _first_serializer_error_message(serializer.errors),
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 @api_view(['DELETE'])

@@ -218,16 +218,19 @@ const ProductList: React.FC<ProductListProps> = () => {
                           <div className="row align-items-center justify-content-between border-bottom">
                             <div className="col-auto">
                               {product.discount_percentage > 0 ? (
-                                <h6 className="card-title subtext-btn my-auto">
+                                <h6 className="card-title subtext-btn-sm my-auto">
                                   <p className="card-text">
-                                    <span style={{ color: '#DC2229' }}>
-                                      <b>C${product.discounted_price.toFixed(2)}</b>
+                                    <span style={{ color: '#DC2229', backgroundColor: '#F3F4F6'}}>
+                                      
+                                      <b style={{ textDecoration: 'line-through', fontSize:'0.9rem' }}>C${product.price}</b>&nbsp; 
+                                      
+                                      <b className="text-dark">Original Price</b>&nbsp;
+                                      <b style={{ color: '#DC2229', backgroundColor: '#F3F4F6', fontStyle: 'italic', fontSize: '0.7rem' }}>-{product.discount_percentage}%</b>
                                     </span>
                                     <br />
-                                    <span className="subtext-btn-sm text-dark">
-                                      <b style={{ textDecoration: 'line-through' }}>C${product.price}</b>
-                                      <b style={{ color: '#DC2229' }}> &nbsp; -{product.discount_percentage}% </b>
-                                      <b className="text-dark"> Original Price</b>
+                                    <span className=" subtext-btn text-dark">
+                                    <b>C${product.discounted_price.toFixed(2)} </b>
+                                    
                                     </span>
                                   </p>
                                 </h6>

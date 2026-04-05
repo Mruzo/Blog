@@ -24,6 +24,42 @@ function getCookie(name: string): string | null {
   return cookieValue;
 }
 
+/** Parse DRF `{ field: ["msg"] }`, `{ error: "..." }`, or non-JSON error responses. */
+function parseCartApiErrorBody(
+  body: unknown,
+  response: Response,
+  fallback: string
+): string {
+  if (body && typeof body === 'object' && body !== null) {
+    const o = body as Record<string, unknown>;
+    if (typeof o.error === 'string' && o.error.trim()) return o.error;
+    if (typeof o.message === 'string' && o.message.trim()) return o.message;
+    if (o.detail !== undefined) {
+      return typeof o.detail === 'string' ? o.detail : JSON.stringify(o.detail);
+    }
+    for (const key of Object.keys(o)) {
+      const v = o[key];
+      if (Array.isArray(v) && v.length > 0 && v[0] != null) {
+        return String(v[0]);
+      }
+    }
+  }
+  const suffix = response.status
+    ? ` (HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''})`
+    : '';
+  return `${fallback}${suffix}`;
+}
+
+async function readResponseJsonOrNull(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text || !text.trim()) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 interface CartContextType {
   cartItems: CartItem[];
   cartCount: number;
@@ -135,10 +171,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           await fetchCart();
         }
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to add to cart' }));
-        // Pass through detailed error message from backend
-        const errorMessage = errorData.error || errorData.message || 'Failed to add to cart';
-        throw new Error(errorMessage);
+        const errorData = await readResponseJsonOrNull(response);
+        throw new Error(
+          parseCartApiErrorBody(errorData, response, 'Failed to add to cart')
+        );
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -211,10 +247,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           await fetchCart();
         }
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to update quantity' }));
-        // Pass through detailed error message from backend
-        const errorMessage = errorData.error || errorData.message || 'Failed to update quantity';
-        throw new Error(errorMessage);
+        const errorData = await readResponseJsonOrNull(response);
+        throw new Error(
+          parseCartApiErrorBody(errorData, response, 'Failed to update quantity')
+        );
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -277,16 +313,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           await fetchCart();
         }
       } else {
-        // Try to parse error response, but handle non-JSON responses (like 500 errors)
-        let errorMessage = 'Failed to remove item';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (parseError) {
-          // If response is not JSON (e.g., HTML error page), use status text
-          errorMessage = `Failed to remove item: ${response.status} ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
+        const errorData = await readResponseJsonOrNull(response);
+        throw new Error(
+          parseCartApiErrorBody(errorData, response, 'Failed to remove item')
+        );
       }
     } catch (error) {
       console.error('Error removing item:', error);
@@ -323,8 +353,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       if (response.ok) {
         await fetchCart(); // Refresh cart data
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to clear cart');
+        const errorData = await readResponseJsonOrNull(response);
+        throw new Error(
+          parseCartApiErrorBody(errorData, response, 'Failed to clear cart')
+        );
       }
     } catch (error) {
       console.error('Error clearing cart:', error);
