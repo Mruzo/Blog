@@ -1,4 +1,5 @@
 {% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
 
 {% block vybcheq_title %}Run #{{ run.pk }}{% endblock %}
 
@@ -37,7 +38,19 @@
                 <td class="font-monospace">{{ row.security.symbol }} · {{ row.security.exchange }}</td>
                 <td>{% if row.passed %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</td>
                 <td>{% if row.score is not None %}{{ row.score }}{% else %}—{% endif %}</td>
-                <td><pre class="mb-0 text-wrap text-secondary" style="white-space: pre-wrap; max-width: 32rem;">{{ row.details }}</pre></td>
+                <td class="align-top py-3" style="min-width: 14rem; max-width: 36rem;">
+                    {% if row.details %}
+                    <ul class="list-unstyled small mb-0 vybcheq-rule-details">
+                        {% for line in row.details|vybcheq_detail_lines %}
+                        <li class="mb-2 ps-2 ms-1 border-start {{ line|vybcheq_detail_line_class }} border-3">
+                            <span class="{{ line|vybcheq_detail_text_class }}">{{ line }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <span class="text-secondary">—</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>

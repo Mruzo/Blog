@@ -31,6 +31,30 @@ def _to_float(x: Any) -> float:
     return float(x)
 
 
+def _fmt_val(x: Any) -> str:
+    """Human-readable number for rule detail lines (not full float precision)."""
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return str(x)
+    if v != v:  # NaN
+        return "nan"
+    av = abs(v)
+    if av >= 1e12:
+        return f"{v / 1e12:.3f}T"
+    if av >= 1e9:
+        return f"{v / 1e9:.3f}B"
+    if av >= 1e6:
+        return f"{v / 1e6:.3f}M"
+    if av >= 1000:
+        return f"{v:,.2f}"
+    if av >= 1:
+        return f"{v:.4g}"
+    return f"{v:.4f}".rstrip("0").rstrip(".")
+
+
+
+
 def evaluate_rules(rules: list, metrics: dict) -> tuple[bool, Decimal | None, str]:
     """
     Returns (passed_all, score, details_text).
@@ -73,7 +97,10 @@ def evaluate_rules(rules: list, metrics: dict) -> tuple[bool, Decimal | None, st
 
         ok = OPS[op](left, right)
         rule_ok.append(ok)
-        lines.append(f"Rule {i}: {metric} ({left}) {op} {right} → {'PASS' if ok else 'FAIL'}")
+        lines.append(
+            f"Rule {i}: {metric} — {_fmt_val(left)} {op} {_fmt_val(right)} → "
+            f"{'PASS' if ok else 'FAIL'}"
+        )
 
     passed_all = all(rule_ok)
     n = len(rule_ok)

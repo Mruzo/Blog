@@ -2,6 +2,7 @@ from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path
+from django.utils.html import escape, format_html
 from django.utils.translation import gettext_lazy as _
 
 from .models import (
@@ -22,6 +23,31 @@ from .yahoo_metrics import (
     fetch_screening_metrics_yahoo,
     yahoo_action_gap_seconds,
 )
+
+
+def _details_as_html(obj: ScreenResult | None) -> str:
+    if obj is None or not obj.details:
+        return "—"
+    blocks = []
+    for line in obj.details.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if "→ FAIL" in line or "-> FAIL" in line:
+            border = "#dc3545"
+            color = "#f8d7da"
+        elif "→ PASS" in line or "-> PASS" in line:
+            border = "#198754"
+            color = "#d1e7dd"
+        else:
+            border = "#6c757d"
+            color = "#e9ecef"
+        blocks.append(
+            f'<div style="margin:0.4em 0;padding:0.35em 0.5em 0.35em 0.65em;'
+            f"border-left:3px solid {border};background:{color};color:#212529;"
+            f'font-size:12px;line-height:1.35;">{escape(line)}</div>'
+        )
+    return format_html("".join(blocks)) if blocks else "—"
 
 
 @admin.action(description=_("Merge screening metrics from Yahoo Finance (yfinance)"))
@@ -141,8 +167,12 @@ class ScreeningRuleSetAdmin(admin.ModelAdmin):
 class ScreenResultInline(admin.TabularInline):
     model = ScreenResult
     extra = 0
-    readonly_fields = ("security", "passed", "score", "metrics_snapshot", "details")
+    readonly_fields = ("security", "passed", "score", "metrics_snapshot", "details_readable")
     can_delete = False
+
+    @admin.display(description=_("Details"))
+    def details_readable(self, obj):
+        return _details_as_html(obj)
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -162,7 +192,11 @@ class ScreenResultAdmin(admin.ModelAdmin):
     list_display = ("run", "security", "passed", "score")
     list_filter = ("passed", "run")
     search_fields = ("security__symbol",)
-    readonly_fields = ("run", "security", "passed", "score", "metrics_snapshot", "details")
+    readonly_fields = ("run", "security", "passed", "score", "metrics_snapshot", "details_readable")
+
+    @admin.display(description=_("Details"))
+    def details_readable(self, obj):
+        return _details_as_html(obj)
 
     def has_add_permission(self, request):
         return False

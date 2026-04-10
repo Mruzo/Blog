@@ -33,6 +33,15 @@ class EvaluateRulesTests(TestCase):
         self.assertFalse(ok)
         self.assertIn("missing metric", details)
 
+    def test_details_use_readable_numbers(self):
+        rules = [{"metric": "market_cap", "op": ">=", "value": 1e9}]
+        ok, score, details = evaluate_rules(
+            rules, {"market_cap": 4_469_932_687_360}
+        )
+        self.assertTrue(ok)
+        self.assertIn("4.470T", details)
+        self.assertIn("\u2014", details)  # em dash before values in detail lines
+
 
 class RunScreenAgainstWatchlistTests(TestCase):
     def setUp(self):
