@@ -1,0 +1,37 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans "Home" %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url 'admin:vybcheq_screeningruleset_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url 'admin:vybcheq_screeningruleset_change' rule_set.pk %}">{{ rule_set }}</a>
+  &rsaquo; {% trans "Run screen" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{% trans "Run screen" %}: {{ rule_set.name }}</h1>
+
+<p>
+  {% blocktrans %}
+  This creates a new <strong>Screen run</strong> and evaluates every active security that has a
+  <strong>Watch list entry</strong>, using this rule set and each security’s <strong>screening metrics</strong> (JSON on the security).
+  {% endblocktrans %}
+</p>
+<p class="help">
+  {% blocktrans %}
+  If you only added a row under Securities, you will get zero results until you also add
+  Vybcheq → Watch list entries → Add, and choose that security.
+  {% endblocktrans %}
+</p>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="submit-row">
+    <input type="submit" value="{% trans "Run screen" %}" class="default">
+    <a href="{% url 'admin:vybcheq_screeningruleset_change' rule_set.pk %}" class="button cancel-link">{% trans "Cancel" %}</a>
+  </div>
+</form>
+{% endblock %}

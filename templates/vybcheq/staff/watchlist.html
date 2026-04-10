@@ -1,0 +1,38 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+
+{% block vybcheq_title %}Watchlist{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-3">Watchlist</h1>
+
+{% if entries %}
+<div class="table-responsive border border-secondary rounded">
+    <table class="table table-dark table-striped table-hover mb-0 align-middle">
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Exchange</th>
+                <th>Name</th>
+                <th>Priority</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in entries %}
+            <tr>
+                <td class="font-monospace">{{ e.security.symbol }}</td>
+                <td>{{ e.security.exchange }}</td>
+                <td>{{ e.security.name|default:"—" }}</td>
+                <td>{{ e.priority }}</td>
+                <td>
+                    <a href="{% url 'vybcheq_staff:security_metrics' pk=e.security.pk %}" class="btn btn-sm btn-outline-warning">Metrics</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-secondary">No watchlist entries. Add securities in <a href="{% url 'admin:vybcheq_security_changelist' %}">admin</a>, then <a href="{% url 'admin:vybcheq_watchlistentry_changelist' %}">watch list entries</a>.</p>
+{% endif %}
+{% endblock %}

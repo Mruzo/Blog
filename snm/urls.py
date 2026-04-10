@@ -51,6 +51,7 @@ urlpatterns = [
     path('new-article/', article_create_view, name='article_create'),
     path('article/', include('snmov.urls')),
     path('immersivecomics/', include('tilf.urls', namespace='immersivecomics')),
+    path('staff/vybcheq/', include('vybcheq.urls', namespace='vybcheq_staff')),
     path('about/', about_page, name='about'),
     path('categories/', get_craft_categories, name='categories_list'),
     path('crafts/', craft_list, name='craft_list'),

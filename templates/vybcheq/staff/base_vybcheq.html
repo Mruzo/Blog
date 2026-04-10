@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Vybcheq · {% block vybcheq_title %}Fund research{% endblock %} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-4 text-light col-lg-10 mx-auto">
+    <nav aria-label="Vybcheq" class="mb-4">
+        <ul class="nav nav-pills flex-column flex-sm-row gap-2">
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'vybcheq_staff:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'watchlist' %}active{% endif %}" href="{% url 'vybcheq_staff:watchlist' %}">Watchlist</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'run_screen' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'vybcheq_staff:run_screen_pick' %}">Run screen</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'screen_runs' or request.resolver_match.url_name == 'screen_run_detail' %}active{% endif %}" href="{% url 'vybcheq_staff:screen_runs' %}">Runs</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-secondary" href="{% url 'admin:app_list' 'vybcheq' %}">Django admin</a>
+            </li>
+        </ul>
+    </nav>
+    {% block vybcheq_content %}{% endblock %}
+</div>
+{% endblock %}

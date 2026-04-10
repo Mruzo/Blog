@@ -1,0 +1,22 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls admin_modify %}
+
+{% block object-tools-items %}
+{{ block.super }}
+{% if change %}
+<li>
+  <a href="{% url 'admin:vybcheq_screeningruleset_run_screen' original.pk %}" class="historylink">{% trans "Run screen" %}</a>
+</li>
+{% endif %}
+{% endblock %}
+
+{# In-form link: some admin themes hide or restyle object-tools; this stays visible. #}
+{% block form_top %}
+{{ block.super }}
+{% if change %}
+<p class="help" style="margin-bottom: 1em;">
+  <a href="{% url 'admin:vybcheq_screeningruleset_run_screen' original.pk %}" class="button">{% trans "Run screen" %}</a>
+  <span class="mini quiet">{% trans "Evaluates all watchlist securities with this rule set." %}</span>
+</p>
+{% endif %}
+{% endblock %}

@@ -43,6 +43,7 @@ s3transfer==0.13.0
 
 # HTTP and API
 requests==2.32.4
+yfinance==0.2.54
 httplib2==0.22.0
 urllib3==2.4.0
 PySocks==1.7.1

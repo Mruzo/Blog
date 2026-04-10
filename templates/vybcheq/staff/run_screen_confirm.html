@@ -1,0 +1,15 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+
+{% block vybcheq_title %}Confirm run{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-3">Run screen</h1>
+<p>Rule set: <strong>{{ rule_set.name }}</strong></p>
+<p class="text-secondary">This creates a new screen run and evaluates every <strong>watchlist</strong> security using each row’s screening metrics.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-warning">Run screen</button>
+    <a href="{% url 'vybcheq_staff:run_screen_pick' %}" class="btn btn-outline-secondary">Cancel</a>
+</form>
+{% endblock %}

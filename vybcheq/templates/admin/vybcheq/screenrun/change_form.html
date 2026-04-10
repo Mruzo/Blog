@@ -1,0 +1,22 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls admin_modify %}
+
+{# Re-run uses the same confirmation URL as Screening rule set → Run screen #}
+{% block object-tools-items %}
+{{ block.super }}
+{% if change and original.rule_set_id %}
+<li>
+  <a href="{% url 'admin:vybcheq_screeningruleset_run_screen' original.rule_set_id %}" class="historylink">{% trans "Run screen again" %}</a>
+</li>
+{% endif %}
+{% endblock %}
+
+{% block form_top %}
+{{ block.super }}
+{% if change and original.rule_set_id %}
+<p class="help" style="margin-bottom: 1em;">
+  <a href="{% url 'admin:vybcheq_screeningruleset_run_screen' original.rule_set_id %}" class="button">{% trans "Run screen again" %}</a>
+  <span class="mini quiet">{% trans "Uses the same screening rule set as this run." %}</span>
+</p>
+{% endif %}
+{% endblock %}

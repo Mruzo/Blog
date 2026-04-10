@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'tinymce',
     'meta',
     'tilf',
+    'vybcheq',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

@@ -1,0 +1,39 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+
+{% block vybcheq_title %}Metrics · {{ security.symbol }}{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-1">{{ security.symbol }} <span class="text-secondary fs-6">{{ security.exchange }}</span></h1>
+<p class="text-secondary mb-4">{{ security.name|default:"" }}</p>
+
+<form method="post" class="border border-secondary rounded p-3 bg-dark bg-opacity-50">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="row g-3">
+        {% for field in form %}
+            {% if field.name != 'advanced_json' %}
+            <div class="col-md-6">
+                <label class="form-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <hr class="border-secondary my-4">
+    <h2 class="h6 text-secondary">Advanced</h2>
+    <div class="mb-3">
+        <label class="form-label" for="{{ form.advanced_json.id_for_label }}">{{ form.advanced_json.label }}</label>
+        {{ form.advanced_json }}
+        <div class="form-text text-secondary">{{ form.advanced_json.help_text }}</div>
+        {% if form.advanced_json.errors %}<div class="text-danger small">{{ form.advanced_json.errors }}</div>{% endif %}
+    </div>
+
+    <button type="submit" class="btn btn-warning">Save metrics</button>
+    <a href="{% url 'vybcheq_staff:watchlist' %}" class="btn btn-outline-secondary">Back to watchlist</a>
+</form>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+
+{% block vybcheq_title %}Run #{{ run.pk }}{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-1">Screen run #{{ run.pk }}</h1>
+<p class="text-secondary mb-3">
+    <span class="badge bg-secondary">{{ run.get_status_display }}</span>
+    · {{ run.rule_set.name }}
+    · {{ run.started_at|date:"Y-m-d H:i" }}
+    {% if run.universe_note %}· {{ run.universe_note }}{% endif %}
+</p>
+{% if run.error_message %}
+<div class="alert alert-danger">{{ run.error_message }}</div>
+{% endif %}
+
+<p class="mb-3">
+    <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=run.rule_set_id %}" class="btn btn-sm btn-outline-warning">Run screen again (same rule set)</a>
+    <a href="{% url 'vybcheq_staff:screen_runs' %}" class="btn btn-sm btn-outline-secondary">All runs</a>
+</p>
+
+{% with results=run.screen_results.all %}
+{% if results %}
+<div class="table-responsive border border-secondary rounded">
+    <table class="table table-dark table-striped mb-0 align-middle small">
+        <thead>
+            <tr>
+                <th>Security</th>
+                <th>Pass</th>
+                <th>Score</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in results %}
+            <tr>
+                <td class="font-monospace">{{ row.security.symbol }} · {{ row.security.exchange }}</td>
+                <td>{% if row.passed %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</td>
+                <td>{% if row.score is not None %}{{ row.score }}{% else %}—{% endif %}</td>
+                <td><pre class="mb-0 text-wrap text-secondary" style="white-space: pre-wrap; max-width: 32rem;">{{ row.details }}</pre></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-secondary">No results for this run.</p>
+{% endif %}
+{% endwith %}
+{% endblock %}
