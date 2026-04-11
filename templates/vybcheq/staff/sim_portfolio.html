@@ -1,0 +1,96 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
+
+{% block vybcheq_title %}Sim trading{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-2">Sim trading (cheqs)</h1>
+<p class="text-secondary small mb-4">
+    Paper portfolio for staff. <strong>1 cheq ≈ 1 USD</strong> notional vs cached quotes.
+    Yahoo refreshes are <strong>rate-limited</strong> (default {{ quote_interval }}s between refreshes per symbol).
+</p>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+    <div class="card bg-dark border-warning text-light px-4 py-3">
+        <div class="small text-secondary">Wallet balance</div>
+        <div class="h4 mb-0 text-warning">{{ cheq_account.balance|floatformat:2 }} cheqs</div>
+    </div>
+    <a href="{% url 'vybcheq_staff:sim_open_trade' %}" class="btn btn-warning">Trade</a>
+</div>
+
+<h2 class="h5">Open positions</h2>
+{% if open_positions %}
+<div class="table-responsive border border-secondary rounded mb-4">
+    <table class="table table-dark table-striped mb-0 align-middle small">
+        <thead>
+            <tr>
+                <th>Security</th>
+                <th>Cheqs in</th>
+                <th>Entry</th>
+                <th>Quote</th>
+                <th>Value</th>
+                <th>P&amp;L</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in open_positions %}
+            <tr>
+                <td class="font-monospace">{{ p.security.symbol }} · {{ p.security.exchange }}</td>
+                <td>{{ p.cheqs_opened|floatformat:2 }}</td>
+                <td>{{ p.entry_price|floatformat:2 }}</td>
+                <td>
+                    {% if p.security.quote_last_price %}
+                        {{ p.security.currency|currency_prefix }}{{ p.security.quote_last_price|floatformat:2 }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{{ p.mark_value_cheqs|floatformat:2 }}</td>
+                <td class="{% if p.unrealized_pnl_cheqs > 0 %}text-success{% elif p.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.unrealized_pnl_cheqs|floatformat:2 }}</td>
+                <td class="text-nowrap">
+                    <a href="{% url 'vybcheq_staff:sim_position_detail' pk=p.pk %}" class="btn btn-sm btn-outline-secondary">History</a>
+                    <form method="post" action="{% url 'vybcheq_staff:sim_close_trade' position_id=p.pk %}" class="d-inline" onsubmit="return confirm('Close at the currently cached quote?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Close</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-secondary mb-4">No open positions.</p>
+{% endif %}
+
+<h2 class="h5">Recently closed</h2>
+{% if closed_positions %}
+<div class="table-responsive border border-secondary rounded">
+    <table class="table table-dark table-striped mb-0 align-middle small">
+        <thead>
+            <tr>
+                <th>Security</th>
+                <th>Opened</th>
+                <th>In</th>
+                <th>Out</th>
+                <th>Realized P&amp;L</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in closed_positions %}
+            <tr>
+                <td class="font-monospace">{{ p.security.symbol }}</td>
+                <td>{{ p.opened_at|date:"Y-m-d" }}</td>
+                <td>{{ p.cheqs_opened|floatformat:2 }}</td>
+                <td>{{ p.cheqs_proceeds|floatformat:2 }}</td>
+                <td class="{% if p.realized_pnl_cheqs > 0 %}text-success{% elif p.realized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.realized_pnl_cheqs|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-secondary">No closed trades yet.</p>
+{% endif %}
+{% endblock %}

@@ -6,12 +6,15 @@ from django.utils.html import escape, format_html
 from django.utils.translation import gettext_lazy as _
 
 from .models import (
+    CheqAccount,
     DecisionLog,
+    PositionMark,
     ResearchPacket,
     ScreenResult,
     ScreenRun,
     ScreeningRuleSet,
     Security,
+    SimPosition,
     WatchlistEntry,
 )
 import time
@@ -221,3 +224,35 @@ class DecisionLogAdmin(admin.ModelAdmin):
     def thesis_preview(self, obj):
         t = (obj.thesis or "").strip()
         return (t[:60] + "…") if len(t) > 60 else t
+
+
+@admin.register(CheqAccount)
+class CheqAccountAdmin(admin.ModelAdmin):
+    list_display = ("user", "balance")
+    search_fields = ("user__username",)
+
+
+class PositionMarkInline(admin.TabularInline):
+    model = PositionMark
+    extra = 0
+    readonly_fields = ("marked_at", "price", "value_cheqs")
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SimPosition)
+class SimPositionAdmin(admin.ModelAdmin):
+    list_display = ("user", "security", "cheqs_opened", "opened_at", "closed_at")
+    list_filter = ("closed_at",)
+    search_fields = ("user__username", "security__symbol")
+    readonly_fields = ("opened_at",)
+    inlines = [PositionMarkInline]
+    autocomplete_fields = ("user", "security")
+
+
+@admin.register(PositionMark)
+class PositionMarkAdmin(admin.ModelAdmin):
+    list_display = ("position", "marked_at", "price", "value_cheqs")
+    list_filter = ("marked_at",)

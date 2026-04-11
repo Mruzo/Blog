@@ -1,9 +1,74 @@
 import json
+from decimal import Decimal, ROUND_FLOOR
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 
-from .models import Security
+from .models import Security, WatchlistEntry
+
+
+class SecuritySelectWithQuote(forms.Select):
+    """Select options include data-quote (cached last price) for client-side estimates."""
+
+    def __init__(self, attrs=None, choices=(), quote_by_pk=None, currency_by_pk=None):
+        self._quote_by_pk = quote_by_pk if quote_by_pk is not None else {}
+        self._currency_by_pk = currency_by_pk if currency_by_pk is not None else {}
+        super().__init__(attrs=attrs, choices=choices)
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+        if value in (None, ""):
+            return option
+        try:
+            # ModelChoiceField values can be wrappers; normalize via str().
+            pk = int(str(value))
+        except (TypeError, ValueError):
+            return option
+        q = self._quote_by_pk.get(pk)
+        cur = (self._currency_by_pk.get(pk) or "").strip().upper()
+        option.setdefault("attrs", {})
+        if q is not None and q > 0:
+            option["attrs"]["data-quote"] = format(q, "f")
+        else:
+            option["attrs"]["data-quote"] = ""
+        option["attrs"]["data-currency"] = cur
+        return option
+
+
+def currency_prefix(code: str) -> str:
+    """
+    Return a short currency prefix for UI display.
+    Prefer a symbol when it's unambiguous; otherwise fall back to the ISO code.
+    """
+    c = (code or "").strip().upper()
+    symbols = {
+        "USD": "$",
+        "EUR": "€",
+        "GBP": "£",
+        "JPY": "¥",
+        "CNY": "¥",
+        "CHF": "CHF ",
+        "CAD": "C$",
+        "AUD": "A$",
+        "NZD": "NZ$",
+        "HKD": "HK$",
+        "SGD": "S$",
+        "SEK": "SEK ",
+        "NOK": "NOK ",
+        "DKK": "DKK ",
+        "INR": "₹",
+        "KRW": "₩",
+        "BRL": "R$",
+        "MXN": "MX$",
+        "ZAR": "R ",
+    }
+    if c in symbols:
+        return symbols[c]
+    return (c + " ") if c else ""
+
 
 # Keys we surface in the staff UI (same vocabulary as Yahoo merge + screening rules).
 SCREENING_METRIC_FIELDS = [
@@ -75,3 +140,95 @@ class ScreeningMetricsForm(forms.Form):
                 m[name] = float(val)
         security.screening_metrics = m
         security.save(update_fields=["screening_metrics"])
+
+
+class SimTradeOpenForm(forms.Form):
+    """Open a simulated position using the cached last quote on Security (no Yahoo on submit)."""
+
+    security = forms.ModelChoiceField(
+        queryset=Security.objects.filter(
+            is_active=True,
+            watchlist_entry__isnull=False,
+        )
+        .select_related("watchlist_entry")
+        .order_by("watchlist_entry__priority", "exchange", "symbol"),
+        label="Security",
+        help_text="Watchlist only — add tickers on the Watchlist page first.",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    price_multiple = forms.IntegerField(
+        label="Shares to buy (simulated)",
+        min_value=1,
+        validators=[MinValueValidator(1)],
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control",
+                # Whole multiples of the quote: 1 ≈ one share’s notional, 2 ≈ two, etc.
+                "step": "1",
+                "min": "1",
+                "inputmode": "numeric",
+            }
+        ),
+        help_text=(
+            "Cheqs deducted ≈ shares × cached last price on file "
+            "(1 cheq ≈ 1 USD notional). The +/− control steps by 1 share. "
+            "Ensure an up-to-date cached quote exists (e.g. Yahoo merge in admin) before trading."
+        ),
+    )
+
+    def __init__(self, *args, wallet_balance: Decimal | None = None, **kwargs):
+        self.wallet_balance = wallet_balance
+        super().__init__(*args, **kwargs)
+        field = self.fields["security"]
+        securities = list(field.queryset)
+        quote_by_pk = {s.pk: s.quote_last_price for s in securities}
+        currency_by_pk = {s.pk: s.currency for s in securities}
+
+        def label_from_instance(obj):
+            base = f"{obj.symbol}.{obj.exchange}"
+            pq = quote_by_pk.get(obj.pk)
+            if pq is not None and pq > 0:
+                return f"{base} — {currency_prefix(obj.currency)}{pq:.2f}"
+            return f"{base} — (no cached quote)"
+
+        field.label_from_instance = label_from_instance
+        attrs = dict(field.widget.attrs or {})
+        attrs.setdefault("class", "form-select")
+        field.widget = SecuritySelectWithQuote(
+            attrs=attrs, quote_by_pk=quote_by_pk, currency_by_pk=currency_by_pk
+        )
+        # Replacing the widget drops ModelChoiceField’s choice iterator unless re-bound.
+        field.widget.choices = field.choices
+
+    def clean_security(self):
+        sec = self.cleaned_data.get("security")
+        if sec is None:
+            return sec
+        if not WatchlistEntry.objects.filter(security_id=sec.pk).exists():
+            raise ValidationError("That security is not on your watchlist.")
+        return sec
+
+    def clean(self):
+        cleaned = super().clean()
+        sec: Security | None = cleaned.get("security")
+        shares = cleaned.get("price_multiple")
+        if sec is None or shares in (None, ""):
+            return cleaned
+        wallet = self.wallet_balance
+        if wallet is None:
+            return cleaned
+        qp = sec.quote_last_price
+        if qp is None or qp <= 0:
+            return cleaned  # can't validate without a cached quote
+        max_shares = int((wallet / qp).to_integral_value(rounding=ROUND_FLOOR))
+        if max_shares < 1:
+            raise ValidationError(
+                "Your wallet is smaller than 1 share at the cached quote. "
+                "Lower the share count or refresh quotes."
+            )
+        if int(shares) > max_shares:
+            raise ValidationError(
+                f"Your max is {max_shares}. "
+                f"You would need more cheqs. " 
+            )
+        return cleaned

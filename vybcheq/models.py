@@ -1,5 +1,9 @@
+from decimal import Decimal
+
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 
 def _default_sections():
@@ -31,6 +35,14 @@ class Security(models.Model):
         blank=True,
         help_text='Numbers used by vibe-check rules, e.g. {"pe_ratio": 18.2, "roe": 0.14}',
     )
+    quote_last_price = models.DecimalField(
+        max_digits=24,
+        decimal_places=8,
+        null=True,
+        blank=True,
+        help_text="Cached last price (Yahoo); used for simulated marks. 1 cheq ≈ 1 USD notional.",
+    )
+    quote_updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["exchange", "symbol"]
@@ -210,3 +222,118 @@ class DecisionLog(models.Model):
 
     def __str__(self):
         return f"{self.action} {self.security} @ {self.decided_at.date()}"
+
+
+class CheqAccount(models.Model):
+    """Staff-only simulated wallet (cheqs)."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="cheq_account",
+    )
+    balance = models.DecimalField(
+        max_digits=20,
+        decimal_places=4,
+        default=Decimal("10000"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+
+    class Meta:
+        verbose_name = "cheq account"
+        verbose_name_plural = "cheq accounts"
+
+    def __str__(self):
+        return f"{self.user} — {self.balance} cheqs"
+
+
+class SimPosition(models.Model):
+    """Simulated long position: cheqs opened at entry price (synthetic fractional shares)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sim_positions",
+    )
+    security = models.ForeignKey(
+        Security,
+        on_delete=models.PROTECT,
+        related_name="sim_positions",
+    )
+    cheqs_opened = models.DecimalField(
+        max_digits=20,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0.0001"))],
+    )
+    entry_price = models.DecimalField(max_digits=24, decimal_places=8)
+    shares = models.DecimalField(max_digits=24, decimal_places=12)
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    exit_price = models.DecimalField(
+        max_digits=24,
+        decimal_places=8,
+        null=True,
+        blank=True,
+    )
+    cheqs_proceeds = models.DecimalField(
+        max_digits=20,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Cheqs returned to wallet on close.",
+    )
+
+    class Meta:
+        ordering = ["-opened_at"]
+
+    def __str__(self):
+        return f"{self.user} {self.security} ({self.cheqs_opened} cheqs)"
+
+    @property
+    def is_open(self) -> bool:
+        return self.closed_at is None
+
+    @property
+    def mark_value_cheqs(self) -> Decimal:
+        """Current notional in cheqs using cached quote, else entry."""
+        if self.closed_at and self.cheqs_proceeds is not None:
+            return self.cheqs_proceeds
+        p = self.security.quote_last_price
+        if p is None or p <= 0:
+            return self.cheqs_opened
+        return (self.shares * p).quantize(Decimal("0.0001"))
+
+    @property
+    def unrealized_pnl_cheqs(self) -> Decimal:
+        if not self.is_open:
+            return Decimal("0")
+        return self.mark_value_cheqs - self.cheqs_opened
+
+    @property
+    def realized_pnl_cheqs(self) -> Decimal:
+        if self.cheqs_proceeds is None:
+            return Decimal("0")
+        return self.cheqs_proceeds - self.cheqs_opened
+
+
+class PositionMark(models.Model):
+    """Time series point for simulated position (respect rate limits when recording)."""
+
+    position = models.ForeignKey(
+        SimPosition,
+        on_delete=models.CASCADE,
+        related_name="marks",
+    )
+    marked_at = models.DateTimeField(default=timezone.now, db_index=True)
+    price = models.DecimalField(max_digits=24, decimal_places=8)
+    value_cheqs = models.DecimalField(max_digits=20, decimal_places=4)
+
+    class Meta:
+        ordering = ["marked_at"]
+
+    def __str__(self):
+        return f"{self.position_id} @ {self.marked_at}"
+
+    @property
+    def delta_vs_opened_cheqs(self) -> Decimal:
+        return self.value_cheqs - self.position.cheqs_opened

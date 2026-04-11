@@ -1,0 +1,44 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
+
+{% block vybcheq_title %}{{ position.security.symbol }} marks{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-1">{{ position.security.symbol }} <span class="text-secondary fs-6">{{ position.security.exchange }}</span></h1>
+<p class="text-secondary small mb-3">
+    Opened {{ position.opened_at|date:"Y-m-d H:i" }} · {{ position.cheqs_opened|floatformat:2 }} cheqs in · entry {{ position.entry_price|floatformat:2 }} · shares {{ position.shares|floatformat:4 }}
+    {% if position.closed_at %}· <span class="text-warning">Closed {{ position.closed_at|date:"Y-m-d" }}</span>{% endif %}
+</p>
+
+<p class="mb-3">
+    <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="btn btn-sm btn-outline-secondary">← Portfolio</a>
+</p>
+
+<h2 class="h5">Value over time (marks)</h2>
+{% if marks %}
+<div class="table-responsive border border-secondary rounded">
+    <table class="table table-dark table-striped mb-0 small">
+        <thead>
+            <tr>
+                <th>When</th>
+                <th>Price</th>
+                <th>Value (cheqs)</th>
+                <th>Δ vs. open (cheqs)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in marks %}
+            <tr>
+                <td>{{ m.marked_at|date:"Y-m-d H:i" }}</td>
+                <td>{{ position.security.currency|currency_prefix }}{{ m.price|floatformat:2 }}</td>
+                <td>{{ m.value_cheqs|floatformat:2 }}</td>
+                <td class="{% if m.delta_vs_opened_cheqs > 0 %}text-success{% elif m.delta_vs_opened_cheqs < 0 %}text-danger{% endif %}">{{ m.delta_vs_opened_cheqs|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-secondary">No marks stored for this position yet.</p>
+{% endif %}
+{% endblock %}

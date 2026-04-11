@@ -4,8 +4,35 @@
 
 {% block content %}
 <div class="container py-4 text-light col-lg-10 mx-auto">
-    <nav aria-label="Vybcheq" class="mb-4">
-        <ul class="nav nav-pills flex-column flex-sm-row gap-2">
+    <style>
+        .vybcheq-staff-nav {
+            width: 100%;
+        }
+        .vybcheq-staff-nav .nav-item {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        .vybcheq-staff-nav .nav-link {
+            width: 100%;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @media (max-width: 767.98px) {
+            .vybcheq-staff-nav {
+                font-size: clamp(0.5rem, 2.6vw, 0.72rem);
+                gap: 0.15rem !important;
+            }
+            .vybcheq-staff-nav .nav-link {
+                padding: 0.2rem 0.15rem;
+                line-height: 1.15;
+                white-space: nowrap;
+            }
+        }
+    </style>
+    <nav aria-label="Vybcheq" class="mb-4 w-100">
+        <ul class="nav nav-pills vybcheq-staff-nav d-flex flex-row flex-nowrap justify-content-center gap-1 gap-md-2 mb-0">
             <li class="nav-item">
                 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'vybcheq_staff:dashboard' %}">Dashboard</a>
             </li>
@@ -19,7 +46,10 @@
                 <a class="nav-link {% if request.resolver_match.url_name == 'screen_runs' or request.resolver_match.url_name == 'screen_run_detail' %}active{% endif %}" href="{% url 'vybcheq_staff:screen_runs' %}">Runs</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link text-secondary" href="{% url 'admin:app_list' 'vybcheq' %}">Django admin</a>
+                <a class="nav-link {% if 'sim_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'vybcheq_staff:sim_portfolio' %}">Sim</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-secondary" href="{% url 'admin:app_list' 'vybcheq' %}">Admin</a>
             </li>
         </ul>
     </nav>

@@ -26,3 +26,36 @@ def vybcheq_detail_text_class(line):
     if "→ FAIL" in line or "-> FAIL" in line:
         return "text-danger"
     return "text-light"
+
+
+@register.filter
+def currency_prefix(code: str) -> str:
+    """
+    Short currency prefix for UI display.
+    Prefer a symbol when it's unambiguous; otherwise fall back to ISO code + space.
+    """
+    c = (code or "").strip().upper()
+    symbols = {
+        "USD": "$",
+        "EUR": "€",
+        "GBP": "£",
+        "JPY": "¥",
+        "CNY": "¥",
+        "CHF": "CHF ",
+        "CAD": "C$",
+        "AUD": "A$",
+        "NZD": "NZ$",
+        "HKD": "HK$",
+        "SGD": "S$",
+        "SEK": "SEK ",
+        "NOK": "NOK ",
+        "DKK": "DKK ",
+        "INR": "₹",
+        "KRW": "₩",
+        "BRL": "R$",
+        "MXN": "MX$",
+        "ZAR": "R ",
+    }
+    if c in symbols:
+        return symbols[c]
+    return (c + " ") if c else ""

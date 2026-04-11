@@ -1,4 +1,5 @@
 {% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
 
 {% block vybcheq_title %}Dashboard{% endblock %}
 
@@ -6,51 +7,198 @@
 <h1 class="h3 mb-3">Vybcheq</h1>
 <p class="text-secondary mb-4">Staff-only vibe-check tools. Nothing here is linked from public pages.</p>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
+<div class="row g-3 mb-4 align-items-stretch">
+    <div class="col-12 col-md-8 order-2 order-md-1">
         <div class="card bg-dark border-secondary text-light h-100">
-            <div class="card-body">
-                <h2 class="h5 card-title">Watchlist</h2>
-                <p class="display-6">{{ watchlist_count }}</p>
-                <a href="{% url 'vybcheq_staff:watchlist' %}" class="btn btn-outline-warning btn-sm">Open</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-dark border-secondary text-light h-100">
-            <div class="card-body">
-                <h2 class="h5 card-title">Active securities</h2>
-                <p class="display-6">{{ security_count }}</p>
-                <a href="{% url 'admin:vybcheq_security_changelist' %}" class="btn btn-outline-secondary btn-sm">Admin</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-dark border-secondary text-light h-100">
-            <div class="card-body">
-                <h2 class="h5 card-title">Last screen run</h2>
-                {% if last_run %}
-                    <p class="mb-1"><span class="badge bg-secondary">{{ last_run.get_status_display }}</span> #{{ last_run.pk }}</p>
-                    <a href="{% url 'vybcheq_staff:screen_run_detail' pk=last_run.pk %}" class="btn btn-outline-warning btn-sm">View</a>
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                    <h2 class="h5 card-title mb-0">Watchlist · by cached price (low → high)</h2>
+                    <span class="badge bg-secondary">{{ watchlist_count }} on list</span>
+                </div>
+                <p class="small text-secondary mb-3">Up to 5 watchlist tickers that have a cached Yahoo quote, sorted from smallest price to largest.</p>
+                {% if watchlist_top5 %}
+                <div class="table-responsive border border-secondary rounded flex-grow-1">
+                    <table class="table table-dark table-sm table-striped mb-0 small">
+                        <thead>
+                            <tr>
+                                <th scope="col">Ticker</th>
+                                <th scope="col">Price</th>
+                                <th scope="col">Quote at</th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in watchlist_top5 %}
+                            {% with s=e.security %}
+                            <tr>
+                                <td class="font-monospace">{{ s.symbol }} · {{ s.exchange }}</td>
+                                <td class="font-monospace">{{ s.currency|currency_prefix }}{{ s.quote_last_price|floatformat:2 }}</td>
+                                <td class="text-secondary">{% if s.quote_updated_at %}{{ s.quote_updated_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
+                                <td class="text-nowrap">
+                                    <a href="{% url 'vybcheq_staff:security_metrics' pk=s.pk %}" class="btn btn-sm btn-outline-warning py-0">Metrics</a>
+                                </td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
-                    <p class="text-secondary mb-0">None yet</p>
+                <p class="text-secondary mb-3 flex-grow-1">No watchlist entries with a cached price yet. Populate quotes from Yahoo (e.g. merge metrics in admin) so prices appear here.</p>
                 {% endif %}
+                <a href="{% url 'vybcheq_staff:watchlist' %}" class="btn btn-outline-warning btn-sm align-self-start mt-3">Full watchlist</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4 order-1 order-md-2 d-flex">
+        <div class="row g-3 g-md-3 w-100 flex-grow-1">
+            <div class="col-6 col-md-12 d-flex">
+                <div class="card bg-dark border-warning text-light w-100 flex-md-shrink-0" style="min-height: 9rem;">
+                    <div class="card-body d-flex flex-column justify-content-center h-100 py-2 py-md-3">
+                        <h2 class="h6 text-secondary mb-1">Sim wallet (cheqs)</h2>
+                        <p class="fs-3 fw-semibold text-warning mb-0 text-break">{{ wallet_balance|floatformat:2 }}</p>
+                        <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="btn btn-outline-warning btn-sm align-self-stretch align-self-md-start mt-2">Portfolio</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-12 d-flex min-h-0">
+                <div class="card bg-dark border-secondary text-light flex-grow-1 d-flex flex-column min-h-0 w-100">
+                    <div class="card-body d-flex flex-column flex-grow-1 min-h-0 py-2 py-md-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-1 gap-md-2 mb-2">
+                            <h2 class="h6 card-title mb-0 text-truncate">Active securities</h2>
+                            <span class="badge bg-secondary flex-shrink-0">{{ security_count }}</span>
+                        </div>
+                        <p class="small text-secondary mb-2 d-none d-md-block">Active tickers (symbol · exchange).</p>
+                        {% if active_securities %}
+                        <div class="border border-secondary rounded flex-grow-1 min-h-0" style="max-height: min(18rem, 42vh); overflow-y: auto;">
+                            <ul class="list-group list-group-flush small mb-0">
+                                {% for s in active_securities %}
+                                <li class="list-group-item bg-dark text-light border-secondary py-1 font-monospace text-truncate">{{ s.symbol }} · {{ s.exchange }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% if active_securities_truncated %}
+                        <p class="small text-secondary mb-0 mt-2 d-none d-md-block">Showing first {{ active_securities|length }} of {{ security_count }}.</p>
+                        {% endif %}
+                        {% else %}
+                        <p class="text-secondary small mb-0">No active securities.</p>
+                        {% endif %}
+                        <a href="{% url 'admin:vybcheq_security_changelist' %}" class="btn btn-outline-secondary btn-sm align-self-stretch align-self-md-start mt-2 mt-md-3">Admin</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<h2 class="h5">Rule sets</h2>
-{% if rule_sets %}
-<ul class="list-group list-group-flush border border-secondary rounded overflow-hidden mb-3">
-    {% for rs in rule_sets %}
-    <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center">
-        <span>{{ rs.name }}{% if rs.is_active %} <span class="badge bg-success">active</span>{% endif %}</span>
-        <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=rs.pk %}" class="btn btn-sm btn-outline-warning">Run</a>
-    </li>
-    {% endfor %}
-</ul>
-{% else %}
-<p class="text-secondary">No screening rule sets yet. Add one in <a href="{% url 'admin:vybcheq_screeningruleset_changelist' %}">admin</a>.</p>
-{% endif %}
+<div class="row g-3 mb-4 align-items-stretch">
+    <div class="col-md-8">
+        <div class="card bg-dark border-warning text-light h-100">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                    <h2 class="h5 card-title mb-0">Portfolio · open positions (by cached price, low → high)</h2>
+                    <span class="badge bg-secondary">{{ open_position_count }} open</span>
+                </div>
+                <p class="small text-secondary mb-3">Up to 5 of your open sim lots, same ordering as the watchlist table (cached quote price ascending).</p>
+                {% if portfolio_top5 %}
+                <div class="table-responsive border border-secondary rounded flex-grow-1">
+                    <table class="table table-dark table-sm table-striped mb-0 small">
+                        <thead>
+                            <tr>
+                                <th scope="col">Ticker</th>
+                                <th scope="col">Price</th>
+                                <th scope="col">Quote at</th>
+                                <th scope="col">Value</th>
+                                <th scope="col">P&amp;L</th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in portfolio_top5 %}
+                            {% with s=p.security %}
+                            <tr>
+                                <td class="font-monospace">{{ s.symbol }} · {{ s.exchange }}</td>
+                                <td class="font-monospace">
+                                    {% if s.quote_last_price %}
+                                        {{ s.currency|currency_prefix }}{{ s.quote_last_price|floatformat:2 }}
+                                    {% else %}
+                                        {{ s.currency|currency_prefix }}{{ p.entry_price|floatformat:2 }}
+                                        <span class="text-secondary">(entry)</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-secondary">{% if s.quote_updated_at %}{{ s.quote_updated_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
+                                <td class="font-monospace">{{ p.mark_value_cheqs|floatformat:2 }}</td>
+                                <td class="font-monospace {% if p.unrealized_pnl_cheqs > 0 %}text-success{% elif p.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.unrealized_pnl_cheqs|floatformat:2 }}</td>
+                                <td class="text-nowrap">
+                                    <a href="{% url 'vybcheq_staff:sim_position_detail' pk=p.pk %}" class="btn btn-sm btn-outline-warning py-0">History</a>
+                                </td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-secondary mb-3 flex-grow-1">No open sim positions.</p>
+                {% endif %}
+                <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="btn btn-warning btn-sm align-self-start mt-3">Full portfolio</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 d-flex flex-column gap-3 h-100">
+        <div class="card bg-dark border-secondary text-light flex-shrink-0" style="flex: 0 1 48%; max-height: 16rem;">
+            <div class="card-body py-2 px-3 d-flex flex-column min-h-0">
+                <h2 class="h6 text-secondary mb-2 text-uppercase small">Last screen runs</h2>
+                {% if screen_run_rows %}
+                <ul class="list-unstyled small mb-2 flex-grow-1 overflow-auto">
+                    {% for row in screen_run_rows %}
+                    <li class="mb-2 pb-2 border-bottom border-secondary">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                            <span class="fw-semibold text-truncate me-1" title="{{ row.run.rule_set.name }}">{{ row.run.rule_set.name }}</span>
+                            <a href="{% url 'vybcheq_staff:screen_run_detail' pk=row.run.pk %}" class="btn btn-outline-warning btn-sm py-0 flex-shrink-0">View</a>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <span class="text-secondary">Pass</span>
+                            {% if row.pass_display == "Yes" %}
+                            <span class="badge bg-success">Yes</span>
+                            {% elif row.pass_display == "No" %}
+                            <span class="badge bg-danger">No</span>
+                            {% else %}
+                            <span class="badge bg-secondary">—</span>
+                            {% endif %}
+                            <span class="text-secondary">·</span>
+                            <span class="text-secondary">Score</span>
+                            <span class="fw-semibold font-monospace">{{ row.score_display }}</span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <a href="{% url 'vybcheq_staff:screen_runs' %}" class="btn btn-outline-secondary btn-sm py-0 align-self-start">All runs</a>
+                {% else %}
+                <p class="text-secondary small mb-0">None yet</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card bg-dark border-secondary text-light flex-grow-1 min-h-0 d-flex flex-column">
+            <div class="card-body py-2 px-3 d-flex flex-column flex-grow-1 min-h-0">
+                <h2 class="h6 text-secondary mb-2 text-uppercase small">Rule sets (top 5)</h2>
+                {% if rule_sets_top5 %}
+                <div class="border border-secondary rounded flex-grow-1 min-h-0 overflow-auto small">
+                    <ul class="list-group list-group-flush mb-0">
+                        {% for rs in rule_sets_top5 %}
+                        <li class="list-group-item bg-dark text-light border-secondary py-2 d-flex justify-content-between align-items-center gap-2">
+                            <span class="text-truncate">{{ rs.name }}{% if rs.is_active %} <span class="badge bg-success">active</span>{% endif %}</span>
+                            <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=rs.pk %}" class="btn btn-sm btn-outline-warning py-0 flex-shrink-0">Run</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% else %}
+                <p class="text-secondary small mb-2 flex-grow-1">No rule sets yet. Add one in <a href="{% url 'admin:vybcheq_screeningruleset_changelist' %}">admin</a>.</p>
+                {% endif %}
+                <a href="{% url 'vybcheq_staff:run_screen_pick' %}" class="btn btn-outline-secondary btn-sm mt-2 align-self-start">Pick rule set…</a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

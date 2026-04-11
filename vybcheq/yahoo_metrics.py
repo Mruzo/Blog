@@ -10,9 +10,11 @@ Metric names match common screening_rules keys (snake_case).
 from __future__ import annotations
 
 import time
+from decimal import Decimal
 from typing import Any
 
 from django.conf import settings
+from django.utils import timezone
 
 from vybcheq.models import Security
 
@@ -106,6 +108,9 @@ def _map_yahoo_info(info: dict) -> dict[str, Any]:
 
 def _looks_like_rate_limit(exc: BaseException) -> bool:
     s = str(exc).lower()
+    cn = type(exc).__name__.lower().replace("_", "")
+    if "ratelimit" in cn or "yfrate" in cn:
+        return True
     return any(
         frag in s
         for frag in (
@@ -208,3 +213,83 @@ def yahoo_action_gap_seconds() -> float:
     return float(
         getattr(settings, "VYBCHEQ_YAHOO_ACTION_GAP_SECONDS", _DEFAULT_ACTION_GAP_SECONDS)
     )
+
+
+def quote_min_interval_seconds() -> float:
+    return float(getattr(settings, "VYBCHEQ_QUOTE_MIN_INTERVAL_SECONDS", 900))
+
+
+def fetch_last_price_yahoo(security: Security, *, session: Any = None) -> Decimal:
+    """
+    Single last price for marking simulated positions (lighter than full fundamentals).
+    """
+    try:
+        import yfinance as yf
+    except ImportError as exc:
+        raise YahooMetricsError(
+            "The yfinance package is not installed. Run: pip install yfinance"
+        ) from exc
+
+    ysym = yahoo_ticker_for_security(security)
+    sess = session or build_yahoo_finance_session()
+    try:
+        ticker = yf.Ticker(ysym, session=sess)
+        lp = None
+        try:
+            fi = ticker.fast_info
+            lp = fi.get("last_price") or fi.get("previous_close")
+        except Exception:
+            pass
+        if lp is None:
+            info = ticker.info or {}
+            lp = (
+                info.get("regularMarketPrice")
+                or info.get("currentPrice")
+                or info.get("previousClose")
+            )
+        if lp is None:
+            raise YahooMetricsError(f"No market price from Yahoo for {ysym!r}.")
+        return Decimal(str(lp))
+    except YahooMetricsError:
+        raise
+    except Exception as exc:
+        if _looks_like_rate_limit(exc):
+            raise YahooMetricsError(
+                "Yahoo Finance rate-limited this quote request. Wait a few minutes and try again."
+            ) from exc
+        raise YahooMetricsError(f"Yahoo quote failed for {ysym!r}: {exc}") from exc
+
+
+def update_security_quote(
+    security: Security,
+    *,
+    session: Any = None,
+    force: bool = False,
+    min_interval_seconds: float | None = None,
+) -> Decimal:
+    """
+    Refresh Security.quote_last_price if outside min_interval (rate-limit friendly).
+    """
+    interval = (
+        min_interval_seconds
+        if min_interval_seconds is not None
+        else quote_min_interval_seconds()
+    )
+    now = timezone.now()
+    if (
+        not force
+        and security.quote_updated_at is not None
+        and security.quote_last_price is not None
+    ):
+        age = (now - security.quote_updated_at).total_seconds()
+        if age < interval:
+            return security.quote_last_price
+
+    price = fetch_last_price_yahoo(security, session=session)
+    type(security).objects.filter(pk=security.pk).update(
+        quote_last_price=price,
+        quote_updated_at=now,
+    )
+    security.quote_last_price = price
+    security.quote_updated_at = now
+    return price

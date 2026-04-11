@@ -1,0 +1,179 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+
+{% block vybcheq_title %}Open sim trade{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-2">Open simulated trade</h1>
+<p class="text-secondary small mb-3">Wallet: <strong class="text-warning">{{ balance|floatformat:2 }} cheqs</strong>. Symbols come from your <a href="{% url 'vybcheq_staff:watchlist' %}">watchlist</a> only. <strong>Trades use the cached price on file</strong> (no Yahoo on submit). Ensure each row has a quote (e.g. Yahoo merge in admin) before trading.</p>
+
+{% if not sim_watchlist_has_securities %}
+<div class="alert alert-warning col-lg-8">No watchlist tickers yet. Add securities on the <a href="{% url 'vybcheq_staff:watchlist' %}" class="alert-link">Watchlist</a> page (or in admin), then return here.</div>
+{% endif %}
+
+<form method="post" id="sim-open-trade-form" class="border border-secondary rounded p-3 bg-dark bg-opacity-50 col-lg-8" data-wallet="{{ balance }}">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div class="mb-3">
+        <label class="form-label" for="{{ form.security.id_for_label }}">{{ form.security.label }}</label>
+        {{ form.security }}
+        {% if form.security.help_text %}<div class="form-text text-secondary">{{ form.security.help_text }}</div>{% endif %}
+        <div class="mt-2 p-3 rounded border border-secondary bg-dark bg-opacity-25">
+            <div class="row g-2 small">
+                <div class="col-6 col-md-4 text-secondary">Balance (cheqs)</div>
+                <div class="col-6 col-md-8 fw-semibold text-warning" id="sim-calc-balance"></div>
+
+                <div class="col-6 col-md-4 text-secondary">Security</div>
+                <div class="col-6 col-md-8 fw-semibold" id="sim-calc-security"></div>
+
+                <div class="col-6 col-md-4 text-secondary">Shares to buy</div>
+                <div class="col-6 col-md-8 fw-semibold" id="sim-calc-shares"></div>
+
+                <div class="col-6 col-md-4 text-secondary">Estimated cheqs (shares × price)</div>
+                <div class="col-6 col-md-8 fw-semibold" id="sim-calc-cheqs"></div>
+
+                <div class="col-6 col-md-4 text-secondary">Max shares (by wallet)</div>
+                <div class="col-6 col-md-8 fw-semibold" id="sim-calc-max"></div>
+            </div>
+        </div>
+        {{ form.security.errors }}
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="{{ form.price_multiple.id_for_label }}">{{ form.price_multiple.label }}</label>
+        <div class="row">
+            <div class="col-3">
+                {{ form.price_multiple }}
+            </div>
+        </div>
+        <div class="form-text text-secondary">{{ form.price_multiple.help_text }}</div>
+        {{ form.price_multiple.errors }}
+    </div>
+    <button type="submit" class="btn btn-warning">Open position</button>
+    <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="btn btn-outline-secondary">Cancel</a>
+</form>
+<script>
+(function () {
+    var form = document.getElementById("sim-open-trade-form");
+    var sel = document.getElementById("{{ form.security.id_for_label }}");
+    var mult = document.getElementById("{{ form.price_multiple.id_for_label }}");
+    var elBal = document.getElementById("sim-calc-balance");
+    var elSec = document.getElementById("sim-calc-security");
+    var elShares = document.getElementById("sim-calc-shares");
+    var elCheqs = document.getElementById("sim-calc-cheqs");
+    var elMax = document.getElementById("sim-calc-max");
+    if (!form || !sel || !mult || !elBal || !elSec || !elShares || !elCheqs || !elMax) return;
+
+    function parseWallet() {
+        var w = form.getAttribute("data-wallet");
+        if (w == null || w === "") return null;
+        var n = parseFloat(String(w).replace(/,/g, ""), 10);
+        return isFinite(n) ? n : null;
+    }
+
+    function fmtMoney2(n) {
+        if (typeof n !== "number" || !isFinite(n)) return "—";
+        var r = Math.round(n * 100) / 100;
+        return r.toFixed(2);
+    }
+
+    function currencyPrefix(code) {
+        var c = (code || "").trim().toUpperCase();
+        var map = {
+            "USD": "$",
+            "EUR": "€",
+            "GBP": "£",
+            "JPY": "¥",
+            "CNY": "¥",
+            "CHF": "CHF ",
+            "CAD": "C$",
+            "AUD": "A$",
+            "NZD": "NZ$",
+            "HKD": "HK$",
+            "SGD": "S$",
+            "SEK": "SEK ",
+            "NOK": "NOK ",
+            "DKK": "DKK ",
+            "INR": "₹",
+            "KRW": "₩",
+            "BRL": "R$",
+            "MXN": "MX$",
+            "ZAR": "R "
+        };
+        if (map[c]) return map[c];
+        return c ? (c + " ") : "";
+    }
+
+    function cheqProduct(sharesVal, priceVal) {
+        if (!isFinite(sharesVal) || !isFinite(priceVal)) return null;
+        return Math.round(sharesVal * priceVal * 100) / 100;
+    }
+
+    function setText(el, txt) {
+        el.textContent = (txt == null) ? "" : String(txt);
+    }
+
+    function update() {
+        var opt = sel.options[sel.selectedIndex];
+        var wallet = parseWallet();
+        setText(elBal, wallet == null ? "—" : fmtMoney2(wallet));
+        var shares = parseInt(String(mult.value || "").replace(/,/g, ""), 10);
+        setText(elShares, isFinite(shares) ? String(shares) : "—");
+
+        if (!opt || !opt.value) {
+            setText(elSec, "—");
+            setText(elCheqs, "—");
+            setText(elMax, "—");
+            mult.removeAttribute("max");
+            return;
+        }
+        setText(elSec, opt.textContent || "—");
+        var rawQ = opt.getAttribute("data-quote");
+        var cur = opt.getAttribute("data-currency") || "";
+        var curPrefix = currencyPrefix(cur);
+
+        if (!rawQ || rawQ === "") {
+            setText(elCheqs, "—");
+            setText(elMax, "—");
+            mult.removeAttribute("max");
+            return;
+        }
+        var price = parseFloat(rawQ, 10);
+        if (!isFinite(price) || price <= 0) {
+            setText(elCheqs, "—");
+            setText(elMax, "—");
+            mult.removeAttribute("max");
+            return;
+        }
+
+        var maxShares = (wallet != null) ? Math.floor(wallet / price) : null;
+        if (maxShares != null && isFinite(maxShares)) {
+            setText(elMax, String(maxShares));
+            mult.setAttribute("max", String(Math.max(1, maxShares)));
+        } else {
+            setText(elMax, "—");
+            mult.removeAttribute("max");
+        }
+
+        if (!isFinite(shares) || shares < 1) {
+            setText(elCheqs, "—");
+            return;
+        }
+
+        var cheqs = cheqProduct(shares, price);
+        setText(elCheqs, fmtMoney2(cheqs));
+
+        if (wallet != null && cheqs > wallet) {
+            elCheqs.className = "col-6 col-md-8 fw-semibold text-danger";
+        } else {
+            elCheqs.className = "col-6 col-md-8 fw-semibold text-warning";
+        }
+    }
+
+    sel.addEventListener("change", update);
+    mult.addEventListener("input", update);
+    mult.addEventListener("change", update);
+    update();
+})();
+</script>
+{% endblock %}
