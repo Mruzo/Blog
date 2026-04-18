@@ -351,7 +351,7 @@ const MyOrders: React.FC = () => {
                                 </div>
                               )}
                               <span
-                                className="position-absolute badge rounded-pill bg-transparent text-dark border border-dark"
+                                className="position-absolute badge rounded-pill bg-light text-dark border-light"
                                 style={{
                                   fontSize: '0.65rem',
                                   bottom: '-0.15rem',

@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import Product, Comment, ReachOut, SiteImage, ShippingAddress, ProductNotification
+from .models import Product, Comment, ReachOut, SiteImage, ShippingAddress, ProductNotification, Coupon
 from django.contrib.auth.forms import UserCreationForm
 
 User = get_user_model()
@@ -159,6 +159,37 @@ class SiteImageForm(forms.ModelForm):
                 raise forms.ValidationError("Invalid object ID for the selected content type.")
         
         return cleaned_data
+
+
+class CouponAdminForm(forms.ModelForm):
+    """
+    Admin form for Coupon: use HTML5 datetime-local for starts/ends so values persist reliably
+    (avoids split date/time calendar quirks in some browsers).
+    """
+
+    class Meta:
+        model = Coupon
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        dt_widget = forms.DateTimeInput(
+            format='%Y-%m-%dT%H:%M',
+            attrs={'type': 'datetime-local', 'step': '60', 'class': 'vTextField'},
+        )
+        formats = [
+            '%Y-%m-%dT%H:%M',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d %H:%M:%S.%f',
+            '%Y-%m-%d %H:%M',
+            '%Y-%m-%d',
+        ]
+        for name in ('starts_at', 'ends_at'):
+            if name in self.fields:
+                self.fields[name].widget = dt_widget
+                self.fields[name].input_formats = formats
+
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(required=True)

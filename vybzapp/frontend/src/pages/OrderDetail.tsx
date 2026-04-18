@@ -161,6 +161,14 @@ function mapOrderApiResponse(data: any): Order {
   };
 }
 
+/** Match `SmallButton` sizing for native invoice `<a>` / `<button>` controls */
+const orderActionNativeStyle: React.CSSProperties = {
+  padding: '0.3rem 0.5rem',
+  fontSize: '0.8rem',
+  whiteSpace: 'nowrap',
+  fontWeight: 900,
+};
+
 const OrderDetail: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
@@ -446,13 +454,13 @@ const OrderDetail: React.FC = () => {
               {(order.product_sale_savings ?? 0) > 0 && (
                 <>
                   <div className="d-flex justify-content-between mb-2">
-                    <span className="subtext-btn-sm text-muted">Regular price (list):</span>
+                    <span className="subtext-btn-sm text-muted">Regular price:</span>
                     <span className="subtext-btn-sm text-muted">
                       ${(order.subtotal + (order.product_sale_savings ?? 0)).toFixed(2)}
                     </span>
                   </div>
                   <div className="d-flex justify-content-between mb-2">
-                    <span className="subtext-btn-sm">Product sale savings:</span>
+                    <span className="subtext-btn-sm">Discount:</span>
                     <span className="subtext-btn-sm text-success">
                       -${(order.product_sale_savings ?? 0).toFixed(2)}
                     </span>
@@ -461,7 +469,7 @@ const OrderDetail: React.FC = () => {
               )}
               <div className="d-flex justify-content-between mb-2">
                 <span className="subtext-btn-sm">
-                  {(order.product_sale_savings ?? 0) > 0 ? 'Merchandise (sale price):' : 'Merchandise:'}
+                  {(order.product_sale_savings ?? 0) > 0 ? 'Sale price:' : 'Sale Price:'}
                 </span>
                 <span className="subtext-btn-sm">${order.subtotal.toFixed(2)}</span>
               </div>
@@ -546,48 +554,35 @@ const OrderDetail: React.FC = () => {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="d-grid gap-2">
-            {(order.status === 'pending' || order.status === 'processing') && (
-              <SmallButton 
-                variant={order.status === 'pending' ? 'danger' : 'outline-danger'}
-                onClick={handleCancelOrder}
-                className="w-100 d-flex justify-content-center align-items-center"
-                disabled={isCancelling}
-              >
-                <i className="fas fa-times me-1"></i>
-                {order.status === 'pending' ? (isCancelling ? 'Cancelling…' : 'Cancel Order') : 'Request Cancellation'}
-              </SmallButton>
-            )}
-            {order.status === 'delivered' && (
-              <SmallButton 
-                variant="outline-warning"
-                to={`/product/returns/create/${order.id}/`}
-                className="w-100 d-flex justify-content-center align-items-center"
-              >
-                <i className="fas fa-undo me-1"></i>Request Return
-              </SmallButton>
-            )}
-            <SmallButton 
-              variant="outline-primary"
+          {/* Actions: safe actions first; destructive / special last. Stack on mobile with spacing; row + right-aligned on md+. */}
+          <div
+            className="d-flex flex-column flex-md-row flex-md-wrap justify-content-md-end align-items-stretch align-items-md-center"
+            style={{ gap: '0.65rem' }}
+            role="group"
+            aria-label="Order actions"
+          >
+            <SmallButton
+              variant="primary"
               to="/product/"
-              className="w-100 d-flex justify-content-center align-items-center"
+              className="d-flex justify-content-center align-items-center"
             >
-              <i className="fas fa-shopping-cart me-1"></i>Continue Shopping
+              <i className="fas fa-shopping-cart me-1"></i> &nbsp;Continue Shopping
             </SmallButton>
             {canDownloadInvoice(order) ? (
               <a
                 href={`/api/orders/${order.id}/invoice/`}
-                className="btn btn-outline-secondary btn-sm subtext-btn-sm w-100 d-flex justify-content-center align-items-center"
+                className="btn btn-outline-secondary btn-sm subtext-btn-sm d-flex justify-content-center align-items-center"
+                style={orderActionNativeStyle}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <i className="fas fa-file-pdf me-1"></i>Download Invoice
+                <i className="fas fa-file-pdf me-1"></i> &nbsp;Download Invoice
               </a>
             ) : (
               <button
                 type="button"
-                className="btn btn-outline-secondary btn-sm subtext-btn-sm w-100"
+                className="btn btn-outline-secondary btn-sm subtext-btn-sm d-flex justify-content-center align-items-center"
+                style={orderActionNativeStyle}
                 disabled
                 title={
                   !order.payment_completed_at
@@ -595,8 +590,28 @@ const OrderDetail: React.FC = () => {
                     : 'Invoice becomes available after your order ships.'
                 }
               >
-                <i className="fas fa-file-pdf me-1"></i>Invoice unavailable
+                <i className="fas fa-file-pdf me-1"></i> &nbsp;Invoice unavailable
               </button>
+            )}
+            {(order.status === 'pending' || order.status === 'processing') && (
+              <SmallButton
+                variant="outline-danger"
+                onClick={handleCancelOrder}
+                className="d-flex justify-content-center align-items-center"
+                disabled={isCancelling}
+              >
+                <i className="fas fa-times me-1">&nbsp;</i>
+                {order.status === 'pending' ? (isCancelling ? 'Cancelling…' : 'Cancel Order') : 'Request Cancellation'}
+              </SmallButton>
+            )}
+            {order.status === 'delivered' && (
+              <SmallButton
+                variant="outline-warning"
+                to={`/product/returns/create/${order.id}/`}
+                className="d-flex justify-content-center align-items-center"
+              >
+                <i className="fas fa-undo me-1"></i>Request Return
+              </SmallButton>
             )}
           </div>
         </div>

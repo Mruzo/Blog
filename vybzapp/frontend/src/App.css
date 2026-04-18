@@ -29,14 +29,16 @@
   --font-weight-semibold: 600;
 
   /* Guide / documentation modal – use for all help/guide modals for uniform spacing */
-  --guide-modal-padding: 1.25rem;
-  --guide-modal-padding-mobile: 1rem;
-  --guide-modal-gap: 1rem;
-  --guide-modal-radius: 10px;
+  --guide-modal-padding: 0.65rem 0.75rem;
+  --guide-modal-padding-mobile: 0.5rem 0.6rem;
+  --guide-modal-gap: 0.45rem;
+  --guide-modal-radius: 8px;
   --guide-modal-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
   --guide-modal-header-color: #414042;
-  --guide-modal-btn-padding: 0.625rem 1rem;
+  --guide-modal-btn-padding: 0.35rem 0.65rem;
   --guide-modal-max-width-desktop: 440px;
+  --guide-modal-header-font: 0.72rem;
+  --guide-modal-body-font: 0.8125rem;
 }
 
 /* Reset and base styles */
@@ -260,8 +262,11 @@ h2 {
   margin: 0 0 var(--guide-modal-gap) 0;
   padding: 0;
   color: var(--guide-modal-header-color);
+  font-size: var(--guide-modal-header-font);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.35px;
+  line-height: 1.25;
   border-bottom: 1px solid var(--guide-modal-header-color);
   padding-bottom: var(--guide-modal-gap);
 }
@@ -269,7 +274,9 @@ h2 {
 .guide-modal__body {
   margin: 0 0 var(--guide-modal-gap) 0;
   padding: 0;
-  line-height: 1.55;
+  font-size: var(--guide-modal-body-font);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.45;
   color: var(--guide-modal-header-color);
 }
 
@@ -277,15 +284,122 @@ h2 {
   margin-bottom: 0;
 }
 
+.guide-modal__actions {
+  margin: 0;
+  padding-top: 0.15rem;
+}
+
 .guide-modal__actions .btn,
 .guide-modal .guide-modal__actions button {
   padding: var(--guide-modal-btn-padding);
+  font-size: var(--guide-modal-body-font);
   cursor: pointer;
 }
 
 @media (max-width: 768px) {
   .guide-modal {
     padding: var(--guide-modal-padding-mobile);
+    max-height: 50vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .guide-modal__header {
+    flex-shrink: 0;
+    margin-bottom: var(--guide-modal-gap);
+  }
+
+  .guide-modal__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    margin-bottom: var(--guide-modal-gap);
+  }
+
+  .guide-modal__actions {
+    flex-shrink: 0;
+    padding-top: 0;
+  }
+}
+
+/* Storefront /product/ coupon strip — full viewport width, billboard marquee */
+.storefront-coupon-billboard {
+  font-family: var(--font-primary);
+  margin: 0;
+  padding: 0.45rem 0;
+  background: #000;
+  color: #f0f0f0;
+  overflow: hidden;
+  width: 100vw;
+  max-width: 100vw;
+  position: relative;
+  left: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  box-sizing: border-box;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+}
+
+.storefront-coupon-billboard--scrollable {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.storefront-coupon-billboard__measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 0.45rem 0;
+  font: inherit;
+}
+
+.storefront-coupon-billboard__track {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  animation-name: storefront-coupon-marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.storefront-coupon-billboard__segment {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding-right: 4rem;
+}
+
+.storefront-coupon-billboard__static {
+  display: block;
+  white-space: nowrap;
+  text-align: center;
+  padding: 0.45rem 0.75rem;
+  overflow: hidden;
+}
+
+@keyframes storefront-coupon-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storefront-coupon-billboard__track {
+    animation: none !important;
+    transform: translate3d(0, 0, 0) !important;
   }
 }
 

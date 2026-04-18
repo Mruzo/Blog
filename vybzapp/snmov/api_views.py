@@ -68,6 +68,31 @@ class _CheckoutTransactionError(Exception):
         super().__init__(message)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def featured_storefront_coupon(request):
+    """
+    Public: the single coupon marked for storefront carousel, only if still valid to redeem.
+    Used by /product/ promo strip.
+    """
+    qs = Coupon.objects.filter(featured_on_storefront=True, is_active=True)
+    coupon = qs.first()
+    if not coupon or not coupon.is_valid_now():
+        return Response({'active': False, 'coupon': None})
+    desc = (coupon.description or '').strip()
+    if not desc:
+        desc = f'Use code {coupon.code} at checkout.'
+    return Response(
+        {
+            'active': True,
+            'coupon': {
+                'code': coupon.code,
+                'description': desc,
+            },
+        }
+    )
+
+
 class ProductListView(generics.ListAPIView):
     """API view for listing products"""
     queryset = Product.objects.filter(available=True).prefetch_related('images')

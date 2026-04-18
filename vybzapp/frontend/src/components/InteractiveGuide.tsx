@@ -25,7 +25,17 @@ function renderSummary(text: string): React.ReactNode {
         <React.Fragment key={i}>
           {i > 0 && <br />}
           {line === 'Edit Mode' ? (
-            <span style={{ fontWeight: 600, textDecoration: 'underline', display: 'block', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Edit Mode</span>
+            <span
+              style={{
+                fontWeight: 600,
+                textDecoration: 'underline',
+                display: 'block',
+                marginTop: '0.35rem',
+                marginBottom: '0.1rem',
+              }}
+            >
+              Edit Mode
+            </span>
           ) : (
             renderBold(line)
           )}
@@ -99,11 +109,11 @@ const InteractiveGuide: React.FC = () => {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="guide-modal__header subtext-btn-xs">
+        <div className="guide-modal__header">
           {currentGuide.name}
         </div>
 
-        <div className="guide-modal__body subtext-sm">
+        <div className="guide-modal__body">
           {renderSummary(currentGuide.summary)}
         </div>
 
@@ -111,7 +121,7 @@ const InteractiveGuide: React.FC = () => {
           <button
             type="button"
             onClick={stopGuide}
-            className="btn btn-primary"
+            className="btn btn-primary btn-sm"
           >
             Got it
           </button>

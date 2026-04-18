@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useCart } from '../contexts/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
@@ -27,8 +27,84 @@ interface ProductListProps {
   // Add any props if needed
 }
 
+/** Full-bleed black strip: exact coupon description, marquee when it overflows. */
+const StorefrontCouponBillboard: React.FC<{ text: string }> = ({ text }) => {
+  const outerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [needsMarquee, setNeedsMarquee] = useState(false);
+  const [durationSec, setDurationSec] = useState(20);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReducedMotion(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  const measure = useCallback(() => {
+    const outer = outerRef.current;
+    const m = measureRef.current;
+    if (!outer || !m) return;
+    const textW = m.scrollWidth;
+    const outerW = outer.clientWidth;
+    const overflow = textW > outerW + 1;
+    setNeedsMarquee(overflow);
+    const pxPerSec = 48;
+    setDurationSec(Math.max(14, (textW + outerW) / pxPerSec));
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+  }, [measure, text]);
+
+  useEffect(() => {
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure]);
+
+  const scrollableReduced = reducedMotion && needsMarquee;
+
+  return (
+    <div
+      ref={outerRef}
+      className={`storefront-coupon-billboard font-quicksand${scrollableReduced ? ' storefront-coupon-billboard--scrollable' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
+      <span ref={measureRef} className="storefront-coupon-billboard__measure">
+        {text}
+      </span>
+
+      {needsMarquee && !reducedMotion && (
+        <div
+          className="storefront-coupon-billboard__track"
+          style={{ animationDuration: `${durationSec}s` }}
+        >
+          <span className="storefront-coupon-billboard__segment">{text}</span>
+          <span className="storefront-coupon-billboard__segment" aria-hidden>
+            {text}
+          </span>
+        </div>
+      )}
+
+      {needsMarquee && reducedMotion && (
+        <div className="storefront-coupon-billboard__static" style={{ textAlign: 'left', width: 'max-content', minWidth: '100%' }}>
+          {text}
+        </div>
+      )}
+
+      {!needsMarquee && (
+        <div className="storefront-coupon-billboard__static">{text}</div>
+      )}
+    </div>
+  );
+};
+
 const ProductList: React.FC<ProductListProps> = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [storefrontCouponDescription, setStorefrontCouponDescription] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string>('');
@@ -38,6 +114,34 @@ const ProductList: React.FC<ProductListProps> = () => {
 
   useEffect(() => {
     fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/coupons/featured/');
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.active && data.coupon) {
+          const raw = (data.coupon.description ?? '').toString();
+          const trimmed = raw.trim();
+          if (trimmed) {
+            setStorefrontCouponDescription(trimmed);
+          } else {
+            setStorefrontCouponDescription(null);
+          }
+        } else if (!cancelled) {
+          setStorefrontCouponDescription(null);
+        }
+      } catch {
+        /* ignore promo fetch failures */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const fetchProducts = async () => {
@@ -143,7 +247,11 @@ const ProductList: React.FC<ProductListProps> = () => {
   }
 
   return (
-    <div className="col p-1 mt-4">
+    <>
+      {storefrontCouponDescription && (
+        <StorefrontCouponBillboard text={storefrontCouponDescription} />
+      )}
+      <div className="col p-1 mt-4">
       <h3 className="text-center bold subtext-btn text-decoration-none border-0" style={{ fontWeight: 'bold' }}>
         <p className="mb-1">Desk Mats</p>
       </h3>
@@ -344,6 +452,7 @@ const ProductList: React.FC<ProductListProps> = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

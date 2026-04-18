@@ -1,6 +1,6 @@
 from django.urls import path
 from .api_views import (
-    ProductListView, ProductDetailView, get_cart, add_to_cart,
+    ProductListView, ProductDetailView, featured_storefront_coupon, get_cart, add_to_cart,
     update_cart_item, remove_from_cart, clear_cart,
     OrderListView, OrderDetailView, user_profile, check_auth,
     checkout, get_shipping_rates, select_shipping_rate, payment_success,
@@ -17,6 +17,7 @@ from .api_views import (
 app_name = 'api'
 
 urlpatterns = [
+    path('coupons/featured/', featured_storefront_coupon, name='coupon-featured-storefront'),
     # Product endpoints
     path('products/', ProductListView.as_view(), name='product-list'),
     path('products/<slug:slug>/', ProductDetailView.as_view(), name='product-detail'),

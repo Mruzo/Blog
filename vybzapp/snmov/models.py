@@ -314,6 +314,11 @@ class Coupon(models.Model):
     max_redemptions = models.PositiveIntegerField(null=True, blank=True)
     times_redeemed = models.PositiveIntegerField(default=0)
 
+    featured_on_storefront = models.BooleanField(
+        default=False,
+        help_text="When checked, this coupon's description is shown on the /product/ promo strip (only one should be checked).",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -334,6 +339,8 @@ class Coupon(models.Model):
 
     def save(self, *args, **kwargs):
         self.code = (self.code or '').strip().upper()
+        if self.featured_on_storefront:
+            Coupon.objects.exclude(pk=self.pk).update(featured_on_storefront=False)
         self.full_clean()
         super().save(*args, **kwargs)
 

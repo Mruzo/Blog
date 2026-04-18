@@ -11,7 +11,7 @@ from django.db import models
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Sum, Avg
-from snmov.forms import SiteImageForm
+from snmov.forms import SiteImageForm, CouponAdminForm
 
 # Remove this line since we're importing User directly from models
 # User = get_user_model()
@@ -163,19 +163,29 @@ class OrderAdmin(admin.ModelAdmin):
 
 
 class CouponAdmin(admin.ModelAdmin):
+    form = CouponAdminForm
     list_display = (
         'code',
         'discount_type',
         'percent_off',
         'amount_off',
         'is_active',
+        'storefront_carousel_display',
         'starts_at',
         'ends_at',
         'max_redemptions',
         'times_redeemed',
     )
-    list_filter = ('is_active', 'discount_type')
+    list_filter = ('is_active', 'discount_type', 'featured_on_storefront')
     search_fields = ('code', 'description')
+
+    def storefront_carousel_display(self, obj):
+        if obj.featured_on_storefront:
+            return 'Featured on /product/'
+        return '—'
+
+    storefront_carousel_display.short_description = 'Storefront carousel'
+    storefront_carousel_display.admin_order_field = 'featured_on_storefront'
 
 admin.site.register(Coupon, CouponAdmin)
 admin.site.register(Order, OrderAdmin)
