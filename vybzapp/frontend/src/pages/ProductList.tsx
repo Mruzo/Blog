@@ -36,8 +36,10 @@ const StorefrontCouponBillboard: React.FC<{ text: string }> = ({ text }) => {
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const sync = () => setReducedMotion(mq.matches);
+    if (!mq || typeof mq.addEventListener !== 'function') return;
+    const sync = () => setReducedMotion(Boolean(mq.matches));
     sync();
     mq.addEventListener('change', sync);
     return () => mq.removeEventListener('change', sync);
@@ -69,6 +71,7 @@ const StorefrontCouponBillboard: React.FC<{ text: string }> = ({ text }) => {
   return (
     <div
       ref={outerRef}
+      data-testid="storefront-coupon-billboard"
       className={`storefront-coupon-billboard font-quicksand${scrollableReduced ? ' storefront-coupon-billboard--scrollable' : ''}`}
       role="status"
       aria-live="polite"
