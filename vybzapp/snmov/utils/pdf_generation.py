@@ -457,18 +457,42 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
                     ]
                 )
 
-        # Subtotal = merchandise only; shipping & tax appear once in the summary block below
-        subtotal = total
+        # Merchandise subtotal (after product discounts), coupon, shipping, tax — match Order totals helpers
+        merchandise_subtotal = float(total)
+        if order is not None and hasattr(order, 'calculate_merchandise_subtotal'):
+            merchandise_subtotal = float(order.calculate_merchandise_subtotal() or 0)
+
+        coupon_discount = 0.0
+        coupon_label = 'Promo:'
+        if order is not None and hasattr(order, 'calculate_coupon_discount'):
+            coupon_discount = float(order.calculate_coupon_discount() or 0)
+            code = (getattr(order, 'coupon_code', '') or '').strip()
+            if code:
+                coupon_label = f'Promo ({code}):'
+
         shipping_cost = float(order.shipping_cost) if order and hasattr(order, 'shipping_cost') else 0
-        tax_rate = getattr(settings, 'TAX_RATE', 0.13)
-        tax_enabled = getattr(settings, 'TAX_ENABLED', True)
+
         tax_amount = 0.0
         tax_percentage = 0.0
-        if tax_enabled and tax_rate > 0:
-            taxable_base = subtotal + shipping_cost
-            tax_amount = taxable_base * float(tax_rate)
-            tax_percentage = float(tax_rate) * 100
-        total = subtotal + shipping_cost + tax_amount
+        tax_rate = getattr(settings, 'TAX_RATE', 0.13)
+        tax_enabled = getattr(settings, 'TAX_ENABLED', True)
+        if order is not None and hasattr(order, 'calculate_tax_amount'):
+            tax_amount = float(order.calculate_tax_amount() or 0)
+            if tax_enabled and tax_rate > 0:
+                tax_percentage = float(tax_rate) * 100
+        else:
+            if tax_enabled and tax_rate > 0:
+                taxable_base = merchandise_subtotal - coupon_discount + shipping_cost
+                if taxable_base < 0:
+                    taxable_base = 0.0
+                tax_amount = taxable_base * float(tax_rate)
+                tax_percentage = float(tax_rate) * 100
+
+        grand_total = merchandise_subtotal - coupon_discount + shipping_cost + tax_amount
+        if grand_total < 0:
+            grand_total = 0.0
+        if order is not None and hasattr(order, 'calculate_grand_total'):
+            grand_total = float(order.calculate_grand_total() or 0)
 
         items_data.append(
             [
@@ -476,10 +500,21 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
                 _p('', items_cell_center),
                 _p('', items_cell_right),
                 _p('', items_cell_center),
-                _p('<b>Subtotal:</b>', items_cell_bold_right),
-                _p(f'<b>${subtotal:.2f}</b>', items_cell_bold_right),
+                _p('<b>Merchandise:</b>', items_cell_bold_right),
+                _p(f'<b>${merchandise_subtotal:.2f}</b>', items_cell_bold_right),
             ]
         )
+        if coupon_discount > 0:
+            items_data.append(
+                [
+                    _p('', items_cell_left),
+                    _p('', items_cell_center),
+                    _p('', items_cell_right),
+                    _p('', items_cell_center),
+                    _p(_esc(coupon_label), items_cell_right),
+                    _p(_esc(f'-${coupon_discount:.2f}'), items_cell_right),
+                ]
+            )
         if shipping_cost > 0:
             items_data.append(
                 [
@@ -509,7 +544,7 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
                 _p('', items_cell_right),
                 _p('', items_cell_center),
                 _p('<b>Total:</b>', items_cell_bold_right),
-                _p(f'<b>${total:.2f}</b>', items_cell_bold_right),
+                _p(f'<b>${grand_total:.2f}</b>', items_cell_bold_right),
             ]
         )
     else:

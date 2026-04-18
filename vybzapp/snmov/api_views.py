@@ -8,16 +8,18 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.db.models import F
+from django.db.models.functions import Greatest
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 import json
 import uuid
 from decimal import Decimal
 
 from .models import (
     Product, Order, OrderItem, ShippingAddress, ReachOut, NewsletterSubscription,
-    ReturnRequest, ReturnItem, CreditNote, Invoice
+    ReturnRequest, ReturnItem, CreditNote, Invoice, Coupon
 )
 from .serializers import (
     ProductSerializer, ProductListSerializer, OrderSerializer, 
@@ -660,7 +662,11 @@ class OrderListView(generics.ListAPIView):
     
     def get_queryset(self):
         # Order model uses `order_date` (not `ordered_date`)
-        return Order.objects.filter(customer=self.request.user).order_by('-order_date')
+        return (
+            Order.objects.filter(customer=self.request.user)
+            .order_by('-order_date')
+            .prefetch_related('orderitem_set__product')
+        )
 
 
 class OrderDetailView(generics.RetrieveAPIView):
@@ -669,7 +675,50 @@ class OrderDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Order.objects.filter(customer=self.request.user)
+        return Order.objects.filter(customer=self.request.user).prefetch_related(
+            'orderitem_set__product'
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_order_api(request, order_id: int):
+    """
+    Cancel a PENDING (unpaid) order and restore stock.
+
+    This is intended for self-serve cancellation before fulfillment begins.
+    """
+    with transaction.atomic():
+        order = get_object_or_404(
+            Order.objects.select_for_update().prefetch_related('orderitem_set__product'),
+            id=order_id,
+            customer=request.user,
+        )
+
+        if order.status != 'PENDING' or order.payment_completed_at is not None:
+            return Response(
+                {
+                    'success': False,
+                    'error': 'This order cannot be cancelled automatically at its current status.',
+                    'status': order.status,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Restore stock
+        for item in order.orderitem_set.select_related('product').all():
+            Product.objects.filter(pk=item.product_id).update(stock=F('stock') + item.quantity)
+
+        if order.coupon_id:
+            Coupon.objects.filter(pk=order.coupon_id).update(
+                times_redeemed=Greatest(F('times_redeemed') - 1, 0)
+            )
+
+        order.status = 'CANCELLED'
+        order.shipping_label_error = None
+        order.save(update_fields=['status', 'shipping_label_error'])
+
+    return Response({'success': True, 'order': OrderSerializer(order).data})
 
 
 @api_view(['GET'])
@@ -825,6 +874,30 @@ def checkout(request):
             'unavailable_items': unavailable_items,
             'insufficient_stock_items': insufficient_stock_items
         }, status=status.HTTP_400_BAD_REQUEST)
+
+    coupon_code_raw = (request.data.get('coupon_code') or request.data.get('coupon') or '').strip()
+    coupon_code = coupon_code_raw.upper()
+    coupon_obj = None
+    if coupon_code:
+        try:
+            coupon_obj = Coupon.objects.get(code=coupon_code)
+        except Coupon.DoesNotExist:
+            return Response({'success': False, 'error': 'Invalid coupon code.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not coupon_obj.is_valid_now():
+            return Response({'success': False, 'error': 'This coupon is not active or has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        merch_total = Decimal('0.00')
+        for item in cart_items:
+            try:
+                p = Product.objects.get(uuid=item['uuid'])
+            except Product.DoesNotExist:
+                continue
+            qty = int(item.get('quantity') or 0)
+            merch_total += (p.get_discounted_price() * qty)
+
+        discount = coupon_obj.compute_discount(merch_total)
+        if discount <= 0:
+            return Response({'success': False, 'error': 'This coupon cannot be applied to your cart.'}, status=status.HTTP_400_BAD_REQUEST)
     
     # Create shipping address
     form = ShippingAddressForm(request.data)
@@ -847,6 +920,28 @@ def checkout(request):
                 shipping.user = request.user
                 shipping.save()
                 order = Order.objects.create(customer=request.user, shipping_address=shipping)
+
+                if coupon_obj:
+                    merch_total_locked = Decimal('0.00')
+                    for item in cart_items:
+                        p = by_uuid[str(item['uuid'])]
+                        qty = int(item.get('quantity') or 0)
+                        merch_total_locked += (p.get_discounted_price() * qty)
+
+                    locked_coupon = Coupon.objects.select_for_update().get(pk=coupon_obj.pk)
+                    if not locked_coupon.is_valid_now():
+                        raise _CheckoutTransactionError('This coupon is no longer available. Please try again.', status.HTTP_409_CONFLICT)
+
+                    discount = locked_coupon.compute_discount(merch_total_locked)
+                    if discount <= 0:
+                        raise _CheckoutTransactionError('This coupon cannot be applied to your cart.', status.HTTP_400_BAD_REQUEST)
+
+                    order.coupon = locked_coupon
+                    order.coupon_code = locked_coupon.code
+                    order.coupon_discount = discount
+                    order.save(update_fields=['coupon', 'coupon_code', 'coupon_discount'])
+
+                    Coupon.objects.filter(pk=locked_coupon.pk).update(times_redeemed=F('times_redeemed') + 1)
 
                 for item in cart_items:
                     p = by_uuid[str(item['uuid'])]
@@ -899,7 +994,11 @@ def get_shipping_rates(request, order_id):
         rates = get_shipping_rates_for_order(order)
         
         # Calculate cart total for total_with_shipping
-        cart_total = order.calculate_total_value() or Decimal("0.00")
+        merch = order.calculate_merchandise_subtotal() or Decimal('0.00')
+        coupon = order.calculate_coupon_discount() or Decimal('0.00')
+        cart_total = merch - coupon
+        if cart_total < 0:
+            cart_total = Decimal('0.00')
         
         # Add total_with_shipping to each rate and ensure all required fields
         for rate in rates:
@@ -1929,6 +2028,14 @@ def download_invoice(request, order_id):
     """Download invoice PDF for an order"""
     try:
         order = Order.objects.get(id=order_id, customer=request.user)
+
+        # Invoices should only exist once payment has been recorded.
+        # This prevents generating invoice PDFs for unpaid checkout drafts.
+        if order.payment_completed_at is None:
+            return Response(
+                {'error': 'Invoice is not available until payment is completed.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         # Get or create invoice
         invoice, created = Invoice.objects.get_or_create(order=order)

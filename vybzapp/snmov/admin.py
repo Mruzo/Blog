@@ -4,7 +4,7 @@ from .models import (
     Product, Comment, Preference, ReachOut, About, SiteImage, Testimonials, ProductNotification, 
     ARUsage, ModelUsage, ShippingAddress, Order, OrderItem, Profile, User, EmailPreference, 
     EmailLog, NewsletterSubscription, SecurityLog, DataConsent,
-    ReturnRequest, ReturnItem, CreditNote, Invoice, ReturnPolicy
+    ReturnRequest, ReturnItem, CreditNote, Invoice, ReturnPolicy, Coupon
 )
 from tinymce.widgets import TinyMCE
 from django.db import models
@@ -110,17 +110,17 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ('id', 'customer__username', 'customer__email', 'tracking_number')
     readonly_fields = ('order_date', 'created_at', 'updated_at', 'stripe_payment_intent_id')
     date_hierarchy = 'order_date'
-    
+
     def save_model(self, request, obj, form, change):
         """Override save to trigger status update email if status changed"""
         if change:
             # Get the old instance to compare status
             old_obj = Order.objects.get(pk=obj.pk)
             previous_status = old_obj.status
-            
+
             # Save the order
             super().save_model(request, obj, form, change)
-            
+
             # Send status update email if status changed
             if obj.status != previous_status and obj.status in ['PROCESSING', 'SHIPPED', 'DELIVERED', 'LABEL_CREATED']:
                 try:
@@ -132,22 +132,21 @@ class OrderAdmin(admin.ModelAdmin):
                     logger.error(f"Failed to send order status update email for order {obj.id}: {e}")
         else:
             super().save_model(request, obj, form, change)
-    
+
     actions = ['process_refund']
-    
+
     def process_refund(self, request, queryset):
         """Admin action to process refunds for cancelled orders"""
         from snmov.utils.email_notifications import send_order_refund_processed
-        from decimal import Decimal
-        
+
         processed = 0
         for order in queryset:
             if order.status != 'CANCELLED':
                 continue
-            
+
             # Calculate refund amount (order total)
             refund_amount = order.calculate_grand_total()
-            
+
             # In a real implementation, you would process the Stripe refund here
             # For now, we'll just send the email notification
             try:
@@ -157,11 +156,28 @@ class OrderAdmin(admin.ModelAdmin):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send refund processed email for order {order.id}: {e}")
-        
+
         self.message_user(request, f'Refund processed notifications sent for {processed} order(s).')
-    
+
     process_refund.short_description = "Send refund processed notification (for cancelled orders)"
 
+
+class CouponAdmin(admin.ModelAdmin):
+    list_display = (
+        'code',
+        'discount_type',
+        'percent_off',
+        'amount_off',
+        'is_active',
+        'starts_at',
+        'ends_at',
+        'max_redemptions',
+        'times_redeemed',
+    )
+    list_filter = ('is_active', 'discount_type')
+    search_fields = ('code', 'description')
+
+admin.site.register(Coupon, CouponAdmin)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(OrderItem)
 admin.site.register(Profile)

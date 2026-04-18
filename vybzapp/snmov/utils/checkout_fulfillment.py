@@ -48,9 +48,12 @@ def stripe_tax_line_item_cents(order):
     rate = getattr(settings, 'TAX_RATE', 0) or 0
     if rate <= 0:
         return None
-    subtotal = order.calculate_total_value() or Decimal('0')
+    merch = order.calculate_merchandise_subtotal() or Decimal('0')
+    coupon = order.calculate_coupon_discount() or Decimal('0')
     shipping = order.shipping_cost or Decimal('0')
-    taxable = subtotal + shipping
+    taxable = merch - coupon + shipping
+    if taxable < 0:
+        taxable = Decimal('0')
     tax = (taxable * Decimal(str(rate))).quantize(Decimal('0.01'))
     return int(tax * 100)
 
@@ -68,6 +71,19 @@ def build_checkout_line_items(order):
         }
         for item in order.orderitem_set.all()
     ]
+    coupon_discount = order.calculate_coupon_discount() or Decimal('0')
+    if coupon_discount > 0:
+        discount_cents = int((coupon_discount * 100).to_integral_value())
+        if discount_cents > 0:
+            label = f"Coupon discount ({order.coupon_code})" if order.coupon_code else 'Coupon discount'
+            line_items.append({
+                'price_data': {
+                    'currency': 'cad',
+                    'product_data': {'name': label},
+                    'unit_amount': -discount_cents,
+                },
+                'quantity': 1,
+            })
     line_items.append({
         'price_data': {
             'currency': 'cad',
@@ -139,6 +155,12 @@ def build_payment_success_response_dict(order, shipping_success):
             'tracking_number': order.tracking_number,
             'label_url': order.label_url,
             'shipping_provider': order.shipping_provider,
+            'coupon_code': (order.coupon_code or '').strip(),
+            'coupon_discount': float(order.calculate_coupon_discount() or 0),
+            'merchandise_subtotal': float(order.calculate_merchandise_subtotal() or 0),
+            'product_sale_savings': float(order.calculate_product_sale_savings() or 0),
+            'tax_amount': float(order.calculate_tax_amount() or 0),
+            'grand_total': float(order.calculate_grand_total() or 0),
             'orderitem_set': [
                 {
                     'product': {'title': item.product.title},

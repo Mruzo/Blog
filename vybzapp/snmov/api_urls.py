@@ -10,7 +10,8 @@ from .api_views import (
     get_newsletter_subscription, export_user_data, delete_user_data,
     get_available_return_items, create_return_request, ReturnRequestListView,
     ReturnRequestDetailView, approve_return_request, reject_return_request,
-    generate_return_label, download_invoice, download_credit_note
+    generate_return_label, download_invoice, download_credit_note,
+    cancel_order_api
 )
 
 app_name = 'api'
@@ -30,6 +31,7 @@ urlpatterns = [
     # Order endpoints
     path('orders/', OrderListView.as_view(), name='order-list'),
     path('orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'),
+    path('orders/<int:order_id>/cancel/', cancel_order_api, name='order-cancel'),
     
     # User endpoints
     path('user/profile/', user_profile, name='user-profile'),

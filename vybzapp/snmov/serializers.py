@@ -77,6 +77,10 @@ class OrderSerializer(serializers.ModelSerializer):
     ref_code = serializers.SerializerMethodField()
     order_number = serializers.SerializerMethodField()
     ordered_date = serializers.DateTimeField(source='order_date', read_only=True)
+    merchandise_subtotal = serializers.SerializerMethodField()
+    product_sale_savings = serializers.SerializerMethodField()
+    tax_amount = serializers.SerializerMethodField()
+    grand_total = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
@@ -84,6 +88,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'user', 'ref_code', 'order_number', 'items', 
             'ordered_date', 'shipping_address', 
             'shipping_cost', 'status', 'tracking_number', 
+            'payment_completed_at',
+            'coupon', 'coupon_code', 'coupon_discount',
+            'merchandise_subtotal', 'product_sale_savings', 'tax_amount', 'grand_total',
             'order_date', 'created_at', 'updated_at'
         ]
         read_only_fields = ['ref_code', 'order_number', 'ordered_date', 'order_date', 'created_at', 'updated_at']
@@ -101,6 +108,18 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_order_number(self, obj):
         return self.get_ref_code(obj)
+
+    def get_merchandise_subtotal(self, obj):
+        return float(obj.calculate_merchandise_subtotal() or 0)
+
+    def get_product_sale_savings(self, obj):
+        return float(obj.calculate_product_sale_savings() or 0)
+
+    def get_tax_amount(self, obj):
+        return float(obj.calculate_tax_amount() or 0)
+
+    def get_grand_total(self, obj):
+        return float(obj.calculate_grand_total() or 0)
 
 
 class CartItemSerializer(serializers.Serializer):

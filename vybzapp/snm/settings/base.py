@@ -23,6 +23,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
+# Debug mode
+# Default to False in base; `snm.settings.local` should enable DEBUG for dev.
+DEBUG = False
+
 # SECURITY WARNING: keep the secret key used in production secret!
 config = RawConfigParser()
 config.read('/etc/vybz/settings.ini')
@@ -288,9 +292,6 @@ DEFAULT_SENDER_CITY = 'Cambridge'
 DEFAULT_SENDER_STATE = 'ON'
 DEFAULT_SENDER_ZIP = 'N3C 1M3'
 DEFAULT_SENDER_COUNTRY = 'CA'
-
-# Debug settings - ensure error pages are shown in production
-DEBUG = False  # This should be True in local.py and False in pro.py
 
 # Allow hosts
 ALLOWED_HOSTS = [

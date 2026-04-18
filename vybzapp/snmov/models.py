@@ -10,6 +10,7 @@ from dj_shop_cart.protocols import Numeric
 import uuid
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
+from django.core.exceptions import ValidationError
 
 
 # Create your models here.
@@ -289,6 +290,82 @@ class ModelUsage(models.Model):
             return f"Model usage by {self.user} at {self.timestamp}"
         return f"Model usage by anonymous user {self.anonymous_user_id} at {self.timestamp}"
 
+
+
+class Coupon(models.Model):
+    DISCOUNT_TYPE_PERCENT = 'percent'
+    DISCOUNT_TYPE_FIXED = 'fixed'
+    DISCOUNT_TYPE_CHOICES = [
+        (DISCOUNT_TYPE_PERCENT, 'Percent off merchandise'),
+        (DISCOUNT_TYPE_FIXED, 'Fixed amount off merchandise'),
+    ]
+
+    code = models.CharField(max_length=40, unique=True, db_index=True)
+    description = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPE_CHOICES, default=DISCOUNT_TYPE_PERCENT)
+    percent_off = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    amount_off = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+
+    max_redemptions = models.PositiveIntegerField(null=True, blank=True)
+    times_redeemed = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.code
+
+    def clean(self):
+        super().clean()
+        if self.discount_type == self.DISCOUNT_TYPE_PERCENT:
+            if self.percent_off <= 0 or self.percent_off > 100:
+                raise ValidationError('percent_off must be between 0 and 100.')
+        if self.discount_type == self.DISCOUNT_TYPE_FIXED:
+            if self.amount_off <= 0:
+                raise ValidationError('amount_off must be greater than 0.')
+
+    def save(self, *args, **kwargs):
+        self.code = (self.code or '').strip().upper()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def is_valid_now(self):
+        if not self.is_active:
+            return False
+        now = timezone.now()
+        if self.starts_at and now < self.starts_at:
+            return False
+        if self.ends_at and now > self.ends_at:
+            return False
+        if self.max_redemptions is not None and self.times_redeemed >= self.max_redemptions:
+            return False
+        return True
+
+    def compute_discount(self, merchandise_subtotal: Decimal) -> Decimal:
+        """Discount applied to merchandise subtotal (pre-shipping, pre-tax)."""
+        merch = merchandise_subtotal or Decimal('0')
+        if merch <= 0:
+            return Decimal('0.00')
+
+        if self.discount_type == self.DISCOUNT_TYPE_PERCENT:
+            discount = (merch * (self.percent_off / Decimal('100'))).quantize(Decimal('0.01'))
+        else:
+            discount = self.amount_off.quantize(Decimal('0.01'))
+
+        if discount < 0:
+            discount = Decimal('0.00')
+        if discount > merch:
+            discount = merch
+        return discount
+
 class ShippingAddress(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='shipping_addresses', null=True)
     full_name = models.CharField(max_length=255)
@@ -346,6 +423,10 @@ class Order(models.Model):
     delivered_at = models.DateTimeField(null=True, blank=True)
     shipping_label_created_at = models.DateTimeField(null=True, blank=True)  # New field
     shipping_label_error = models.TextField(blank=True, null=True)  # New field for storing error messages
+
+    coupon = models.ForeignKey('Coupon', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    coupon_code = models.CharField(max_length=40, blank=True, default='')
+    coupon_discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     
 
     def __str__(self):
@@ -370,11 +451,52 @@ class Order(models.Model):
             item.product.get_discounted_price() * item.quantity
             for item in self.orderitem_set.select_related('product')
         ])
+
+    def calculate_merchandise_subtotal(self):
+        """Merchandise subtotal after product discounts, before coupons/shipping/tax."""
+        return self.calculate_total_value()
+
+    def calculate_product_sale_savings(self):
+        """
+        Savings vs catalog list price from per-product sale discounts (discount_percentage).
+        Does not include checkout promo coupons; see coupon_discount.
+        """
+        total = Decimal('0.00')
+        for item in self.orderitem_set.select_related('product'):
+            p = item.product
+            list_unit = p.price or Decimal('0.00')
+            deal_unit = p.get_discounted_price()
+            if list_unit > deal_unit:
+                total += (list_unit - deal_unit) * item.quantity
+        return total.quantize(Decimal('0.01'))
+
+    def calculate_coupon_discount(self):
+        return (self.coupon_discount or Decimal('0.00')).quantize(Decimal('0.01'))
+
+    def calculate_tax_amount(self):
+        from django.conf import settings as dj_settings
+        if not getattr(dj_settings, 'TAX_ENABLED', True):
+            return Decimal('0.00')
+        rate = getattr(dj_settings, 'TAX_RATE', 0) or 0
+        if rate <= 0:
+            return Decimal('0.00')
+        merch = self.calculate_merchandise_subtotal() or Decimal('0.00')
+        coupon = self.calculate_coupon_discount()
+        shipping = self.shipping_cost or Decimal('0.00')
+        taxable = merch - coupon + shipping
+        if taxable < 0:
+            taxable = Decimal('0.00')
+        return (taxable * Decimal(str(rate))).quantize(Decimal('0.01'))
     
     def calculate_grand_total(self):
-        subtotal = self.calculate_total_value()
-        shipping = self.shipping_cost or Decimal("0.00")
-        return subtotal + shipping
+        merch = self.calculate_merchandise_subtotal() or Decimal('0.00')
+        coupon = self.calculate_coupon_discount()
+        shipping = self.shipping_cost or Decimal('0.00')
+        tax = self.calculate_tax_amount()
+        total = merch - coupon + shipping + tax
+        if total < 0:
+            return Decimal('0.00')
+        return total.quantize(Decimal('0.01'))
     
     def is_eligible_for_return(self):
         """Check if order is eligible for returns"""

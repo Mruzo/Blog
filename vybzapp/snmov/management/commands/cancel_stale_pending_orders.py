@@ -11,9 +11,10 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import F
+from django.db.models.functions import Greatest
 from django.utils import timezone
 
-from snmov.models import Order, Product
+from snmov.models import Order, Product, Coupon
 
 
 class Command(BaseCommand):
@@ -68,6 +69,10 @@ class Command(BaseCommand):
                 for item in o.orderitem_set.select_related('product').all():
                     Product.objects.filter(pk=item.product_id).update(
                         stock=F('stock') + item.quantity
+                    )
+                if o.coupon_id:
+                    Coupon.objects.filter(pk=o.coupon_id).update(
+                        times_redeemed=Greatest(F('times_redeemed') - 1, 0)
                     )
                 o.status = 'CANCELLED'
                 o.save(update_fields=['status'])
