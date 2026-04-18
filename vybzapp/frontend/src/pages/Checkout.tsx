@@ -57,6 +57,7 @@ const Checkout: React.FC = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [saveAddress, setSaveAddress] = useState(false);
   const [addressLabel, setAddressLabel] = useState('');
+  const [couponCode, setCouponCode] = useState('');
 
   const [formData, setFormData] = useState<ShippingAddress>({
     full_name: '',
@@ -172,7 +173,10 @@ const Checkout: React.FC = () => {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          ...(couponCode.trim() ? { coupon_code: couponCode.trim() } : {}),
+        })
       });
 
       if (!response.ok) {
@@ -341,6 +345,31 @@ const Checkout: React.FC = () => {
         </tbody>
       </table>
       <p className="subtext-btn-sm"><strong>Sub Total: ${totalPrice.toFixed(2)}</strong></p>
+
+      <div className="row justify-content-end mb-3">
+        <div className="col-6 col-md-4 text-left subtext-btn-sm text-decoration-none">
+          <div className="d-flex flex-nowrap align-items-center">
+            <label htmlFor="coupon_code" className="form-label mb-0 text-nowrap me-2 flex-shrink-0">
+              Coupon&nbsp;
+            </label>
+            <input
+              type="text"
+              className="form-control text-uppercase flex-grow-1"
+              id="coupon_code"
+              name="coupon_code"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="Enter code"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
+              style={{ minWidth: 0 }}
+            />
+          </div>
+          <small className="form-text text-muted d-block mt-1">
+            
+          </small>
+        </div>
+      </div>
 
       {/* Shipping Address Form */}
       <div className="subtext-btn-sm text-decoration-none">

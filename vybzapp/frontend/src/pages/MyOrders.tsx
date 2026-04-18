@@ -10,6 +10,12 @@ interface Order {
   order_number: string;
   status: string;
   total: number;
+  merchandise_subtotal: number;
+  product_sale_savings?: number;
+  shipping_cost: number;
+  tax: number;
+  coupon_code?: string;
+  coupon_discount?: number;
   created_at: string;
   shipping_address: {
     first_name: string;
@@ -26,6 +32,7 @@ interface Order {
     quantity: number;
     price: number;
     total: number;
+    product_image?: string;
   }>;
 }
 
@@ -41,72 +48,115 @@ const MyOrders: React.FC = () => {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        // Replace with actual API call
-        const response = await new Promise<Order[]>((resolve) => 
-          setTimeout(() => resolve([
-            {
-              id: 1,
-              order_number: 'ORD-2024-001',
-              status: 'shipped',
-              total: 99.99,
-              created_at: '2024-01-15T10:30:00Z',
-              shipping_address: {
-                first_name: 'Chris',
-                last_name: 'Creator',
-                address_line_1: '123 Main St',
-                city: 'New York',
-                state: 'NY',
-                postal_code: '10001',
-                country: 'USA'
-              },
-              items: [
-                {
-                  id: 1,
-                  product_name: '3D Comic Model Pack',
-                  quantity: 1,
-                  price: 49.99,
-                  total: 49.99
-                },
-                {
-                  id: 2,
-                  product_name: 'Premium Sound Effects',
-                  quantity: 2,
-                  price: 25.00,
-                  total: 50.00
-                }
-              ]
-            },
-            {
-              id: 2,
-              order_number: 'ORD-2024-002',
-              status: 'processing',
-              total: 149.99,
-              created_at: '2024-01-20T14:15:00Z',
-              shipping_address: {
-                first_name: 'Chris',
-                last_name: 'Creator',
-                address_line_1: '123 Main St',
-                city: 'New York',
-                state: 'NY',
-                postal_code: '10001',
-                country: 'USA'
-              },
-              items: [
-                {
-                  id: 3,
-                  product_name: 'Character Animation Kit',
-                  quantity: 1,
-                  price: 149.99,
-                  total: 149.99
-                }
-              ]
+        const token = localStorage.getItem('authToken');
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (token) {
+          headers['Authorization'] = `Token ${token}`;
+        }
+
+        const response = await fetch('/api/orders/', {
+          headers,
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load orders.');
+        }
+
+        const data = await response.json();
+        const ordersData = (data?.results || data) as any[];
+
+        const mappedOrders: Order[] = (ordersData || []).map((o: any) => {
+          const shippingAddress = o.shipping_address || {};
+          const items = (o.items || []).map((item: any) => {
+            const price = parseFloat(item.price) || 0;
+            const quantity = Number(item.quantity) || 0;
+            const product_image = item.product?.images?.[0]?.image as string | undefined;
+            return {
+              id: item.id,
+              product_name: item.product?.title || 'Unknown Product',
+              quantity,
+              price,
+              total: price * quantity,
+              product_image,
+            };
+          });
+          const itemsSum = items.reduce((sum: number, item: any) => sum + (Number(item.total) || 0), 0);
+          const shippingCost = parseFloat(o.shipping_cost) || 0;
+
+          const merchFromApi =
+            o.merchandise_subtotal !== undefined && o.merchandise_subtotal !== null
+              ? parseFloat(o.merchandise_subtotal)
+              : NaN;
+          const subtotal = Number.isFinite(merchFromApi) ? merchFromApi : itemsSum;
+
+          const productSaleFromApi =
+            o.product_sale_savings !== undefined && o.product_sale_savings !== null
+              ? parseFloat(o.product_sale_savings)
+              : NaN;
+          const product_sale_savings = Number.isFinite(productSaleFromApi)
+            ? productSaleFromApi
+            : 0;
+
+          const coupon_discount = parseFloat(o.coupon_discount) || 0;
+          const coupon_code = (o.coupon_code || '').trim();
+          const hasPromo = Boolean(coupon_code) || coupon_discount > 0;
+
+          const taxFromApi =
+            o.tax_amount !== undefined && o.tax_amount !== null ? parseFloat(o.tax_amount) : NaN;
+          const grandFromApi =
+            o.grand_total !== undefined && o.grand_total !== null ? parseFloat(o.grand_total) : NaN;
+
+          let tax = Number.isFinite(taxFromApi) ? taxFromApi : NaN;
+          let total = Number.isFinite(grandFromApi) ? grandFromApi : NaN;
+
+          if (!Number.isFinite(total)) {
+            tax = Number.isFinite(tax) ? tax : 0;
+            total = Math.max(0, subtotal - coupon_discount + shippingCost + tax);
+          } else if (!Number.isFinite(tax)) {
+            tax = total - (subtotal - coupon_discount + shippingCost);
+            if (!Number.isFinite(tax) || tax < 0) {
+              tax = 0;
             }
-          ]), 1000)
-        );
-        setOrders(response);
+          }
+
+          const fullName = shippingAddress.full_name || '';
+          const nameParts = typeof fullName === 'string' ? fullName.split(' ') : [];
+          const firstName = shippingAddress.first_name || nameParts[0] || '';
+          const lastName = shippingAddress.last_name || nameParts.slice(1).join(' ') || '';
+
+          return {
+            id: o.id,
+            order_number: o.order_number || o.ref_code || `ORD-${o.id}`,
+            status: (o.status || 'pending').toLowerCase(),
+            total,
+            merchandise_subtotal: subtotal,
+            product_sale_savings: product_sale_savings > 0 ? product_sale_savings : undefined,
+            shipping_cost: shippingCost,
+            tax,
+            coupon_code: coupon_code || undefined,
+            coupon_discount: hasPromo ? coupon_discount : undefined,
+            created_at: o.ordered_date || o.order_date || o.created_at || new Date().toISOString(),
+            shipping_address: {
+              first_name: firstName,
+              last_name: lastName,
+              address_line_1: shippingAddress.address_line_1 || shippingAddress.street_address || '',
+              city: shippingAddress.city || '',
+              state: shippingAddress.state || '',
+              postal_code: shippingAddress.postal_code || shippingAddress.zip || '',
+              country: shippingAddress.country || shippingAddress.country_code || '',
+            },
+            items,
+          };
+        });
+
+        setOrders(mappedOrders);
       } catch (err) {
-        setError('Failed to load orders.');
-        setMessage('Failed to load orders.');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load orders.';
+        setError(errorMessage);
+        setMessage(errorMessage);
         setMessageType('danger');
         setShowMessage(true);
       } finally {
@@ -119,13 +169,21 @@ const MyOrders: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
+      case 'pending':
+        return 'secondary';
+      case 'ordered':
+        return 'primary';
+      case 'label_created':
+        return 'info';
       case 'shipped':
-        return 'success';
+        return 'primary';
       case 'processing':
         return 'warning';
       case 'delivered':
-        return 'info';
+        return 'success';
       case 'cancelled':
+        return 'danger';
+      case 'failed':
         return 'danger';
       default:
         return 'secondary';
@@ -134,6 +192,12 @@ const MyOrders: React.FC = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
+      case 'pending':
+        return 'fas fa-hourglass-half';
+      case 'ordered':
+        return 'fas fa-credit-card';
+      case 'label_created':
+        return 'fas fa-tag';
       case 'shipped':
         return 'fas fa-shipping-fast';
       case 'processing':
@@ -142,8 +206,33 @@ const MyOrders: React.FC = () => {
         return 'fas fa-check-circle';
       case 'cancelled':
         return 'fas fa-times-circle';
+      case 'failed':
+        return 'fas fa-exclamation-triangle';
       default:
         return 'fas fa-question-circle';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pending';
+      case 'ordered':
+        return 'Payment received';
+      case 'processing':
+        return 'Processing';
+      case 'label_created':
+        return 'Label created';
+      case 'shipped':
+        return 'Shipped';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'failed':
+        return 'Failed';
+      default:
+        return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
     }
   };
 
@@ -202,36 +291,99 @@ const MyOrders: React.FC = () => {
             <div key={order.id} className="col-12 mb-4">
               <div className="card border-0 shadow-sm">
                 <div className="card-header bg-light">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
+                  <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <div className="min-w-0">
                       <h6 className="subtext-btn-sm mb-1">Order #{order.order_number}</h6>
                       <small className="text-muted">
                         Placed on {new Date(order.created_at).toLocaleDateString()}
                       </small>
                     </div>
-                    <div className="d-flex align-items-center gap-3">
-                      <span className={`badge bg-${getStatusColor(order.status)}`}>
-                        <i className={`${getStatusIcon(order.status)} me-1`}></i>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </span>
-                      <span className="subtext-btn-sm fw-bold">${order.total.toFixed(2)}</span>
-                    </div>
+                    <span className={`badge bg-${getStatusColor(order.status)} flex-shrink-0`}>
+                      <i className={`${getStatusIcon(order.status)} me-1`}>&nbsp;</i>
+                      {getStatusLabel(order.status)}
+                    </span>
                   </div>
                 </div>
                 
                 <div className="card-body">
                   <div className="row">
                     <div className="col-md-8">
-                      <h6 className="subtext-btn-sm mb-3">Items Ordered</h6>
-                      {order.items.map((item) => (
-                        <div key={item.id} className="d-flex justify-content-between align-items-center mb-2">
-                          <div>
-                            <span className="subtext-btn-sm">{item.product_name}</span>
-                            <small className="text-muted d-block">Qty: {item.quantity}</small>
-                          </div>
-                          <span className="subtext-btn-sm">${item.total.toFixed(2)}</span>
+                      <div className="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+                        <h6 className="subtext-btn-sm mb-0">Items ordered</h6>
+                        {/* <small className="text-muted">
+                          {order.items.length} {order.items.length === 1 ? 'line' : 'lines'}
+                          {' · '}
+                          {order.items.reduce((sum, li) => sum + li.quantity, 0)} pcs
+                        </small> */}
+                      </div>
+
+                      {order.items.length > 0 && (
+                        <div
+                          className="d-flex flex-nowrap gap-2 pb-2 mb-3 border-bottom"
+                          style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
+                          aria-label="Product thumbnails for this order"
+                        >
+                          {order.items.map((item) => (
+                            <div
+                              key={`thumb-${item.id}`}
+                              className="position-relative flex-shrink-0"
+                              title={`${item.product_name} × ${item.quantity}`}
+                            >
+                              {item.product_image ? (
+                                <img
+                                  src={item.product_image}
+                                  alt=""
+                                  className="rounded border bg-white"
+                                  style={{
+                                    width: '56px',
+                                    height: '56px',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  className="rounded border bg-light d-flex align-items-center justify-content-center text-muted"
+                                  style={{ width: '56px', height: '56px' }}
+                                  aria-hidden
+                                >
+                                  <i className="fas fa-image small" />
+                                </div>
+                              )}
+                              <span
+                                className="position-absolute badge rounded-pill bg-transparent text-dark border border-dark"
+                                style={{
+                                  fontSize: '0.65rem',
+                                  bottom: '-0.15rem',
+                                  right: '-0.15rem',
+                                  padding: '0.2em 0.45em',
+                                }}
+                              >
+                                ×{item.quantity}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+
+                      <ul className="list-unstyled mb-0">
+                        {order.items.map((item) => (
+                          <li
+                            key={item.id}
+                            className="d-flex justify-content-between align-items-start gap-2 py-2 border-bottom border-light"
+                          >
+                            <div className="min-w-0 flex-grow-1">
+                              <div className="subtext-btn-sm text-truncate" title={item.product_name}>
+                                {item.product_name}
+                              </div>
+                              <small className="text-muted">Qty {item.quantity}</small>
+                            </div>
+                            <span className="subtext-btn-sm text-nowrap flex-shrink-0">
+                              ${item.total.toFixed(2)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                     
                     <div className="col-md-4">
@@ -276,8 +428,25 @@ const MyOrders: React.FC = () => {
                         </SmallButton>
                       )}
                     </div>
-                    <div className="text-muted subtext-btn-sm">
-                      Total: <span className="fw-bold">${order.total.toFixed(2)}</span>
+                    <div className="text-muted subtext-btn-sm text-end">
+                      {(order.coupon_code || (order.coupon_discount ?? 0) > 0) && (
+                        <div className="mb-1">
+                          {order.coupon_code && (
+                            <span>
+                              Code <span className="fw-bold text-dark">{order.coupon_code}</span>
+                              {' '}
+                            </span>
+                          )}
+                          {(order.coupon_discount ?? 0) > 0 && (
+                            <span className="text-success">
+                              -${(order.coupon_discount ?? 0).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div>
+                        Total: <span className="fw-bold text-dark">${order.total.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>

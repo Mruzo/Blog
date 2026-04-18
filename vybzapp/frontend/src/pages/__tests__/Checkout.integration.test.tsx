@@ -94,17 +94,23 @@ describe('Checkout Integration Tests', () => {
               'Authorization': 'Token test-token'
             }),
             credentials: 'include',
-            body: JSON.stringify({
-              full_name: 'John Doe',
-              address_line_1: '123 Main St',
-              address_line_2: '',
-              city: 'Toronto',
-              state: 'ON',
-              postal_code: 'M5H 2N2',
-              country_code: 'CA'
-            })
           })
         );
+
+        const checkoutCall = (global.fetch as jest.Mock).mock.calls.find(
+          (call: any[]) => call[0] === 'http://localhost:8000/api/checkout/'
+        );
+        expect(checkoutCall).toBeDefined();
+        const body = JSON.parse(checkoutCall![1].body);
+        expect(body).toEqual({
+          full_name: 'John Doe',
+          address_line_1: '123 Main St',
+          address_line_2: '',
+          city: 'Toronto',
+          state: 'ON',
+          postal_code: 'M5H 2N2',
+          country_code: 'CA',
+        });
       });
 
       await waitFor(() => {

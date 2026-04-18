@@ -19,8 +19,12 @@ interface Order {
   id: number;
   order_number: string;
   status: string;
+  payment_completed_at?: string | null;
   total: number;
   subtotal: number;
+  product_sale_savings?: number;
+  coupon_code?: string;
+  coupon_discount?: number;
   shipping_cost: number;
   tax: number;
   created_at: string;
@@ -52,10 +56,116 @@ interface Order {
   estimated_delivery?: string;
 }
 
+function mapOrderApiResponse(data: any): Order {
+  const shippingAddress = data.shipping_address || {};
+  const items = (data.items || []).map((item: any) => ({
+    id: item.id,
+    product_name: item.product?.title || 'Unknown Product',
+    quantity: item.quantity,
+    price: parseFloat(item.price) || 0,
+    total: (parseFloat(item.price) || 0) * item.quantity,
+    product_image: item.product?.images?.[0]?.image || undefined,
+  }));
+
+  const itemsSum = items.reduce((sum: number, item: OrderItem) => sum + item.total, 0);
+  const shipping_cost = parseFloat(data.shipping_cost) || 0;
+
+  const merchFromApi =
+    data.merchandise_subtotal !== undefined && data.merchandise_subtotal !== null
+      ? parseFloat(data.merchandise_subtotal)
+      : NaN;
+  const subtotal = Number.isFinite(merchFromApi) ? merchFromApi : itemsSum;
+
+  const productSaleFromApi =
+    data.product_sale_savings !== undefined && data.product_sale_savings !== null
+      ? parseFloat(data.product_sale_savings)
+      : NaN;
+  const product_sale_savings = Number.isFinite(productSaleFromApi)
+    ? productSaleFromApi
+    : 0;
+
+  const coupon_discount = parseFloat(data.coupon_discount) || 0;
+  const coupon_code = (data.coupon_code || '').trim();
+  const hasPromo =
+    Boolean(coupon_code) || coupon_discount > 0;
+
+  const taxFromApi =
+    data.tax_amount !== undefined && data.tax_amount !== null ? parseFloat(data.tax_amount) : NaN;
+
+  const grandFromApi =
+    data.grand_total !== undefined && data.grand_total !== null ? parseFloat(data.grand_total) : NaN;
+
+  let tax = Number.isFinite(taxFromApi) ? taxFromApi : NaN;
+  let total = Number.isFinite(grandFromApi) ? grandFromApi : NaN;
+
+  if (!Number.isFinite(total)) {
+    tax = Number.isFinite(tax) ? tax : 0;
+    total = Math.max(0, subtotal - coupon_discount + shipping_cost + tax);
+  } else if (!Number.isFinite(tax)) {
+    tax = total - (subtotal - coupon_discount + shipping_cost);
+    if (!Number.isFinite(tax) || tax < 0) {
+      tax = 0;
+    }
+  }
+
+  let first_name = '';
+  let last_name = '';
+  if (shippingAddress.full_name) {
+    const nameParts = shippingAddress.full_name.split(' ');
+    first_name = nameParts[0] || '';
+    last_name = nameParts.slice(1).join(' ') || '';
+  } else {
+    first_name = shippingAddress.first_name || '';
+    last_name = shippingAddress.last_name || '';
+  }
+
+  return {
+    id: data.id,
+    order_number: data.order_number || data.ref_code || `ORD-${data.id}`,
+    status: (data.status || 'pending').toLowerCase(),
+    payment_completed_at: data.payment_completed_at || null,
+    total,
+    subtotal,
+    product_sale_savings: product_sale_savings > 0 ? product_sale_savings : undefined,
+    coupon_code: coupon_code || undefined,
+    coupon_discount: hasPromo ? coupon_discount : undefined,
+    shipping_cost,
+    tax,
+    created_at: data.ordered_date || data.order_date || data.start_date || new Date().toISOString(),
+    updated_at: data.updated_at || new Date().toISOString(),
+    tracking_number: data.tracking_number || undefined,
+    estimated_delivery: undefined,
+    shipping_address: {
+      first_name,
+      last_name,
+      address_line_1: shippingAddress.address_line_1 || shippingAddress.street_address || '',
+      address_line_2: shippingAddress.address_line_2 || shippingAddress.apartment_address || undefined,
+      city: shippingAddress.city || '',
+      state: shippingAddress.state || '',
+      postal_code: shippingAddress.postal_code || shippingAddress.zip || '',
+      country: shippingAddress.country || shippingAddress.country_code || '',
+      phone: shippingAddress.phone || undefined,
+    },
+    billing_address: {
+      first_name,
+      last_name,
+      address_line_1: shippingAddress.address_line_1 || shippingAddress.street_address || '',
+      address_line_2: shippingAddress.address_line_2 || shippingAddress.apartment_address || undefined,
+      city: shippingAddress.city || '',
+      state: shippingAddress.state || '',
+      postal_code: shippingAddress.postal_code || shippingAddress.zip || '',
+      country: shippingAddress.country || shippingAddress.country_code || '',
+      phone: shippingAddress.phone || undefined,
+    },
+    items,
+  };
+}
+
 const OrderDetail: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
@@ -88,76 +198,7 @@ const OrderDetail: React.FC = () => {
         }
 
         const data = await response.json();
-        
-        // Map backend response to frontend Order interface
-        const shippingAddress = data.shipping_address || {};
-        const items = (data.items || []).map((item: any) => ({
-          id: item.id,
-          product_name: item.product?.title || 'Unknown Product',
-          quantity: item.quantity,
-          price: parseFloat(item.price) || 0,
-          total: (parseFloat(item.price) || 0) * item.quantity,
-          product_image: item.product?.images?.[0]?.image || undefined,
-        }));
-
-        // Calculate totals
-        const subtotal = items.reduce((sum: number, item: OrderItem) => sum + item.total, 0);
-        const shipping_cost = parseFloat(data.shipping_cost) || 0;
-        // Tax calculation (if needed, otherwise 0)
-        const tax = 0; // Backend doesn't provide tax separately
-        const total = subtotal + shipping_cost + tax;
-
-        // Parse shipping address name if it's a single field
-        let first_name = '';
-        let last_name = '';
-        if (shippingAddress.full_name) {
-          const nameParts = shippingAddress.full_name.split(' ');
-          first_name = nameParts[0] || '';
-          last_name = nameParts.slice(1).join(' ') || '';
-        } else {
-          first_name = shippingAddress.first_name || '';
-          last_name = shippingAddress.last_name || '';
-        }
-
-        const mappedOrder: Order = {
-          id: data.id,
-          order_number: data.ref_code || `ORD-${data.id}`,
-          status: data.status?.toLowerCase() || 'pending',
-          total: total,
-          subtotal: subtotal,
-          shipping_cost: shipping_cost,
-          tax: tax,
-          created_at: data.ordered_date || data.start_date || new Date().toISOString(),
-          updated_at: data.updated_at || new Date().toISOString(),
-          tracking_number: data.tracking_number || undefined,
-          estimated_delivery: undefined, // Backend doesn't provide this
-          shipping_address: {
-            first_name: first_name,
-            last_name: last_name,
-            address_line_1: shippingAddress.address_line_1 || shippingAddress.street_address || '',
-            address_line_2: shippingAddress.address_line_2 || shippingAddress.apartment_address || undefined,
-            city: shippingAddress.city || '',
-            state: shippingAddress.state || '',
-            postal_code: shippingAddress.postal_code || shippingAddress.zip || '',
-            country: shippingAddress.country || shippingAddress.country_code || '',
-            phone: shippingAddress.phone || undefined,
-          },
-          billing_address: {
-            // Use shipping address as billing address if no separate billing address
-            first_name: first_name,
-            last_name: last_name,
-            address_line_1: shippingAddress.address_line_1 || shippingAddress.street_address || '',
-            address_line_2: shippingAddress.address_line_2 || shippingAddress.apartment_address || undefined,
-            city: shippingAddress.city || '',
-            state: shippingAddress.state || '',
-            postal_code: shippingAddress.postal_code || shippingAddress.zip || '',
-            country: shippingAddress.country || shippingAddress.country_code || '',
-            phone: shippingAddress.phone || undefined,
-          },
-          items: items,
-        };
-
-        setOrder(mappedOrder);
+        setOrder(mapOrderApiResponse(data));
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load order details.';
         setError(errorMessage);
@@ -172,15 +213,34 @@ const OrderDetail: React.FC = () => {
     fetchOrder();
   }, [orderId]);
 
+  const refetchOrder = async () => {
+    if (!orderId) return;
+    const token = localStorage.getItem('authToken');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Token ${token}`;
+    const response = await fetch(`/api/orders/${orderId}/`, { headers, credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to refresh order.');
+    const data = await response.json();
+    setOrder(mapOrderApiResponse(data));
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
+      case 'pending':
+        return 'secondary';
+      case 'ordered':
+        return 'primary';
+      case 'label_created':
+        return 'info';
       case 'shipped':
-        return 'success';
+        return 'primary';
       case 'processing':
         return 'warning';
       case 'delivered':
-        return 'info';
+        return 'success';
       case 'cancelled':
+        return 'danger';
+      case 'failed':
         return 'danger';
       default:
         return 'secondary';
@@ -189,6 +249,12 @@ const OrderDetail: React.FC = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
+      case 'pending':
+        return 'fas fa-hourglass-half';
+      case 'ordered':
+        return 'fas fa-credit-card';
+      case 'label_created':
+        return 'fas fa-tag';
       case 'shipped':
         return 'fas fa-shipping-fast';
       case 'processing':
@@ -197,19 +263,90 @@ const OrderDetail: React.FC = () => {
         return 'fas fa-check-circle';
       case 'cancelled':
         return 'fas fa-times-circle';
+      case 'failed':
+        return 'fas fa-exclamation-triangle';
       default:
         return 'fas fa-question-circle';
     }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pending';
+      case 'ordered':
+        return 'Payment received';
+      case 'processing':
+        return 'Processing';
+      case 'label_created':
+        return 'Label created';
+      case 'shipped':
+        return 'Shipped';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'failed':
+        return 'Failed';
+      default:
+        return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+    }
+  };
+
+  const canDownloadInvoice = (o: Order) => {
+    if (!o.payment_completed_at) return false;
+    const s = o.status.toLowerCase();
+    if (s === 'pending' || s === 'failed') return false;
+    // Only show once the order is in a "completed fulfillment" state
+    return ['shipped', 'delivered'].includes(s);
   };
 
   const handleCloseMessage = () => {
     setShowMessage(false);
   };
 
-  const handleCancelOrder = () => {
-    setMessage('Order cancellation requested! We will process this within 24 hours.');
-    setMessageType('info');
-    setShowMessage(true);
+  const handleCancelOrder = async () => {
+    const s = (order?.status || '').toLowerCase();
+
+    // Processing+ is manual request (no automatic backend change)
+    if (s !== 'pending') {
+      setMessage('Cancellation requested. If fulfillment has started, our team will review and confirm by email.');
+      setMessageType('info');
+      setShowMessage(true);
+      return;
+    }
+
+    if (!orderId) return;
+
+    setIsCancelling(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Token ${token}`;
+
+      const response = await fetch(`/api/orders/${orderId}/cancel/`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Failed to cancel order.');
+      }
+
+      await refetchOrder();
+      setMessage('Order cancelled successfully.');
+      setMessageType('success');
+      setShowMessage(true);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to cancel order.';
+      setMessage(errorMessage);
+      setMessageType('danger');
+      setShowMessage(true);
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   if (loading) {
@@ -234,15 +371,16 @@ const OrderDetail: React.FC = () => {
         title={`Order #${order.order_number}`}
         description={`Placed on ${new Date(order.created_at).toLocaleDateString()}`}
         actions={
-          <>
-            <span className={`badge bg-${getStatusColor(order.status)} me-2`}>
+          <div className="d-flex align-items-center justify-content-between gap-2 w-100">
+            <span className={`badge bg-${getStatusColor(order.status)}`}>
               <i className={`${getStatusIcon(order.status)} me-1`}></i>
-              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+              {getStatusLabel(order.status)}
             </span>
             <BackButton to="/product/my-orders/" />
-          </>
+          </div>
         }
       />
+
 
       <MessagePopup
         message={message}
@@ -279,15 +417,17 @@ const OrderDetail: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex-grow-1">
-                    <h6 className="subtext-btn-sm mb-1">{item.product_name}</h6>
-                    <div className="d-flex justify-content-between align-items-center">
+                  <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                    <h6 className="subtext-btn-sm mb-1 text-truncate" title={item.product_name}>
+                      {item.product_name}
+                    </h6>
+                    <div className="d-flex flex-wrap align-items-center gap-2">
                       <span className="text-muted subtext-btn-sm">Qty: {item.quantity}</span>
-                      <span className="subtext-btn-sm">${item.price.toFixed(2)} each</span>
+                      <span className="subtext-btn-sm text-nowrap">${item.price.toFixed(2)} each</span>
                     </div>
                   </div>
-                  <div className="text-end">
-                    <div className="subtext-btn-sm fw-bold">${item.total.toFixed(2)}</div>
+                  <div className="text-end ms-3 flex-shrink-0">
+                    <div className="subtext-btn-sm fw-bold text-nowrap">${item.total.toFixed(2)}</div>
                   </div>
                 </div>
               ))}
@@ -303,10 +443,46 @@ const OrderDetail: React.FC = () => {
               <h6 className="subtext-btn-sm mb-0">Order Summary</h6>
             </div>
             <div className="card-body">
+              {(order.product_sale_savings ?? 0) > 0 && (
+                <>
+                  <div className="d-flex justify-content-between mb-2">
+                    <span className="subtext-btn-sm text-muted">Regular price (list):</span>
+                    <span className="subtext-btn-sm text-muted">
+                      ${(order.subtotal + (order.product_sale_savings ?? 0)).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="d-flex justify-content-between mb-2">
+                    <span className="subtext-btn-sm">Product sale savings:</span>
+                    <span className="subtext-btn-sm text-success">
+                      -${(order.product_sale_savings ?? 0).toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
               <div className="d-flex justify-content-between mb-2">
-                <span className="subtext-btn-sm">Subtotal:</span>
+                <span className="subtext-btn-sm">
+                  {(order.product_sale_savings ?? 0) > 0 ? 'Merchandise (sale price):' : 'Merchandise:'}
+                </span>
                 <span className="subtext-btn-sm">${order.subtotal.toFixed(2)}</span>
               </div>
+              {(order.coupon_code || (order.coupon_discount ?? 0) > 0) && (
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="subtext-btn-sm">
+                    {order.coupon_code ? (
+                      <>
+                        Promo code: <span className="fw-bold">{order.coupon_code}</span>
+                      </>
+                    ) : (
+                      'Discount'
+                    )}
+                  </span>
+                  <span className="subtext-btn-sm text-success">
+                    {(order.coupon_discount ?? 0) > 0
+                      ? `-$${(order.coupon_discount ?? 0).toFixed(2)}`
+                      : '—'}
+                  </span>
+                </div>
+              )}
               <div className="d-flex justify-content-between mb-2">
                 <span className="subtext-btn-sm">Shipping:</span>
                 <span className="subtext-btn-sm">${order.shipping_cost.toFixed(2)}</span>
@@ -372,18 +548,22 @@ const OrderDetail: React.FC = () => {
 
           {/* Actions */}
           <div className="d-grid gap-2">
-            {order.status === 'processing' && (
+            {(order.status === 'pending' || order.status === 'processing') && (
               <SmallButton 
-                variant="outline-danger"
+                variant={order.status === 'pending' ? 'danger' : 'outline-danger'}
                 onClick={handleCancelOrder}
+                className="w-100 d-flex justify-content-center align-items-center"
+                disabled={isCancelling}
               >
-                <i className="fas fa-times me-1"></i>Cancel Order
+                <i className="fas fa-times me-1"></i>
+                {order.status === 'pending' ? (isCancelling ? 'Cancelling…' : 'Cancel Order') : 'Request Cancellation'}
               </SmallButton>
             )}
             {order.status === 'delivered' && (
               <SmallButton 
                 variant="outline-warning"
                 to={`/product/returns/create/${order.id}/`}
+                className="w-100 d-flex justify-content-center align-items-center"
               >
                 <i className="fas fa-undo me-1"></i>Request Return
               </SmallButton>
@@ -391,17 +571,33 @@ const OrderDetail: React.FC = () => {
             <SmallButton 
               variant="outline-primary"
               to="/product/"
+              className="w-100 d-flex justify-content-center align-items-center"
             >
               <i className="fas fa-shopping-cart me-1"></i>Continue Shopping
             </SmallButton>
-            <a
-              href={`/api/orders/${order.id}/invoice/`}
-              className="btn btn-outline-secondary btn-sm subtext-btn-sm"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <i className="fas fa-file-pdf me-1"></i>Download Invoice
-            </a>
+            {canDownloadInvoice(order) ? (
+              <a
+                href={`/api/orders/${order.id}/invoice/`}
+                className="btn btn-outline-secondary btn-sm subtext-btn-sm w-100 d-flex justify-content-center align-items-center"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <i className="fas fa-file-pdf me-1"></i>Download Invoice
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm subtext-btn-sm w-100"
+                disabled
+                title={
+                  !order.payment_completed_at
+                    ? 'Invoice becomes available after payment is completed.'
+                    : 'Invoice becomes available after your order ships.'
+                }
+              >
+                <i className="fas fa-file-pdf me-1"></i>Invoice unavailable
+              </button>
+            )}
           </div>
         </div>
       </div>

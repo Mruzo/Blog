@@ -21,7 +21,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
           <h1 className="subtext-btn mb-0">{title}</h1>
         </div>
         {actions && (
-          <div className="d-flex gap-2 flex-wrap">
+          <div className="w-100 d-md-flex justify-content-md-end align-self-stretch">
             {actions}
           </div>
         )}

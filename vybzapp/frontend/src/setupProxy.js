@@ -180,7 +180,8 @@ module.exports = function(app) {
       target: 'http://127.0.0.1:8000',
       changeOrigin: true,
       secure: false,
-      ws: true,
+      // Admin doesn't use websockets; disabling prevents /uno/ws spam in Django logs
+      ws: false,
       logLevel: 'debug',
       // Express strips mount path: req.url is '/' or '/icvybz/...'. Restore /uno for Django.
       pathRewrite: (path) => (path === '/' || path === '') ? '/uno/' : '/uno' + path,

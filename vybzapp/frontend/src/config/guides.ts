@@ -79,6 +79,51 @@ export const guides: GuideConfig[] = [
     showOnFirstVisit: false,
     summary: 'Edit your story details, manage seasons and episodes, and manage characters. Use the sections below to navigate.',
   },
+  {
+    id: 'order-statuses',
+    name: 'Order Status Guide',
+    route: '/product/order',
+    showOnFirstVisit: false,
+    summary:
+      
+      '**Pending** — order created but not finalized yet (usually payment not confirmed). You can cancel automatically.\n' +
+      '**Payment received** — payment confirmed; queued for fulfillment.\n' +
+      '**Processing** — fulfillment has started. You can request cancellation and our team will confirm.\n' +
+      '**Label created** — shipping label generated; shipment is close to dispatch.\n' +
+      '**Shipped** — with the carrier.\n' +
+      '**Delivered** — delivered.\n' +
+      '**Cancelled** — cancelled and will not ship.\n' +
+      '**Failed** — payment or fulfillment failure; support may follow up.\n' +
+      '**Invoice** — downloadable after payment is completed and the order has shipped (Shipped/Delivered).\n' +
+      '**Promo codes** — when applied, the code and discount appear in your order totals and on the invoice PDF (merchandise, promo, shipping, tax, total).',
+  },
+  {
+    id: 'my-orders-statuses',
+    name: 'My Orders — Status Guide',
+    route: '/product/my-orders/',
+    showOnFirstVisit: false,
+    summary:
+      
+      '**Pending** — order created but not finalized yet (usually payment not confirmed). You can cancel automatically.\n' +
+      '**Payment received** — payment confirmed; queued for fulfillment.\n' +
+      '**Processing** — fulfillment has started. You can request cancellation and our team will confirm.\n' +
+      '**Label created** — shipping label generated; shipment is close to dispatch.\n' +
+      '**Shipped** — with the carrier.\n' +
+      '**Delivered** — delivered.\n' +
+      '**Cancelled** — cancelled and will not ship.\n' +
+      '**Failed** — payment or fulfillment failure; support may follow up.\n' +
+      '**Invoice** — downloadable after payment is completed and the order has shipped (Shipped/Delivered).\n' +
+      '**Promo codes** — applied promos show on each order card and in order details (merchandise, promo, tax, total).',
+  },
+  {
+    id: 'checkout-promo',
+    name: 'Checkout — Promo code',
+    route: '/product/cart/checkout/',
+    showOnFirstVisit: false,
+    summary:
+      'Optional **Promo code** applies to **merchandise** (after product sale prices), before shipping and tax.\n' +
+      'If the code is valid, it is stored on your order and shown consistently on **order details**, **My Orders**, and the **invoice PDF**.',
+  },
 ];
 
 // Helper function to find guide by route
@@ -96,6 +141,10 @@ export const findGuideByRoute = (pathname: string): GuideConfig | undefined => {
         return true;
       }
       return false;
+    }
+
+    if (guide.id === 'my-orders-statuses') {
+      return pathname === '/product/my-orders' || pathname === '/product/my-orders/';
     }
 
     // pathContains (e.g. /story/:id/manage/): must start with route and include the substring
