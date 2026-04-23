@@ -26,16 +26,9 @@ snm/settings/local.py
 .env
 # Distribution / packaging
 .Python
-!vybzapp/frontend/build/
-!vybzapp/frontend/build/**
-!vybzapp/frontend/build/static/js/main.*.js
-# Ignore source maps and license files in build (only commit runtime assets)
-vybzapp/frontend/build/**/*.map
-vybzapp/frontend/build/**/*.LICENSE.txt
-# Build directories (except vybzapp/frontend/build/)
+# CRA production build — generate on server/CI (do not commit)
+vybzapp/frontend/build/
 build/
-!vybzapp/frontend/
-!vybzapp/frontend/build/
 develop-eggs/
 dist/
 downloads/
@@ -162,7 +155,7 @@ live-static/
 static-root/
 staticfiles.json
 
-# Node modules and build artifacts (except frontend/build which is needed)
+# Node modules and build artifacts
 node_modules/
 npm-debug.log*
 yarn-debug.log*
