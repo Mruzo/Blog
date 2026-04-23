@@ -12,6 +12,28 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+/** Pathname for public-endpoint checks (axios may pass full URL in production). */
+function requestPathname(url: string | undefined): string {
+  if (!url) return '';
+  const noQuery = url.split('?')[0];
+  if (noQuery.startsWith('http://') || noQuery.startsWith('https://')) {
+    try {
+      return new URL(noQuery).pathname;
+    } catch {
+      return noQuery;
+    }
+  }
+  return noQuery.startsWith('/') ? noQuery : `/${noQuery}`;
+}
+
+/** GET /studios/{id}/ only — not collaborators, collaboration-requests, etc. */
+function isPublicStudioDetailGetRequest(url: string | undefined, method: string): boolean {
+  if (method !== 'GET') return false;
+  const path = requestPathname(url);
+  if (/\/studios\/\d+\/.+/.test(path)) return false;
+  return /\/studios\/\d+\/?$/.test(path);
+}
+
 // Helper function to get CSRF token from cookies
 function getCookie(name: string): string | null {
   let cookieValue: string | null = null;
@@ -48,7 +70,7 @@ api.interceptors.request.use(
     // - /studios/{id}/collaborators/ (requires auth)
     const isPublicStoriesEndpoint = url.includes('/stories/public/');
     const isPublicStudiosListEndpoint = url.match(/\/studios\/$/) && method === 'GET';
-    const isPublicStudioDetailGet = method === 'GET' && Boolean(url?.match(/^\/studios\/\d+\/?$/));
+    const isPublicStudioDetailGet = isPublicStudioDetailGetRequest(url, method);
     const isContactEndpoint = url.includes('/contact/') || url.includes('/feedback/');
     const isAuthEndpoint = url.includes('/auth/login/') || url.includes('/auth/register/') || url.includes('/auth/password-reset/');
     const isPublicEndpoint =
@@ -113,7 +135,7 @@ api.interceptors.response.use(
     const isLogoutEndpoint = url?.includes('/auth/logout/');
     const isPublicStoriesEndpoint = url?.includes('/stories/public/');
     const isPublicStudiosListEndpoint = url?.match(/\/studios\/$/) && method === 'GET';
-    const isPublicStudioDetailGet = method === 'GET' && Boolean(url?.match(/^\/studios\/\d+\/?$/));
+    const isPublicStudioDetailGet = isPublicStudioDetailGetRequest(url, method);
     const isPublicEndpoint =
       isPublicStoriesEndpoint || isPublicStudiosListEndpoint || isPublicStudioDetailGet;
     const isAuthEndpoint = url?.includes('/auth/');
