@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import PageHeader from '../components/PageHeader';
-import SmallButton from '../components/SmallButton';
 import BackButton from '../components/BackButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
@@ -182,39 +180,64 @@ const CharacterManage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner message="Loading characters…" />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '1200px' }}>
-      <PageHeader
-        title="Character Management"
-        description="Create and manage characters for your story"
-        actions={
-          <>
-            <SmallButton 
-              variant="primary" 
-              onClick={() => setShowForm(true)}
-            >
-              <i className="fas fa-plus me-1"></i>Add Character
-            </SmallButton>
-            <BackButton to={`/immersivecomics/story/${storyId}/manage/`} />
-          </>
-        }
+    <div className="product-landing">
+      <MessagePopup
+        message={message}
+        type={messageType}
+        show={showMessage}
+        onClose={handleCloseMessage}
+        duration={4000}
       />
 
-      {/* Character Form */}
-      {showForm && (
-        <div className="card mb-4">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <h5 className="subtext-btn mb-0">
-              {editingCharacter ? 'Edit Character' : 'Add New Character'}
-            </h5>
-            <SmallButton variant="outline-secondary" onClick={resetForm}>
-              <i className="fas fa-times"></i>
-            </SmallButton>
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container" style={{ maxWidth: '1200px' }}>
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+              <p className="product-landing__eyebrow">Story</p>
+              <h1 className="product-landing__h1 mb-0">Characters</h1>
+              <p className="product-landing__lead mb-0 mt-2">
+                Create and manage cast, bios, and 3D head positions for camera and dialogue.
+              </p>
+            </div>
+            <div className="episode-manage__heroActions">
+              <button type="button" className="stories-landing__btnPrimary" onClick={() => setShowForm(true)}>
+                <i className="fas fa-plus me-2" aria-hidden />
+                Add character
+              </button>
+              <BackButton to={`/immersivecomics/story/${storyId}/manage/`} />
+            </div>
           </div>
-          <div className="card-body">
+        </div>
+      </section>
+
+      <section className="product-landing__section">
+        <div className="product-landing__container px-2 px-md-3 pb-4" style={{ maxWidth: '1200px' }}>
+      {showForm && (
+        <div className="my-studio__panel mb-4">
+          <div className="my-studio__panelHead">
+            <h2 className="my-studio__panelTitle">
+              <i className="fas fa-user-edit" aria-hidden />
+              <span className="my-studio__panelTitleText">
+                {editingCharacter ? 'Edit character' : 'New character'}
+              </span>
+            </h2>
+            <button type="button" className="product-landing__ctaGhost" onClick={resetForm} aria-label="Close form">
+              <i className="fas fa-times" aria-hidden />
+            </button>
+          </div>
+          <div className="my-studio__panelBody">
             <form onSubmit={handleSubmit}>
               <div className="row">
                 <div className="col-md-6">
@@ -343,35 +366,40 @@ const CharacterManage: React.FC = () => {
                 </div>
               </div>
               
-              <div className="d-flex justify-content-end gap-2">
-                <SmallButton type="button" variant="outline-secondary" onClick={resetForm}>
+              <div className="d-flex justify-content-end gap-2 flex-wrap pt-2">
+                <button type="button" className="product-landing__ctaGhost" onClick={resetForm}>
                   Cancel
-                </SmallButton>
-                <SmallButton type="submit" variant="primary">
-                  {editingCharacter ? 'Update Character' : 'Create Character'}
-                </SmallButton>
+                </button>
+                <button type="submit" className="stories-landing__btnPrimary">
+                  {editingCharacter ? 'Update character' : 'Create character'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Characters List */}
-      <div className="card">
-        <div className="card-header">
-          <h5 className="subtext-btn mb-0">Characters ({storyCharacters.length})</h5>
+      <div className="my-studio__panel">
+        <div className="my-studio__panelHead">
+          <h2 className="my-studio__panelTitle">
+            <i className="fas fa-users" aria-hidden />
+            <span className="my-studio__panelTitleText">Cast ({storyCharacters.length})</span>
+          </h2>
         </div>
-        <div className="card-body">
+        <div className="my-studio__panelBody">
           {storyCharacters.length === 0 ? (
-            <div className="text-center py-4">
-              <i className="fas fa-users fa-3x text-muted mb-3"></i>
-              <p className="subtext-btn-sm text-muted">No characters created yet</p>
-              
+            <div className="story-manage__inlineEmpty py-3">
+              <div className="stories-landing__emptyIcon" aria-hidden>
+                <i className="fas fa-users" />
+              </div>
+              <p className="product-landing__body mb-0" style={{ fontSize: '0.9rem' }}>
+                No characters yet. Add your cast to attach dialogues and POV targets.
+              </p>
             </div>
           ) : (
-            <div className="row">
-              {storyCharacters.map(character => (
-                <div key={character.id} className="col-md-6 col-lg-4 mb-3">
+            <div className="row g-3">
+              {storyCharacters.map((character) => (
+                <div key={character.id} className="col-md-6 col-lg-4">
                   <CharacterCard
                     character={character}
                     onEdit={handleEdit}
@@ -384,16 +412,8 @@ const CharacterManage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Message Popup */}
-      {showMessage && (
-        <MessagePopup
-          message={message}
-          type={messageType}
-          show={showMessage}
-          onClose={handleCloseMessage}
-        />
-      )}
+        </div>
+      </section>
     </div>
   );
 };

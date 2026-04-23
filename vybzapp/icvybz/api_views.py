@@ -10,7 +10,7 @@ from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.db import connection
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Prefetch
 from django.utils import timezone
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.forms import PasswordResetForm
@@ -22,8 +22,9 @@ import time
 import logging
 from .models import Comic, Season, Episode, Dialogue, Character, POV, Studio, AudioTrack, StudioCollaborator, StudioCollaborationRequest
 from .serializers import (
-    ComicSerializer, SeasonSerializer, EpisodeSerializer, 
-    DialogueSerializer, CharacterSerializer, StudioSerializer, AudioTrackSerializer,
+    ComicSerializer, SeasonSerializer, EpisodeSerializer,
+    DialogueSerializer, CharacterSerializer, StudioSerializer, StudioReadSerializer,
+    AudioTrackSerializer,
     StudioCollaboratorSerializer, InviteStudioUserSerializer, InviteStudioEmailSerializer,
     StudioCollaborationRequestSerializer, CreateStudioCollaborationRequestSerializer
 )
@@ -428,10 +429,38 @@ class StudioListCreateView(generics.ListCreateAPIView):
         serializer.save(owner=self.request.user)
 
 class StudioDetailView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = StudioSerializer
-    permission_classes = [IsAuthenticated]
-    
+    """
+    GET: any public studio, or the authenticated owner's studio (including private).
+    PUT/PATCH/DELETE: studio owner only.
+    """
+
+    def get_permissions(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return StudioReadSerializer
+        return StudioSerializer
+
     def get_queryset(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            q = Q(is_public=True)
+            user = self.request.user
+            if getattr(user, 'is_authenticated', False):
+                q = q | Q(owner=user)
+            return (
+                Studio.objects.filter(q)
+                .select_related('owner')
+                .prefetch_related(
+                    Prefetch(
+                        'collaborators',
+                        queryset=StudioCollaborator.objects.filter(is_active=True).select_related('user'),
+                    )
+                )
+                .distinct()
+            )
         return Studio.objects.filter(owner=self.request.user).select_related('owner')
 
 # Audio Track API Views

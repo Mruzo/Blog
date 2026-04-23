@@ -69,8 +69,8 @@ const DialogueCard: React.FC<DialogueCardProps> = ({
   };
 
   return (
-    <div className={`card mb-2 border-0 ${className}`}>
-      <div className="card-body p-0 border-0">
+    <div className={`episode-manage__dialogueCard ${className}`}>
+      <div className="p-2">
         <div className="d-flex justify-content-between align-items-start mb-2">
           <div className="d-flex align-items-center flex-wrap gap-1">
             <span className="dialogue-card__order" aria-label={`Order ${dialogue.order}`}>

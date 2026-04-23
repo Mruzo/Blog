@@ -215,8 +215,8 @@ const FloatingActionMenu: React.FC = () => {
             className={`btn btn-primary shadow-lg fab-main-button ${isExpanded ? 'expanded' : ''}`}
             style={{
               borderRadius: '50%',
-              width: isExpanded ? '56px' : '60px',
-              height: isExpanded ? '56px' : '60px',
+              width: isExpanded ? '46px' : '50px',
+              height: isExpanded ? '50px' : '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

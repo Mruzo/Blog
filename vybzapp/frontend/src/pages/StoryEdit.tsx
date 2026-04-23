@@ -146,38 +146,66 @@ const StoryEdit: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner message="Loading story..." />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner message="Loading story…" />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   if (error && !story) {
     return (
-      <div className="container mt-4">
-        <div className="alert alert-danger" role="alert">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          {error}
-        </div>
-        <BackButton to="/immersivecomics/" variant="primary" />
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container" style={{ maxWidth: '720px' }}>
+            <div className="store-page__error" role="alert">
+              <i className="fas fa-exclamation-triangle store-page__errorIcon" aria-hidden />
+              <span>{error}</span>
+            </div>
+            <div className="store-page__ctaRow mt-3">
+              <BackButton to="/immersivecomics/" variant="primary" />
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '800px' }}>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h1 className="subtext-btn mb-1">Edit Story: {story?.title}</h1>
-          <p className="subtext-btn-sm text-muted mb-0">Update your story details</p>
+    <div className="product-landing">
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container" style={{ maxWidth: '800px' }}>
+          <p className="product-landing__eyebrow">Story</p>
+          <h1 className="product-landing__h1">Edit story</h1>
+          <p className="product-landing__lead">
+            {story?.title || 'Untitled'} — title, cover, visibility, and description.
+          </p>
         </div>
-        <BackButton to={`/immersivecomics/story/${id}/manage/`} />
-      </div>
-      
-      <div className="card border-0 shadow-sm">
-        <div className="card-body">
+      </section>
+
+      <section className="product-landing__section">
+        <div className="product-landing__container" style={{ maxWidth: '800px' }}>
+          <div className="d-flex justify-content-end mb-3">
+            <BackButton to={`/immersivecomics/story/${id}/manage/`} />
+          </div>
+
+          <div className="my-studio__panel">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-book" aria-hidden />
+                <span className="my-studio__panelTitleText">Story details</span>
+              </h2>
+            </div>
+            <div className="my-studio__panelBody">
           <form onSubmit={handleSubmit}>
             {error && (
-              <div className="alert alert-danger" role="alert">
-                <i className="fas fa-exclamation-triangle me-2"></i>
-                {error}
+              <div className="store-page__error mb-3" role="alert">
+                <i className="fas fa-exclamation-triangle store-page__errorIcon" aria-hidden />
+                <span>{error}</span>
               </div>
             )}
             
@@ -257,34 +285,33 @@ const StoryEdit: React.FC = () => {
               </label>
             </div>
             
-            <div className="d-flex gap-2">
-              <button
-                type="submit"
-                className="btn btn-primary subtext-btn-sm"
-                disabled={saving}
-              >
-                {saving ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-save me-1"></i>Save Changes
-                  </>
-                )}
-              </button>
+            <div className="d-flex gap-2 flex-wrap justify-content-end pt-2">
               <button
                 type="button"
-                className="btn btn-outline-secondary subtext-btn-sm"
+                className="product-landing__ctaGhost"
                 onClick={() => navigate(`/immersivecomics/story/${id}/manage/`)}
               >
                 Cancel
               </button>
+              <button type="submit" className="stories-landing__btnPrimary" disabled={saving}>
+                {saving ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-save me-2" aria-hidden />
+                    Save changes
+                  </>
+                )}
+              </button>
             </div>
           </form>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

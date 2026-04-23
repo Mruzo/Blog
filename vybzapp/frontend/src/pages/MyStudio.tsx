@@ -110,21 +110,10 @@ const MyStudio: React.FC = () => {
   useEffect(() => {
     const fetchMyStudio = async () => {
       try {
-        console.log('MyStudio: Loading stories and studio data...');
         setIsInitialLoading(true);
-        
-        // Always attempt to load fresh data, but handle errors gracefully
+
         const results = await Promise.allSettled([
-          loadStories().then(result => {
-            console.log('MyStudio: loadStories resolved successfully');
-            // Note: stories state will be updated in context by loadStories
-            // Check context stories after a brief delay to allow state to update
-            setTimeout(() => {
-              console.log('MyStudio: Stories from context after loadStories:', stories);
-              console.log('MyStudio: Stories length after loadStories:', stories?.length || 0);
-            }, 200);
-            return result;
-          }).catch(err => {
+          loadStories().then((result) => result).catch((err) => {
             const status = err?.response?.status;
             const errorMessage = err?.response?.data?.detail || err?.message || 'Unknown error';
             if (status === 403 || status === 401) {
@@ -136,10 +125,7 @@ const MyStudio: React.FC = () => {
             // Don't throw - let data from context be used if available
             return null;
           }),
-          loadMyStudio().then(result => {
-            console.log('MyStudio: loadMyStudio resolved successfully');
-            return result;
-          }).catch(err => {
+          loadMyStudio().then((result) => result).catch((err) => {
             const status = err?.response?.status;
             const errorMessage = err?.response?.data?.detail || err?.message || 'Unknown error';
             if (status === 403 || status === 401) {
@@ -151,13 +137,10 @@ const MyStudio: React.FC = () => {
             return null;
           })
         ]);
-        
-        // Log results
+
         results.forEach((result, index) => {
           const name = index === 0 ? 'loadStories' : 'loadMyStudio';
-          if (result.status === 'fulfilled') {
-            console.log(`MyStudio: ${name} promise fulfilled`);
-          } else {
+          if (result.status === 'rejected') {
             console.error(`MyStudio: ${name} promise rejected:`, result.reason);
           }
         });
@@ -197,22 +180,7 @@ const MyStudio: React.FC = () => {
     // Note: We don't show error for empty stories array - that's a valid state (user has no stories)
   }, [stories, myStudio, isInitialLoading, isLoading]);
 
-  // Load counts when stories change and debug logging
   useEffect(() => {
-    // Debug: Log stories when they change
-    console.log('MyStudio: Stories updated:', stories);
-    console.log('MyStudio: Stories is array?', Array.isArray(stories));
-    console.log('MyStudio: Stories count:', stories?.length || 0);
-    console.log('MyStudio: Stories type:', typeof stories);
-    
-    if (stories) {
-      console.log('MyStudio: Draft stories:', stories.filter(s => !s.is_public) || []);
-      console.log('MyStudio: Public stories:', stories.filter(s => s.is_public) || []);
-      console.log('MyStudio: Story IDs:', stories.map((s: any) => s.id));
-    } else {
-      console.warn('MyStudio: Stories is null/undefined!');
-    }
-    
     // Load counts asynchronously to not block UI (deferred loading)
     if (stories && Array.isArray(stories) && stories.length > 0) {
       // Use setTimeout to defer the counts loading
@@ -316,8 +284,6 @@ const MyStudio: React.FC = () => {
     try {
       const data = await collaborationService.getStudioCollaborators(myStudio.id);
       const collaboratorsData = Array.isArray(data) ? data : ((data as any)?.results || []);
-      console.log('Loaded collaborators:', collaboratorsData);
-      console.log('Number of collaborators:', collaboratorsData.length);
       setCollaborators(collaboratorsData);
     } catch (error: any) {
       console.error('Error loading collaborators:', error);
@@ -338,10 +304,6 @@ const MyStudio: React.FC = () => {
       const data = await apiService.getStudioCollaborationRequests(myStudio.id);
       // API returns {results: [...]} or just an array
       const requests = Array.isArray(data) ? data : ((data as any)?.results || []);
-      console.log('Loaded collaboration requests:', requests);
-      console.log('Studio ID:', myStudio.id);
-      console.log('Current user ID:', currentUser?.id);
-      console.log('Studio owner ID:', typeof myStudio.owner === 'object' ? myStudio.owner?.id : myStudio.owner);
       setCollaborationRequests(requests);
     } catch (error: any) {
       console.error('Error loading collaboration requests:', error);
@@ -349,9 +311,7 @@ const MyStudio: React.FC = () => {
       console.error('Error status:', error.response?.status);
       // If it's a 403, user might not be the owner - that's expected
       if (error.response?.status === 403) {
-        console.log('User is not the owner of this studio, cannot see requests');
-        console.log('Current user:', currentUser?.id);
-        console.log('Studio owner:', typeof myStudio.owner === 'object' ? myStudio.owner?.id : myStudio.owner);
+        // Non-owners cannot list requests; expected.
       }
       setCollaborationRequests([]);
     } finally {
@@ -409,23 +369,16 @@ const MyStudio: React.FC = () => {
     }
     
     try {
-      console.log('Checking if collaborator already exists...');
-      // Check if the collaborator is already in the team before accepting
       const request = collaborationRequests.find((r: any) => r.id === requestId);
-      console.log('Found request:', request);
-      
+
       if (request) {
         const requesterId = request.requester?.id || request.requester;
-        console.log('Requester ID:', requesterId);
-        console.log('Current collaborators:', collaborators);
-        
+
         const isAlreadyCollaborator = collaborators.some((collab: any) => {
           const collabUserId = collab.user?.id || collab.user || collab.id;
           return collabUserId === requesterId && (collab.is_active === true || collab.is_active === undefined);
         });
-        
-        console.log('Is already collaborator:', isAlreadyCollaborator);
-        
+
         if (isAlreadyCollaborator) {
           setMessage('This user is already a member of your team');
           setMessageType('info');
@@ -435,19 +388,14 @@ const MyStudio: React.FC = () => {
           return;
         }
       }
-      
-      console.log('Calling API to accept request...');
+
       await apiService.acceptStudioCollaborationRequest(myStudio.id, requestId);
-      console.log('Request accepted successfully');
-      
+
       setMessage('Collaboration request accepted');
       setMessageType('success');
       setShowMessage(true);
-      
-      // Reload collaborators and requests
-      console.log('Reloading collaborators and requests...');
+
       await Promise.all([loadCollaborators(), loadCollaborationRequests()]);
-      console.log('Reload complete');
     } catch (error: any) {
       console.error('Error accepting request:', error);
       console.error('Error response:', error.response);
@@ -488,7 +436,15 @@ const MyStudio: React.FC = () => {
   // Show loading spinner during initial load or while waiting for user to load
   const token = localStorage.getItem('authToken');
   if (isInitialLoading || isLoading || (token && !currentUser)) {
-    return <LoadingSpinner message="Loading studio..." />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner message="Loading studio…" />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   // If no token and no user after loading, redirect to login
@@ -496,7 +452,15 @@ const MyStudio: React.FC = () => {
     const currentPath = window.location.pathname;
     sessionStorage.setItem('redirectAfterLogin', currentPath);
     navigate(`/login/?next=${encodeURIComponent(currentPath)}`, { replace: true });
-    return <LoadingSpinner message="Redirecting to login..." />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner message="Redirecting to login…" />
+          </div>
+        </section>
+      </div>
+    );
   }
 
 
@@ -595,25 +559,8 @@ const MyStudio: React.FC = () => {
       }, 500);
     }
   };
-
-
-  // Debug: Log current state
-  console.log('MyStudio: Render state:', {
-    stories: stories,
-    storiesLength: stories?.length || 0,
-    myStudio: myStudio,
-    isLoading: isLoading,
-    isInitialLoading: isInitialLoading,
-    paginatedStories: paginatedStories,
-    paginatedStoriesLength: paginatedStories?.length || 0
-  });
-
-  // Studio data is now loaded from API, no need to check for studio object
-
   return (
-    <div className="container mt-1" style={{ maxWidth: '1200px' }}>
-      
-
+    <div className="product-landing">
       <MessagePopup
         message={message}
         type={messageType}
@@ -629,112 +576,121 @@ const MyStudio: React.FC = () => {
         onInviteByEmail={handleEmailInvite}
       />
 
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container">
+          <p className="product-landing__eyebrow">Dashboard</p>
+          <h1 className="product-landing__h1">My studio</h1>
+          <p className="product-landing__lead">
+            Manage your studio profile, team, and stories in one place.
+          </p>
+        </div>
+      </section>
 
-      {/* Studio Overview */}
-      <div className="row mb-1">
-        <div className="col-lg-9 p-2">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-transparent border-0 d-flex justify-content-between align-items-center p-1 border rounded">
-              <h3 className="subtext font-gillsans mb-0"><i className="fas fa-clapperboard me-2 align-middle"></i>&nbsp;My Studio</h3>
-              <div className="d-flex gap-2">
+      <section className="product-landing__section">
+        <div className="product-landing__container">
+          <div className="my-studio__dashboard">
+        <div>
+          <div className="my-studio__panel">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-clapperboard" aria-hidden />
+                <span className="my-studio__panelTitleText">{myStudio?.name || 'My Studio'}</span>
+              </h2>
+              <div className="my-studio__panelHeadActions">
                 {myStudio && (
-                  <Link 
+                  <Link
                     to={`/immersivecomics/studio/${myStudio.id}/edit/`}
-                    className="btn btn-primary subtext-btn-sm border-0"
-                    title="Edit Studio"
+                    className="stories-landing__btnPrimary text-decoration-none d-inline-flex align-items-center"
+                    title="Edit studio"
                   >
-                    <i className="fas fa-edit me-1"></i> Edit
+                    <i className="fas fa-edit me-2" aria-hidden />
+                    Edit
                   </Link>
                 )}
                 {currentUser && (
                   <button
+                    type="button"
                     onClick={handleLogout}
-                    className="btn btn-sm btn-light border"
-                    title="Logout"
+                    className="product-landing__ctaGhost"
+                    title="Log out"
                   >
-                    <i className="fas fa-sign-out-alt"></i>
+                    <i className="fas fa-sign-out-alt me-2" aria-hidden />
+                    Log out
                   </button>
                 )}
               </div>
             </div>
-            <div className="card-body p-2 p-md-">
-              {/* Row 1: Studio Title — stacked on mobile, side-by-side on md+ (studio name first, then owner) */}
-              <div className="row mb-2">
-                <div className="col-12 col-md-8 border-end text-start mb-2 mb-md-0">
-                  <h4 className="subtext-btn-md fw-bold text-dark mb-1">{myStudio?.name || "My Studio"}</h4>
-                  <p className="subtext-btn-sm text-muted mb-0" style={{ lineHeight: 1.4 }}>{myStudio?.description || "A collaborative space for immersive 3D storytelling."}</p>
-                </div>
-                <div className="col-12 col-md-4 text-start">
-                  <div className="d-flex align-items-stretch">
-                    {currentUser?.avatar ? (
-                      <img
-                        src={currentUser.avatar}
-                        alt={currentUser.username}
-                        className="rounded me-2 flex-shrink-0"
-                        style={{ width: '4.5rem', height: '4.5rem', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div
-                        className="rounded bg-secondary text-white d-flex align-items-center justify-content-center me-2 flex-shrink-0"
-                        style={{ width: '4.5rem', height: '4.5rem', fontSize: '1.25rem' }}
-                      >
-                        {(currentUser?.username || 'U').charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="ml-1 d-flex flex-column justify-content-center">
-                      <div className="subtext-btn-sm fw-bold">@{currentUser?.username || 'User'}</div>
-                      <div className="subtext-btn-sm text-muted">
-                        {[currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(' ') || '—'}
-                      </div>
-                      <div className="subtext-btn-sm text-muted">Owner</div>
-                    </div>
+            <div className="my-studio__panelBody">
+              <p className="my-studio__studioDesc">
+                {myStudio?.description || 'A collaborative space for immersive 3D storytelling.'}
+              </p>
+
+              <div className="my-studio__ownerRow">
+                {currentUser?.avatar ? (
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.username || 'Profile'}
+                    className="my-studio__ownerAvatar"
+                  />
+                ) : (
+                  <div className="my-studio__ownerAvatarPlaceholder bg-secondary text-white">
+                    {(currentUser?.username || 'U').charAt(0).toUpperCase()}
                   </div>
+                )}
+                <div className="my-studio__ownerMeta">
+                  <div className="my-studio__ownerHandle">@{currentUser?.username || 'user'}</div>
+                  <div className="my-studio__ownerName">
+                    {[currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(' ') || '—'}
+                  </div>
+                  <div className="my-studio__ownerLabel">Owner</div>
                 </div>
               </div>
-              
-              {/* Row 2: Statistics */}
-              <div className="row text-center  border-top">
-                <div className="col-3">
-                  <div className="subtext-btn-xs text-primary">{stories?.length || 0}</div>
-                  <div className="subtext-btn-sm text-muted">Stories</div>
+
+              <div className="my-studio__statGrid">
+                <div>
+                  <div className="my-studio__statNum">{stories?.length || 0}</div>
+                  <div className="my-studio__statLabel">Stories</div>
                 </div>
-                
-                <div className="col-3">
-                  <div className="subtext-btn-xs text-info">
+                <div>
+                  <div className="my-studio__statNum">
                     {isLoadingCounts ? (
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
                     ) : (
                       stories ? stories.reduce((total, story) => total + (storyCounts[story.id]?.seasons || 0), 0) : 0
                     )}
                   </div>
-                  <div className="subtext-btn-sm text-muted">Seasons</div>
+                  <div className="my-studio__statLabel">Seasons</div>
                 </div>
-                <div className="col-3">
-                  <div className="subtext-btn-xs text-warning">
+                <div>
+                  <div className="my-studio__statNum">
                     {isLoadingCounts ? (
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
                     ) : (
                       stories ? stories.reduce((total, story) => total + (storyCounts[story.id]?.episodes || 0), 0) : 0
                     )}
                   </div>
-                  <div className="subtext-btn-sm text-muted">Episodes</div>
+                  <div className="my-studio__statLabel">Episodes</div>
                 </div>
-                <div className="col-3">
-                  <div className="subtext-btn-xs text-success">{uniqueTeamMembersCount}</div>
-                  <div className="subtext-btn-sm text-muted">Team</div>
+                <div>
+                  <div className="my-studio__statNum">{uniqueTeamMembersCount}</div>
+                  <div className="my-studio__statLabel">Team</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        
-        <div className="col-lg-3 p-2 ">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-transparent border-0 d-flex justify-content-between align-items-center p-1 border rounded">
-              <h3 className="subtext font-gillsans mb-0"><i className="fas fa-users me-2"></i>&nbsp;My Team</h3>
-              <div className="d-flex gap-2">
+
+        <div className="my-studio__dashboardTeamCol">
+          <div className="my-studio__panel my-studio__panel--team">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-users" aria-hidden />
+                <span className="my-studio__panelTitleText">My team</span>
+              </h2>
+              <div className="my-studio__panelHeadActions">
                 <button
-                  className={`btn btn-sm border position-relative ${collaborationRequests.length > 0 ? 'btn-warning' : 'btn-light'}`}
+                  type="button"
+                  className={`product-landing__ctaGhost position-relative ${collaborationRequests.length > 0 ? 'border-warning' : ''}`}
                   onClick={async () => {
                     await loadCollaborationRequests();
                     setTimeout(() => {
@@ -746,7 +702,8 @@ const MyStudio: React.FC = () => {
                   title={collaborationRequests.length > 0 ? `View ${collaborationRequests.length} collaboration request${collaborationRequests.length > 1 ? 's' : ''}` : 'No pending collaboration requests'}
                   disabled={collaborationRequests.length === 0 && !isLoadingRequests}
                 >
-                  <i className="fas fa-bell me-1"></i> Requests
+                  <i className="fas fa-bell me-2" aria-hidden />
+                  Requests
                   {collaborationRequests.length > 0 && (
                     <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                       {collaborationRequests.length}
@@ -754,72 +711,73 @@ const MyStudio: React.FC = () => {
                   )}
                 </button>
                 <button
-                  className="btn btn-success subtext-btn-sm border-0"
+                  type="button"
+                  className="stories-landing__btnPrimary"
                   onClick={() => setShowInviteModal(true)}
                   title="Invite collaborator"
                 >
-                  <i className="fas fa-plus me-1"></i> Invite
+                  <i className="fas fa-plus me-2" aria-hidden />
+                  Invite
                 </button>
               </div>
             </div>
-            <div className="card-body p-2">
+            <div className="my-studio__panelBody">
               {isLoadingCollaborators ? (
                 <div className="text-center">
                   <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 </div>
               ) : (
-                <div className="d-flex flex-wrap justify-content-center align-items-center gap-3">
-                  {/* Owner */}
-                  <div className="d-flex flex-column align-items-center border-right p-2">
-                    <i className="fas fa-crown text-warning mb-1"></i>
-                    <div className="text-center">
-                      <div className="subtext-btn-sm fw-bold">
-                        {(() => {
-                          if (!currentUser || !myStudio) {
-                            return currentUser?.username || 'User';
-                          }
-                          const ownerId = typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner;
-                          const isOwner = Number(currentUser.id) === Number(ownerId);
-                          return isOwner ? 'Me' : (currentUser?.username || 'User');
-                        })()}
-                      </div>
+                <div className="my-studio__teamGrid">
+                  <div className="my-studio__teamMember">
+                    <div className="my-studio__teamMemberRole">
+                      <span className="my-studio__teamPillOwner">
+                        <i className="fas fa-crown text-warning" aria-hidden />
+                        Owner
+                      </span>
+                    </div>
+                    <div className="my-studio__teamMemberHandle">
+                      {(() => {
+                        if (!currentUser || !myStudio) {
+                          return currentUser?.username || 'You';
+                        }
+                        const ownerId = typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner;
+                        const isOwner = Number(currentUser.id) === Number(ownerId);
+                        return isOwner ? 'Me' : `@${currentUser.username || 'user'}`;
+                      })()}
                     </div>
                   </div>
-                  
-                  {/* Collaborators */}
+
                   {(() => {
-                    // Filter to show only active/accepted collaborators
-                    const activeCollaborators = collaborators.filter((collab: any) => 
-                      collab.is_active === true || collab.is_active === undefined
+                    const activeCollaborators = collaborators.filter(
+                      (collab: any) => collab.is_active === true || collab.is_active === undefined
                     );
-                    
-                    return activeCollaborators.length > 0 ? (
-                      activeCollaborators.map((collaborator: any) => {
-                        // Handle both nested user object and flat structure
-                        const user = collaborator.user || collaborator;
-                        const userName = user?.username || 'Unknown';
-                        const userLastName = user?.last_name || '';
-                        const userUsername = user?.username || 'unknown';
-                        const role = collaborator.role || 'writer';
-                        
-                        // Check if current user is the owner
-                        const ownerId = myStudio && (typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner);
-                        const isOwner = myStudio && currentUser && Number(currentUser.id) === Number(ownerId);
-                        const isCollaboratorOwner = myStudio && Number(user?.id) === Number(ownerId);
-                        
-                        return (
-                          <div key={collaborator.id || collaborator.user?.id || Math.random()} className="d-flex flex-column align-items-center p-2 position-relative border-right">
-                            <span className={`badge bg-${getRoleColor(role)} mb-1`}>
-                              {/* <i className={`${getRoleIcon(role)} me-1`}></i> */}
-                              &nbsp;{role.replace('_', ' ').toUpperCase()}
-                            </span>
-                            <div className="text-center">
-                              <div className="subtext-btn-sm">@{userUsername}</div>
-                            </div>
-                            {/* Remove Button - Only show if current user is owner and collaborator is not the owner */}
+
+                    return activeCollaborators.length > 0
+                      ? activeCollaborators.map((collaborator: any) => {
+                          const user = collaborator.user || collaborator;
+                          const userName = user?.username || 'Unknown';
+                          const userUsername = user?.username || 'unknown';
+                          const role = collaborator.role || 'writer';
+                          const ownerId =
+                            myStudio && (typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner);
+                          const isOwner =
+                            myStudio && currentUser && Number(currentUser.id) === Number(ownerId);
+                          const isCollaboratorOwner = myStudio && Number(user?.id) === Number(ownerId);
+
+                          return (
+                            <div
+                              key={collaborator.id || collaborator.user?.id || userUsername}
+                              className="my-studio__teamMember position-relative"
+                            >
+                              <div className="my-studio__teamMemberRole">
+                                <span className={`badge bg-${getRoleColor(role)}`}>
+                                  {role.replace('_', ' ').toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="my-studio__teamMemberHandle">@{userUsername}</div>
                             {isOwner && !isCollaboratorOwner && myStudio && (
                               <button
-                                className="btn btn-link text-muted p-0 border-0 mt-1"
+                                className="btn btn-link text-muted p-0 border-0 my-studio__teamMemberAction"
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   if (window.confirm(`Are you sure you want to remove ${userName} from your studio team?`)) {
@@ -855,22 +813,23 @@ const MyStudio: React.FC = () => {
                                   e.currentTarget.style.color = '';
                                 }}
                               >
-                                <i className="fas fa-times-circle"></i>
+                                <i className="fas fa-times-circle" aria-hidden />
                               </button>
                             )}
-                          </div>
-                        );
-                      })
-                    ) : null;
+                            </div>
+                          );
+                        })
+                      : null;
                   })()}
-                  
-                  {/* Show message if no collaborators */}
+
                   {(() => {
-                    const activeCollaborators = collaborators.filter((collab: any) => 
-                      collab.is_active === true || collab.is_active === undefined
+                    const activeCollaborators = collaborators.filter(
+                      (collab: any) => collab.is_active === true || collab.is_active === undefined
                     );
-                    return activeCollaborators.length === 0 && (
-                      <div className="text-center text-muted subtext-btn-sm w-100">No collaborators yet</div>
+                    return (
+                      activeCollaborators.length === 0 && (
+                        <p className="my-studio__teamEmpty">No collaborators yet.</p>
+                      )
                     );
                   })()}
                 </div>
@@ -878,49 +837,44 @@ const MyStudio: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Stories Section */}
-      <div className="row">
-        <div className="col-12 px-2">
-          <div className="d-flex justify-content-between align-items-center mb-1 bg-transparent p-1 border rounded">
-            <h3 className="subtext font-gillsans mb-0">My Stories</h3>
-            <div className="d-flex gap-2">
-              <ScrollAwareLink 
-                to="/immersivecomics/story/create/" 
-                className="btn btn-primary subtext-btn-sm border-0"
+      <section className="product-landing__section">
+        <div className="product-landing__container">
+          <div className="my-studio__sectionHead">
+            <h2 className="product-landing__h2 mb-0">My stories</h2>
+            <div className="my-studio__sectionHeadActions">
+              <ScrollAwareLink
+                to="/immersivecomics/story/create/"
+                className="stories-landing__btnPrimary text-decoration-none d-inline-flex align-items-center"
               >
-                <i className="fas fa-plus me-1"></i> Create
+                <i className="fas fa-plus me-2" aria-hidden />
+                Create
               </ScrollAwareLink>
-              <ScrollAwareLink 
-                to="/immersivecomics/import/" 
-                className="btn btn-success subtext-btn-sm border-0"
+              <ScrollAwareLink
+                to="/immersivecomics/import/"
+                className="product-landing__ctaGhost text-decoration-none d-inline-flex align-items-center"
               >
-                <i className="fas fa-download me-1"></i> Import
+                <i className="fas fa-download me-2" aria-hidden />
+                Import
               </ScrollAwareLink>
-              
             </div>
           </div>
-          
+
           {stories && Array.isArray(stories) && stories.length > 0 && paginatedStories && paginatedStories.length > 0 ? (
-            <div>
-              <div className="row">
+            <>
+              <div className="my-studio__storyGrid">
                 {paginatedStories.map((story) => (
-                <div key={story.id} className="col-lg-6 col-md-6 mb-4">
-                  <div className="card h-100 border-0 shadow-sm">
-                    {/* Cover Image */}
+                <article key={story.id} className="my-studio__storyCard">
                     {story.comic_image && typeof story.comic_image === 'string' && (
-                      <div className="card-img-top" style={{ height: '200px', overflow: 'hidden' }}>
-                        <img 
-                          src={story.comic_image} 
-                          alt={story.title || 'Story cover'} 
-                          className="w-100 h-100"
-                          style={{ objectFit: 'cover' }}
-                        />
+                      <div className="my-studio__storyCover">
+                        <img src={story.comic_image} alt={story.title || 'Story cover'} />
                       </div>
                     )}
-                    
-                    <div className="card-body p-2">
+
+                    <div className="my-studio__storyBody">
                         <div className="d-flex justify-content-between align-items-center border-bottom">
                           <h5 className="subtext-btn-xs mb-0">{story.title || 'Untitled Story'}</h5>
                           <div className="text-muted subtext-btn-sm">
@@ -982,105 +936,86 @@ const MyStudio: React.FC = () => {
                        </div>
                     </div>
                     
-                    <div className="card-footer bg-transparent border-0 pt-0">
-                      <div className="d-flex justify-content-between align-items-center">
-                        {/* Views count on the left */}
-                        <div className="text-muted subtext-btn-sm">
-                          <i className="fas fa-eye me-1"></i>&nbsp;
-                          <strong>{story.total_views || 0}</strong> 
-                        </div>
-                        {/* Action buttons on the right */}
-                        <div className="d-flex gap-2">
-                        <ScrollAwareLink 
-                          to={`/immersivecomics/story/${story.id}/manage/`} 
-                          className="btn btn-primary subtext-btn-sm"
-                        >
-                          <i className="fas fa-edit me-1"></i>
-                        </ScrollAwareLink>
-                          {/* <button 
-                          className="btn btn-outline-secondary subtext-btn-sm"
-                          onClick={() => {
-                            setMessage('Story collaboration settings opened!');
-                            setMessageType('info');
-                            setShowMessage(true);
-                          }}
-                        >
-                          <i className="fas fa-users me-1"></i>Team
-                          </button> */}
-                        </div>
-                      </div>
+                    <div className="my-studio__storyFooter">
+                      <p className="stories-landing__meta mb-0" aria-label="Story views">
+                        <i className="fas fa-eye me-1" aria-hidden />
+                        <span className="stories-landing__metaNum">{story.total_views || 0}</span> views
+                      </p>
+                      <ScrollAwareLink
+                        to={`/immersivecomics/story/${story.id}/manage/`}
+                        className="stories-landing__btnPrimary text-decoration-none d-inline-flex align-items-center"
+                      >
+                        <i className="fas fa-sliders-h me-2" aria-hidden />
+                        Manage
+                      </ScrollAwareLink>
                     </div>
-                  </div>
-                </div>
+                </article>
               ))}
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-5">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body py-5">
-                  <i className="fas fa-book-open fa-4x text-muted mb-3"></i>
-                  <h5 className="subtext-btn-xs text-muted mb-3">No stories yet</h5>
-                  <p className="subtext-btn-sm text-muted mb-4">
-                    Start creating your first collaborative story.
-                  </p>
-                  <ScrollAwareLink 
-                    to="/immersivecomics/story/create/" 
-                    className="btn btn-primary subtext-btn-sm"
-                  >
-                    <i className="fas fa-plus me-1"></i>Create Your First Story
-                  </ScrollAwareLink>
-                </div>
-              </div>
-              
-              {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="d-flex justify-content-center mt-4">
-                  <nav aria-label="Stories pagination">
-                    <ul className="pagination">
-                      <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                        <button 
-                          className="page-link" 
-                          onClick={handlePrevPage}
-                          disabled={currentPage === 1}
-                        >
-                          <i className="fas fa-chevron-left"></i> Previous
+                <nav className="my-studio__pagination" aria-label="Stories pagination">
+                  <ul className="pagination mb-0">
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <button
+                        type="button"
+                        className="page-link"
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                      >
+                        <i className="fas fa-chevron-left" aria-hidden /> Previous
+                      </button>
+                    </li>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                        <button type="button" className="page-link" onClick={() => handlePageChange(page)}>
+                          {page}
                         </button>
                       </li>
-                      
-                      {/* Page numbers */}
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                          <button 
-                            className="page-link" 
-                            onClick={() => handlePageChange(page)}
-                          >
-                            {page}
-                          </button>
-                        </li>
-                      ))}
-                      
-                      <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                        <button 
-                          className="page-link" 
-                          onClick={handleNextPage}
-                          disabled={currentPage === totalPages}
-                        >
-                          Next <i className="fas fa-chevron-right"></i>
-                        </button>
-                      </li>
-                    </ul>
-                  </nav>
-                </div>
+                    ))}
+                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                      <button
+                        type="button"
+                        className="page-link"
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next <i className="fas fa-chevron-right" aria-hidden />
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
               )}
+            </>
+          ) : (
+            <div className="my-studio__empty">
+              <div className="stories-landing__emptyIcon" aria-hidden>
+                <i className="fas fa-book-open" />
+              </div>
+              <h3 className="product-landing__h2" style={{ fontSize: '1.25rem' }}>
+                No stories yet
+              </h3>
+              <p className="product-landing__body" style={{ marginTop: '0.5rem' }}>
+                Start creating your first collaborative story.
+              </p>
+              <ScrollAwareLink
+                to="/immersivecomics/story/create/"
+                className="stories-landing__btnPrimary mt-3 d-inline-flex text-decoration-none align-items-center"
+              >
+                <i className="fas fa-plus me-2" aria-hidden />
+                Create your first story
+              </ScrollAwareLink>
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       {/* Collaboration Requests Modal */}
       {showRequestsModal && (
-        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div
+          className="my-studio__modal modal show d-block"
+          tabIndex={-1}
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
           <div className="modal-dialog modal-dialog-scrollable">
             <div className="modal-content">
               <div className="modal-header p-2">
@@ -1141,7 +1076,6 @@ const MyStudio: React.FC = () => {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                console.log('Accept button clicked for request:', request.id);
                                 handleAcceptRequest(request.id);
                               }}
                             >
@@ -1153,7 +1087,6 @@ const MyStudio: React.FC = () => {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                console.log('Decline button clicked for request:', request.id);
                                 handleDeclineRequest(request.id);
                               }}
                             >

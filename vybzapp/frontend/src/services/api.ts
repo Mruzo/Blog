@@ -48,9 +48,15 @@ api.interceptors.request.use(
     // - /studios/{id}/collaborators/ (requires auth)
     const isPublicStoriesEndpoint = url.includes('/stories/public/');
     const isPublicStudiosListEndpoint = url.match(/\/studios\/$/) && method === 'GET';
+    const isPublicStudioDetailGet = method === 'GET' && Boolean(url?.match(/^\/studios\/\d+\/?$/));
     const isContactEndpoint = url.includes('/contact/') || url.includes('/feedback/');
     const isAuthEndpoint = url.includes('/auth/login/') || url.includes('/auth/register/') || url.includes('/auth/password-reset/');
-    const isPublicEndpoint = isPublicStoriesEndpoint || isPublicStudiosListEndpoint || isContactEndpoint || isAuthEndpoint;
+    const isPublicEndpoint =
+      isPublicStoriesEndpoint ||
+      isPublicStudiosListEndpoint ||
+      isPublicStudioDetailGet ||
+      isContactEndpoint ||
+      isAuthEndpoint;
     
     if (!isPublicEndpoint) {
       const token = localStorage.getItem('authToken');
@@ -107,7 +113,9 @@ api.interceptors.response.use(
     const isLogoutEndpoint = url?.includes('/auth/logout/');
     const isPublicStoriesEndpoint = url?.includes('/stories/public/');
     const isPublicStudiosListEndpoint = url?.match(/\/studios\/$/) && method === 'GET';
-    const isPublicEndpoint = isPublicStoriesEndpoint || isPublicStudiosListEndpoint;
+    const isPublicStudioDetailGet = method === 'GET' && Boolean(url?.match(/^\/studios\/\d+\/?$/));
+    const isPublicEndpoint =
+      isPublicStoriesEndpoint || isPublicStudiosListEndpoint || isPublicStudioDetailGet;
     const isAuthEndpoint = url?.includes('/auth/');
     const is403Or401 = status === 403 || status === 401;
     
@@ -294,6 +302,7 @@ export interface Studio {
     username: string;
     first_name: string;
     last_name: string;
+    avatar?: string;
   } | number; // Can be object or just owner ID (for backward compatibility)
   collaborators?: Array<{
     id: number;
@@ -301,9 +310,18 @@ export interface Studio {
     first_name?: string;
     last_name?: string;
     role?: string;
+    is_active?: boolean;
+    avatar?: string;
+    user?: {
+      id: number;
+      username?: string;
+      first_name?: string;
+      last_name?: string;
+    };
   }>;
   stories_count?: number;
   collaborators_count?: number;
+  total_episode_views?: number;
   created_at: string;
   updated_at: string;
   avatar_url?: string;

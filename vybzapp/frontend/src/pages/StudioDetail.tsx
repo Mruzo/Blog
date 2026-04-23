@@ -4,39 +4,10 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Comic3DViewer from '../components/Comic3DViewer';
 import MetaTags from '../components/MetaTags';
 import BackButton from '../components/BackButton';
-import { apiService } from '../services/api';
+import MessagePopup from '../components/MessagePopup';
+import { apiService, type Studio } from '../services/api';
 import { collaborationService } from '../services/collaborationService';
-import { Story } from '../services/api';
-
-interface Studio {
-  id: number;
-  name: string;
-  description: string;
-  owner?: {
-    id: number;
-    username: string;
-    first_name: string;
-    last_name: string;
-  } | number;
-  collaborators?: Array<{
-    id: number;
-    username?: string;
-    first_name?: string;
-    last_name?: string;
-    role?: string;
-    user?: {
-      id: number;
-      username: string;
-      first_name: string;
-      last_name: string;
-    };
-  }>;
-  stories_count?: number;
-  created_at: string;
-  updated_at: string;
-  is_public: boolean;
-  avatar_url?: string;
-}
+import { filterPublicStoriesForStudio } from '../utils/studioScope';
 
 interface Character {
   id: number;
@@ -74,6 +45,29 @@ const StudioDetail: React.FC = () => {
   const [isLoadingStoryData, setIsLoadingStoryData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [message, setMessage] = useState<string>('');
+  const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
+  const [showMessage, setShowMessage] = useState(false);
+
+  const isOwner = useMemo(() => {
+    if (!studio || !currentUser) return false;
+    const ownerId = typeof studio.owner === 'object' ? studio.owner.id : studio.owner;
+    return Number(currentUser.id) === Number(ownerId);
+  }, [studio, currentUser]);
+
+  const isMember = useMemo(() => {
+    if (!studio || !currentUser) return false;
+    if (isOwner) return true;
+    const uid = Number(currentUser.id);
+    const collabs = studio.collaborators || [];
+    return collabs.some((c: any) => {
+      if (c?.is_active === false) return false;
+      const idFromNested = c?.user?.id;
+      const idFromFlat = c?.id;
+      const candidate = idFromNested ?? idFromFlat;
+      return candidate != null && Number(candidate) === uid;
+    });
+  }, [studio, currentUser, isOwner]);
 
   // Load current user
   useEffect(() => {
@@ -120,26 +114,10 @@ const StudioDetail: React.FC = () => {
       if (!studio || !studio.owner) return;
 
       try {
-        // Get owner ID
-        const ownerId = typeof studio.owner === 'object' ? studio.owner.id : studio.owner;
-
-        // Get all published stories
         const allStories = await apiService.getPublicStories();
         
-        // Filter stories where:
-        // 1. Story owner matches studio owner, OR
-        // 2. Story has collaborators that belong to this studio
-        const studioStories = allStories.filter((story: Story) => {
-          // Check if story owner matches studio owner
-          if (story.user === ownerId) {
-            return true;
-          }
-          
-          // TODO: Check if any studio collaborators are story collaborators
-          // This would require checking the story's collaborators against the studio's collaborators
-          // For now, we'll filter by owner only
-          return false;
-        });
+        // Approved public stories owned by the studio owner or an active studio collaborator
+        const studioStories = filterPublicStoriesForStudio(allStories, studio);
 
         // Convert to Comic format
         const comicsData = await Promise.all(
@@ -353,35 +331,25 @@ const StudioDetail: React.FC = () => {
       : { id: typeof studio.owner === 'number' ? studio.owner : 0, username: 'Unknown' };
   }, [studio]);
 
-  // Debug: Log comparison values
-  useEffect(() => {
-    if (currentUser && ownerInfo) {
-      console.log('StudioDetail: Current user:', currentUser);
-      console.log('StudioDetail: Owner info:', ownerInfo);
-      console.log('StudioDetail: Current user ID:', currentUser.id, typeof currentUser.id);
-      console.log('StudioDetail: Owner info ID:', ownerInfo.id, typeof ownerInfo.id);
-      console.log('StudioDetail: IDs match (strict)?', currentUser.id === ownerInfo.id);
-      console.log('StudioDetail: IDs match (coerce)?', Number(currentUser.id) === Number(ownerInfo.id));
-    }
-  }, [currentUser, ownerInfo]);
-
   if (loading) {
     return <LoadingSpinner />;
   }
 
   if (error || !studio) {
     return (
-      <div className="container mt-4">
-        <div className="alert alert-danger" role="alert">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          {error || 'Studio not found'}
+      <div className="product-landing">
+        <div className="product-landing__container product-landing__section">
+          <div className="store-page__error" role="alert">
+            <i className="fas fa-exclamation-triangle" aria-hidden />
+            <span>{error || 'Studio not found'}</span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '1200px' }}>
+    <div className="product-landing">
       <MetaTags
         title={`${studio.name} - Studio Stories - JustVybz`}
         description={studio.description || `Browse published stories from ${studio.name}`}
@@ -389,225 +357,287 @@ const StudioDetail: React.FC = () => {
         image={studio.avatar_url}
       />
 
-      {/* Back Button */}
-      <div className="mb-3">
-        <BackButton to="/immersivecomics/studios/" />
-      </div>
+      <MessagePopup
+        message={message}
+        type={messageType}
+        show={showMessage}
+        onClose={() => setShowMessage(false)}
+        duration={3000}
+      />
 
-      {/* Studio Header */}
-      <div className="card border-0 shadow-sm mb-4 position-relative">
-        {/* Gear Icon - Show if current user is the studio owner */}
-        {currentUser && ownerInfo && (Number(currentUser.id) === Number(ownerInfo.id)) && (
-          <Link
-            to="/immersivecomics/my-studio/"
-            className="position-absolute"
-            style={{ top: '1rem', right: '1rem', zIndex: 10 }}
-            title="My Studio"
-          >
-            <button
-              className="btn btn-outline-secondary btn-sm"
-              style={{ borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <i className="fas fa-cog"></i>
-            </button>
-          </Link>
-        )}
-        <div className="card-body p-4">
-          <div className="row align-items-center">
-            <div className="col-md-2 text-center mb-3 mb-md-0">
-              {studio.avatar_url ? (
-                <img 
-                  src={studio.avatar_url} 
-                  alt={studio.name}
-                  className="img-fluid rounded-circle"
-                  style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                />
-              ) : (
-                <div 
-                  className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto"
-                  style={{ width: '100px', height: '100px' }}
-                >
-                  <i className="fas fa-building fa-3x"></i>
-                </div>
-              )}
-            </div>
-            <div className="col-md-10">
-              <h1 className="subtext-btn mb-2">{studio.name}</h1>
-              <p className="subtext-btn-sm text-muted mb-3">{studio.description}</p>
-              <div className="d-flex flex-wrap gap-3 align-items-center">
-                <div>
-                  <i className="fas fa-crown text-warning me-2"></i>
-                  <span className="subtext-btn-sm">
-                    <strong>Owner:</strong> @{ownerInfo?.username || 'Unknown'}
-                  </span>
-                </div>
-                {studio.collaborators && studio.collaborators.length > 0 && (
-                  <div>
-                    <i className="fas fa-users text-info me-2"></i>
-                    <span className="subtext-btn-sm">
-                      <strong>Team:</strong> {studio.collaborators.length} members
-                    </span>
+      <section className="product-landing__section">
+        <div className="product-landing__container">
+          <div className="studio-detail__backRow">
+            <BackButton to="/immersivecomics/studios/" />
+          </div>
+        </div>
+      </section>
+
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container">
+          <div className="studio-detail__heroCard">
+            {currentUser && ownerInfo && Number(currentUser.id) === Number(ownerInfo.id) && (
+              <Link
+                to="/immersivecomics/my-studio/"
+                className="studio-detail__gearLink"
+                title="My Studio"
+                aria-label="My Studio settings"
+              >
+                <i className="fas fa-cog" aria-hidden />
+              </Link>
+            )}
+
+            <div className="studio-detail__heroGrid">
+              <div>
+                {studio.avatar_url ? (
+                  <img src={studio.avatar_url} alt={studio.name} className="studio-detail__avatar" />
+                ) : (
+                  <div className="studio-detail__avatarPlaceholder" aria-hidden>
+                    <i className="fas fa-building" />
                   </div>
                 )}
-                <div>
-                  <i className="fas fa-book-open text-primary me-2"></i>
-                  <span className="subtext-btn-sm">
-                    <strong>Stories:</strong> {stories.length}
+              </div>
+              <div className="studio-detail__heroContent">
+                <p className="product-landing__eyebrow">Studio</p>
+                <h1 className="product-landing__h1">{studio.name}</h1>
+                {studio.description ? (
+                  <p className="product-landing__lead" style={{ maxWidth: '52ch', marginTop: '0.65rem' }}>
+                    {studio.description}
+                  </p>
+                ) : null}
+
+                <div className="studio-detail__metaRow">
+                  <span>
+                    <strong>Owner</strong> @{ownerInfo?.username || 'Unknown'}
+                  </span>
+                  {studio.collaborators && studio.collaborators.length > 0 ? (
+                    <span>
+                      <strong>Team</strong> {studio.collaborators.length} members
+                    </span>
+                  ) : null}
+                  <span>
+                    <strong>Stories</strong> {stories.length}
                   </span>
                 </div>
+
+                {currentUser ? (
+                  <div className="studio-detail__actions">
+                    <Link
+                      to={`/immersivecomics/?studio=${studio.id}`}
+                      className="stories-landing__btnPrimary"
+                      title="View this studio's published stories in the catalog"
+                    >
+                      <i className="fas fa-eye me-2" aria-hidden />
+                      View stories
+                    </Link>
+                    <button
+                      type="button"
+                      className="product-landing__ctaGhost"
+                      style={isMember ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
+                      disabled={isMember}
+                      title={
+                        isOwner
+                          ? 'You are the owner of this studio'
+                          : isMember
+                            ? 'You are already a member of this studio'
+                            : 'Request to collaborate with this studio'
+                      }
+                      onClick={async () => {
+                        if (isOwner) {
+                          setMessage('You are the owner of this studio!');
+                          setMessageType('info');
+                          setShowMessage(true);
+                          return;
+                        }
+                        if (isMember) {
+                          setMessage('You are already a member of this studio!');
+                          setMessageType('info');
+                          setShowMessage(true);
+                          return;
+                        }
+                        try {
+                          await apiService.createStudioCollaborationRequest(studio.id, {
+                            role: 'writer',
+                            message: '',
+                          });
+                          setMessage('Collaboration request sent! The studio owner will review it.');
+                          setMessageType('success');
+                          setShowMessage(true);
+                        } catch (e: any) {
+                          const errorMessage =
+                            e?.response?.data?.detail || e?.message || 'Failed to send collaboration request';
+                          setMessage(errorMessage);
+                          setMessageType('danger');
+                          setShowMessage(true);
+                        }
+                      }}
+                    >
+                      <i
+                        className={`fas ${isOwner ? 'fa-crown' : isMember ? 'fa-check-circle' : 'fa-handshake'} me-2`}
+                        aria-hidden
+                      />
+                      {isOwner ? 'Mine' : isMember ? 'Member' : 'Collaborate'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="studio-detail__actions">
+                    <Link to="/login/" className="stories-landing__textLink">
+                      <i className="fas fa-sign-in-alt me-1" aria-hidden />
+                      Log in to collaborate
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stories Section */}
-      <div className="mb-4">
-        <h2 className="subtext-btn mb-3">Published Stories</h2>
-        
-        {isLoadingStoryData ? (
-          <LoadingSpinner />
-        ) : stories.length === 0 ? (
-          <div className="text-center py-5">
-            <div className="card border-0 shadow-sm">
-              <div className="card-body py-5">
-                <i className="fas fa-book-open fa-4x text-muted mb-3"></i>
-                <h5 className="subtext-btn-sm text-muted mb-3">No published stories yet</h5>
-                <p className="subtext-btn-sm text-muted">
-                  This studio hasn't published any stories yet.
-                </p>
-              </div>
+      <section className="product-landing__section">
+        <div className="product-landing__container">
+          <h2 className="product-landing__h2">Published stories</h2>
+          <p className="product-landing__body" style={{ marginBottom: '1.25rem', maxWidth: '48rem' }}>
+            Stories published by this studio's owner and collaborators.
+          </p>
+
+          {isLoadingStoryData ? (
+            <div className="store-page__loadingWrap" aria-busy="true">
+              <LoadingSpinner />
             </div>
-          </div>
-        ) : (
-          <div className="row">
-            {stories.map((comic) => (
-              <div key={comic.id} className="col-lg-4 col-md-6 mb-4">
-                <div className="card h-100 border-0 shadow-sm">
-                  {/* Card Header with Username and Date */}
-                  <div className="card-header bg-transparent border-0 p-1">
-                    <div className="d-flex justify-content-between align-items-center mb-2 border-bottom">
-                      <div className="subtext-btn-xs text-dark font-weight-bold">
-                        <i className="fas fa-user me-1"></i> {comic.user_username || 'Unknown'}
-                      </div>
-                      <div className="subtext-btn-xs text-muted">
-                        {comic.updated_at !== comic.created_at ? (
-                          <>Edited: {new Date(comic.updated_at).toLocaleDateString()}</>
-                        ) : (
-                          <>Created: {new Date(comic.created_at).toLocaleDateString()}</>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="card-body p-1">
-                    <div className="d-flex justify-content-between align-items-start mb-0">
-                      <h5 className="subtext-btn-sm mb-1">
-                        {comic.title}
-                        {storyData.has(comic.id) && (() => {
-                          const storySeasons = storyData.get(comic.id)?.seasons || [];
-                          const storyEpisodes = storyData.get(comic.id)?.episodes || [];
-                          const firstEpisode = storyEpisodes[0];
-                          if (firstEpisode && storySeasons.length > 0) {
-                            const season = storySeasons.find((s: any) => s.id === firstEpisode.season);
-                            if (season) {
-                              return <span className="text-muted"> - Season {season.season_number}</span>;
-                            }
-                          }
-                          if (storySeasons.length > 0) {
-                            return <span className="text-muted"> - Season {storySeasons[0].season_number}</span>;
-                          }
-                          return null;
-                        })()}
-                      </h5>
-                    </div>
-                    
-                    <p className="subtext-btn-sm text-muted mb-3">
-                      {comic.description}
-                    </p>
-                    
-                    {/* 3D Comic Viewer - Read-only mode */}
-                    {storyData.has(comic.id) && (
-                      <div className="mb-3">
-                        <Comic3DViewer
-                          episodes={storyData.get(comic.id)?.episodes || []}
-                          dialogues={storyData.get(comic.id)?.dialogues || []}
-                          seasons={storyData.get(comic.id)?.seasons || []}
-                          storyId={comic.id}
-                          readOnly={true}
-                        />
-                      </div>
-                    )}
-                    
-                    {/* Collaborators Section */}
-                    {storyData.has(comic.id) && (
-                      <div className="mb-3">
-                        <div className="card border-0 shadow-sm">
-                          <div className="card-header bg-transparent border-bottom p-2">
-                            <h6 className="subtext-btn-sm mb-0">
-                              <i className="fas fa-users me-2"></i>
-                              Collaborators ({storyData.get(comic.id)?.collaborators?.length || 0})
-                            </h6>
-                          </div>
-                          <div className="card-body p-2">
-                            {(() => {
-                              const collaborators = storyData.get(comic.id)?.collaborators || [];
-                              return collaborators.length > 0 ? (
-                                <div className="d-flex flex-wrap gap-2">
-                                  {(() => {
-                                    // Group collaborators by user (since one user can have multiple roles)
-                                    const collaboratorsByUser = new Map();
-                                    collaborators.forEach((collaborator: any) => {
-                                      const userId = collaborator.user?.id || collaborator.invitee_user?.id;
-                                      const userEmail = collaborator.invitee_email;
-                                      const key = userId || userEmail;
-                                      if (!key) return;
-                                      
-                                      if (!collaboratorsByUser.has(key)) {
-                                        collaboratorsByUser.set(key, {
-                                          user: collaborator.user || collaborator.invitee_user,
-                                          email: collaborator.invitee_email,
-                                          roles: []
-                                        });
-                                      }
-                                      if (collaborator.role) {
-                                        collaboratorsByUser.get(key).roles.push(collaborator.role);
-                                      }
-                                    });
-                                    
-                                    return Array.from(collaboratorsByUser.values()).map((collab: any) => {
-                                      let displayName: string;
-                                      if (collab.user) {
-                                        displayName = `@${collab.user.username}`;
-                                      } else {
-                                        displayName = collab.email || 'Unknown';
-                                      }
-                                      const key = collab.user?.id || collab.email;
-                                      return (
-                                        <span key={key} className="badge bg-primary subtext-btn-sm me-1">
-                                          {displayName} {collab.roles.length > 1 && `(${collab.roles.length} roles)`}
-                                        </span>
-                                      );
-                                    });
-                                  })()}
-                                </div>
-                              ) : (
-                                <div className="text-muted subtext-btn-sm">
-                                  No collaborators for this story.
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+          ) : stories.length === 0 ? (
+            <div className="stories-landing__empty">
+              <div className="stories-landing__emptyIcon" aria-hidden>
+                <i className="fas fa-book-open" />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <h3 className="product-landing__h2" style={{ fontSize: '1.25rem' }}>
+                No published stories yet
+              </h3>
+              <p className="product-landing__body" style={{ marginTop: '0.5rem' }}>
+                This studio has not published any stories yet.
+              </p>
+            </div>
+          ) : (
+            <div className="stories-landing__grid">
+              {stories.map((comic) => (
+                <article key={comic.id} className="stories-landing__card">
+                  <div className="stories-landing__cardMeta">
+                    <span>
+                      <i className="fas fa-user me-1" aria-hidden />
+                      <strong>{comic.user_username || 'Unknown'}</strong>
+                    </span>
+                    <span aria-hidden>·</span>
+                    <span>
+                      {comic.updated_at !== comic.created_at ? (
+                        <>Updated {new Date(comic.updated_at).toLocaleDateString()}</>
+                      ) : (
+                        <>Posted {new Date(comic.created_at).toLocaleDateString()}</>
+                      )}
+                    </span>
+                  </div>
+
+                  <h3 className="stories-landing__cardTitle">
+                    {comic.title}
+                    {storyData.has(comic.id) &&
+                      (() => {
+                        const storySeasons = storyData.get(comic.id)?.seasons || [];
+                        const storyEpisodes = storyData.get(comic.id)?.episodes || [];
+                        const firstEpisode = storyEpisodes[0];
+                        if (firstEpisode && storySeasons.length > 0) {
+                          const season = storySeasons.find((s: any) => s.id === firstEpisode.season);
+                          if (season) {
+                            return (
+                              <span className="stories-landing__cardTitleSuffix">
+                                {' '}
+                                · Season {season.season_number}
+                              </span>
+                            );
+                          }
+                        }
+                        if (storySeasons.length > 0) {
+                          return (
+                            <span className="stories-landing__cardTitleSuffix">
+                              {' '}
+                              · Season {storySeasons[0].season_number}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                  </h3>
+
+                  {comic.description ? (
+                    <p className="studio-detail__storyDesc">{comic.description}</p>
+                  ) : null}
+
+                  {storyData.has(comic.id) && (
+                    <div className="stories-landing__viewerWrap">
+                      <Comic3DViewer
+                        episodes={storyData.get(comic.id)?.episodes || []}
+                        dialogues={storyData.get(comic.id)?.dialogues || []}
+                        seasons={storyData.get(comic.id)?.seasons || []}
+                        storyId={comic.id}
+                        readOnly={true}
+                      />
+                    </div>
+                  )}
+
+                  {storyData.has(comic.id) && (
+                    <div className="stories-landing__subsection">
+                      <div className="stories-landing__subsectionLabel">
+                        Collaborators ({storyData.get(comic.id)?.collaborators?.length || 0})
+                      </div>
+                      {(() => {
+                        const collaborators = storyData.get(comic.id)?.collaborators || [];
+                        if (collaborators.length === 0) {
+                          return <p className="stories-landing__chipMuted mb-0">No collaborators listed.</p>;
+                        }
+                        const collaboratorsByUser = new Map();
+                        collaborators.forEach((collaborator: any) => {
+                          const userId = collaborator.user?.id || collaborator.invitee_user?.id;
+                          const userEmail = collaborator.invitee_email;
+                          const key = userId || userEmail;
+                          if (!key) return;
+
+                          if (!collaboratorsByUser.has(key)) {
+                            collaboratorsByUser.set(key, {
+                              user: collaborator.user || collaborator.invitee_user,
+                              email: collaborator.invitee_email,
+                              roles: [],
+                            });
+                          }
+                          if (collaborator.role) {
+                            collaboratorsByUser.get(key).roles.push(collaborator.role);
+                          }
+                        });
+
+                        return (
+                          <div className="stories-landing__chips">
+                            {Array.from(collaboratorsByUser.values()).map((collab: any) => {
+                              let displayName: string;
+                              if (collab.user) {
+                                displayName = `@${collab.user.username}`;
+                              } else {
+                                displayName = collab.email || 'Unknown';
+                              }
+                              const key = collab.user?.id || collab.email;
+                              return (
+                                <span key={key} className="stories-landing__chip">
+                                  {displayName}
+                                  {collab.roles.length > 1 && ` · ${collab.roles.length} roles`}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 };

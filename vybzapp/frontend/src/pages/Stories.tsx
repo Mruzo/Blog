@@ -6,6 +6,7 @@ import MetaTags from '../components/MetaTags';
 import { useApi } from '../contexts/ApiContext';
 import apiService from '../services/api';
 import { collaborationService } from '../services/collaborationService';
+import { filterPublicStoriesForStudio } from '../utils/studioScope';
 import './Stories.css';
 
 interface Character {
@@ -88,34 +89,6 @@ const Stories: React.FC = () => {
     requestCache.current.set(cacheKey, request);
     
     return request;
-  }, []);
-
-  // Track authentication state - update when component mounts or token changes
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const token = localStorage.getItem('authToken');
-    return !!token;
-  });
-
-  // Listen for token changes (e.g., after login/logout)
-  useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem('authToken');
-      setIsAuthenticated(!!token);
-    };
-
-    // Check on mount
-    checkAuth();
-
-    // Listen for storage events (logout in other tabs)
-    window.addEventListener('storage', checkAuth);
-    
-    // Also check periodically (in case token is set/removed in same tab)
-    const interval = setInterval(checkAuth, 1000);
-
-    return () => {
-      window.removeEventListener('storage', checkAuth);
-      clearInterval(interval);
-    };
   }, []);
 
   // Create story button removed - now handled by FloatingActionMenu in Layout
@@ -227,7 +200,9 @@ const Stories: React.FC = () => {
   // Copy link to clipboard - use selected episode URL if available
   const handleCopyLink = async (e: React.MouseEvent<HTMLButtonElement>, storyId: number) => {
     e.preventDefault();
-    
+    const button = e.currentTarget;
+    if (!button) return;
+
     const selectedEpisode = selectedEpisodes.get(storyId);
     const storyDataForStory = storyData.get(storyId);
     
@@ -256,39 +231,34 @@ const Stories: React.FC = () => {
     // Track the share click
     trackShareClick('copy_link', contentId, contentType);
     
+    const showCopiedFeedback = () => {
+      if (!button.isConnected) return;
+      const originalHTML = button.innerHTML;
+      button.innerHTML = '<i class="fas fa-check"></i>';
+      button.classList.add('is-copied');
+      window.setTimeout(() => {
+        if (!button.isConnected) return;
+        button.innerHTML = originalHTML;
+        button.classList.remove('is-copied');
+      }, 2000);
+    };
+
     try {
       await navigator.clipboard.writeText(urlToCopy);
-      
-      // Show success feedback
-      const button = e.currentTarget;
-      const originalHTML = button.innerHTML;
-      button.innerHTML = '<i class="fas fa-check" style="color: #ffffff; font-size: 0.8rem;"></i>';
-      button.style.backgroundColor = '#28a745';
-      
-      setTimeout(() => {
-        button.innerHTML = originalHTML;
-        button.style.backgroundColor = '#ffffff';
-      }, 2000);
+      showCopiedFeedback();
     } catch (err) {
       console.error('Could not copy text: ', err);
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = urlToCopy;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      
-      // Show success feedback
-      const button = e.currentTarget;
-      const originalHTML = button.innerHTML;
-      button.innerHTML = '<i class="fas fa-check" style="color: #ffffff; font-size: 0.8rem;"></i>';
-      button.style.backgroundColor = '#28a745';
-      
-      setTimeout(() => {
-        button.innerHTML = originalHTML;
-        button.style.backgroundColor = '#ffffff';
-      }, 2000);
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = urlToCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showCopiedFeedback();
+      } catch (fallbackErr) {
+        console.error('Clipboard fallback failed: ', fallbackErr);
+      }
     }
   };
   
@@ -408,12 +378,7 @@ const Stories: React.FC = () => {
     }
 
     if (studio && studio.owner) {
-      // Get owner ID
-      const ownerId = typeof studio.owner === 'object' ? studio.owner.id : studio.owner;
-      
-      // Filter stories owned by the studio owner
-      const filtered = stories.filter((story) => story.user === ownerId);
-      setFilteredStories(filtered);
+      setFilteredStories(filterPublicStoriesForStudio(stories, studio));
     } else {
       // No studio filter - show all stories
       setFilteredStories(stories);
@@ -641,128 +606,138 @@ const Stories: React.FC = () => {
 
   if (error) {
     return (
-      <div className="container mt-4">
-        <div className="alert alert-danger" role="alert">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          {error}
+      <div className="product-landing">
+        <div className="product-landing__container product-landing__section">
+          <div className="store-page__error" role="alert">
+            <i className="fas fa-exclamation-triangle" aria-hidden />
+            <span>{error}</span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4 stories-container" style={{ maxWidth: '1200px' }}>
+    <div className="product-landing">
       <MetaTags
         title="Immersive Stories"
         description="Browse all published interactive & immersive stories"
         keywords="3D comics, published stories, interactive narratives, immersive comics"
       />
-      {/* <PageHeader
-        title="Published Stories"
-        description="Browse all published 3D comic stories"
-        actions={
-          <SmallButton to="/immersivecomics/story/create/">
-            <i className="fas fa-plus me-1"></i>Create New Story
-          </SmallButton>
-        }
-      /> */}
+
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container">
+          <p className="product-landing__eyebrow">{studio ? 'Studio' : 'Browse'}</p>
+          <h1 className="product-landing__h1">
+            {studio?.name ? `Stories — ${studio.name}` : 'Immersive stories'}
+          </h1>
+          <p className="product-landing__lead">
+            {studio
+              ? 'Published stories linked to this studio. Open a card to preview in 3D and share episodes.'
+              : 'Explore published 3D comic stories — preview scenes, see collaborators, and share your favorites.'}
+          </p>
+          {studio && (
+            <div className="stories-landing__contextStrip">
+              <span>
+                Filtered by <strong>{studio.name}</strong>
+              </span>
+              <Link to="/immersivecomics/" className="stories-landing__textLink">
+                Show all stories
+              </Link>
+              <Link to={`/immersivecomics/studio/${studio.id}/`} className="stories-landing__btnPrimary">
+                Studio profile
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
 
       {comics.length === 0 ? (
-        <div className="text-center py-5">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body py-5">
-              <i className="fas fa-book-open fa-4x text-muted mb-3"></i>
-              <h5 className="subtext-btn-sm text-muted mb-3">No published stories yet</h5>
-              <p className="subtext-btn-sm text-muted mb-4">
-                No published stories are available. Create and publish your first 3D comic story.
+        <section className="product-landing__section">
+          <div className="product-landing__container">
+            <div className="stories-landing__empty">
+              <div className="stories-landing__emptyIcon" aria-hidden>
+                <i className="fas fa-book-open" />
+              </div>
+              <h2 className="product-landing__h2" style={{ fontSize: '1.25rem' }}>
+                No published stories yet
+              </h2>
+              <p className="product-landing__body" style={{ marginTop: '0.5rem' }}>
+                Create and publish your first 3D comic story to have it appear here.
               </p>
-              <Link 
-                to="/immersivecomics/story/create/" 
-                className="btn btn-primary subtext-btn-sm create-story-btn"
-              >
-                <i className="fas fa-plus me-1"></i>Create Your First Story
+              <Link to="/immersivecomics/story/create/" className="stories-landing__btnPrimary mt-3 d-inline-flex">
+                <i className="fas fa-plus me-2" aria-hidden />
+                Create your first story
               </Link>
             </div>
           </div>
-        </div>
+        </section>
       ) : (
-        <div className="row">
-          {comics.map((comic) => (
-            <div key={comic.id} className="col-lg-4 col-md-6 mb-4">
-              <div className="card h-100 border-0 shadow-sm">
-                {/* Card Header with Username and Date */}
-                <div className="card-header bg-transparent border-0 p-1">
-                  <div className="d-flex justify-content-between align-items-center mb-2 border-bottom">
-                    <div className="subtext-btn-xs text-dark font-weight-bold">
-                      <i className="fas fa-user me-1"></i> {comic.user_username || 'Unknown'}
-                    </div>
-                    <div className="subtext-btn-xs text-muted">
+        <section className="product-landing__section">
+          <div className="product-landing__container">
+            <div className="stories-landing__grid">
+              {comics.map((comic) => (
+                <article key={comic.id} className="stories-landing__card">
+                  <div className="stories-landing__cardMeta">
+                    <span>
+                      <i className="fas fa-user me-1" aria-hidden />
+                      <strong>{comic.user_username || 'Unknown'}</strong>
+                    </span>
+                    <span aria-hidden>·</span>
+                    <span>
                       {comic.updated_at !== comic.created_at ? (
-                        <>Edited: {new Date(comic.updated_at).toLocaleDateString()}</>
+                        <>Updated {new Date(comic.updated_at).toLocaleDateString()}</>
                       ) : (
-                        <>Created: {new Date(comic.created_at).toLocaleDateString()}</>
+                        <>Posted {new Date(comic.created_at).toLocaleDateString()}</>
                       )}
-                    </div>
+                    </span>
                   </div>
-                </div>
-                
-                <div className="card-body p-1">
-                  <div className="d-flex justify-content-between align-items-start mb-0">
-                    <h5 className="subtext-btn-sm mb-1">
-                      {comic.title}
-                      {storyData.has(comic.id) && (() => {
+
+                  <h2 className="stories-landing__cardTitle">
+                    {comic.title}
+                    {storyData.has(comic.id) &&
+                      (() => {
                         const storySeasons = storyData.get(comic.id)?.seasons || [];
                         const storyEpisodes = storyData.get(comic.id)?.episodes || [];
-                        // Find the season from the first episode (which Comic3DViewer auto-selects)
                         const firstEpisode = storyEpisodes[0];
                         if (firstEpisode && storySeasons.length > 0) {
                           const season = storySeasons.find((s: any) => s.id === firstEpisode.season);
                           if (season) {
-                            return <span className="text-muted"> - Season {season.season_number}</span>;
+                            return (
+                              <span className="stories-landing__cardTitleSuffix">
+                                {' '}
+                                · Season {season.season_number}
+                              </span>
+                            );
                           }
                         }
-                        // Fallback: show first season if available
                         if (storySeasons.length > 0) {
-                          return <span className="text-muted"> - Season {storySeasons[0].season_number}</span>;
+                          return (
+                            <span className="stories-landing__cardTitleSuffix">
+                              {' '}
+                              · Season {storySeasons[0].season_number}
+                            </span>
+                          );
                         }
                         return null;
                       })()}
-                    </h5>
-                    <div className="dropdown">
-                      {/* <button 
-                        className="btn btn-sm btn-outline-secondary" 
-                        type="button" 
-                        data-bs-toggle="dropdown"
-                      >
-                        <i className="fas fa-ellipsis-v"></i>
-                      </button> */}
-                      <ul className="dropdown-menu">
-                        <li>
-                          <Link className="dropdown-item" to={`/immersivecomics/story/${comic.id}/edit/`}>
-                            <i className="fas fa-edit me-2"></i>Edit
-                          </Link>
-                        </li>
-                        <li>
-                          <Link className="dropdown-item" to={`/immersivecomics/story/${comic.id}/manage/`}>
-                            <i className="fas fa-cog me-2"></i>Manage
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <p 
-                      className={`subtext-btn-sm text-muted mb-0 story-description ${expandedDescriptions.has(comic.id) ? 'expanded' : 'collapsed'}`}
+                  </h2>
+
+                  <div>
+                    <p
+                      className={`product-landing__body story-description mb-0 ${
+                        expandedDescriptions.has(comic.id) ? 'expanded' : 'collapsed'
+                      }`}
+                      style={{ color: 'rgba(15, 23, 42, 0.62)', fontSize: '0.92rem' }}
                     >
-                    {comic.description}
-                  </p>
+                      {comic.description}
+                    </p>
                     {comic.description && comic.description.length > 100 && (
                       <button
-                        className="btn btn-link p-0 text-primary text-decoration-none font-quicksand"
-                        style={{ fontSize: '0.85rem', paddingTop: '0.25rem' }}
+                        type="button"
+                        className="stories-landing__descMore"
                         onClick={() => {
-                          setExpandedDescriptions(prev => {
+                          setExpandedDescriptions((prev) => {
                             const newSet = new Set(prev);
                             if (newSet.has(comic.id)) {
                               newSet.delete(comic.id);
@@ -773,14 +748,13 @@ const Stories: React.FC = () => {
                           });
                         }}
                       >
-                        {expandedDescriptions.has(comic.id) ? 'less' : '... more'}
+                        {expandedDescriptions.has(comic.id) ? 'Show less' : 'Show more'}
                       </button>
                     )}
                   </div>
                   
-                  {/* 3D Comic Viewer - Read-only mode */}
                   {storyData.has(comic.id) && (
-                    <div className="mb-2">
+                    <div className="stories-landing__viewerWrap">
                       <Comic3DViewer
                         episodes={storyData.get(comic.id)?.episodes || []}
                         dialogues={storyData.get(comic.id)?.dialogues || []}
@@ -791,256 +765,125 @@ const Stories: React.FC = () => {
                           handleEpisodeSelect(comic.id, episode);
                         }}
                         onViewIncremented={(storyId) => {
-                          console.log('[Stories] ========== onViewIncremented CALLED ==========');
-                          console.log('[Stories] storyId:', storyId);
-                          console.log('[Stories] Current comics state:', comics);
-                          
-                          // Update the comic's total_views when an episode view is incremented
-                          setComics(prev => {
-                            console.log('[Stories] setComics called with prev:', prev);
-                            const updated = prev.map(c => {
-                              if (c.id === storyId) {
-                                const newTotal = (c.total_views || 0) + 1;
-                                console.log('[Stories] ✅ Updating comic', storyId, 'total_views from', c.total_views, 'to', newTotal);
-                                return { ...c, total_views: newTotal };
-                              }
-                              return c;
-                            });
-                            console.log('[Stories] Updated comics:', updated);
-                            return updated;
-                          });
-                          
-                          // Also update filteredStories so the value persists when useEffect runs
-                          setFilteredStories(prev => prev.map(s => 
-                            s.id === storyId 
-                              ? { ...s, total_views: (s.total_views || 0) + 1 }
-                              : s
-                          ));
-                          
-                          console.log('[Stories] ========== State update complete ==========');
+                          setComics((prev) =>
+                            prev.map((c) =>
+                              c.id === storyId ? { ...c, total_views: (c.total_views || 0) + 1 } : c
+                            )
+                          );
+                          setFilteredStories((prev) =>
+                            prev.map((s) =>
+                              s.id === storyId ? { ...s, total_views: (s.total_views || 0) + 1 } : s
+                            )
+                          );
                         }}
                       />
                     </div>
                   )}
-                  
-                  {/* Views Count Section - Above Collaborators */}
-                  {/* Use total_views from API (calculated by backend) instead of frontend calculation */}
-                  <div className="d-flex justify-content-start align-items-center mb-2">
-                    <span 
-                      className="badge" 
-                      style={{ 
-                        background: 'transparent', 
-                        color: '#111e7f',
-                        fontSize: '0.85rem',
-                        padding: '0.35rem 0.65rem'
-                      }}
-                    >
-                      {comic.total_views || 0} views
-                    </span>
-                  </div>
-                  
-                  {/* Collaborators Section - Below 3D Viewer */}
-                  {storyData.has(comic.id) && (
-                    <div className="mb-2">
-                      <div className="card border-0 shadow-sm">
-                        <div className="card-header bg-transparent border-bottom border-top p-2">
-                          <h6 className="subtext-btn-sm mb-0">
-                            <i className="fas fa-users me-2"></i>
-                            &nbsp;Collaborators ({(() => {
-                              const collaborators = storyData.get(comic.id)?.collaborators || [];
-                              // Only count StoryCollaborator objects (selected via checkbox)
-                              const storyCollaborators = collaborators.filter((collab: any) => 
-                                collab.user && collab.user.username && collab.is_active !== false
-                              );
-                              return storyCollaborators.length;
-                            })()})
-                          </h6>
-                        </div>
-                        <div className="card-body p-2">
-                          {(() => {
-                            const collaborators = storyData.get(comic.id)?.collaborators || [];
-                            // Only show StoryCollaborator objects (selected via checkbox)
-                            const storyCollaborators = collaborators.filter((collab: any) => 
-                              collab.user && collab.user.username && collab.is_active !== false
-                            );
-                            
-                            return storyCollaborators.length > 0 ? (
-                              <div className="d-flex flex-wrap gap-2">
-                                {(() => {
-                                  // Group collaborators by user (since one user can have multiple roles)
-                                  const collaboratorsByUser = new Map();
-                                  storyCollaborators.forEach((collaborator: any) => {
-                                    const userId = collaborator.user?.id;
-                                    if (!userId) return;
-                                    
-                                    if (!collaboratorsByUser.has(userId)) {
-                                      collaboratorsByUser.set(userId, {
-                                        user: collaborator.user,
-                                        roles: []
-                                      });
-                                    }
-                                    if (collaborator.role) {
-                                      collaboratorsByUser.get(userId).roles.push(collaborator.role);
-                                    }
-                                  });
-                                  
-                                  return Array.from(collaboratorsByUser.values()).map((collab: any) => {
-                                    const displayName = `@${collab.user.username}`;
-                                    const key = `${collab.user.id}`;
-                                    return (
-                                      <span key={key} className="badge bg-primary subtext-btn-sm me-1">
-                                        {displayName} {collab.roles.length > 1 && `(${collab.roles.length} roles)`}
-                                      </span>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            ) : (
-                              <div className="text-muted subtext-btn-sm">
-                                No collaborators for this story.
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Social Media Sharing Section - After Collaborators */}
-                  {storyData.has(comic.id) && (
-                    <div className="mb-3">
-                      <div className="card border-0 shadow-sm">
-                        <div className="card-body p-2">
-                          <div className="d-flex justify-content-center justify-content-md-end gap-2 align-items-center">
-                            {/* Facebook Share */}
-                            <button 
-                              type="button"
-                              onClick={() => handleShare('facebook', comic.id)}
-                              className="btn btn-outline-dark btn-sm rounded-circle share-btn"
-                              style={{
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #000000',
-                                width: '35px',
-                                height: '35px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.3s ease'
-                              }}
-                              title="Share on Facebook"
-                            >
-                              <i className="fab fa-facebook-f" style={{ color: '#000000', fontSize: '0.8rem' }}></i>
-                            </button>
-                            
-                            {/* X (Twitter) Share */}
-                            <button 
-                              type="button"
-                              onClick={() => handleShare('x_twitter', comic.id)}
-                              className="btn btn-outline-dark btn-sm rounded-circle share-btn"
-                              style={{
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #000000',
-                                width: '35px',
-                                height: '35px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.3s ease'
-                              }}
-                              title="Share on X (Twitter)"
-                            >
-                              <i className="fab fa-x-twitter" style={{ color: '#000000', fontSize: '0.8rem' }}></i>
-                            </button>
-                            
-                            {/* Reddit Share */}
-                            <button 
-                              type="button"
-                              onClick={() => handleShare('reddit', comic.id)}
-                              className="btn btn-outline-dark btn-sm rounded-circle share-btn"
-                              style={{
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #000000',
-                                width: '35px',
-                                height: '35px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.3s ease'
-                              }}
-                              title="Share on Reddit"
-                            >
-                              <i className="fab fa-reddit-alien" style={{ color: '#000000', fontSize: '0.8rem' }}></i>
-                            </button>
-                            
-                            {/* Copy Link */}
-                            <button 
-                              type="button"
-                              onClick={(e) => handleCopyLink(e, comic.id)}
-                              className="btn btn-outline-dark btn-sm rounded-circle share-btn"
-                              style={{
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #000000',
-                                width: '35px',
-                                height: '35px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.3s ease'
-                              }}
-                              title="Copy link"
-                            >
-                              <i className="fas fa-link" style={{ color: '#000000', fontSize: '0.8rem' }}></i>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Hide badges for visitors */}
-                  {/* <div className="d-flex gap-2 mb-3">
-                    <span className={`badge ${comic.is_public ? 'bg-success' : 'bg-secondary'}`}>
-                      {comic.is_public ? 'Public' : 'Private'}
-                    </span>
-                    <span className={`badge ${
-                      comic.moderation_status === 'approved' ? 'bg-success' : 
-                      comic.moderation_status === 'pending' ? 'bg-warning' : 'bg-danger'
-                    }`}>
-                      {comic.moderation_status}
-                    </span>
-                  </div> */}
-                  
-                  {/* Hide duplicate date info - already shown in header */}
-                  {/* <div className="text-muted subtext-btn-sm">
-                    <div>Created: {new Date(comic.created_at).toLocaleDateString()}</div>
-                    <div>Updated: {new Date(comic.updated_at).toLocaleDateString()}</div>
-                  </div> */}
-                </div>
-                
-                {/* Hide Manage and Edit buttons for visitors - only show 3D viewer */}
-                {/* <div className="card-footer bg-transparent border-0 pt-0">
-                  <div className="d-flex gap-2">
-                    <Link 
-                      to={`/immersivecomics/story/${comic.id}/manage/`}
-                      className="btn btn-outline-primary btn-sm subtext-btn-sm flex-fill"
-                    >
-                      <i className="fas fa-cog me-1"></i>Manage
-                    </Link>
-                    <Link 
-                      to={`/immersivecomics/story/${comic.id}/edit/`}
-                      className="btn btn-outline-secondary btn-sm subtext-btn-sm flex-fill"
-                    >
-                      <i className="fas fa-edit me-1"></i>Edit
-                    </Link>
-                  </div>
-                </div> */}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* Floating Action Button removed - now handled by FloatingActionMenu in Layout */}
+                  <p className="stories-landing__meta" aria-label="Total story views">
+                    <span className="stories-landing__metaNum">{(comic.total_views || 0).toLocaleString()}</span>{' '}
+                    views
+                  </p>
+
+                  {storyData.has(comic.id) && (
+                    <div className="stories-landing__subsection">
+                      <div className="stories-landing__subsectionLabel">
+                        Collaborators (
+                        {(() => {
+                          const collaborators = storyData.get(comic.id)?.collaborators || [];
+                          const storyCollaborators = collaborators.filter(
+                            (collab: any) => collab.user && collab.user.username && collab.is_active !== false
+                          );
+                          return storyCollaborators.length;
+                        })()}
+                        )
+                      </div>
+                      {(() => {
+                        const collaborators = storyData.get(comic.id)?.collaborators || [];
+                        const storyCollaborators = collaborators.filter(
+                          (collab: any) => collab.user && collab.user.username && collab.is_active !== false
+                        );
+
+                        if (storyCollaborators.length === 0) {
+                          return <p className="stories-landing__chipMuted mb-0">No collaborators listed.</p>;
+                        }
+
+                        const collaboratorsByUser = new Map();
+                        storyCollaborators.forEach((collaborator: any) => {
+                          const userId = collaborator.user?.id;
+                          if (!userId) return;
+
+                          if (!collaboratorsByUser.has(userId)) {
+                            collaboratorsByUser.set(userId, {
+                              user: collaborator.user,
+                              roles: [],
+                            });
+                          }
+                          if (collaborator.role) {
+                            collaboratorsByUser.get(userId).roles.push(collaborator.role);
+                          }
+                        });
+
+                        return (
+                          <div className="stories-landing__chips">
+                            {Array.from(collaboratorsByUser.values()).map((collab: any) => {
+                              const displayName = `@${collab.user.username}`;
+                              const key = `${collab.user.id}`;
+                              return (
+                                <span key={key} className="stories-landing__chip">
+                                  {displayName}
+                                  {collab.roles.length > 1 && ` · ${collab.roles.length} roles`}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {storyData.has(comic.id) && (
+                    <div className="stories-landing__shareRow" role="group" aria-label="Share this story">
+                      <button
+                        type="button"
+                        onClick={() => handleShare('facebook', comic.id)}
+                        className="stories-landing__shareBtn"
+                        title="Share on Facebook"
+                      >
+                        <i className="fab fa-facebook-f" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleShare('x_twitter', comic.id)}
+                        className="stories-landing__shareBtn"
+                        title="Share on X (Twitter)"
+                      >
+                        <i className="fab fa-x-twitter" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleShare('reddit', comic.id)}
+                        className="stories-landing__shareBtn"
+                        title="Share on Reddit"
+                      >
+                        <i className="fab fa-reddit-alien" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyLink(e, comic.id)}
+                        className="stories-landing__shareBtn"
+                        title="Copy link"
+                      >
+                        <i className="fas fa-link" aria-hidden />
+                      </button>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

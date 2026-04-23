@@ -70,83 +70,88 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
     })
   });
 
+  const path = location.pathname;
+  const storiesActive =
+    path === '/immersivecomics/' ||
+    path === '/immersivecomics' ||
+    path.startsWith('/immersivecomics/dashboard');
+  const studiosActive = path.includes('/immersivecomics/studios');
+  const storeActive =
+    path.includes('/product') && !path.includes('my-orders');
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-light border-bottom w-100" style={{ backgroundColor: '#ffbc00' }}>
-        <div className="container-fluid px-0">
-          <Link className="navbar-brand p-0" to="/">
-            <img 
-              src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/jv_header%201.2.svg` : "/jv_header.svg"} 
-              alt="VYBZ Logo - Updated" 
+      {/* Top Navbar — logo, primary destinations (desktop inline / mobile bottom bar via #default-navbar), account */}
+      <nav
+        className="navbar navbar-expand-lg navbar-light border-bottom w-100 app-site-header"
+        style={{ backgroundColor: '#ffbc00' }}
+      >
+        <div className="container-fluid px-2 px-md-3 app-site-header__inner">
+          <Link className="navbar-brand p-0 app-site-header__brand" to="/">
+            <img
+              src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/jv_header%201.2.svg` : "/jv_header.svg"}
+              alt="VYBZ Logo - Updated"
               height="40"
             />
           </Link>
-          
-          <div className="d-flex align-items-center font-quicksand">
+
+          <div
+            id="default-navbar"
+            className={`navbar-state-default app-site-header__navTray navbar-buttons-container ${showProfileNavbar ? 'hidden' : 'show'}`}
+          >
+            <Link
+              to="/immersivecomics/"
+              className={`app-site-header__link${storiesActive ? ' active' : ''}`}
+            >
+              <i className="fas fa-play" aria-hidden />
+              <span>Stories</span>
+            </Link>
+            <Link
+              to="/immersivecomics/studios/"
+              className={`app-site-header__link${studiosActive ? ' active' : ''}`}
+            >
+              <i className="fas fa-clapperboard" aria-hidden />
+              <span>Studios</span>
+            </Link>
+            <Link
+              to="/product/"
+              className={`app-site-header__link${storeActive ? ' active' : ''}`}
+            >
+              <i className="fas fa-store" aria-hidden />
+              <span>Store</span>
+            </Link>
+          </div>
+
+          <div className="d-flex align-items-center font-quicksand app-site-header__actions">
             {isAuthenticated ? (
-              <Link 
-                to="/immersivecomics/my-studio/" 
-                className="btn btn-light btn-sm mx-2 px-2" 
+              <Link
+                to="/immersivecomics/my-studio/"
+                className="btn btn-light btn-sm mx-1 mx-sm-2 px-2"
                 id="profile-btn"
                 onClick={switchToProfileNavbar}
               >
-                <i className="fas fa-user"></i>
+                <i className="fas fa-user" />
                 <span className="d-none d-sm-inline ms-1">
                   &nbsp;{user?.first_name || user?.username || 'Profile'}
                 </span>
               </Link>
             ) : (
-              <Link to="/login/" className="btn btn-light btn-sm mx-2 px-2" id="login-btn">
-                <i className="fas fa-sign-in-alt"></i>
+              <Link to="/login/" className="btn btn-light btn-sm mx-1 mx-sm-2 px-2" id="login-btn">
+                <i className="fas fa-sign-in-alt" />
                 <span className="d-none d-sm-inline ms-1"> Login</span>
               </Link>
             )}
-            <Link to="/product/cart/" className="btn btn-light btn-sm px-2 ms-2 position-relative">
-              <i className="fas fa-shopping-cart"></i>
-              <span className={`position-absolute top-0 start-100 translate-middle badge rounded-pill ${cartCount > 0 ? 'bg-success' : 'bg-danger'}`}>
+            <Link to="/product/cart/" className="btn btn-light btn-sm px-2 ms-1 ms-sm-2 position-relative">
+              <i className="fas fa-shopping-cart" />
+              <span
+                className={`position-absolute top-0 start-100 translate-middle badge rounded-pill ${cartCount > 0 ? 'bg-success' : 'bg-danger'}`}
+              >
                 {cartCount}
               </span>
             </Link>
           </div>
         </div>
       </nav>
-
-      {/* Navigation Buttons */}
-      <div className="border-bottom w-100">
-        <div className="container-fluid px-0">
-          <div 
-            id="default-navbar" 
-            className={`navbar-state-default d-flex justify-content-center align-items-center py-2 navbar-buttons-container ${showProfileNavbar ? 'hidden' : 'show'}`} 
-            style={{ flexWrap: 'nowrap', width: '100%' }}
-          >
-            <Link 
-              to="/immersivecomics/" 
-              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname === '/immersivecomics/' ? 'active' : ''}`}
-              style={getButtonStyle(location.pathname === '/immersivecomics/')}
-            >
-              <i className="fas fa-play me-1" style={{ fontSize: '1em', verticalAlign: 'middle', lineHeight: 'inherit' }}></i>
-              <span> Stories</span>
-            </Link>
-            <Link 
-              to="/immersivecomics/studios/" 
-              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname.includes('studios') ? 'active' : ''}`}
-              style={getButtonStyle(location.pathname.includes('studios'))}
-            >
-              <i className="fas fa-clapperboard me-1" style={{ fontSize: '1em', verticalAlign: 'middle', lineHeight: 'inherit' }}></i>
-              <span> Studios</span>
-            </Link>
-            <Link 
-              to="/product/" 
-              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname.includes('product') ? 'active' : ''}`}
-              style={getButtonStyle(location.pathname.includes('product'))}
-            >
-              <i className="fas fa-store me-1" style={{ fontSize: '1em', verticalAlign: 'middle', lineHeight: 'inherit' }}></i>
-              <span> Store</span>
-            </Link>
-          </div>
-        </div>
-      </div>
 
       {/* Profile navbar state */}
       <div className="border-bottom w-100">

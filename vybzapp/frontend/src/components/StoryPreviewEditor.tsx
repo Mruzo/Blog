@@ -239,7 +239,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
         <div className="col-12">
           <div className="card model-container position-relative" style={{ height: '400px', display: 'block' }}>
             {data.model.previewUrl ? (
-              <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+              <div style={{ width: '100%', height: '100%', position: 'relative', zIndex: 0, isolation: 'isolate' }}>
                 {/* Direct model-viewer element */}
                 <model-viewer
                   ref={modelViewerRef}
@@ -266,33 +266,36 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                     height: '100%',
                     display: 'block',
                     visibility: 'visible',
-                    opacity: 1
+                    opacity: 1,
+                    position: 'relative',
+                    zIndex: 0
                   }}
                 />
                 
-                {/* Speech Bubble - positioned absolutely over the model viewer (Django pattern) */}
                 {currentDialogue && (
-                  <div 
-                    className="speech-bubble position-absolute bg-light p-1 rounded-2 border border-secondary w-100 align-top"
-                    style={{ 
-                      zIndex: 10, 
-                      top: '0',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: '90%',
-                      maxWidth: '600px',
-                      textAlign: 'left',
-                      fontFamily: 'animeace, Comic, sans-serif',
-                      fontSize: 'small',
-                      fontStyle: 'italic',
-                      backgroundColor: 'rgba(248, 249, 250, 0.95)',
-                      border: '2px solid #333',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                    }}
-                  >
-                    <div>
-                      <strong>{data.characters.find(char => char.id === currentDialogue.character)?.name || `Character ${currentDialogue.character}`}:</strong> {currentDialogue.text}
+                  <div className="comic3d-dialogue-overlay">
+                    <div
+                      className="speech-bubble p-1 rounded-2 border border-secondary align-top"
+                      style={{
+                        position: 'relative',
+                        textAlign: 'left',
+                        fontFamily: 'animeace, Comic, sans-serif',
+                        fontSize: 'small',
+                        fontStyle: 'italic',
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #333',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      <div id="top-dialogue" style={{ padding: 0, margin: 0 }}>
+                        <strong>
+                          {data.characters.find(char => char.id === currentDialogue.character)?.name ||
+                            `Character ${currentDialogue.character}`}
+                          :
+                        </strong>{' '}
+                        {currentDialogue.text}
+                      </div>
                     </div>
                   </div>
                 )}

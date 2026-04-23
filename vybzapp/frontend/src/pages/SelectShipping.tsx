@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
-import BackButton from '../components/BackButton';
 import { parseJsonApiError } from '../utils/parseJsonApiError';
 
 // Helper function to get CSRF token from cookies
@@ -52,7 +51,6 @@ interface Order {
 
 const SelectShipping: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [rates, setRates] = useState<ShippingRate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,10 +87,7 @@ const SelectShipping: React.FC = () => {
 
       const data = await response.json();
       setOrder(data.order);
-      // Debug: log the rates to see what we're getting
-      console.log('Shipping rates received:', JSON.stringify(data.rates, null, 2));
-      console.log('First rate structure:', data.rates && data.rates[0] ? JSON.stringify(data.rates[0], null, 2) : 'No rates');
-      
+
       // Sort rates by cost (amount) from lowest to highest
       const sortedRates = (data.rates || []).sort((a: ShippingRate, b: ShippingRate) => {
         const amountA = parseFloat(a.amount || '0');
@@ -159,112 +154,152 @@ const SelectShipping: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__hero">
+          <div className="product-landing__container store-page__heroRow">
+            <div className="store-page__heroMain">
+              <p className="product-landing__eyebrow">Store</p>
+              <h1 className="product-landing__h1">Shipping</h1>
+              <p className="product-landing__lead">Loading carrier rates…</p>
+            </div>
+          </div>
+        </section>
+        <section className="product-landing__section store-page__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="container text-center p-5">
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-        <BackButton to="/product/cart/" variant="primary" />
+      <div className="product-landing">
+        <section className="product-landing__hero">
+          <div className="product-landing__container store-page__heroRow">
+            <div className="store-page__heroMain">
+              <p className="product-landing__eyebrow">Store</p>
+              <h1 className="product-landing__h1">Shipping</h1>
+              <p className="product-landing__lead">We could not load shipping options.</p>
+            </div>
+          </div>
+        </section>
+        <section className="product-landing__section store-page__section">
+          <div className="product-landing__container">
+            <div className="store-page__error" role="alert">
+              <i className="fas fa-exclamation-triangle store-page__errorIcon" aria-hidden />
+              <span>{error}</span>
+            </div>
+            <div className="store-page__ctaRow">
+              <Link to="/product/cart/checkout/" className="product-landing__ctaGhost store-page__linkBtn">
+                Back to checkout
+              </Link>
+              <Link to="/product/cart/" className="product-landing__ctaPrimary store-page__linkBtn">
+                Back to cart
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="container text-center p-1 mt-0">
-      <div className="container mt-5 p-0">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <div className="flex-grow-1">
-            <h2 className="subtext-btn text-decoration-none mb-0">Select Shipping Option</h2>
+    <div className="product-landing">
+      <section className="product-landing__hero">
+        <div className="product-landing__container store-page__heroRow">
+          <div className="store-page__heroMain">
+            <p className="product-landing__eyebrow">Store</p>
+            <h1 className="product-landing__h1">Choose shipping</h1>
+            <p className="product-landing__lead">
+              Pick a service level. You will continue to secure payment after confirming the total.
+            </p>
           </div>
-          <div className="d-flex gap-2">
-            <BackButton to="/product/cart/checkout/" />
+          <div className="store-page__heroActions">
+            <Link to="/product/cart/checkout/" className="product-landing__ctaGhost store-page__linkBtn">
+              Back to checkout
+            </Link>
           </div>
         </div>
-        
+      </section>
 
-        <MessagePopup
-          message={message}
-          type={messageType}
-          show={showMessage}
-          onClose={handleCloseMessage}
-          duration={5000}
-        />
+      <section className="product-landing__section store-page__section">
+        <div className="product-landing__container">
+          <MessagePopup
+            message={message}
+            type={messageType}
+            show={showMessage}
+            onClose={handleCloseMessage}
+            duration={5000}
+          />
 
-        {error && (
-          <div>
-            <p className="alert alert-danger m-1">{error}</p>
-          </div>
-        )}
+          {order && (
+            <div className="store-page__panel" style={{ marginBottom: '1.25rem' }}>
+              <div className="store-page__panelHead">
+                <h2 className="store-page__panelTitle">Order #{order.id}</h2>
+              </div>
+              <div className="store-page__panelBody store-page__panelBody--padded product-landing__body">
+                {order.orderitem_set?.length ? (
+                  <ul className="store-page__itemList">
+                    {order.orderitem_set.map((line, idx) => (
+                      <li key={`${line.product?.title ?? 'item'}-${idx}`} className="store-page__itemRow">
+                        <span className="store-page__itemName">{line.product?.title ?? 'Item'}</span>
+                        <span className="store-page__itemQty">×{line.quantity}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ margin: 0 }}>Order {order.id}</p>
+                )}
+              </div>
+            </div>
+          )}
 
-        
-
-        {rates.length > 0 ? (
-          <>
-            <hr />
-
-            <div className="table-responsive mt-4 font-quicksand">
-              <table className="table table-bordered table-striped table-sm text-center mb-0">
-                <thead className="thead-light">
-                  {/* Top header with image */}
-                  <tr>
-                    <th colSpan={4} className="p-1">
-                      <img 
-                        src={rates[0].provider_image_200} 
-                        alt={rates[0].provider} 
-                        style={{ height: '30px' }}
-                      />
-                    </th>
-                  </tr>
-                  {/* Column titles */}
-                  <tr>
-                    <th>Service</th>
-                    <th>Days</th>
-                    <th>Cost</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rates.map((rate, index) => {
-                    // Debug: log each rate
-                    console.log('Rendering rate:', rate);
-                    const serviceName = rate.servicelevel?.name || rate._canadapost_service_name || 'Standard Shipping';
-                    const estimatedDays = rate.estimated_days || 0;
-                    // Use object_id if available, otherwise use index to ensure unique keys
-                    const uniqueKey = rate.object_id || `rate-${index}`;
-                    return (
-                      <tr className="subtext-btn-sm" key={uniqueKey}>
-                        <td className="p-0 align-middle">
-                          {serviceName}
-                        </td>
-                        <td className="p-0 align-middle">
-                          {estimatedDays > 0 ? `${estimatedDays} day${estimatedDays !== 1 ? 's' : ''}` : 'N/A'}
-                        </td>
-                      <td className="p-0 align-middle">${parseFloat(rate.amount || '0').toFixed(2)}</td>
-                      <td className="p-1 align-middle">
+          {rates.length > 0 ? (
+            <>
+              <div className="store-page__rateProvider">
+                <img src={rates[0].provider_image_200} alt={rates[0].provider} />
+              </div>
+              <div className="store-page__rateList">
+                {rates.map((rate, index) => {
+                  const serviceName =
+                    rate.servicelevel?.name || rate._canadapost_service_name || 'Standard shipping';
+                  const estimatedDays = rate.estimated_days || 0;
+                  const uniqueKey = rate.object_id || `rate-${index}`;
+                  return (
+                    <div className="store-page__rateCard" key={uniqueKey}>
+                      <div>
+                        <div className="store-page__rateService">{serviceName}</div>
+                        <div className="store-page__rateMeta">
+                          {estimatedDays > 0
+                            ? `${estimatedDays} business day${estimatedDays !== 1 ? 's' : ''} est.`
+                            : 'Delivery estimate unavailable'}
+                          {' · '}
+                          Shipping ${parseFloat(rate.amount || '0').toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="store-page__ratePick">
                         <button
                           type="button"
-                          className="btn btn-success btn-sm"
+                          className="product-landing__ctaPrimary store-page__linkBtn"
                           onClick={() => handleSelectRate(rate.object_id)}
                           disabled={submitting}
                         >
-                          {submitting ? 'Processing...' : `$${parseFloat(rate.total_with_shipping || '0').toFixed(2)}`}
+                          {submitting ? 'Processing…' : `Pay $${parseFloat(rate.total_with_shipping || '0').toFixed(2)}`}
                         </button>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : (
-          <p>No shipping options available.</p>
-        )}
-      </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <p className="product-landing__body">No shipping options available.</p>
+          )}
+        </div>
+      </section>
     </div>
   );
 };

@@ -244,7 +244,6 @@ const StoryCreationWizard: React.FC = () => {
   };
 
   const handleSave = async () => {
-    console.log('StoryCreationWizard: handleSave called!');
     try {
       setIsSaving(true);
       
@@ -278,14 +277,6 @@ const StoryCreationWizard: React.FC = () => {
         title: data.episode.title.trim() || `Episode 1 of ${storyData.title}`
       };
       
-      console.log('StoryCreationWizard: Creating complete story with data:', {
-        story: storyData,
-        season: seasonData,
-        characters: data.characters,
-        episode: episodeData,
-        dialogues: data.dialogues
-      });
-
       const result = await apiService.createCompleteStory({
         story: storyData,
         season: seasonData,
@@ -294,9 +285,7 @@ const StoryCreationWizard: React.FC = () => {
         dialogues: data.dialogues,
         model: data.model.file || undefined
       });
-      
-      console.log('StoryCreationWizard: Story created successfully:', result);
-      
+
       setMessage('Draft saved successfully! You can continue editing later.');
       setMessageType('success');
       setShowMessage(true);
@@ -337,39 +326,22 @@ const StoryCreationWizard: React.FC = () => {
   // Show loading spinner while checking authentication
   const token = localStorage.getItem('authToken');
   if (!token || !currentUser) {
-    return <LoadingSpinner />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner message="Checking sign-in…" />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   const currentStepComponent = steps[currentStep];
   const StepComponent = currentStepComponent.component;
 
   return (
-    <div className="container mt-2 p-2 p-md-4" style={{ maxWidth: '1200px' }}>
-      {/* Custom Header with title and buttons on same row */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <div className="flex-grow-1">
-          <h1 className="subtext-btn mb-0">Create New Story</h1>
-        </div>
-        <div className="d-flex gap-2 flex-wrap">
-          <BackButton to="/immersivecomics/" />
-          <SmallButton 
-            variant="outline-primary"
-            onClick={() => {
-              console.log('Save Draft button clicked!');
-              handleSave();
-            }}
-            disabled={isSaving}
-          >
-            <i className="fas fa-save me-1"></i>{isSaving ? 'Saving...' : ' Save Draft'}
-          </SmallButton>
-        </div>
-      </div>
-      
-      {/* Description */}
-      <div className="mb-2">
-        <p className="subtext-btn-sm text-muted mb-0">Story Building Process.</p>
-      </div>
-
+    <div className="product-landing">
       <MessagePopup
         message={message}
         type={messageType}
@@ -378,6 +350,29 @@ const StoryCreationWizard: React.FC = () => {
         duration={5000}
       />
 
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container" style={{ maxWidth: '1200px' }}>
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+              <p className="product-landing__eyebrow">Wizard</p>
+              <h1 className="product-landing__h1 mb-0">Create new story</h1>
+              <p className="product-landing__lead mb-0 mt-2">
+                Step through details, characters, season, episode, dialogues, and scene.
+              </p>
+            </div>
+            <div className="d-flex gap-2 flex-wrap">
+              <BackButton to="/immersivecomics/my-studio/" />
+              <SmallButton variant="outline-primary" onClick={() => handleSave()} disabled={isSaving}>
+                <i className="fas fa-save me-1" aria-hidden />
+                {isSaving ? 'Saving…' : 'Save draft'}
+              </SmallButton>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="product-landing__section">
+        <div className="product-landing__container p-0 p-md-2" style={{ maxWidth: '1200px' }}>
       {/* Step Indicator - Modern Step Wizard Structure */}
       <div className="card border-0 shadow-sm mb-2 font-quicksand">
         <div className="card-body p-2 p-md-4">
@@ -544,6 +539,8 @@ const StoryCreationWizard: React.FC = () => {
           )}
         </div>
       </div>
+        </div>
+      </section>
     </div>
   );
 };

@@ -36,6 +36,21 @@ interface FetchRouterOptions {
   featuredBody?: unknown;
   featuredOk?: boolean;
   featuredReject?: boolean;
+  heroBody?: unknown;
+  heroOk?: boolean;
+  heroReject?: boolean;
+  closeupBody?: unknown;
+  closeupOk?: boolean;
+  closeupReject?: boolean;
+  insightFullBody?: unknown;
+  insightFullOk?: boolean;
+  insightFullReject?: boolean;
+  insightCoveredBody?: unknown;
+  insightCoveredOk?: boolean;
+  insightCoveredReject?: boolean;
+  benefitTextureBody?: unknown;
+  benefitTextureOk?: boolean;
+  benefitTextureReject?: boolean;
   cartBody?: Record<string, unknown>;
 }
 
@@ -48,6 +63,62 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
     featuredBody = { active: false, coupon: null },
     featuredOk = true,
     featuredReject = false,
+    heroBody = {
+      id: 3,
+      token: 'STORE_CATALOG_HERO',
+      image: 'http://example.com/hero.jpg',
+      caption: 'STORE_CATALOG_HERO',
+    },
+    heroOk = true,
+    heroReject = false,
+    closeupBody = (() => {
+      const slug = (mockProducts[0] as any).slug as string;
+      const token = `STORE_CLOSEUP:${slug}`;
+      return {
+        id: 99,
+        token,
+        image: 'http://example.com/closeup.jpg',
+        caption: token,
+      };
+    })(),
+    closeupOk = true,
+    closeupReject = false,
+    insightFullBody = (() => {
+      const slug = (mockProducts[0] as any).slug as string;
+      const token = `STORE_INSIGHT_FULL:${slug}`;
+      return {
+        id: 101,
+        token,
+        image: 'http://example.com/insight-full.jpg',
+        caption: token,
+      };
+    })(),
+    insightFullOk = true,
+    insightFullReject = false,
+    insightCoveredBody = (() => {
+      const slug = (mockProducts[0] as any).slug as string;
+      const token = `STORE_INSIGHT_COVERED:${slug}`;
+      return {
+        id: 102,
+        token,
+        image: 'http://example.com/insight-covered.jpg',
+        caption: token,
+      };
+    })(),
+    insightCoveredOk = true,
+    insightCoveredReject = false,
+    benefitTextureBody = (() => {
+      const slug = (mockProducts[0] as any).slug as string;
+      const token = `STORE_BENEFIT_TEXTURE:${slug}`;
+      return {
+        id: 103,
+        token,
+        image: 'http://example.com/benefit-texture.jpg',
+        caption: token,
+      };
+    })(),
+    benefitTextureOk = true,
+    benefitTextureReject = false,
     cartBody = { cart_items: [], total_price: 0 },
   } = options;
 
@@ -101,6 +172,38 @@ function installFetchRouter(options: FetchRouterOptions = {}) {
       });
     }
 
+    if (url.includes('/api/site-images/by-caption/')) {
+      const u = new URL(url, 'http://localhost');
+      const token = (u.searchParams.get('token') || '').trim();
+
+      if (token.toUpperCase() === 'STORE_CATALOG_HERO') {
+        if (heroReject) return Promise.reject(new Error('Hero image fetch failed'));
+        return Promise.resolve({ ok: heroOk, json: async () => heroBody });
+      }
+
+      if (token.toLowerCase().startsWith('store_closeup:')) {
+        if (closeupReject) return Promise.reject(new Error('Close-up image fetch failed'));
+        return Promise.resolve({ ok: closeupOk, json: async () => closeupBody });
+      }
+
+      if (token.toLowerCase().startsWith('store_insight_full:')) {
+        if (insightFullReject) return Promise.reject(new Error('Insight full image fetch failed'));
+        return Promise.resolve({ ok: insightFullOk, json: async () => insightFullBody });
+      }
+
+      if (token.toLowerCase().startsWith('store_insight_covered:')) {
+        if (insightCoveredReject) return Promise.reject(new Error('Insight covered image fetch failed'));
+        return Promise.resolve({ ok: insightCoveredOk, json: async () => insightCoveredBody });
+      }
+
+      if (token.toLowerCase().startsWith('store_benefit_texture:')) {
+        if (benefitTextureReject) return Promise.reject(new Error('Benefit texture image fetch failed'));
+        return Promise.resolve({ ok: benefitTextureOk, json: async () => benefitTextureBody });
+      }
+
+      return Promise.reject(new Error(`Unexpected site-images token in test: ${token}`));
+    }
+
     return Promise.reject(new Error(`Unexpected fetch URL in test: ${url}`));
   });
 }
@@ -135,6 +238,66 @@ describe('ProductList', () => {
           json: async () => ({ active: false, coupon: null }),
         });
       }
+      if (url.includes('/api/site-images/by-caption/')) {
+        const u = new URL(url, 'http://localhost');
+        const token = (u.searchParams.get('token') || '').trim();
+        if (token.toUpperCase() === 'STORE_CATALOG_HERO') {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              id: 3,
+              token: 'STORE_CATALOG_HERO',
+              image: 'http://example.com/hero.jpg',
+              caption: 'STORE_CATALOG_HERO',
+            }),
+          });
+        }
+        if (token.toLowerCase().startsWith('store_closeup:')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              id: 99,
+              token,
+              image: 'http://example.com/closeup.jpg',
+              caption: token,
+            }),
+          });
+        }
+        if (token.toLowerCase().startsWith('store_insight_full:')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              id: 101,
+              token,
+              image: 'http://example.com/insight-full.jpg',
+              caption: token,
+            }),
+          });
+        }
+        if (token.toLowerCase().startsWith('store_insight_covered:')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              id: 102,
+              token,
+              image: 'http://example.com/insight-covered.jpg',
+              caption: token,
+            }),
+          });
+        }
+        if (token.toLowerCase().startsWith('store_benefit_texture:')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              id: 103,
+              token,
+              image: 'http://example.com/benefit-texture.jpg',
+              caption: token,
+            }),
+          });
+        }
+        return Promise.reject(new Error(`Unexpected site-images token in loading test: ${token}`));
+      }
       return Promise.reject(new Error(`Unexpected fetch: ${url}`));
     });
 
@@ -164,14 +327,23 @@ describe('ProductList', () => {
     });
   });
 
-  it('renders product images correctly', async () => {
+  it('renders marketing hero, SKU close-up, insight pair, and premium-feel benefit when configured', async () => {
     installFetchRouter();
 
     renderWithProviders(<ProductList />);
 
     await waitFor(() => {
-      const images = screen.getAllByAltText('Image 1');
-      expect(images.length).toBeGreaterThan(0);
+      expect(screen.getByAltText(/STORE_CATALOG_HERO/i)).toBeInTheDocument();
+      expect(screen.getByAltText(/Test Product 1 close-up/i)).toBeInTheDocument();
+      expect(
+        screen.getByAltText(/Test Product 1 — desk mat visible \(uncovered\)/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByAltText(/Test Product 1 — desk mat mostly covered by keyboard and mouse/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByAltText(/Test Product 1 — premium feel, texture and material/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -217,6 +389,7 @@ describe('ProductList — storefront featured coupon (API + Cart integration)', 
     expect(urls.some((u) => u.includes('/api/products/'))).toBe(true);
     expect(urls.some((u) => u.includes('/api/cart/'))).toBe(true);
     expect(urls.some((u) => u.includes('/api/coupons/featured/'))).toBe(true);
+    expect(urls.filter((u) => u.includes('/api/site-images/by-caption/')).length).toBeGreaterThanOrEqual(5);
   });
 
   it('shows full-bleed billboard with trimmed coupon description when featured is active', async () => {

@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import PageHeader from '../components/PageHeader';
-import SmallButton from '../components/SmallButton';
+import { useParams, Link } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
@@ -190,7 +188,6 @@ const EpisodeManage: React.FC = () => {
           // Flatten and accumulate all dialogues
           const allDialoguesData = dialogueResults.flat();
           setAllDialogues(allDialoguesData);
-          console.log(`Loaded ${allDialoguesData.length} total dialogues for ${seasonEpisodes.length} episodes`);
         } catch (error) {
           console.error('Error loading dialogues for all episodes:', error);
         }
@@ -445,8 +442,19 @@ const EpisodeManage: React.FC = () => {
   };
 
   if (isPageLoading) {
-    return <LoadingSpinner message="Loading episodes..." />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner message="Loading episodes…" />
+          </div>
+        </section>
+      </div>
+    );
   }
+
+  const resolvedStoryId = story?.id ?? currentSeason?.comic ?? season?.comic;
+  const displaySeason = currentSeason || season;
 
   // Get season image for meta tags - use first episode cover image, or story cover image, or default
   const getSeasonImage = (): string | undefined => {
@@ -467,143 +475,226 @@ const EpisodeManage: React.FC = () => {
   };
 
   // Get season title and description for meta tags
-  const seasonTitle = currentSeason 
-    ? `Season ${currentSeason.season_number}: ${currentSeason.title}${story ? ` - ${story.title}` : ''}`
+  const seasonTitle = displaySeason
+    ? `Season ${displaySeason.season_number}: ${displaySeason.title}${story ? ` - ${story.title}` : ''}`
     : 'Season';
-  const seasonDescription = currentSeason?.description || story?.description || 'Explore episodes and dialogues for this season';
+  const seasonDescription =
+    displaySeason?.description || story?.description || 'Explore episodes and dialogues for this season';
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '1200px' }}>
+    <div className="product-landing">
       <MetaTags
         title={seasonTitle}
         description={seasonDescription}
-        keywords={`3D comics, ${currentSeason?.title || ''}, ${story?.title || ''}, interactive stories, immersive comics`}
+        keywords={`3D comics, ${displaySeason?.title || ''}, ${story?.title || ''}, interactive stories, immersive comics`}
         image={getSeasonImage()}
         url={typeof window !== 'undefined' ? window.location.href : undefined}
         type="article"
       />
-      <PageHeader
-        title="Episode Management"
-        description="Create and manage episodes and dialogues for your season"
-        actions={
-          <>
-            <SmallButton 
-              variant="primary" 
-              onClick={() => setShowEpisodeForm(true)}
-            >
-              <i className="fas fa-plus me-1"></i>Add Episode
-            </SmallButton>
-            <BackButton to={storyId ? `/immersivecomics/story/${storyId}/manage/` : "/immersivecomics/"} />
-          </>
-        }
+      <MessagePopup
+        message={message}
+        type={messageType}
+        show={showMessage}
+        onClose={handleCloseMessage}
+        duration={4000}
       />
 
-      <div className="row">
-        {/* Episodes Column */}
-        <div className="col-md-6">
-          <div className="card p-0">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="subtext-btn mb-0">Episodes ({seasonEpisodes.length})</h5>
-              <SmallButton 
-                variant="outline-primary" 
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container" style={{ maxWidth: '1200px' }}>
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+              <p className="product-landing__eyebrow">Season</p>
+              <h1 className="product-landing__h1 mb-0">Episodes</h1>
+              <p className="product-landing__lead mb-0 mt-2">
+                {displaySeason
+                  ? `Season ${displaySeason.season_number}: ${displaySeason.title}`
+                  : 'This season'}
+                {story?.title ? ` · ${story.title}` : ''}
+              </p>
+            </div>
+            <div className="episode-manage__heroActions">
+              <button
+                type="button"
+                className="stories-landing__btnPrimary"
                 onClick={() => setShowEpisodeForm(true)}
               >
-                <i className="fas fa-plus me-1"></i>New Episode
-              </SmallButton>
-            </div>
-            <div className="card-body p-1" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-              {seasonEpisodes.length === 0 ? (
-                <div className="text-center py-4">
-                  <i className="fas fa-video fa-3x text-muted mb-3"></i>
-                  <p className="subtext-btn-sm text-muted">No episodes created yet</p>
-                  <SmallButton variant="primary" onClick={() => setShowEpisodeForm(true)}>
-                    <i className="fas fa-plus me-1"></i>Create First Episode
-                  </SmallButton>
-                </div>
-              ) : (
-                <div>
-                  {seasonEpisodes.map(episode => {
-                    const episodeDialogueCount = allDialogues.filter(d => d.episode === episode.id).length;
-                    console.log(`Episode ${episode.id} (${episode.title}): ${episodeDialogueCount} dialogues`);
-                    return (
-                      <EpisodeCard
-                        key={episode.id}
-                        episode={episode as ApiEpisode}
-                        onEdit={handleEditEpisode}
-                        onDelete={handleDeleteEpisode}
-                        onSelect={handleEpisodeSelect}
-                        isSelected={selectedEpisode?.id === episode.id}
-                        showActions={true}
-                        dialogueCount={episodeDialogueCount}
-                      />
-                    );
-                  })}
-                </div>
+                <i className="fas fa-plus me-2" aria-hidden />
+                Add episode
+              </button>
+              {resolvedStoryId && (
+                <>
+                  <Link
+                    to={`/immersivecomics/story/${resolvedStoryId}/edit/`}
+                    className="product-landing__ctaGhost text-decoration-none d-inline-flex align-items-center"
+                  >
+                    <i className="fas fa-book me-2" aria-hidden />
+                    Edit story
+                  </Link>
+                  <Link
+                    to={`/immersivecomics/story/${resolvedStoryId}/characters/`}
+                    className="product-landing__ctaGhost text-decoration-none d-inline-flex align-items-center"
+                  >
+                    <i className="fas fa-users me-2" aria-hidden />
+                    Characters
+                  </Link>
+                </>
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* Dialogues Column */}
-        <div className="col-md-6 mt-2">
-          <div className="card">
-            <div className="card-header d-flex justify-content-between align-items-center p-1">
-              <h5 className="subtext-btn mb-0">
-                Dialogues {selectedEpisode ? `- ${selectedEpisode.title}` : ''}
-              </h5>
-              {selectedEpisode && (
-                <SmallButton 
-                  variant="outline-primary" 
-                  onClick={() => setShowDialogueForm(true)}
+              {seasonId && (
+                <Link
+                  to={`/immersivecomics/season/${seasonId}/edit/`}
+                  className="product-landing__ctaGhost text-decoration-none d-inline-flex align-items-center"
                 >
-                  <i className="fas fa-plus me-3"></i>
-                </SmallButton>
+                  <i className="fas fa-sliders-h me-2" aria-hidden />
+                  Edit season
+                </Link>
               )}
-            </div>
-            <div className="card-body p-1" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-              {!selectedEpisode ? (
-                <div className="text-center py-4">
-                  <i className="fas fa-comments fa-3x text-muted mb-3"></i>
-                  <p className="subtext-btn-sm text-muted">Select an episode to manage dialogues</p>
-                </div>
-              ) : isLoadingDialogues ? (
-                <div className="text-center py-4">
-                  <LoadingSpinner message="Loading dialogues..." />
-                </div>
-              ) : episodeDialogues.length === 0 ? (
-                <div className="text-center py-4">
-                  <i className="fas fa-comment fa-3x text-muted mb-3"></i>
-                  <p className="subtext-btn-sm text-muted">No dialogues for this episode</p>
-                  <SmallButton variant="primary" onClick={() => setShowDialogueForm(true)}>
-                    <i className="fas fa-plus me-1"></i>Add First Dialogue
-                  </SmallButton>
-                </div>
-              ) : (
-                <div>
-                  {episodeDialogues
-                    .sort((a, b) => a.order - b.order)
-                    .map(dialogue => (
-                    <DialogueCard
-                      key={dialogue.id}
-                      dialogue={dialogue}
-                      characters={characters}
-                      onEdit={handleEditDialogue}
-                      onDelete={handleDeleteDialogue}
-                      showActions={true}
-                      showCameraInfo={true}
-                    />
-                  ))}
-                </div>
-              )}
+              <BackButton
+                to={
+                  resolvedStoryId
+                    ? `/immersivecomics/story/${resolvedStoryId}/manage/`
+                    : '/immersivecomics/'
+                }
+              />
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Episode Form Modal */}
+      <section className="product-landing__section">
+        <div className="product-landing__container px-2 px-md-3 pb-4" style={{ maxWidth: '1200px' }}>
+          <div className="story-manage__layout">
+            <div className="my-studio__panel">
+              <div className="my-studio__panelHead">
+                <h2 className="my-studio__panelTitle">
+                  <i className="fas fa-film" aria-hidden />
+                  <span className="my-studio__panelTitleText">Episodes ({seasonEpisodes.length})</span>
+                </h2>
+                <div className="my-studio__panelHeadActions">
+                  <button
+                    type="button"
+                    className="stories-landing__btnPrimary"
+                    onClick={() => setShowEpisodeForm(true)}
+                  >
+                    <i className="fas fa-plus me-2" aria-hidden />
+                    New
+                  </button>
+                </div>
+              </div>
+              <div className="my-studio__panelBody episode-manage__panelScroll p-2">
+                {seasonEpisodes.length === 0 ? (
+                  <div className="story-manage__inlineEmpty py-3">
+                    <div className="stories-landing__emptyIcon" aria-hidden>
+                      <i className="fas fa-video" />
+                    </div>
+                    <p className="product-landing__body mb-2" style={{ fontSize: '0.9rem' }}>
+                      No episodes yet. Create one to add dialogues and scenes.
+                    </p>
+                    <button type="button" className="stories-landing__btnPrimary" onClick={() => setShowEpisodeForm(true)}>
+                      <i className="fas fa-plus me-2" aria-hidden />
+                      Create first episode
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {seasonEpisodes.map((episode) => {
+                      const episodeDialogueCount = allDialogues.filter((d) => d.episode === episode.id).length;
+                      return (
+                        <EpisodeCard
+                          key={episode.id}
+                          episode={episode as ApiEpisode}
+                          onEdit={handleEditEpisode}
+                          onDelete={handleDeleteEpisode}
+                          onSelect={handleEpisodeSelect}
+                          isSelected={selectedEpisode?.id === episode.id}
+                          showActions={true}
+                          dialogueCount={episodeDialogueCount}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="my-studio__panel">
+              <div className="my-studio__panelHead">
+                <h2 className="my-studio__panelTitle">
+                  <i className="fas fa-comments" aria-hidden />
+                  <span className="my-studio__panelTitleText">
+                    Dialogues
+                    {selectedEpisode ? ` · ${selectedEpisode.title}` : ''}
+                  </span>
+                </h2>
+                {selectedEpisode && (
+                  <div className="my-studio__panelHeadActions">
+                    <button
+                      type="button"
+                      className="stories-landing__btnPrimary"
+                      onClick={() => setShowDialogueForm(true)}
+                    >
+                      <i className="fas fa-plus me-2" aria-hidden />
+                      Add
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="my-studio__panelBody episode-manage__panelScroll p-2">
+                {!selectedEpisode ? (
+                  <div className="story-manage__inlineEmpty py-4">
+                    <div className="stories-landing__emptyIcon" aria-hidden>
+                      <i className="fas fa-hand-pointer" />
+                    </div>
+                    <p className="product-landing__body mb-0" style={{ fontSize: '0.9rem' }}>
+                      Select an episode on the left to view and edit its dialogues.
+                    </p>
+                  </div>
+                ) : isLoadingDialogues ? (
+                  <div className="text-center py-4">
+                    <LoadingSpinner message="Loading dialogues…" />
+                  </div>
+                ) : episodeDialogues.length === 0 ? (
+                  <div className="story-manage__inlineEmpty py-3">
+                    <div className="stories-landing__emptyIcon" aria-hidden>
+                      <i className="fas fa-comment-dots" />
+                    </div>
+                    <p className="product-landing__body mb-2" style={{ fontSize: '0.9rem' }}>
+                      No dialogues for this episode yet.
+                    </p>
+                    <button type="button" className="stories-landing__btnPrimary" onClick={() => setShowDialogueForm(true)}>
+                      <i className="fas fa-plus me-2" aria-hidden />
+                      Add first dialogue
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {episodeDialogues
+                      .sort((a, b) => a.order - b.order)
+                      .map((dialogue) => (
+                        <DialogueCard
+                          key={dialogue.id}
+                          dialogue={dialogue}
+                          characters={characters}
+                          onEdit={handleEditDialogue}
+                          onDelete={handleDeleteDialogue}
+                          showActions={true}
+                          showCameraInfo={true}
+                        />
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {showEpisodeForm && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
+        <div
+          className="my-studio__modal modal show d-block"
+          tabIndex={-1}
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="subtext-btn mb-0">
@@ -678,13 +769,13 @@ const EpisodeManage: React.FC = () => {
                     )}
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <SmallButton type="button" variant="outline-secondary" onClick={resetEpisodeForm}>
+                <div className="modal-footer gap-2 d-flex flex-wrap justify-content-end">
+                  <button type="button" className="product-landing__ctaGhost" onClick={resetEpisodeForm}>
                     Cancel
-                  </SmallButton>
-                  <SmallButton type="submit" variant="primary">
-                    {editingEpisode ? 'Update Episode' : 'Create Episode'}
-                  </SmallButton>
+                  </button>
+                  <button type="submit" className="stories-landing__btnPrimary">
+                    {editingEpisode ? 'Update episode' : 'Create episode'}
+                  </button>
                 </div>
               </form>
             </div>
@@ -692,10 +783,13 @@ const EpisodeManage: React.FC = () => {
         </div>
       )}
 
-      {/* Dialogue Form Modal */}
       {showDialogueForm && selectedEpisode && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
+        <div
+          className="my-studio__modal modal show d-block"
+          tabIndex={-1}
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <div className="modal-dialog modal-dialog-scrollable modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="subtext-btn mb-0">
@@ -858,28 +952,18 @@ const EpisodeManage: React.FC = () => {
                     <small className="text-muted">Format: x y z rotation in degrees</small>
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <SmallButton type="button" variant="outline-secondary" onClick={resetDialogueForm}>
+                <div className="modal-footer gap-2 d-flex flex-wrap justify-content-end">
+                  <button type="button" className="product-landing__ctaGhost" onClick={resetDialogueForm}>
                     Cancel
-                  </SmallButton>
-                  <SmallButton type="submit" variant="primary">
-                    {editingDialogue ? 'Update Dialogue' : 'Create Dialogue'}
-                  </SmallButton>
+                  </button>
+                  <button type="submit" className="stories-landing__btnPrimary">
+                    {editingDialogue ? 'Update dialogue' : 'Create dialogue'}
+                  </button>
                 </div>
               </form>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Message Popup */}
-      {showMessage && (
-        <MessagePopup
-          message={message}
-          type={messageType}
-          show={showMessage}
-          onClose={handleCloseMessage}
-        />
       )}
     </div>
   );

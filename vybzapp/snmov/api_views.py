@@ -19,7 +19,7 @@ from decimal import Decimal
 
 from .models import (
     Product, Order, OrderItem, ShippingAddress, ReachOut, NewsletterSubscription,
-    ReturnRequest, ReturnItem, CreditNote, Invoice, Coupon
+    ReturnRequest, ReturnItem, CreditNote, Invoice, Coupon, SiteImage
 )
 from .serializers import (
     ProductSerializer, ProductListSerializer, OrderSerializer, 
@@ -89,6 +89,39 @@ def featured_storefront_coupon(request):
                 'code': coupon.code,
                 'description': desc,
             },
+        }
+    )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def site_image_by_caption_token(request):
+    """
+    Public: resolve a SiteImage by an exact caption token (storefront marketing slots).
+
+    Example: GET /api/site-images/by-caption/?token=STORE_CATALOG_HERO
+    Example (SKU-scoped): GET /api/site-images/by-caption/?token=STORE_CLOSEUP%3Amy-deskmat&product_slug=my-deskmat
+    """
+    token = (request.query_params.get('token') or '').strip()
+    if not token:
+        return Response({'detail': 'Missing token.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    product_slug = (request.query_params.get('product_slug') or '').strip()
+    qs = SiteImage.objects.filter(caption__iexact=token).exclude(image__isnull=True).exclude(image='')
+    if product_slug:
+        qs = qs.filter(product__slug__iexact=product_slug)
+
+    qs = qs.order_by('-id')
+    img = qs.first()
+    if not img:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(
+        {
+            'id': img.id,
+            'token': token,
+            'image': request.build_absolute_uri(img.image.url),
+            'caption': (img.caption or '').strip(),
         }
     )
 

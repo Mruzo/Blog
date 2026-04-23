@@ -163,16 +163,11 @@ describe('Stories Component - Views Count and Share Features', () => {
         expect(screen.getByText(/50 views/)).toBeInTheDocument(); // 10 + 25 + 15 = 50
       });
 
-      // Check that views count is displayed
       const viewsText = screen.getByText(/50 views/);
       expect(viewsText).toBeInTheDocument();
-      // Check that it's in a badge with transparent background
-      const badge = viewsText.closest('.badge');
-      expect(badge).toBeInTheDocument();
-      expect(badge).toHaveStyle({
-        background: 'transparent',
-        color: '#111e7f',
-      });
+      const meta = viewsText.closest('.stories-landing__meta');
+      expect(meta).toBeInTheDocument();
+      expect(meta).toHaveAttribute('aria-label', 'Total story views');
     });
 
     it('should display 0 views when episodes have no views', async () => {
@@ -207,7 +202,7 @@ describe('Stories Component - Views Count and Share Features', () => {
       });
     });
 
-    it('should display views count in badge format', async () => {
+    it('should display views count as inline metadata (not a button)', async () => {
       mockedApiService.getPublicStories.mockResolvedValue(mockStories);
       mockedApiService.getSeasons.mockResolvedValue(mockSeasons);
       mockedApiService.getEpisodes.mockResolvedValue(mockEpisodes);
@@ -217,11 +212,9 @@ describe('Stories Component - Views Count and Share Features', () => {
       renderWithProviders(<Stories />);
 
       await waitFor(() => {
-        const viewsBadge = screen.getByText(/50 views/).closest('.badge');
-        expect(viewsBadge).toBeInTheDocument();
-        // Verify it's left-aligned (justify-content-start)
-        const container = viewsBadge?.closest('.d-flex');
-        expect(container).toHaveClass('justify-content-start');
+        const viewsEl = screen.getByText(/50 views/);
+        expect(viewsEl.closest('.stories-landing__meta')).toBeInTheDocument();
+        expect(viewsEl.closest('button')).toBeNull();
       });
     });
   });
@@ -422,12 +415,10 @@ describe('Stories Component - Views Count and Share Features', () => {
       renderWithProviders(<Stories />);
 
       await waitFor(() => {
-        const viewsSection = screen.getByText(/50 views/).closest('.card');
+        const viewsSection = screen.getByText(/50 views/).closest('.stories-landing__card');
         const collaboratorsSection = screen.queryByText(/Collaborators/);
-        
-        // Views should be rendered
+
         expect(viewsSection).toBeInTheDocument();
-        // Collaborators section should also be present (even if empty)
         expect(collaboratorsSection).toBeInTheDocument();
       });
     });
@@ -471,8 +462,8 @@ describe('Stories Component - Views Count and Share Features', () => {
 
       await waitFor(() => {
         // Should display views for each story
-        const viewsBadges = screen.getAllByText(/50 views/);
-        expect(viewsBadges.length).toBeGreaterThan(0);
+        const viewsLines = screen.getAllByText(/50 views/);
+        expect(viewsLines.length).toBeGreaterThan(0);
       });
     });
   });

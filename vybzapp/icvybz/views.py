@@ -10,6 +10,7 @@ from django.utils.safestring import mark_safe
 from .forms import ComicCommentForm, StoryForm, SeasonForm, EpisodeForm, CharacterForm, DialogueForm
 import json
 import os
+import hashlib
 from datetime import datetime
 import re
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -1343,6 +1344,28 @@ class AudioTrackDeleteView(LoginRequiredMixin, DeleteView):
         return reverse('immersivecomics:audio_track_list')
 
 
+def _user_profile_image_url(user):
+    """
+    Return a profile image URL for a User: explicit string avatar, ImageField/FileField URL if present,
+    otherwise Gravatar from email (identicon fallback), or empty string.
+    """
+    if not user:
+        return ''
+    avatar_field = getattr(user, 'avatar', None)
+    if isinstance(avatar_field, str) and avatar_field.strip():
+        return avatar_field.strip()
+    try:
+        if avatar_field is not None and hasattr(avatar_field, 'url') and getattr(avatar_field, 'name', ''):
+            return avatar_field.url
+    except (ValueError, AttributeError):
+        pass
+    email = (getattr(user, 'email', '') or '').strip().lower()
+    if not email:
+        return ''
+    digest = hashlib.md5(email.encode('utf-8')).hexdigest()
+    return f'https://www.gravatar.com/avatar/{digest}?s=128&d=identicon'
+
+
 # API Views for React Integration
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1357,12 +1380,22 @@ def studio_list_api(request):
         to_attr='prefetched_active_collaborators'
     )
     
+    # Match PublicStoriesView: only public comics that are approved (same set as /immersivecomics/ + studio filter).
+    owner_public_approved_comics = Q(
+        owner__comics__is_public=True,
+        owner__comics__moderation_status='approved',
+    )
     # Get studios with optimized queries - use annotation to count stories per owner (avoids N+1)
     # Access comics through owner relationship: owner__comics (related_name='comics' on Comic.user)
     # Use different annotation names to avoid conflict with model properties
     studios = Studio.objects.filter(is_public=True).select_related('owner').prefetch_related(active_collaborators_prefetch).annotate(
         annotated_collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
-        annotated_stories_count=Count('owner__comics', filter=Q(owner__comics__is_public=True))
+        annotated_stories_count=Count('owner__comics', filter=owner_public_approved_comics),
+        annotated_total_episode_views=Sum(
+            'owner__comics__seasons__episodes__view_count',
+            filter=owner_public_approved_comics,
+            default=0,
+        ),
     ).order_by('-created_at')
     
     studios_data = []
@@ -1377,7 +1410,9 @@ def studio_list_api(request):
                         'username': collab.user.username,
                         'first_name': collab.user.first_name or '',
                         'last_name': collab.user.last_name or '',
-                        'role': collab.role
+                        'role': collab.role,
+                        'avatar': _user_profile_image_url(collab.user),
+                        'is_active': True,
                     })
         else:
             # Fallback if prefetch didn't work
@@ -1388,12 +1423,15 @@ def studio_list_api(request):
                         'username': collab.user.username,
                         'first_name': collab.user.first_name or '',
                         'last_name': collab.user.last_name or '',
-                        'role': collab.role
+                        'role': collab.role,
+                        'avatar': _user_profile_image_url(collab.user),
+                        'is_active': True,
                     })
         
         # Use annotated counts (no additional query needed)
         stories_count = getattr(studio, 'annotated_stories_count', 0) or 0
         collaborators_count = getattr(studio, 'annotated_collaborators_count', len(collaborators_data)) or 0
+        total_episode_views = getattr(studio, 'annotated_total_episode_views', 0) or 0
         
         studios_data.append({
             'id': studio.id,
@@ -1403,11 +1441,13 @@ def studio_list_api(request):
                 'id': studio.owner.id,
                 'username': studio.owner.username,
                 'first_name': studio.owner.first_name or '',
-                'last_name': studio.owner.last_name or ''
+                'last_name': studio.owner.last_name or '',
+                'avatar': _user_profile_image_url(studio.owner),
             },
             'collaborators': collaborators_data,
             'stories_count': stories_count,
             'collaborators_count': collaborators_count,
+            'total_episode_views': total_episode_views,
             'created_at': studio.created_at.isoformat() if studio.created_at else '',
             'updated_at': studio.updated_at.isoformat() if studio.updated_at else '',
             'is_public': studio.is_public,

@@ -55,7 +55,7 @@ const StudioEdit: React.FC = () => {
             } catch (fetchErr: any) {
               // If 403/404, user doesn't have permission or studio doesn't exist
               if (fetchErr?.response?.status === 403 || fetchErr?.response?.status === 404) {
-                console.log('Studio not accessible:', fetchErr.response.status);
+                // Not accessible or missing
               } else {
                 console.error('Error fetching studio by ID:', fetchErr);
               }
@@ -180,36 +180,61 @@ const StudioEdit: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner message="Loading studio…" />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   if (error && !studio) {
     return (
-      <div className="container mt-4" style={{ maxWidth: '800px' }}>
-        <BackButton to="/immersivecomics/my-studio/" />
-        <div className="alert alert-danger" role="alert">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          {error}
-        </div>
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container" style={{ maxWidth: '720px' }}>
+            <BackButton to="/immersivecomics/my-studio/" />
+            <div className="store-page__error mt-3" role="alert">
+              <i className="fas fa-exclamation-triangle store-page__errorIcon" aria-hidden />
+              <span>{error}</span>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '800px' }}>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h6 className="subtext-btn mb-0">
-          <i className="fas fa-clapperboard me-2"></i>&nbsp;Edit Studio
-        </h6>
-        <BackButton />
-      </div>
-      
-      <div className="card border-0 shadow-sm">
-        <div className="card-body p-2 p-md-3">
+    <div className="product-landing">
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container" style={{ maxWidth: '720px' }}>
+          <p className="product-landing__eyebrow">Studio</p>
+          <h1 className="product-landing__h1">Edit studio</h1>
+          <p className="product-landing__lead">Update your studio profile and visibility.</p>
+        </div>
+      </section>
+
+      <section className="product-landing__section">
+        <div className="product-landing__container" style={{ maxWidth: '720px' }}>
+          <div className="d-flex justify-content-end mb-3">
+            <BackButton to="/immersivecomics/my-studio/" />
+          </div>
+
+          <div className="my-studio__panel">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-clapperboard" aria-hidden />
+                <span>{studio?.name || 'Studio'}</span>
+              </h2>
+            </div>
+            <div className="my-studio__panelBody">
           {error && (
-            <div className="alert alert-danger" role="alert">
-              <i className="fas fa-exclamation-triangle me-2"></i>
-              {error}
+            <div className="store-page__error mb-3" role="alert">
+              <i className="fas fa-exclamation-triangle store-page__errorIcon" aria-hidden />
+              <span>{error}</span>
             </div>
           )}
 
@@ -292,36 +317,34 @@ const StudioEdit: React.FC = () => {
               </div>
             </div>
 
-            <div className="d-flex gap-2 justify-content-end">
+            <div className="d-flex gap-2 justify-content-end flex-wrap pt-2">
               <button
                 type="button"
-                className="btn btn-outline-secondary subtext-btn-sm"
+                className="product-landing__ctaGhost"
                 onClick={() => navigate(`/immersivecomics/my-studio/`)}
                 disabled={saving}
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="btn btn-primary subtext-btn-sm"
-                disabled={saving}
-              >
+              <button type="submit" className="stories-landing__btnPrimary" disabled={saving}>
                 {saving ? (
                   <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Saving...
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden />
+                    Saving…
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-save me-2"></i>
-                    &nbsp;Save
+                    <i className="fas fa-save me-2" aria-hidden />
+                    Save changes
                   </>
                 )}
               </button>
             </div>
           </form>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

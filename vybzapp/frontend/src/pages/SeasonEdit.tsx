@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import PageHeader from '../components/PageHeader';
-import SmallButton from '../components/SmallButton';
 import BackButton from '../components/BackButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import { useApi } from '../contexts/ApiContext';
-import { Season, SeasonCreateData } from '../services/api';
+import { SeasonCreateData } from '../services/api';
 
 interface SeasonFormData {
   title: string;
@@ -21,7 +19,7 @@ interface SeasonFormData {
 const SeasonEdit: React.FC = () => {
   const { seasonId } = useParams<{ seasonId: string }>();
   const navigate = useNavigate();
-  const { seasons, updateSeason, loadSeasons } = useApi();
+  const { seasons, updateSeason } = useApi();
   
   const [formData, setFormData] = useState<SeasonFormData>({
     title: '',
@@ -173,11 +171,7 @@ const SeasonEdit: React.FC = () => {
         model_usdz: formData.model_usdz
       };
       
-      console.log('Updating season with data:', seasonData);
-      
       const updatedSeason = await updateSeason(parseInt(seasonId), seasonData);
-      
-      console.log('Season updated successfully:', updatedSeason);
       
       setMessage('Season updated successfully!');
       setMessageType('success');
@@ -211,35 +205,61 @@ const SeasonEdit: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner message="Loading season..." />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner message="Loading season…" />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   if (error || !season) {
     return (
-      <div className="container mt-4">
-        <div className="alert alert-danger" role="alert">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          {error || 'Season not found'}
-        </div>
-        <div className="mt-3">
-          <BackButton to="/immersivecomics/my-studio/" variant="primary" />
-        </div>
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container" style={{ maxWidth: '720px' }}>
+            <div className="store-page__error" role="alert">
+              <i className="fas fa-exclamation-triangle store-page__errorIcon" aria-hidden />
+              <span>{error || 'Season not found'}</span>
+            </div>
+            <div className="store-page__ctaRow mt-3">
+              <BackButton to="/immersivecomics/my-studio/" variant="primary" />
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '800px' }}>
-      <PageHeader
-        title={`Edit Season: ${season.title}`}
-        description="Update season details and 3D models"
-        actions={
-          <BackButton to={`/immersivecomics/story/${season.comic}/manage/`} />
-        }
-      />
+    <div className="product-landing">
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container" style={{ maxWidth: '800px' }}>
+          <p className="product-landing__eyebrow">Season</p>
+          <h1 className="product-landing__h1">Edit season</h1>
+          <p className="product-landing__lead">
+            {season.title} — details, visibility, and 3D model files.
+          </p>
+        </div>
+      </section>
 
-      <div className="card border-0 shadow-sm">
-        <div className="card-body p-2 p-md-3">
+      <section className="product-landing__section">
+        <div className="product-landing__container" style={{ maxWidth: '800px' }}>
+          <div className="d-flex justify-content-end mb-3">
+            <BackButton to={`/immersivecomics/story/${season.comic}/manage/`} />
+          </div>
+
+          <div className="my-studio__panel">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-layer-group" aria-hidden />
+                <span className="my-studio__panelTitleText">{season.title}</span>
+              </h2>
+            </div>
+            <div className="my-studio__panelBody">
           <form onSubmit={handleSubmit}>
             <div className="row">
               <div className="col-md-2">
@@ -380,45 +400,42 @@ const SeasonEdit: React.FC = () => {
               </div>
             </div>
 
-            <div className="d-flex justify-content-end gap-2">
-              <SmallButton
+            <div className="d-flex justify-content-end gap-2 flex-wrap pt-2">
+              <button
                 type="button"
-                variant="outline-secondary"
+                className="product-landing__ctaGhost"
                 onClick={() => navigate(`/immersivecomics/story/${season.comic}/manage/`)}
                 disabled={isSubmitting}
               >
                 Cancel
-              </SmallButton>
-              <SmallButton
-                type="submit"
-                variant="primary"
-                disabled={isSubmitting}
-              >
+              </button>
+              <button type="submit" className="stories-landing__btnPrimary" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
-                    <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                    Updating...
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden />
+                    Updating…
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-save me-1"></i> Update Season
+                    <i className="fas fa-save me-2" aria-hidden />
+                    Save season
                   </>
                 )}
-              </SmallButton>
+              </button>
             </div>
           </form>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Message Popup */}
-      {showMessage && (
-        <MessagePopup
-          message={message}
-          type={messageType}
-          show={showMessage}
-          onClose={handleCloseMessage}
-        />
-      )}
+      <MessagePopup
+        message={message}
+        type={messageType}
+        show={showMessage}
+        onClose={handleCloseMessage}
+        duration={4000}
+      />
     </div>
   );
 };

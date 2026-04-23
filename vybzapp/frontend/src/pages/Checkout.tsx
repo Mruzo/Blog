@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useApi } from '../contexts/ApiContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
-import BackButton from '../components/BackButton';
 
 // Helper function to get CSRF token from cookies
 function getCookie(name: string): string | null {
@@ -295,7 +294,24 @@ const Checkout: React.FC = () => {
   // Show loading spinner while checking authentication or cart
   const token = localStorage.getItem('authToken');
   if (isLoading || !token || !currentUser) {
-    return <LoadingSpinner />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__hero">
+          <div className="product-landing__container store-page__heroRow">
+            <div className="store-page__heroMain">
+              <p className="product-landing__eyebrow">Store</p>
+              <h1 className="product-landing__h1">Checkout</h1>
+              <p className="product-landing__lead">Preparing your order…</p>
+            </div>
+          </div>
+        </section>
+        <section className="product-landing__section store-page__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   if (cartItems.length === 0) {
@@ -303,58 +319,67 @@ const Checkout: React.FC = () => {
   }
 
   return (
-    <div className="container text-center p-2 mt-5">
-      {/* Header */}
-      <div className="d-flex align-items-center mb-4 position-relative">
-        <div className="flex-grow-1 text-center">
-          <h2 className="subtext-btn text-decoration-none mb-1">Cart Checkout</h2>
+    <div className="product-landing">
+      <section className="product-landing__hero">
+        <div className="product-landing__container store-page__heroRow">
+          <div className="store-page__heroMain">
+            <p className="product-landing__eyebrow">Store</p>
+            <h1 className="product-landing__h1">Checkout</h1>
+            <p className="product-landing__lead">Confirm shipping and apply a coupon before choosing rates.</p>
+          </div>
+          <div className="store-page__heroActions">
+            <Link to="/product/cart/" className="product-landing__ctaGhost store-page__linkBtn">
+              Back to cart
+            </Link>
+          </div>
         </div>
-        <div className="position-absolute" style={{ right: 0 }}>
-          <BackButton />
-        </div>
-      </div>
-      <hr />
-      
-      <MessagePopup
-        message={message}
-        type={messageType}
-        show={showMessage}
-        onClose={handleCloseMessage}
-        duration={5000}
-      />
+      </section>
 
-      {/* Cart Summary */}
-                      <table className="subtext-btn-sm table table-bordered table-striped table-sm text-center">
-        <thead className="thead-light">
-          <tr>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-                        <tbody className="subtext-btn-sm">
-          {cartItems.map(item => (
-            <tr key={item.uuid}>
-              <td>{item.title}</td>
-              <td>{item.quantity}</td>
-              <td>${item.price.toFixed(2)}</td>
-              <td>${item.item_total.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="subtext-btn-sm"><strong>Sub Total: ${totalPrice.toFixed(2)}</strong></p>
+      <section className="product-landing__section store-page__section">
+        <div className="product-landing__container">
+          <MessagePopup
+            message={message}
+            type={messageType}
+            show={showMessage}
+            onClose={handleCloseMessage}
+            duration={5000}
+          />
 
-      <div className="row justify-content-end mb-3">
-        <div className="col-6 col-md-4 text-left subtext-btn-sm text-decoration-none">
-          <div className="d-flex flex-nowrap align-items-center">
-            <label htmlFor="coupon_code" className="form-label mb-0 text-nowrap me-2 flex-shrink-0">
-              Coupon&nbsp;
+          <div className="store-page__panel">
+            <div className="store-page__panelHead">
+              <h2 className="store-page__panelTitle">Cart summary</h2>
+            </div>
+            <div className="store-page__panelBody store-page__panelBody--padded">
+              <ul className="store-page__itemList" style={{ marginBottom: '0.75rem' }}>
+                {cartItems.map((item) => (
+                  <li key={item.uuid} className="store-page__itemRow">
+                    <div className="store-page__itemMain">
+                      <div className="store-page__itemName" title={item.title}>
+                        {item.title}
+                      </div>
+                      <div className="store-page__itemQty">Qty {item.quantity}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="store-page__itemQty">${item.price.toFixed(2)} each</div>
+                      <div className="store-page__itemPrice">${item.item_total.toFixed(2)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="store-page__summaryRow store-page__summaryRow--strong">
+                <span>Subtotal</span>
+                <span>${totalPrice.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="store-page__couponRow">
+            <label className="store-page__label" htmlFor="coupon_code" style={{ marginBottom: 0 }}>
+              Coupon
             </label>
             <input
               type="text"
-              className="form-control text-uppercase flex-grow-1"
+              className="store-page__input"
               id="coupon_code"
               name="coupon_code"
               autoComplete="off"
@@ -362,176 +387,188 @@ const Checkout: React.FC = () => {
               placeholder="Enter code"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value)}
-              style={{ minWidth: 0 }}
+              style={{ maxWidth: '16rem' }}
             />
           </div>
-          <small className="form-text text-muted d-block mt-1">
-            
-          </small>
-        </div>
-      </div>
 
-      {/* Shipping Address Form */}
-      <div className="subtext-btn-sm text-decoration-none">
-        <h2 className="subtext-btn text-decoration-none mt-4">Shipping Information</h2>
-        <hr />
-        
-        {/* High Priority: Saved Addresses Selection */}
-        {savedAddresses.length > 0 && (
-          <div className="mb-3">
-            <label htmlFor="saved_address" className="form-label">Use Saved Address:</label>
-            <select
-              className="form-control mb-2"
-              id="saved_address"
-              value={selectedAddressId || ''}
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleSelectSavedAddress(e.target.value);
-                } else {
-                  handleUseNewAddress();
-                }
-              }}
-            >
-              <option value="">Enter New Address</option>
-              {savedAddresses.map(addr => (
-                <option key={addr.id} value={addr.id}>
-                  {addr.label} {addr.is_default ? '(Default)' : ''} - {addr.address_line_1}, {addr.city}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+          <div className="store-page__formCard">
+            <h2 className="product-landing__h2" style={{ marginBottom: '1rem' }}>
+              Shipping information
+            </h2>
 
-        <form className="text-center subtext-btn-sm" onSubmit={handleSubmit}>
-          <div className="row p-2">
-            <div className="col-6 mb-1 p-1">
-              <label htmlFor="full_name" className="form-label col-12 p-0 m-0">Full Name:</label>
-              <input
-                type="text"
-                className="form-control"
-                id="full_name"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="col-6 mb-1 p-1">
-              <label htmlFor="address_line_1" className="form-label col-12 p-0 m-0">Address Line 1:</label>
-              <input
-                type="text"
-                className="form-control"
-                id="address_line_1"
-                name="address_line_1"
-                value={formData.address_line_1}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="col-6 mb-1 p-1">
-              <label htmlFor="address_line_2" className="form-label col-12 p-0 m-0">Address Line 2:</label>
-              <input
-                type="text"
-                className="form-control"
-                id="address_line_2"
-                name="address_line_2"
-                value={formData.address_line_2}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="col-6 mb-1 p-1">
-              <label htmlFor="city" className="form-label col-12 p-0 m-0">City:</label>
-              <input
-                type="text"
-                className="form-control"
-                id="city"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="col-6 mb-1 p-1">
-              <label htmlFor="state" className="form-label col-12 p-0 m-0">State/Province:</label>
-              <input
-                type="text"
-                className="form-control"
-                id="state"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="col-6 mb-1 p-1">
-              <label htmlFor="postal_code" className="form-label col-12 p-0 m-0">Postal Code:</label>
-              <input
-                type="text"
-                className="form-control"
-                id="postal_code"
-                name="postal_code"
-                value={formData.postal_code}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="col-6 mb-1 p-1">
-              <label htmlFor="country_code" className="form-label col-12 p-0 m-0">Country:</label>
-              <select
-                className="form-control"
-                id="country_code"
-                name="country_code"
-                value={formData.country_code}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="CA">Canada</option>
-                <option value="US">United States</option>
-              </select>
-            </div>
-          </div>
-          
-          {/* High Priority: Save Address Option */}
-          {currentUser && (
-            <div className="row p-2">
-              <div className="col-12 mb-2">
-                <div className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id="save_address"
-                    checked={saveAddress}
-                    onChange={(e) => setSaveAddress(e.target.checked)}
-                  />
-                  <label className="form-check-label" htmlFor="save_address">
-                    Save this address for future use
-                  </label>
-                </div>
-                {saveAddress && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Address label (e.g., Home, Work)"
-                      value={addressLabel}
-                      onChange={(e) => setAddressLabel(e.target.value)}
-                      maxLength={50}
-                    />
-                  </div>
-                )}
+            {savedAddresses.length > 0 && (
+              <div className="store-page__field" style={{ marginBottom: '1rem' }}>
+                <label className="store-page__label" htmlFor="saved_address">
+                  Use saved address
+                </label>
+                <select
+                  className="store-page__select"
+                  id="saved_address"
+                  value={selectedAddressId || ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleSelectSavedAddress(e.target.value);
+                    } else {
+                      handleUseNewAddress();
+                    }
+                  }}
+                >
+                  <option value="">Enter new address</option>
+                  {savedAddresses.map((addr) => (
+                    <option key={addr.id} value={addr.id}>
+                      {addr.label} {addr.is_default ? '(Default)' : ''} — {addr.address_line_1}, {addr.city}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
-          )}
-          
-          <button 
-            type="submit" 
-            className="subtext-btn-sm text-center btn my-1 btn-success"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Processing...' : 'View Shipping Rates'}
-          </button>
-        </form>
-      </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <div className="store-page__formGrid">
+                <div className="store-page__field">
+                  <label className="store-page__label" htmlFor="full_name">
+                    Full name
+                  </label>
+                  <input
+                    type="text"
+                    className="store-page__input"
+                    id="full_name"
+                    name="full_name"
+                    value={formData.full_name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="store-page__field">
+                  <label className="store-page__label" htmlFor="address_line_1">
+                    Address line 1
+                  </label>
+                  <input
+                    type="text"
+                    className="store-page__input"
+                    id="address_line_1"
+                    name="address_line_1"
+                    value={formData.address_line_1}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="store-page__field">
+                  <label className="store-page__label" htmlFor="address_line_2">
+                    Address line 2
+                  </label>
+                  <input
+                    type="text"
+                    className="store-page__input"
+                    id="address_line_2"
+                    name="address_line_2"
+                    value={formData.address_line_2}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="store-page__field">
+                  <label className="store-page__label" htmlFor="city">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    className="store-page__input"
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="store-page__field">
+                  <label className="store-page__label" htmlFor="state">
+                    State / Province
+                  </label>
+                  <input
+                    type="text"
+                    className="store-page__input"
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="store-page__field">
+                  <label className="store-page__label" htmlFor="postal_code">
+                    Postal code
+                  </label>
+                  <input
+                    type="text"
+                    className="store-page__input"
+                    id="postal_code"
+                    name="postal_code"
+                    value={formData.postal_code}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="store-page__field">
+                  <label className="store-page__label" htmlFor="country_code">
+                    Country
+                  </label>
+                  <select
+                    className="store-page__select"
+                    id="country_code"
+                    name="country_code"
+                    value={formData.country_code}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="CA">Canada</option>
+                    <option value="US">United States</option>
+                  </select>
+                </div>
+              </div>
+
+              {currentUser && (
+                <div className="store-page__checkRow">
+                  <label className="store-page__checkbox" htmlFor="save_address">
+                    <input
+                      type="checkbox"
+                      id="save_address"
+                      checked={saveAddress}
+                      onChange={(e) => setSaveAddress(e.target.checked)}
+                    />
+                    <span>Save this address for future use</span>
+                  </label>
+                  {saveAddress && (
+                    <div className="store-page__field" style={{ marginTop: '0.65rem' }}>
+                      <label className="store-page__label" htmlFor="address_label_input">
+                        Address label
+                      </label>
+                      <input
+                        type="text"
+                        className="store-page__input"
+                        id="address_label_input"
+                        placeholder="Home, Work, …"
+                        value={addressLabel}
+                        onChange={(e) => setAddressLabel(e.target.value)}
+                        maxLength={50}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="store-page__formSubmit">
+                <button
+                  type="submit"
+                  className="product-landing__ctaPrimary store-page__linkBtn"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Processing…' : 'View shipping rates'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

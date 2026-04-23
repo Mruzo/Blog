@@ -150,8 +150,14 @@ class StudioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Studio
         fields = [
-            'id', 'name', 'description', 'is_public', 
-            'owner', 'created_at', 'updated_at'
+            'id',
+            'name',
+            'description',
+            'is_public',
+            'avatar_url',
+            'owner',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'owner']
 
@@ -171,6 +177,59 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
         read_only_fields = ['id']
+
+
+class PublicUserSerializer(serializers.ModelSerializer):
+    """Subset of user fields for public studio pages (no email)."""
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name']
+        read_only_fields = ['id', 'username', 'first_name', 'last_name']
+
+
+class StudioReadSerializer(serializers.ModelSerializer):
+    """Full studio read for public detail + owner's private studio (GET only)."""
+
+    owner = PublicUserSerializer(read_only=True)
+    collaborators = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Studio
+        fields = [
+            'id',
+            'name',
+            'description',
+            'is_public',
+            'avatar_url',
+            'owner',
+            'collaborators',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'name',
+            'description',
+            'is_public',
+            'avatar_url',
+            'owner',
+            'collaborators',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_collaborators(self, obj):
+        rows = obj.collaborators.filter(is_active=True).select_related('user')
+        return [
+            {
+                'id': c.id,
+                'role': c.role,
+                'is_active': c.is_active,
+                'user': PublicUserSerializer(c.user).data,
+            }
+            for c in rows
+        ]
 
 
 class CollaborationInviteSerializer(serializers.ModelSerializer):

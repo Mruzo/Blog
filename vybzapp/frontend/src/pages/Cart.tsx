@@ -4,7 +4,6 @@ import { useCart } from '../contexts/CartContext';
 import { useApi } from '../contexts/ApiContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
-import BackButton from '../components/BackButton';
 
 const Cart: React.FC = () => {
   const { cartItems, totalPrice, updateQuantity, removeItem, isLoading } = useCart();
@@ -15,7 +14,6 @@ const Cart: React.FC = () => {
   const [showMessage, setShowMessage] = useState(false);
 
   const handleUpdateQuantity = async (productId: string, quantity: number) => {
-    // Enforce maximum of 4 items per product
     const MAX_ITEMS_PER_PRODUCT = 4;
     if (quantity > MAX_ITEMS_PER_PRODUCT) {
       setMessage(`Maximum of ${MAX_ITEMS_PER_PRODUCT} items per product allowed.`);
@@ -23,7 +21,7 @@ const Cart: React.FC = () => {
       setShowMessage(true);
       return;
     }
-    
+
     try {
       await updateQuantity(productId, quantity);
       setMessage('Cart item quantity updated.');
@@ -31,7 +29,6 @@ const Cart: React.FC = () => {
       setShowMessage(true);
     } catch (error: any) {
       console.error('Error updating quantity:', error);
-      // Extract detailed error message from API response
       const errorMessage = error.message || 'Failed to update quantity.';
       setMessage(errorMessage);
       setMessageType('danger');
@@ -59,117 +56,135 @@ const Cart: React.FC = () => {
 
   const handleCheckoutClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    // Check if user is authenticated
+
     const token = localStorage.getItem('authToken');
     if (!token || !currentUser) {
-      // User is not authenticated, redirect to login
       const checkoutPath = '/product/cart/checkout/';
       sessionStorage.setItem('redirectAfterLogin', checkoutPath);
       navigate(`/login/?next=${encodeURIComponent(checkoutPath)}`);
       return;
     }
-    
-    // User is authenticated, proceed to checkout
+
     navigate('/product/cart/checkout/');
   };
 
-  // Maximum of 4 items per product
   const MAX_ITEMS_PER_PRODUCT = 4;
   const quantityRange = Array.from({ length: MAX_ITEMS_PER_PRODUCT }, (_, i) => i + 1);
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="product-landing">
+        <section className="product-landing__hero">
+          <div className="product-landing__container store-page__heroRow">
+            <div className="store-page__heroMain">
+              <p className="product-landing__eyebrow">Store</p>
+              <h1 className="product-landing__h1">Cart</h1>
+              <p className="product-landing__lead">Loading your cart…</p>
+            </div>
+          </div>
+        </section>
+        <section className="product-landing__section store-page__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   return (
-    <div className="container text-center p-2 mt-4">
-      {/* Header */}
-      <div className="d-flex align-items-center mb-4 position-relative">
-        <div className="flex-grow-1 text-center">
-          <h1 className="subtext-btn text-decoration-none mb-1">Shopping Cart</h1>
+    <div className="product-landing">
+      <section className="product-landing__hero">
+        <div className="product-landing__container store-page__heroRow">
+          <div className="store-page__heroMain">
+            <p className="product-landing__eyebrow">Store</p>
+            <h1 className="product-landing__h1">Shopping cart</h1>
+            <p className="product-landing__lead">Review quantities before checkout—up to four per product.</p>
+          </div>
+          {cartItems.length > 0 && (
+            <div className="store-page__heroActions">
+              <Link to="/product/" className="product-landing__ctaGhost store-page__linkBtn">
+                Continue shopping
+              </Link>
+            </div>
+          )}
         </div>
-        <div className="position-absolute" style={{ right: 0 }}>
-          <BackButton to="/product/" />
-        </div>
-      </div>
-      <hr />
-      <MessagePopup
-        message={message}
-        type={messageType}
-        show={showMessage}
-        onClose={handleCloseMessage}
-        duration={3000}
-      />
+      </section>
 
-      {cartItems.length > 0 ? (
-        <>
-          <table className="table table-bordered table-striped table-sm text-center">
-            <thead className="thead-light font-quicksand">
-              <tr>
-                <th style={{ width: '20%' }}>Product</th>
-                <th style={{ width: '15%' }}>Price</th>
-                <th style={{ width: '10%' }}>Qty</th>
-                <th style={{ width: '15%' }}>Total</th>
-                <th style={{ width: '10%' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {cartItems.map(product => (
-                <tr className="subtext-btn-sm" key={product.uuid}>
-                  <td className="align-middle">{product.title}</td>
-                  <td className="align-middle">${product.price.toFixed(2)}</td>
-                  <td className="align-middle">
-                    <select
-                      className="form-control form-control-sm text-center quantity-dropdown"
-                      value={product.quantity}
-                      onChange={(e) => handleUpdateQuantity(String(product.uuid), parseInt(e.target.value))}
-                      style={{ width: 'auto' }}
-                    >
-                      {quantityRange.map(i => (
-                        <option value={i} key={i}>{i}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="align-middle product-total" data-product-id={product.uuid}>
-                    ${product.item_total.toFixed(2)}
-                  </td>
-                  <td className="align-middle">
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleRemoveItem(product.uuid)}
-                      disabled={isLoading}
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="product-landing__section store-page__section">
+        <div className="product-landing__container">
+          <MessagePopup
+            message={message}
+            type={messageType}
+            show={showMessage}
+            onClose={handleCloseMessage}
+            duration={3000}
+          />
 
-          <div className="row justify-content-end mt-3">
-            <div className="col-md-4 col-12 text-right">
-              <h5 className="subtext-btn-sm font-weight-bold">Total: <span id="cart-total-price">${totalPrice.toFixed(2)}</span></h5>
-              <div className="mt-3 d-flex gap-2 justify-content-center">
-                <button 
+          {cartItems.length > 0 ? (
+            <>
+              <div className="store-page__cartList">
+                {cartItems.map((product) => (
+                  <div key={product.uuid} className="store-page__cartLine">
+                    <div className="store-page__cartTitleRow">
+                      <span className="store-page__cartTitle">{product.title}</span>
+                      <button
+                        type="button"
+                        className="store-page__cartRemove"
+                        onClick={() => handleRemoveItem(product.uuid)}
+                        disabled={isLoading}
+                        title="Remove from cart"
+                        aria-label={`Remove ${product.title} from cart`}
+                      >
+                        <i className="fas fa-trash" aria-hidden />
+                      </button>
+                    </div>
+                    <div className="store-page__cartControls">
+                      <span className="store-page__cartEach">${product.price.toFixed(2)} each</span>
+                      <label className="visually-hidden" htmlFor={`qty-${product.uuid}`}>
+                        Quantity for {product.title}
+                      </label>
+                      <select
+                        id={`qty-${product.uuid}`}
+                        className="store-page__cartSelect"
+                        value={product.quantity}
+                        onChange={(e) =>
+                          handleUpdateQuantity(String(product.uuid), parseInt(e.target.value, 10))
+                        }
+                      >
+                        {quantityRange.map((i) => (
+                          <option value={i} key={i}>
+                            {i}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="store-page__cartLineTot">${product.item_total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="store-page__cartTotBar">
+                <span className="store-page__cartTotalLabel" id="cart-total-price">
+                  Total: ${totalPrice.toFixed(2)}
+                </span>
+                <button
+                  type="button"
                   onClick={handleCheckoutClick}
-                  className="btn btn-primary, font-quicksand font-weight-bold" 
-                  style={{ backgroundColor: '#FFBC00', borderColor: '#FFBC00' }}
+                  className="product-landing__ctaPrimary store-page__linkBtn"
                 >
                   Checkout
                 </button>
-
               </div>
+            </>
+          ) : (
+            <div className="store-page__infoBanner" role="status">
+              Your cart is empty.{' '}
+              <Link to="/product/">Continue shopping</Link>.
             </div>
-          </div>
-        </>
-      ) : (
-                    <div className="alert alert-info subtext-btn-sm mt-4" role="alert">
-                      Your cart is empty. <Link to="/product/" className="alert-link">Continue shopping</Link>.
-                    </div>
-      )}
+          )}
+        </div>
+      </section>
     </div>
   );
 };

@@ -91,7 +91,7 @@ describe('Stories Component - Character Display Tests', () => {
     );
 
     // Basic check that component renders
-    expect(container.innerHTML).toContain('Published Stories');
+    expect(container.innerHTML).toContain('Immersive stories');
   });
 
   it('should call getCharacters API for each story', async () => {

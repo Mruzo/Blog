@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { useCart } from '../contexts/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
@@ -25,6 +25,26 @@ interface Product {
 
 interface ProductListProps {
   // Add any props if needed
+}
+
+/** Must match exactly one SiteImage.caption in admin (case-insensitive on server). */
+const STORE_CATALOG_HERO_CAPTION = 'STORE_CATALOG_HERO';
+
+/** Per-SKU close-up: SiteImage.caption must be exactly `STORE_CLOSEUP:<product-slug>` for that product row. */
+const STORE_CLOSEUP_PREFIX = 'STORE_CLOSEUP:';
+
+/** Insight pair (full mat vs covered): captions `STORE_INSIGHT_FULL:<slug>` and `STORE_INSIGHT_COVERED:<slug>`. */
+const STORE_INSIGHT_FULL_PREFIX = 'STORE_INSIGHT_FULL:';
+const STORE_INSIGHT_COVERED_PREFIX = 'STORE_INSIGHT_COVERED:';
+
+/** Buy grid — “Premium feel” card: caption `STORE_BENEFIT_TEXTURE:<slug>`. */
+const STORE_BENEFIT_TEXTURE_PREFIX = 'STORE_BENEFIT_TEXTURE:';
+
+interface SiteImageHeroPayload {
+  id: number;
+  token: string;
+  image: string;
+  caption: string;
 }
 
 /** Full-bleed black strip: exact coupon description, marquee when it overflows. */
@@ -107,6 +127,11 @@ const StorefrontCouponBillboard: React.FC<{ text: string }> = ({ text }) => {
 
 const ProductList: React.FC<ProductListProps> = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [heroSiteImage, setHeroSiteImage] = useState<SiteImageHeroPayload | null>(null);
+  const [closeupSiteImage, setCloseupSiteImage] = useState<SiteImageHeroPayload | null>(null);
+  const [insightFullSiteImage, setInsightFullSiteImage] = useState<SiteImageHeroPayload | null>(null);
+  const [insightCoveredSiteImage, setInsightCoveredSiteImage] = useState<SiteImageHeroPayload | null>(null);
+  const [benefitTextureSiteImage, setBenefitTextureSiteImage] = useState<SiteImageHeroPayload | null>(null);
   const [storefrontCouponDescription, setStorefrontCouponDescription] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,10 +139,176 @@ const ProductList: React.FC<ProductListProps> = () => {
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
   const { addToCart, cartItems } = useCart();
+  const buySectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  const featuredProduct = useMemo(() => products.find((p) => p.available) || products[0] || null, [products]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const qs = new URLSearchParams({ token: STORE_CATALOG_HERO_CAPTION });
+        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as SiteImageHeroPayload;
+        if (cancelled) return;
+        if (data?.image) {
+          setHeroSiteImage(data);
+        }
+      } catch {
+        /* ignore hero image fetch failures; placeholder remains */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCloseupSiteImage(null);
+      if (!featuredProduct?.slug) return;
+
+      const token = `${STORE_CLOSEUP_PREFIX}${featuredProduct.slug}`;
+      try {
+        const qs = new URLSearchParams({
+          token,
+          product_slug: featuredProduct.slug,
+        });
+        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as SiteImageHeroPayload;
+        if (cancelled) return;
+        if (data?.image) {
+          setCloseupSiteImage(data);
+        }
+      } catch {
+        /* ignore close-up fetch failures; placeholder remains */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [featuredProduct?.slug]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setInsightFullSiteImage(null);
+      if (!featuredProduct?.slug) return;
+
+      const token = `${STORE_INSIGHT_FULL_PREFIX}${featuredProduct.slug}`;
+      try {
+        const qs = new URLSearchParams({
+          token,
+          product_slug: featuredProduct.slug,
+        });
+        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as SiteImageHeroPayload;
+        if (cancelled) return;
+        if (data?.image) {
+          setInsightFullSiteImage(data);
+        }
+      } catch {
+        /* ignore insight image fetch failures; placeholder remains */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [featuredProduct?.slug]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setInsightCoveredSiteImage(null);
+      if (!featuredProduct?.slug) return;
+
+      const token = `${STORE_INSIGHT_COVERED_PREFIX}${featuredProduct.slug}`;
+      try {
+        const qs = new URLSearchParams({
+          token,
+          product_slug: featuredProduct.slug,
+        });
+        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as SiteImageHeroPayload;
+        if (cancelled) return;
+        if (data?.image) {
+          setInsightCoveredSiteImage(data);
+        }
+      } catch {
+        /* ignore insight image fetch failures; placeholder remains */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [featuredProduct?.slug]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setBenefitTextureSiteImage(null);
+      if (!featuredProduct?.slug) return;
+
+      const token = `${STORE_BENEFIT_TEXTURE_PREFIX}${featuredProduct.slug}`;
+      try {
+        const qs = new URLSearchParams({
+          token,
+          product_slug: featuredProduct.slug,
+        });
+        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as SiteImageHeroPayload;
+        if (cancelled) return;
+        if (data?.image) {
+          setBenefitTextureSiteImage(data);
+        }
+      } catch {
+        /* ignore benefit image fetch failures; placeholder remains */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [featuredProduct?.slug]);
+
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (els.length === 0) return;
+
+    // Respect reduced motion automatically (no fancy scroll reveals).
+    const prefersReduced =
+      typeof window.matchMedia === 'function' &&
+      !!window.matchMedia('(prefers-reduced-motion: reduce)')?.matches;
+
+    if (prefersReduced || typeof IntersectionObserver === 'undefined') {
+      els.forEach((el) => el.classList.add('is-visible'));
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            (e.target as HTMLElement).classList.add('is-visible');
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -10% 0px' }
+    );
+
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [products.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,34 +396,27 @@ const ProductList: React.FC<ProductListProps> = () => {
     setShowMessage(false);
   };
 
-  const switchImage = (productId: string, imageIndex: number) => {
-    // Find the carousel container for this product
-    const carouselContainer = document.getElementById(`carousel-${productId}`);
-    if (!carouselContainer) return;
+  const currentQty = featuredProduct
+    ? cartItems.find((i) => i.uuid === featuredProduct.uuid)?.quantity ?? 0
+    : 0;
+  const isMaxReached = currentQty >= 4;
+  const priceDisplay = (p: Product) => {
+    const priceNum = Number((p as any).price);
+    const discountedNum = Number((p as any).discounted_price);
+    const safePrice = Number.isFinite(priceNum) ? priceNum : 0;
+    const safeDiscounted = Number.isFinite(discountedNum) ? discountedNum : safePrice;
+    const pct = Number((p as any).discount_percentage) || 0;
 
-    // Remove active class from all carousel items
-    const carouselItems = carouselContainer.querySelectorAll('.carousel-item');
-    carouselItems.forEach((item) => {
-      item.classList.remove('active');
-    });
-
-    // Add active class to the selected item
-    const selectedItem = carouselItems[imageIndex];
-    if (selectedItem) {
-      selectedItem.classList.add('active');
+    if (pct > 0) {
+      return (
+        <>
+          <span className="product-landing__priceNow">C${safeDiscounted.toFixed(2)}</span>
+          <span className="product-landing__priceWas">C${safePrice.toFixed(2)}</span>
+          <span className="product-landing__priceBadge">-{pct}%</span>
+        </>
+      );
     }
-
-    // Update thumbnail borders
-    const thumbnails = carouselContainer.querySelectorAll('.img-thumbnail');
-    thumbnails.forEach((thumb, index) => {
-      if (index === imageIndex) {
-        thumb.classList.add('border-dark');
-        thumb.classList.remove('border-0');
-      } else {
-        thumb.classList.remove('border-dark');
-        thumb.classList.add('border-0');
-      }
-    });
+    return <span className="product-landing__priceNow">C${safePrice.toFixed(2)}</span>;
   };
 
   if (loading) {
@@ -254,12 +438,7 @@ const ProductList: React.FC<ProductListProps> = () => {
       {storefrontCouponDescription && (
         <StorefrontCouponBillboard text={storefrontCouponDescription} />
       )}
-      <div className="col p-1 mt-4">
-      <h3 className="text-center bold subtext-btn text-decoration-none border-0" style={{ fontWeight: 'bold' }}>
-        <p className="mb-1">Desk Mats</p>
-      </h3>
-
-      <div className="container p-0">
+      <div className="product-landing">
         <MessagePopup
           message={message}
           type={messageType}
@@ -268,193 +447,240 @@ const ProductList: React.FC<ProductListProps> = () => {
           duration={3000}
         />
 
-        <div className="row d-flex flex-wrap justify-content-center">
-          {products.map((product) => (
-            <div key={product.uuid} className="col-md-6 col-12">
-              <ul className="list-group mx-auto p-0">
-                {product.available ? (
-                  <li className="list-group-item row w-100 mb-2 mx-auto d-flex justify-content-center shadow">
-                    <div className="subtext-btn p-0">
-                      <h6 className="subtext-btn border-bottom mb-" style={{ fontWeight: 'bold' }}>
-                        {product.title}
-                      </h6>
-                      <div className="row">
-                        {/* Carousel Container */}
-                        <div id={`carousel-${product.uuid}`} className="carousel slide">
-                          {/* Main Image Display */}
-                          <div className="carousel-inner">
-                            {product.images.length > 0 ? (
-                              product.images.map((image, index) => (
-                                <div
-                                  key={image.id}
-                                  className={`carousel-item ${index === 0 ? 'active' : ''}`}
-                                >
-                                  <img
-                                    id={`main-image-${product.uuid}`}
-                                    src={image.image}
-                                    alt={image.caption}
-                                    className="d-block w-100"
-                                    style={{ height: 'auto' }}
-                                  />
-                                </div>
-                              ))
-                            ) : (
-                              <div className="carousel-item active">
-                                <p className="subtext-btn-sm text-center py-3">No images available for this product.</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Thumbnail Navigation */}
-                          {product.images.length > 1 && (
-                            <div className="d-flex justify-content-center mt-2">
-                              {product.images.map((image, index) => (
-                                <div key={image.id} className="col-2 p-1">
-                                  <img
-                                    src={image.image}
-                                    alt={image.caption}
-                                    className={`img-thumbnail border ${
-                                      index === 0 ? 'border-dark' : 'border-0'
-                                    }`}
-                                    style={{ cursor: 'pointer' }}
-                                    onClick={() => switchImage(product.uuid, index)}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="col p-0 my-2 subtext-btn-sm border-top">
-                          <div className="row align-items-center justify-content-between border-bottom">
-                            <div className="col-auto">
-                              {product.discount_percentage > 0 ? (
-                                <h6 className="card-title subtext-btn-sm my-auto">
-                                  <p className="card-text">
-                                    <span style={{ color: '#DC2229', backgroundColor: '#F3F4F6'}}>
-                                      
-                                      <b style={{ textDecoration: 'line-through', fontSize:'0.9rem' }}>C${product.price}</b>&nbsp; 
-                                      
-                                      <b className="text-dark">Original Price</b>&nbsp;
-                                      <b style={{ color: '#DC2229', backgroundColor: '#F3F4F6', fontStyle: 'italic', fontSize: '0.7rem' }}>-{product.discount_percentage}%</b>
-                                    </span>
-                                    <br />
-                                    <span className=" subtext-btn text-dark">
-                                    <b>C${product.discounted_price.toFixed(2)} </b>
-                                    
-                                    </span>
-                                  </p>
-                                </h6>
-                              ) : (
-                                <h6 className="card-title subtext-btn text-right my-auto">
-                                  <span style={{ textDecoration: 'line-through', color: '#DC2229' }}></span>
-                                  C${product.price}
-                                </h6>
-                              )}
-                            </div>
-
-                            <div className="col-auto">
-                            {(() => {
-                              const existingItem = cartItems.find(item => item.uuid === product.uuid);
-                              const currentQuantity = existingItem ? existingItem.quantity : 0;
-                              const isMaxReached = currentQuantity >= 4;
-                              return (
-                                <button
-                                  className="btn subtext-btn-sm shadow mb-0 bg-body-tertiary justify-content-center text-dark rounded-5 mt-1 p-1 add-to-cart-btn my-auto"
-                                  data-product-id={product.uuid}
-                                  data-quantity="1"
-                                  style={{ 
-                                    backgroundColor: isMaxReached ? '#cccccc' : '#FFBC00', 
-                                    position: 'relative', 
-                                    zIndex: 10, 
-                                    touchAction: 'manipulation',
-                                    cursor: isMaxReached ? 'not-allowed' : 'pointer'
-                                  }}
-                                  type="button"
-                                  disabled={isMaxReached}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    if (!isMaxReached) {
-                                      handleAddToCart(product.uuid, 1);
-                                    }
-                                  }}
-                                  onTouchStart={(e) => {
-                                    e.stopPropagation();
-                                  }}
-                                  title={isMaxReached ? 'Maximum of 4 items per product' : 'Add to cart'}
-                                >
-                                  {isMaxReached ? 'Max (4)' : 'Add to cart'}
-                                </button>
-                              );
-                            })()}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+        {/* 1) Hero */}
+        <section className="product-landing__section product-landing__hero" data-reveal>
+          <div className="product-landing__container">
+            <div className="product-landing__heroGrid">
+              <div className="product-landing__heroCopy">
+                <p className="product-landing__eyebrow">Desk mat</p>
+                <h2 className="product-landing__h1">Designed for what you see</h2>
+                <p className="product-landing__lead">
+                A desk mat that brings subtle vibrance and comfort to the parts of your workspace that actually stay visible.
+                </p>
+                <div className="product-landing__ctaRow">
+                  <button
+                    type="button"
+                    className="product-landing__ctaPrimary"
+                    onClick={() => buySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  >
+                    Shop desk mat
+                  </button>
+                  <button
+                    type="button"
+                    className="product-landing__ctaGhost"
+                    onClick={() => document.getElementById('product-insight')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  >
+                    See more
+                  </button>
+                </div>
+              </div>
+              <div className="product-landing__heroVisual" aria-label="Hero image">
+                <div className="product-landing__imagePlaceholder product-landing__imagePlaceholder--hero">
+                  {heroSiteImage ? (
+                    <img
+                      className="product-landing__heroImg"
+                      src={heroSiteImage.image}
+                      alt={heroSiteImage.caption || 'Store catalog hero image'}
+                      loading="eager"
+                      decoding="async"
+                    />
+                  ) : (
+                    <div className="product-landing__placeholderLabel">
+                      Hero: create a Site image whose caption is exactly “{STORE_CATALOG_HERO_CAPTION}”
                     </div>
-                  </li>
-                ) : (
-                  <li className="list-group-item row w-100 mb-2 mx-auto d-flex justify-content-center shadow">
-                    <div className="subtext-btn p-0">
-                      <h6 className="subtext-btn border-bottom mb-" style={{ fontWeight: 'bold' }}>
-                        {product.title}
-                      </h6>
-                      <div className="row">
-                        {/* Carousel Container for unavailable products */}
-                        <div id={`carousel-${product.uuid}`} className="carousel slide">
-                          <div className="carousel-inner">
-                            {product.images.length > 0 ? (
-                              product.images.map((image, index) => (
-                                <div
-                                  key={image.id}
-                                  className={`carousel-item ${index === 0 ? 'active' : ''}`}
-                                >
-                                  <img
-                                    id={`main-image-${product.uuid}`}
-                                    src={image.image}
-                                    alt={image.caption}
-                                    className="d-block w-100"
-                                    style={{ height: 'auto' }}
-                                  />
-                                </div>
-                              ))
-                            ) : (
-                              <div className="carousel-item active">
-                                <p className="subtext-btn-sm text-center py-3">No images available for this product.</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="col p-0 my-2 subtext-btn-sm border-top">
-                          <div className="row align-items-center justify-content-between border-bottom">
-                            <div className="col-auto">
-                              <span className="subtext-btn-sm text-dark">
-                                <b className="text-dark">Unavailable</b>
-                              </span>
-                            </div>
-                            <div className="col-auto">
-                            <button
-                              className="btn subtext-btn-sm shadow mb-0 bg-body-tertiary justify-content-center text-dark rounded-5 my-1 p-1"
-                              style={{ backgroundColor: '#FFBC00' }}
-                              type="button"
-                            >
-                              Get notified
-                            </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                )}
-              </ul>
+                  )}
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
+          </div>
+        </section>
+
+        {/* 2) Insight */}
+        <section id="product-insight" className="product-landing__section" data-reveal>
+          <div className="product-landing__container">
+            <div className="product-landing__twoCol">
+              <div className="product-landing__imagePlaceholder product-landing__imagePlaceholder--insight">
+                {insightFullSiteImage ? (
+                  <img
+                    className="product-landing__productImg"
+                    src={insightFullSiteImage.image}
+                    alt={
+                      featuredProduct
+                        ? `${featuredProduct.title} — desk mat visible (uncovered)`
+                        : 'Desk mat visible (uncovered)'
+                    }
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="product-landing__placeholderLabel">
+                    {featuredProduct?.slug
+                      ? `Insight (full mat): set a Site image caption to “${STORE_INSIGHT_FULL_PREFIX}${featuredProduct.slug}” (linked to this product)`
+                      : 'Insight (full mat): add an available product to configure SKU-scoped insight tokens'}
+                  </div>
+                )}
+              </div>
+              <div className="product-landing__imagePlaceholder product-landing__imagePlaceholder--insight">
+                {insightCoveredSiteImage ? (
+                  <img
+                    className="product-landing__productImg"
+                    src={insightCoveredSiteImage.image}
+                    alt={
+                      featuredProduct
+                        ? `${featuredProduct.title} — desk mat mostly covered by keyboard and mouse`
+                        : 'Desk mat mostly covered by keyboard and mouse'
+                    }
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="product-landing__placeholderLabel">
+                    {featuredProduct?.slug
+                      ? `Insight (covered mat): set a Site image caption to “${STORE_INSIGHT_COVERED_PREFIX}${featuredProduct.slug}” (linked to this product)`
+                      : 'Insight (covered mat): add an available product to configure SKU-scoped insight tokens'}
+                  </div>
+                )}
+              </div>
+              <div className="product-landing__twoColCopy">
+                <h3 className="product-landing__h2">Most desk mats are designed inefficiently.</h3>
+                <p className="product-landing__body">
+                When you actually use a desk mat, your keyboard and mouse cover most of the mat's surface.
+                So why is every inch designed the same?.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 3) Visual Proof */}
+        {/* <section className="product-landing__section" data-reveal>
+          <div className="product-landing__container">
+            <div className="product-landing__proof">
+              <div className="product-landing__proofVisual product-landing__imagePlaceholder">
+                <div className="product-landing__placeholderLabel">
+                  Image placeholder: annotated top-down view (covered area vs visible area)
+                </div>
+                <div className="product-landing__proofTag product-landing__proofTag--a">Covered area</div>
+                <div className="product-landing__proofTag product-landing__proofTag--b">Visible area</div>
+              </div>
+              <div className="product-landing__proofCopy">
+                <h3 className="product-landing__h2">Proof in one glance</h3>
+                <p className="product-landing__body">
+                  A simple overlay explains the coverage so customers understand the fit in under five seconds.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section> */}
+
+        {/* 4) Product + Benefits */}
+        <section ref={buySectionRef} className="product-landing__section product-landing__buy" data-reveal>
+          <div className="product-landing__container">
+            <div className="product-landing__buyHeader">
+              <h3 className="product-landing__h2">Experience the Bliss</h3>
+              <p className="product-landing__body">Premium feel, clean look, built for daily use.</p>
+            </div>
+
+            <div className="product-landing__buyGrid">
+              <div className="product-landing__productCard">
+                <div className="product-landing__productVisual product-landing__imagePlaceholder">
+                  {closeupSiteImage ? (
+                    <img
+                      className="product-landing__productImg"
+                      src={closeupSiteImage.image}
+                      alt={featuredProduct ? `${featuredProduct.title} close-up` : 'Product close-up'}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <div className="product-landing__placeholderLabel">
+                      {featuredProduct?.slug
+                        ? `Close-up: set a Site image caption to “${STORE_CLOSEUP_PREFIX}${featuredProduct.slug}” (linked to this product)`
+                        : 'Close-up: add an available product to configure SKU-scoped close-up tokens'}
+                    </div>
+                  )}
+                </div>
+                <div className="product-landing__productMeta">
+                  <div className="product-landing__productTitleRow">
+                    <div className="product-landing__productTitle">
+                      {featuredProduct ? featuredProduct.title : 'Deskmat'}
+                    </div>
+                    {featuredProduct && (
+                      <div className="product-landing__price">{priceDisplay(featuredProduct)}</div>
+                    )}
+                  </div>
+                  <ul className="product-landing__bullets">
+                    <li>Focused design for a cleaner setup</li>
+                    <li>Subtle vibrance without distraction</li>
+                    <li>Smooth, comfortable surface for everyday use</li>
+                    <li>Durable, high-quality build</li>
+                  </ul>
+                  <div className="product-landing__buyRow">
+                    <button
+                      className="product-landing__ctaPrimary"
+                      type="button"
+                      disabled={!featuredProduct || !featuredProduct.available || isMaxReached}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (featuredProduct && !isMaxReached) handleAddToCart(featuredProduct.uuid, 1);
+                      }}
+                      title={isMaxReached ? 'Maximum of 4 items per product' : 'Add to cart'}
+                    >
+                      {isMaxReached ? 'Max (4)' : 'Add to cart'}
+                    </button>
+                    <div className="product-landing__finePrint">
+                      {featuredProduct?.available ? 'Ships after checkout.' : 'Unavailable'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="product-landing__benefitCard">
+                <div className="product-landing__imagePlaceholder product-landing__imagePlaceholder--mini">
+                  {benefitTextureSiteImage ? (
+                    <img
+                      className="product-landing__productImg"
+                      src={benefitTextureSiteImage.image}
+                      alt={
+                        featuredProduct
+                          ? `${featuredProduct.title} — premium feel, texture and material`
+                          : 'Premium feel, texture and material'
+                      }
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <div className="product-landing__placeholderLabel">
+                      {featuredProduct?.slug
+                        ? `Premium feel: set a Site image caption to “${STORE_BENEFIT_TEXTURE_PREFIX}${featuredProduct.slug}” (linked to this product)`
+                        : 'Premium feel: add an available product to configure SKU-scoped benefit tokens'}
+                    </div>
+                  )}
+                </div>
+                <h4 className="product-landing__h3">Premium feel, Clean edges</h4>
+                <p className="product-landing__body">A surface that feels deliberate—smooth where it matters, stable where it counts.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 5) Final CTA */}
+        <section className="product-landing__section product-landing__final" data-reveal>
+          <div className="product-landing__container product-landing__finalInner">
+            <h3 className="product-landing__h2">Ready to upgrade your desk?</h3>
+            <p className="product-landing__body">
+              Keep it clean. Keep it visible. Make your setup feel intentional.
+            </p>
+            <button
+              type="button"
+              className="product-landing__ctaPrimary"
+              onClick={() => buySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            >
+              Get the desk mat
+            </button>
+          </div>
+        </section>
       </div>
-    </div>
     </>
   );
 };

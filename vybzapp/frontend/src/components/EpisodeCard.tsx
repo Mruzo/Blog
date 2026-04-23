@@ -30,40 +30,30 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
     return tempDiv.textContent || tempDiv.innerText || '';
   };
 
-  console.log(`EpisodeCard ${episode.id} (${episode.title}): received dialogueCount = ${dialogueCount}`);
-
   return (
-    <div 
-      className={`card mb-3 ${isSelected ? 'border-primary shadow-sm' : 'border-0 shadow-sm'} ${className}`}
+    <div
+      className={`episode-manage__epCard ${isSelected ? 'episode-manage__epCard--selected' : ''} ${className}`}
       style={{ cursor: 'pointer', position: 'relative' }}
       onClick={() => onSelect(episode)}
     >
-      {/* Dialogue count and selected indicator - top right corner */}
-      <div className="position-absolute" style={{ top: '8px', right: '8px', zIndex: 10, display: 'flex', gap: '8px', alignItems: 'center' }}>
-        {/* Dialogue count badge */}
-        <span className={`badge subtext-btn-sm ${dialogueCount > 0 ? 'bg-success' : 'bg-secondary'}`}>
-          <i className="fas fa-comments me-1"></i>
+      <div
+        className="position-absolute d-flex align-items-center gap-2"
+        style={{ top: '8px', right: '8px', zIndex: 10 }}
+      >
+        <span
+          className={`stories-landing__chip ${dialogueCount > 0 ? 'stories-landing__chip--success' : ''}`}
+          style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }}
+        >
+          <i className="fas fa-comments me-1" aria-hidden />
           {dialogueCount}
         </span>
-        
-        {/* Selected indicator */}
         {isSelected && (
-          <div 
-            style={{ 
-              backgroundColor: 'rgba(13, 110, 253, 0.9)',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <i className="fas fa-check text-white" style={{ fontSize: '12px' }}></i>
-          </div>
+          <span className="episode-manage__epBadge" aria-hidden>
+            <i className="fas fa-check" style={{ fontSize: '0.65rem' }} />
+          </span>
         )}
       </div>
-      <div className="card-body p-1">
+      <div className="p-2">
         <div className="row">
           {/* Cover Image Column */}
           <div className="col-md-3">
@@ -88,11 +78,13 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
           <div className="col-md-9">
             <div className="d-flex justify-content-between align-items-start mb-2">
               <div className="flex-grow-1">
-                <div className="d-flex align-items-center my-1">
-                  <span className="badge bg-primary me-2 subtext-btn-sm">
+                <div className="d-flex align-items-center my-1 flex-wrap gap-1">
+                  <span className="stories-landing__chip" style={{ fontSize: '0.68rem' }}>
                     S{episode.season_number || 1}E{episode.episode_number}
                   </span>
-                  <h6 className="subtext-btn mb-0">{episode.title}</h6>
+                  <h6 className="subtext-btn mb-0" style={{ fontWeight: 700 }}>
+                    {episode.title}
+                  </h6>
                 </div>
                 <p className="subtext-btn-sm text-muted mb-0" style={{ 
                   display: '-webkit-box',

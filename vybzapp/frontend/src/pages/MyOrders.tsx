@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
-import PageHeader from '../components/PageHeader';
-import SmallButton from '../components/SmallButton';
 
 interface Order {
   id: number;
@@ -167,26 +165,27 @@ const MyOrders: React.FC = () => {
     fetchOrders();
   }, []);
 
-  const getStatusColor = (status: string) => {
+  /** CSS modifier for `.store-page__status--*` (matches product-page pill styling). */
+  const getStatusVariant = (status: string): string => {
     switch (status.toLowerCase()) {
       case 'pending':
-        return 'secondary';
+        return 'pending';
       case 'ordered':
-        return 'primary';
+        return 'ordered';
       case 'label_created':
-        return 'info';
+        return 'label_created';
       case 'shipped':
-        return 'primary';
+        return 'shipped';
       case 'processing':
-        return 'warning';
+        return 'processing';
       case 'delivered':
-        return 'success';
+        return 'delivered';
       case 'cancelled':
-        return 'danger';
+        return 'cancelled';
       case 'failed':
-        return 'danger';
+        return 'failed';
       default:
-        return 'secondary';
+        return 'default';
     }
   };
 
@@ -240,233 +239,223 @@ const MyOrders: React.FC = () => {
     setShowMessage(false);
   };
 
+  const hero = (
+    <section className="product-landing__hero">
+      <div className="product-landing__container">
+        <p className="product-landing__eyebrow">Store</p>
+        <h1 className="product-landing__h1">My orders</h1>
+        <p className="product-landing__lead">
+          View status, line items, and shipping details for every purchase.
+        </p>
+      </div>
+    </section>
+  );
+
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="product-landing">
+        {hero}
+        <section className="product-landing__section store-page__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="container mt-4">
-        <div className="alert alert-danger" role="alert">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          {error}
-        </div>
+      <div className="product-landing">
+        {hero}
+        <section className="product-landing__section store-page__section">
+          <div className="product-landing__container">
+            <div className="store-page__error" role="alert">
+              <i className="fas fa-exclamation-triangle store-page__errorIcon" aria-hidden />
+              <span>{error}</span>
+            </div>
+            <div className="store-page__ctaRow">
+              <Link to="/product/" className="product-landing__ctaPrimary store-page__linkBtn">
+                Back to shop
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '1200px' }}>
-      <PageHeader
-        title="My Orders"
-        description="View and manage your order history"
-      />
+    <div className="product-landing">
+      {hero}
 
-      <MessagePopup
-        message={message}
-        type={messageType}
-        show={showMessage}
-        onClose={handleCloseMessage}
-        duration={3000}
-      />
+      <section className="product-landing__section store-page__section">
+        <div className="product-landing__container">
+          <MessagePopup
+            message={message}
+            type={messageType}
+            show={showMessage}
+            onClose={handleCloseMessage}
+            duration={3000}
+          />
 
-      {orders.length === 0 ? (
-        <div className="text-center py-5">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body py-5">
-              <i className="fas fa-shopping-bag fa-4x text-muted mb-3"></i>
-              <h5 className="subtext-btn-sm text-muted mb-3">No orders yet</h5>
-              <p className="subtext-btn-sm text-muted mb-4">
-                Start shopping to see your orders here.
+          {orders.length === 0 ? (
+            <div className="store-page__empty">
+              <div className="store-page__emptyIcon" aria-hidden>
+                <i className="fas fa-shopping-bag" />
+              </div>
+              <h2 className="product-landing__h2 store-page__emptyTitle">No orders yet</h2>
+              <p className="product-landing__body store-page__emptyBody">
+                When you check out, your orders will show up here with tracking-friendly status.
               </p>
-              <Link to="/product/" className="btn btn-primary subtext-btn-sm">
-                <i className="fas fa-shopping-cart me-1"></i>Start Shopping
+              <Link to="/product/" className="product-landing__ctaPrimary store-page__linkBtn">
+                Browse deskmats
               </Link>
             </div>
-          </div>
-        </div>
-      ) : (
-        <div className="row">
-          {orders.map((order) => (
-            <div key={order.id} className="col-12 mb-4">
-              <div className="card border-0 shadow-sm">
-                <div className="card-header bg-light">
-                  <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                    <div className="min-w-0">
-                      <h6 className="subtext-btn-sm mb-1">Order #{order.order_number}</h6>
-                      <small className="text-muted">
-                        Placed on {new Date(order.created_at).toLocaleDateString()}
-                      </small>
+          ) : (
+            <ul className="store-page__list">
+              {orders.map((order) => (
+                <li key={order.id} className="store-page__card">
+                  <div className="store-page__cardHeader">
+                    <div className="store-page__cardTitleBlock">
+                      <h2 className="store-page__cardTitle">Order #{order.order_number}</h2>
+                      <p className="store-page__cardMeta">
+                        Placed {new Date(order.created_at).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
                     </div>
-                    <span className={`badge bg-${getStatusColor(order.status)} flex-shrink-0`}>
-                      <i className={`${getStatusIcon(order.status)} me-1`}>&nbsp;</i>
+                    <span
+                      className={`store-page__status store-page__status--${getStatusVariant(order.status)}`}
+                    >
+                      <i className={getStatusIcon(order.status)} aria-hidden />
                       {getStatusLabel(order.status)}
                     </span>
                   </div>
-                </div>
-                
-                <div className="card-body">
-                  <div className="row">
-                    <div className="col-md-8">
-                      <div className="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
-                        <h6 className="subtext-btn-sm mb-0">Items ordered</h6>
-                        {/* <small className="text-muted">
-                          {order.items.length} {order.items.length === 1 ? 'line' : 'lines'}
-                          {' · '}
-                          {order.items.reduce((sum, li) => sum + li.quantity, 0)} pcs
-                        </small> */}
-                      </div>
+
+                  <div className="store-page__cardBody">
+                    <div className="store-page__bodyMain">
+                      <h3 className="product-landing__h3 store-page__blockLabel">Items</h3>
 
                       {order.items.length > 0 && (
                         <div
-                          className="d-flex flex-nowrap gap-2 pb-2 mb-3 border-bottom"
-                          style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
+                          className="store-page__thumbRow"
                           aria-label="Product thumbnails for this order"
                         >
                           {order.items.map((item) => (
                             <div
                               key={`thumb-${item.id}`}
-                              className="position-relative flex-shrink-0"
+                              className="store-page__thumbWrap"
                               title={`${item.product_name} × ${item.quantity}`}
                             >
                               {item.product_image ? (
                                 <img
                                   src={item.product_image}
                                   alt=""
-                                  className="rounded border bg-white"
-                                  style={{
-                                    width: '56px',
-                                    height: '56px',
-                                    objectFit: 'cover',
-                                    display: 'block',
-                                  }}
+                                  className="store-page__thumbImg"
                                 />
                               ) : (
-                                <div
-                                  className="rounded border bg-light d-flex align-items-center justify-content-center text-muted"
-                                  style={{ width: '56px', height: '56px' }}
-                                  aria-hidden
-                                >
-                                  <i className="fas fa-image small" />
+                                <div className="store-page__thumbPlaceholder" aria-hidden>
+                                  <i className="fas fa-image" />
                                 </div>
                               )}
-                              <span
-                                className="position-absolute badge rounded-pill bg-light text-dark border-light"
-                                style={{
-                                  fontSize: '0.65rem',
-                                  bottom: '-0.15rem',
-                                  right: '-0.15rem',
-                                  padding: '0.2em 0.45em',
-                                }}
-                              >
-                                ×{item.quantity}
-                              </span>
+                              <span className="store-page__thumbQty">×{item.quantity}</span>
                             </div>
                           ))}
                         </div>
                       )}
 
-                      <ul className="list-unstyled mb-0">
+                      <ul className="store-page__itemList">
                         {order.items.map((item) => (
-                          <li
-                            key={item.id}
-                            className="d-flex justify-content-between align-items-start gap-2 py-2 border-bottom border-light"
-                          >
-                            <div className="min-w-0 flex-grow-1">
-                              <div className="subtext-btn-sm text-truncate" title={item.product_name}>
+                          <li key={item.id} className="store-page__itemRow">
+                            <div className="store-page__itemMain">
+                              <div className="store-page__itemName" title={item.product_name}>
                                 {item.product_name}
                               </div>
-                              <small className="text-muted">Qty {item.quantity}</small>
+                              <div className="store-page__itemQty">Qty {item.quantity}</div>
                             </div>
-                            <span className="subtext-btn-sm text-nowrap flex-shrink-0">
-                              ${item.total.toFixed(2)}
-                            </span>
+                            <div className="store-page__itemPrice">${item.total.toFixed(2)}</div>
                           </li>
                         ))}
                       </ul>
                     </div>
-                    
-                    <div className="col-md-4">
-                      <h6 className="subtext-btn-sm mb-3">Shipping Address</h6>
-                      <div className="subtext-btn-sm">
-                        <div>{order.shipping_address.first_name} {order.shipping_address.last_name}</div>
+
+                    <div className="store-page__bodyAside">
+                      <h3 className="product-landing__h3 store-page__blockLabel">Ship to</h3>
+                      <div className="store-page__address product-landing__body">
+                        <div>
+                          {order.shipping_address.first_name} {order.shipping_address.last_name}
+                        </div>
                         <div>{order.shipping_address.address_line_1}</div>
-                        <div>{order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}</div>
+                        <div>
+                          {order.shipping_address.city}, {order.shipping_address.state}{' '}
+                          {order.shipping_address.postal_code}
+                        </div>
                         <div>{order.shipping_address.country}</div>
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="card-footer bg-transparent border-0">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div className="d-flex gap-2">
-                      <SmallButton 
-                        variant="outline-primary"
+
+                  <div className="store-page__footer">
+                    <div className="store-page__actions">
+                      <Link
                         to={`/product/order/${order.id}/`}
+                        className="product-landing__ctaPrimary store-page__linkBtn"
                       >
-                        <i className="fas fa-eye me-1"></i>View Details
-                      </SmallButton>
+                        View details
+                      </Link>
                       {order.status === 'processing' && (
-                        <SmallButton 
-                          variant="outline-danger"
+                        <button
+                          type="button"
+                          className="product-landing__ctaGhost store-page__linkBtn"
                           onClick={() => {
                             setMessage('Order cancellation requested!');
                             setMessageType('info');
                             setShowMessage(true);
                           }}
                         >
-                          <i className="fas fa-times me-1"></i>Cancel Order
-                        </SmallButton>
+                          Cancel order
+                        </button>
                       )}
                       {order.status === 'delivered' && (
-                        <SmallButton 
-                          variant="outline-warning"
+                        <Link
                           to={`/product/returns/create/${order.id}/`}
+                          className="product-landing__ctaGhost store-page__linkBtn"
                         >
-                          <i className="fas fa-undo me-1"></i>Request Return
-                        </SmallButton>
+                          Request return
+                        </Link>
                       )}
                     </div>
-                    <div className="text-muted subtext-btn-sm text-end">
+                    <div className="store-page__totals">
                       {(order.coupon_code || (order.coupon_discount ?? 0) > 0) && (
-                        <div className="mb-1">
+                        <div className="store-page__couponLine">
                           {order.coupon_code && (
                             <span>
-                              Code <span className="fw-bold text-dark">{order.coupon_code}</span>
-                              {' '}
+                              Code <strong>{order.coupon_code}</strong>{' '}
                             </span>
                           )}
                           {(order.coupon_discount ?? 0) > 0 && (
-                            <span className="text-success">
-                              -${(order.coupon_discount ?? 0).toFixed(2)}
+                            <span className="store-page__couponSave">
+                              −${(order.coupon_discount ?? 0).toFixed(2)}
                             </span>
                           )}
                         </div>
                       )}
-                      <div>
-                        Total: <span className="fw-bold text-dark">${order.total.toFixed(2)}</span>
+                      <div className="store-page__totalLine">
+                        Total <span className="store-page__totalAmt">${order.total.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          ))}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      )}
+      </section>
     </div>
   );
 };
 
 export default MyOrders;
-
-
-
-
-
-
-
-
-
-

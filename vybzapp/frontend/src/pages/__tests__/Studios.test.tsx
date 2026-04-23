@@ -67,7 +67,8 @@ const mockStudios = [
       id: 1,
       username: 'owner1',
       first_name: 'John',
-      last_name: 'Doe'
+      last_name: 'Doe',
+      avatar: 'https://example.com/owner1.jpg',
     },
     collaborators: [
       {
@@ -75,10 +76,13 @@ const mockStudios = [
         username: 'collab1',
         first_name: 'Jane',
         last_name: 'Smith',
-        role: 'writer'
+        role: 'writer',
+        is_active: true,
+        avatar: 'https://example.com/collab1.jpg',
       }
     ],
     stories_count: 5,
+    total_episode_views: 42,
     collaborators_count: 1,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -93,10 +97,12 @@ const mockStudios = [
       id: 2,
       username: 'owner2',
       first_name: 'Bob',
-      last_name: 'Wilson'
+      last_name: 'Wilson',
+      avatar: '',
     },
     collaborators: [],
     stories_count: 3,
+    total_episode_views: 0,
     collaborators_count: 0,
     created_at: '2024-01-02T00:00:00Z',
     updated_at: '2024-01-02T00:00:00Z',
@@ -128,7 +134,9 @@ describe('Studios Component', () => {
     renderWithProviders(<Studios />);
     
     expect(screen.getByText('Collaborative Studios')).toBeInTheDocument();
-    expect(screen.getByText(/Discover creative studios/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Discover creative studios where artists collaborate/i)
+    ).toBeInTheDocument();
   });
 
   it('should load studios on mount', async () => {
@@ -159,15 +167,12 @@ describe('Studios Component', () => {
     renderWithProviders(<Studios />);
     
     await waitFor(() => {
-      // Studio Alpha
       expect(screen.getByText('Studio Alpha')).toBeInTheDocument();
       expect(screen.getByText('A creative studio')).toBeInTheDocument();
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-      expect(screen.getByText(/@owner1/)).toBeInTheDocument();
-      
-      // Studio Beta
+      expect(screen.getByTitle(/Studio Alpha — A creative studio/)).toBeInTheDocument();
       expect(screen.getByText('Studio Beta')).toBeInTheDocument();
       expect(screen.getByText('Another creative studio')).toBeInTheDocument();
+      expect(screen.getByTitle(/Studio Beta — Another creative studio/)).toBeInTheDocument();
     });
   });
 
@@ -177,28 +182,23 @@ describe('Studios Component', () => {
     renderWithProviders(<Studios />);
     
     await waitFor(() => {
-      // Studio Alpha stats
-      expect(screen.getByText('5')).toBeInTheDocument(); // Stories count
-      expect(screen.getByText('2')).toBeInTheDocument(); // Members count (1 collaborator + 1 owner)
-      
-      // Studio Beta stats
-      expect(screen.getByText('3')).toBeInTheDocument(); // Stories count
-      expect(screen.getByText('1')).toBeInTheDocument(); // Members count (0 collaborators + 1 owner)
+      expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('42')).toBeInTheDocument();
     });
   });
 
   it('should display collaborators correctly', async () => {
     mockApiContext.studios = mockStudios;
     
-    renderWithProviders(<Studios />);
+    const { container } = renderWithProviders(<Studios />);
     
     await waitFor(() => {
-      // Studio Alpha has collaborators
-      expect(screen.getByText('Team (1):')).toBeInTheDocument();
-      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
-      
-      // Studio Beta has no collaborators
-      expect(screen.queryByText(/Team \(0\):/)).not.toBeInTheDocument();
+      expect(container.querySelector('img[src="https://example.com/owner1.jpg"]')).toBeTruthy();
+      expect(container.querySelector('img[src="https://example.com/collab1.jpg"]')).toBeTruthy();
+      expect(screen.getByTitle('@collab1')).toBeInTheDocument();
     });
   });
 
@@ -272,14 +272,11 @@ describe('Studios Component', () => {
   it('should handle studios with no avatar', async () => {
     mockApiContext.studios = [mockStudios[1]]; // Studio Beta has no avatar
     
-    renderWithProviders(<Studios />);
+    const { container } = renderWithProviders(<Studios />);
     
     await waitFor(() => {
       expect(screen.getByText('Studio Beta')).toBeInTheDocument();
-      // Should show default building icon when no avatar
-      const icons = screen.getAllByRole('img', { hidden: true });
-      const buildingIcons = icons.filter(icon => icon.className.includes('fa-building'));
-      expect(buildingIcons.length).toBeGreaterThan(0);
+      expect(container.querySelector('.fa-building')).toBeFalsy();
     });
   });
 
@@ -289,12 +286,19 @@ describe('Studios Component', () => {
     renderWithProviders(<Studios />);
     
     await waitFor(() => {
-      const viewLinks = screen.getAllByText('View Studio');
-      expect(viewLinks.length).toBe(2);
-      
-      // Check links point to correct studio detail pages
-      expect(viewLinks[0].closest('a')).toHaveAttribute('href', '/studios/1/');
-      expect(viewLinks[1].closest('a')).toHaveAttribute('href', '/studios/2/');
+      const viewStoryLinks = screen.getAllByRole('link', { name: /view stories from this studio/i });
+      expect(viewStoryLinks.length).toBe(2);
+      expect(viewStoryLinks[0]).toHaveAttribute('href', '/immersivecomics/?studio=1');
+      expect(viewStoryLinks[1]).toHaveAttribute('href', '/immersivecomics/?studio=2');
+
+      expect(screen.getByRole('link', { name: 'Studio Alpha' })).toHaveAttribute(
+        'href',
+        '/immersivecomics/studio/1/'
+      );
+      expect(screen.getByRole('link', { name: 'Studio Beta' })).toHaveAttribute(
+        'href',
+        '/immersivecomics/studio/2/'
+      );
     });
   });
 

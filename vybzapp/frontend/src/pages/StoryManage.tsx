@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import BackButton from '../components/BackButton';
-import SmallButton from '../components/SmallButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import Comic3DViewer from '../components/Comic3DViewer';
@@ -41,12 +40,8 @@ const StoryManage: React.FC = () => {
 
   // Function to handle season selection and update active season
   const handleSeasonSelect = useCallback((season: Season) => {
-    console.log('Season selected:', season);
     setActiveSeasonId(season.id);
-    // Filter episodes for the selected season
-    const seasonEpisodes = allEpisodes.filter(ep => ep.season === season.id);
-    console.log('Episodes for selected season:', seasonEpisodes);
-  }, [allEpisodes]);
+  }, []);
 
   // Set feedback context when story is loaded
   useEffect(() => {
@@ -62,7 +57,6 @@ const StoryManage: React.FC = () => {
 
   // Function to handle episode selection and update active season
   const handleEpisodeSelect = useCallback((episode: Episode) => {
-    console.log('Episode selected:', episode);
     // Find the season for this episode
     const season = seasons.find(s => s.id === episode.season);
     if (season) {
@@ -281,47 +275,67 @@ const StoryManage: React.FC = () => {
   // Show loading while checking authorization
   if (isCheckingAuth || loading) {
     return (
-      <div className="container mt-2" style={{ maxWidth: '1200px' }}>
-        <LoadingSpinner message={isCheckingAuth ? "Checking access permissions..." : "Loading story..."} />
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container store-page__loadingWrap" style={{ maxWidth: '1200px' }}>
+            <LoadingSpinner
+              message={isCheckingAuth ? 'Checking access permissions…' : 'Loading story…'}
+            />
+          </div>
+        </section>
       </div>
     );
   }
 
-  // Show error if not authorized or other error
   if (error || !isAuthorized) {
     return (
-      <div className="container mt-2" style={{ maxWidth: '1200px' }}>
-        <div className="alert alert-danger">
-          <h5>Access Denied</h5>
-          <p>{error || 'You do not have permission to access this story.'}</p>
-          <p className="text-muted">Only the story owner and collaborators can access the manage page.</p>
-          <button 
-            className="btn btn-primary"
-            onClick={() => navigate('/immersivecomics/my-studio/')}
-          >
-            <i className="fas fa-arrow-left me-1"></i>Back to My Studio
-          </button>
-        </div>
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container" style={{ maxWidth: '720px' }}>
+            <div className="store-page__error" role="alert">
+              <i className="fas fa-lock store-page__errorIcon" aria-hidden />
+              <div>
+                <strong className="d-block mb-1">Access denied</strong>
+                <span>{error || 'You do not have permission to access this story.'}</span>
+                <p className="mb-0 mt-2" style={{ opacity: 0.9 }}>
+                  Only the story owner and collaborators can open this page.
+                </p>
+              </div>
+            </div>
+            <div className="store-page__ctaRow mt-3">
+              <button
+                type="button"
+                className="stories-landing__btnPrimary"
+                onClick={() => navigate('/immersivecomics/my-studio/')}
+              >
+                <i className="fas fa-arrow-left me-2" aria-hidden />
+                Back to My studio
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 
   if (!story) {
     return (
-      <div className="container mt-4">
-        <div className="alert alert-warning" role="alert">
-          <i className="fas fa-info-circle me-2"></i>
-          Story not found or still loading...
-        </div>
-        <div className="mt-3">
-          <BackButton to="/immersivecomics/my-studio/" variant="primary" />
-          <button 
-            className="btn btn-primary ms-2"
-            onClick={() => window.location.reload()}
-          >
-            <i className="fas fa-refresh me-1"></i>Retry
-          </button>
-        </div>
+      <div className="product-landing">
+        <section className="product-landing__section">
+          <div className="product-landing__container" style={{ maxWidth: '720px' }}>
+            <div className="store-page__error" role="alert">
+              <i className="fas fa-info-circle store-page__errorIcon" aria-hidden />
+              <span>Story not found or still loading…</span>
+            </div>
+            <div className="store-page__ctaRow mt-3">
+              <BackButton to="/immersivecomics/my-studio/" variant="primary" />
+              <button type="button" className="product-landing__ctaGhost" onClick={() => window.location.reload()}>
+                <i className="fas fa-sync-alt me-2" aria-hidden />
+                Retry
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
@@ -356,16 +370,7 @@ const StoryManage: React.FC = () => {
   };
 
   return (
-    <div className="container mt-2 p-2" style={{ maxWidth: '1200px' }}>
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <div className="flex-grow-1">
-          <h4 className="font-quicksand mb-0">Manage story details</h4>
-        </div>
-        <div className="d-flex gap-2 flex-wrap">
-          <BackButton to="/immersivecomics/my-studio/" />
-        </div>
-      </div>
-
+    <div className="product-landing">
       <MessagePopup
         message={message}
         type={messageType}
@@ -374,144 +379,171 @@ const StoryManage: React.FC = () => {
         duration={3000}
       />
 
-      {/* Story Info */}
-      <div className="row mb-4">
-        <div className="col-lg-8">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-transparent text-white d-flex justify-content-between align-items-center p-2">
-              <h5 className="mb-0 font-quicksand"><i className="fas fa-book me-2"></i> {story?.title?.trim() || (story ? 'Untitled Story' : 'Loading...')}</h5>
-              <div className="d-flex gap-2">
-                <SmallButton 
-                  variant="outline-primary"
-                  onClick={() => navigate(`/immersivecomics/story/${id}/edit/`)}
-                >
-                  <i className="fas fa-edit me-1"></i>
-                </SmallButton>
-                <SmallButton 
-                  variant="outline-danger"
-                  onClick={handleDeleteStory}
-                  title="Delete story"
-                >
-                  <i className="fas fa-trash me-1"></i>
-                </SmallButton>
-              </div>
+      <section className="product-landing__section product-landing__hero">
+        <div className="product-landing__container" style={{ maxWidth: '1200px' }}>
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+              <p className="product-landing__eyebrow">Story</p>
+              <h1 className="product-landing__h1 mb-0">Manage story</h1>
+              <p className="product-landing__lead mb-0 mt-2">
+                {story?.title?.trim() || 'Untitled story'} — seasons, preview, and team.
+              </p>
             </div>
-            <div className="card-body p-2">
-              {/* Cover Image */}
-              {story?.comic_image && typeof story.comic_image === 'string' && (
-                <div className="mb-3">
-                  <img 
-                    src={story.comic_image} 
-                    alt={story.title || 'Story cover'} 
-                    className="img-fluid rounded"
-                    style={{ maxHeight: '200px', objectFit: 'cover', width: '100%' }}
-                  />
-                </div>
-              )}
-              
-              <p className="subtext-btn-sm mb-3">{story?.description?.trim() || 'No description provided'}</p>
-              <div className="d-flex gap-2 mb-3">
-                <span className={`badge ${story?.is_public ? 'bg-success' : 'bg-secondary'}`}>
-                  {story?.is_public ? 'Public' : 'Private'}
-                </span>
-              </div>
-                      <div className="text-muted subtext-btn-sm">
-                <div>Created: {story?.created_at ? new Date(story.created_at).toLocaleDateString() : 'N/A'}</div>
-                <div>Updated: {story?.updated_at ? new Date(story.updated_at).toLocaleDateString() : 'N/A'}</div>
-              </div>
+            <div className="my-studio__panelHeadActions">
+              <Link
+                to={`/immersivecomics/story/${id}/edit/`}
+                className="stories-landing__btnPrimary text-decoration-none d-inline-flex align-items-center"
+              >
+                <i className="fas fa-edit me-2" aria-hidden />
+                Edit
+              </Link>
+              <BackButton to="/immersivecomics/my-studio/" />
             </div>
           </div>
         </div>
-        
-        <div className="col-lg-4">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-info text-white">
-              <h5 className="mb-0 font-quicksand"><i className="fas fa-chart-bar me-2"></i> Quick Stats</h5>
+      </section>
+
+      <section className="product-landing__section">
+        <div className="product-landing__container px-2 px-md-3 pb-4" style={{ maxWidth: '1200px' }}>
+      <div className="story-manage__layout mb-4">
+        <div className="my-studio__panel">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-book-open" aria-hidden />
+                <span className="my-studio__panelTitleText">Story details</span>
+              </h2>
+              <div className="my-studio__panelHeadActions">
+                <button
+                  type="button"
+                  className="product-landing__ctaGhost story-manage__ghostDanger"
+                  title="Delete story"
+                  onClick={handleDeleteStory}
+                >
+                  <i className="fas fa-trash-alt me-2" aria-hidden />
+                  Delete
+                </button>
+              </div>
             </div>
-            <div className="card-body">
-              <div className="row text-center">
-                <div className="col-4">
-                  <div className="subtext-md text-primary">{seasons.length}</div>
-                    <div className="subtext-btn-sm text-muted">
-                      {seasons.length === 1 ? 'Season' : 'Seasons'}
-                    </div>
+            <div className="my-studio__panelBody">
+              {story?.comic_image && typeof story.comic_image === 'string' && (
+                <div className="mb-3">
+                  <img
+                    src={story.comic_image}
+                    alt={story.title || 'Story cover'}
+                    className="story-manage__coverImg"
+                  />
                 </div>
-                <div className="col-4">
-                  <div className="subtext-md text-primary">{allEpisodes.length}</div>
-                  <div className="subtext-btn-sm text-muted">
+              )}
+
+              <p className="product-landing__body" style={{ fontSize: '0.9rem', marginBottom: '0.85rem' }}>
+                {story?.description?.trim() || 'No description provided.'}
+              </p>
+              <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
+                <span className={`stories-landing__chip ${story?.is_public ? 'stories-landing__chip--success' : ''}`}>
+                  {story?.is_public ? 'Public' : 'Private'}
+                </span>
+              </div>
+              <div className="story-manage__meta">
+                <div>Created {story?.created_at ? new Date(story.created_at).toLocaleDateString() : '—'}</div>
+                <div>Updated {story?.updated_at ? new Date(story.updated_at).toLocaleDateString() : '—'}</div>
+              </div>
+            </div>
+          </div>
+
+        <div className="d-flex flex-column gap-3">
+          <div className="my-studio__panel">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-chart-bar" aria-hidden />
+                <span className="my-studio__panelTitleText">Quick stats</span>
+              </h2>
+            </div>
+            <div className="my-studio__panelBody">
+              <div className="story-manage__statGrid">
+                <div>
+                  <div className="story-manage__statNum">{seasons.length}</div>
+                  <div className="story-manage__statLabel">
+                    {seasons.length === 1 ? 'Season' : 'Seasons'}
+                  </div>
+                </div>
+                <div>
+                  <div className="story-manage__statNum">{allEpisodes.length}</div>
+                  <div className="story-manage__statLabel">
                     {allEpisodes.length === 1 ? 'Episode' : 'Episodes'}
                   </div>
                 </div>
-                <div className="col-4">
-                  <div className="subtext-md text-success">
-                    {story?.total_views || 0}
-                  </div>
-                  <div className="subtext-btn-sm text-muted">
+                <div>
+                  <div className="story-manage__statNum">{story?.total_views || 0}</div>
+                  <div className="story-manage__statLabel">
                     {(story?.total_views || 0) === 1 ? 'View' : 'Views'}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          {/* Characters Section */}
-          <div className="row my-2">
-            <div className="col-12 ">
-              <div className="d-flex justify-content-between align-items-center mb-0">
-                <h3 className="subtext-btn mb-0">Characters ({(() => {
-                  // Get unique character names from all dialogues
-                  const uniqueCharacterNames = new Set(
-                    allDialogues
-                      .filter(dialogue => dialogue.character_name)
-                      .map(dialogue => dialogue.character_name)
-                  );
-                  return uniqueCharacterNames.size;
-                })()})</h3>
-                <SmallButton 
-                  className="btn btn-primary subtext-btn-sm"
+
+          <div className="my-studio__panel">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-users" aria-hidden />
+                <span className="my-studio__panelTitleText">
+                  Characters (
+                  {(() => {
+                    const uniqueCharacterNames = new Set(
+                      allDialogues
+                        .filter((dialogue) => dialogue.character_name)
+                        .map((dialogue) => dialogue.character_name)
+                    );
+                    return uniqueCharacterNames.size;
+                  })()}
+                  )
+                </span>
+              </h2>
+              <div className="my-studio__panelHeadActions">
+                <button
+                  type="button"
+                  className="stories-landing__btnPrimary"
                   onClick={() => navigate(`/immersivecomics/story/${id}/characters/`)}
                 >
-                  <i className="fas fa-edit me-1"></i>
-                </SmallButton>
+                  <i className="fas fa-sliders-h me-2" aria-hidden />
+                  Manage
+                </button>
               </div>
-              
+            </div>
+            <div className="my-studio__panelBody">
               {(() => {
-                // Get unique character names from all dialogues
-                const uniqueCharacterNames = Array.from(new Set(
-                  allDialogues
-                    .filter(dialogue => dialogue.character_name)
-                    .map(dialogue => dialogue.character_name)
-                ));
-                
+                const uniqueCharacterNames = Array.from(
+                  new Set(
+                    allDialogues
+                      .filter((dialogue) => dialogue.character_name)
+                      .map((dialogue) => dialogue.character_name)
+                  )
+                );
+
                 return uniqueCharacterNames.length === 0 ? (
-                  <div className="card border-0 shadow-sm">
-                    <div className="card-body text-center py-4">
-                      <i className="fas fa-users fa-3x text-muted mb-0"></i>
-                      <h5 className="subtext-btn mb-0">No Characters Yet</h5>
-                      <p className="subtext-btn-sm text-muted mb-3">
-                        Create characters and dialogues to bring your story to life.
-                      </p>
-                      <button 
-                        className="btn btn-primary subtext-btn-sm"
-                        onClick={() => navigate(`/immersivecomics/story/${id}/characters/`)}
-                      >
-                        <i className="fas fa-plus me-1"></i>Create Characters
-                      </button>
+                  <div className="story-manage__inlineEmpty">
+                    <div className="stories-landing__emptyIcon" aria-hidden>
+                      <i className="fas fa-users" />
                     </div>
+                    <p className="product-landing__body mb-2" style={{ fontSize: '0.9rem' }}>
+                      No characters yet. Add characters and dialogues to bring the story to life.
+                    </p>
+                    <button
+                      type="button"
+                      className="stories-landing__btnPrimary"
+                      onClick={() => navigate(`/immersivecomics/story/${id}/characters/`)}
+                    >
+                      <i className="fas fa-plus me-2" aria-hidden />
+                      Create characters
+                    </button>
                   </div>
                 ) : (
-                  <div className="card border-0 shadow-sm">
-                    <div className="card-body p-1">
-                      <div className="d-flex flex-wrap gap-2">
-                        {uniqueCharacterNames.map((characterName, index) => (
-                          <span 
-                            key={`${characterName}-${index}`} 
-                            className="badge bg-primary subtext-btn-sm px-3 py-2"
-                          >
-                            {characterName}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="story-manage__chipRow">
+                    {uniqueCharacterNames.map((characterName, index) => (
+                      <span key={`${characterName}-${index}`} className="stories-landing__chip">
+                        {characterName}
+                      </span>
+                    ))}
                   </div>
                 );
               })()}
@@ -520,183 +552,115 @@ const StoryManage: React.FC = () => {
         </div>
       </div>
 
-
-
-      {/* Seasons Section */}
-      <div className="row">
-        <div className="col-12 border-left">
-          {/* <div className="d-flex justify-content-between align-items-center mb-0 ">
-            <h3 className="subtext-btn mb-0">Seasons</h3>
-            <button 
-              className="btn btn-primary subtext-btn-sm"
-              onClick={() => navigate(`/immersivecomics/story/${id}/season/create/`)}
-            >
-              <i className="fas fa-plus me-1"></i>Add Season
-            </button>
-          </div> */}
-          
+      <div className="story-manage__fullBleed">
+        <div className="w-100">
           {seasons.length === 0 ? (
-            <div className="card border-1 shadow-sm">
-              <div className="card-body text-center py-3">
-                <i className="fas fa-layer-group fa-3x text-muted mb-2"></i>
-                <h5 className="subtext-btn-sm text-muted mb-3">No seasons yet</h5>
-                <p className="subtext-btn-sm text-muted mb-2">
-                  Create the first season for your story.
-                </p>
-                <button 
-                  className="btn btn-primary subtext-btn-sm"
-                  onClick={() => navigate(`/immersivecomics/story/${id}/season/create/`)}
-                >
-                  <i className="fas fa-plus me-1"></i>Create First Season
-                </button>
+            <div className="my-studio__empty">
+              <div className="stories-landing__emptyIcon" aria-hidden>
+                <i className="fas fa-layer-group" />
               </div>
+              <h3 className="product-landing__h2" style={{ fontSize: '1.2rem' }}>
+                No seasons yet
+              </h3>
+              <p className="product-landing__body" style={{ marginTop: '0.35rem' }}>
+                Create the first season for your story.
+              </p>
+              <button
+                type="button"
+                className="stories-landing__btnPrimary mt-2"
+                onClick={() => navigate(`/immersivecomics/story/${id}/season/create/`)}
+              >
+                <i className="fas fa-plus me-2" aria-hidden />
+                Create first season
+              </button>
             </div>
           ) : (
-            <div className="card">
-              <div className="card-header d-flex justify-content-between align-items-center">
-                <h5 className="subtext-btn mb-0">Seasons ({seasons.length})</h5>
-                <SmallButton 
-                  variant="outline-primary" 
-                  onClick={() => navigate(`/immersivecomics/story/${id}/season/create/`)}
-                >
-                  <i className="fas fa-plus me-1"></i>New Season
-                </SmallButton>
-              </div>
-              <div className="card-body p-1">
-                {/* Desktop: Horizontal scroll for first 5 seasons */}
-                <div className="d-none d-lg-block">
-                  <div className="d-flex gap-3" style={{ overflowX: 'auto', paddingBottom: '10px' }}>
-                    {seasons.slice(0, 5).map((season) => (
-                      <div key={season.id} className="flex-shrink-0" style={{ width: '300px' }}>
-                        <div 
-                          className={`card h-100 shadow-sm ${activeSeasonId === season.id ? 'border-primary border-3' : 'border-0'}`}
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleSeasonSelect(season)}
-                        >
-                          <div className="card-body d-flex flex-column p-1">
-                            {/* Row 1: Title and Release Date */}
-                            <div className="d-flex justify-content-between align-items-start mb-0">
-                              <h5 className="subtext-btn-sm mb-0">Season {season.season_number}: {season.title}</h5>
-                              <div className="subtext-btn-sm text-muted">
-                                <span className="d-none d-md-inline">Release Date: </span>
-                                {new Date(season.release_date).toLocaleDateString()}
-                              </div>
-                            </div>
-                            
-                            {/* Row 2: Description */}
-                            {/* <div className="mb-1 flex-grow-1">
-                              <p className="subtext-btn-sm text-muted mb-0">
-                                {season.description}
-                              </p>
-                            </div> */}
-                            
-                            {/* Row 3: Episodes, Views, 3D Model, and Edit Button */}
-                            <div className="d-flex justify-content-between align-items-center gap-2">
-                              <button 
-                                className="btn btn-primary btn-sm subtext-btn-sm border-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/immersivecomics/season/${season.id}/episodes/`);
-                                }}
-                              >
-                                <i className="fas fa-video me-1"></i> Episodes: {allEpisodes.filter(ep => ep.season === season.id).length}
-                              </button>
-                              
-                              <div className="d-flex align-items-center text-muted subtext-btn-sm">
-                                <i className="fas fa-eye me-1"></i>
-                                &nbsp;<strong>{(season as any).total_views ?? (allEpisodes.filter(ep => ep.season === season.id).reduce((sum, ep) => sum + ((ep as any).view_count || 0), 0))}</strong>
-                              </div>
-                              
-                              <div className="d-flex align-items-center">
-                                <span className="me-2 subtext-btn-sm text-muted"> Model:</span>
-                                <span className={`badge ${getModelFileType(season) === 'None' ? 'bg-success' : 'bg-success'}`}>
-                                  {getModelFileType(season)}
-                                </span>
-                              </div>
-                              
-                              <button 
-                                className="btn btn-outline-secondary btn-sm subtext-btn-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/immersivecomics/season/${season.id}/edit/`);
-                                }}
-                              >
-                                <i className="fas fa-edit me-1"></i>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            <div className="my-studio__panel">
+              <div className="my-studio__panelHead">
+                <h2 className="my-studio__panelTitle">
+                  <i className="fas fa-layer-group" aria-hidden />
+                  <span className="my-studio__panelTitleText">Seasons ({seasons.length})</span>
+                </h2>
+                <div className="my-studio__panelHeadActions">
+                  <button
+                    type="button"
+                    className="stories-landing__btnPrimary"
+                    onClick={() => navigate(`/immersivecomics/story/${id}/season/create/`)}
+                  >
+                    <i className="fas fa-plus me-2" aria-hidden />
+                    New season
+                  </button>
                 </div>
-                
-                {/* Mobile: Vertical scroll for all seasons */}
-                <div className="d-lg-none" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                  <div className="row">
-                    {seasons.map((season) => (
-                      <div key={season.id} className="col-12 mb-3">
-                        <div 
-                          className={`card h-100 shadow-sm ${activeSeasonId === season.id ? 'border-primary border-3' : 'border-0'}`}
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleSeasonSelect(season)}
-                        >
-                          <div className="card-body d-flex flex-column p-1">
-                            {/* Row 1: Title and Release Date */}
-                            <div className="d-flex justify-content-between align-items-start mb-0">
-                              <h5 className="subtext-btn-sm mb-0">Season {season.season_number}: {season.title}</h5>
-                              <div className="subtext-btn-sm text-muted">
-                                <span className="d-none d-md-inline">Release Date: </span>
-                                {new Date(season.release_date).toLocaleDateString()}
-                              </div>
-                            </div>
-                            
-                            {/* Row 2: Description */}
-                            <div className="mb-1 flex-grow-1">
-                              <p className="subtext-btn-sm text-muted mb-0">
-                                {season.description}
-                              </p>
-                            </div>
-                            
-                            {/* Row 3: Episodes, Views, 3D Model, and Edit Button */}
-                            <div className="d-flex justify-content-between align-items-center gap-2">
-                              <button 
-                                className="btn btn-primary btn-sm subtext-btn-sm border-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/immersivecomics/season/${season.id}/episodes/`);
-                                }}
-                              >
-                                <i className="fas fa-video me-1"></i> Ep: {allEpisodes.filter(ep => ep.season === season.id).length}
-                              </button>
-                              
-                              <div className="d-flex align-items-center text-muted subtext-btn-sm">
-                                <i className="fas fa-eye me-1"></i>
-                                &nbsp;<strong>{(season as any).total_views ?? (allEpisodes.filter(ep => ep.season === season.id).reduce((sum, ep) => sum + ((ep as any).view_count || 0), 0))}</strong>
-                              </div>
-                              
-                              <div className="d-flex align-items-center">
-                                <span className="me-2 subtext-btn-sm text-muted"> Model:</span>
-                                <span className={`badge ${getModelFileType(season) === 'None' ? 'bg-success' : 'bg-success'}`}>
-                                  {getModelFileType(season)}
-                                </span>
-                              </div>
-                              
-                              <button 
-                                className="btn btn-outline-secondary btn-sm subtext-btn-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/immersivecomics/season/${season.id}/edit/`);
-                                }}
-                              >
-                                <i className="fas fa-edit me-1"></i>
-                              </button>
-                            </div>
-                          </div>
+              </div>
+              <div className="my-studio__panelBody pt-2">
+                <p className="stories-landing__chipMuted mb-2" style={{ fontSize: '0.8rem' }}>
+                  Tap a season to load it in the 3D preview below.
+                </p>
+                <div className="story-manage__seasonStrip">
+                  {seasons.map((season) => {
+                    const epCount = allEpisodes.filter((ep) => ep.season === season.id).length;
+                    const viewTotal =
+                      (season as any).total_views ??
+                      allEpisodes
+                        .filter((ep) => ep.season === season.id)
+                        .reduce((sum, ep) => sum + ((ep as any).view_count || 0), 0);
+                    const modelType = getModelFileType(season);
+                    return (
+                      <div
+                        key={season.id}
+                        role="button"
+                        tabIndex={0}
+                        className={`story-manage__seasonCard ${
+                          activeSeasonId === season.id ? 'story-manage__seasonCard--active' : ''
+                        }`}
+                        onClick={() => handleSeasonSelect(season)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleSeasonSelect(season);
+                          }
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-start gap-2">
+                          <p className="story-manage__seasonCardTitle">
+                            Season {season.season_number}: {season.title}
+                          </p>
+                          <span className="story-manage__seasonMeta flex-shrink-0">
+                            {new Date(season.release_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="story-manage__seasonActions">
+                          <button
+                            type="button"
+                            className="stories-landing__btnPrimary story-manage__btnCompact"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/immersivecomics/season/${season.id}/episodes/`);
+                            }}
+                          >
+                            <i className="fas fa-video me-1" aria-hidden />
+                            Episodes · {epCount}
+                          </button>
+                          <p className="stories-landing__meta mb-0" style={{ fontSize: '0.75rem' }}>
+                            <i className="fas fa-eye me-1" aria-hidden />
+                            <span className="stories-landing__metaNum">{viewTotal}</span>
+                          </p>
+                          <span className="stories-landing__chip">{modelType}</span>
+                          <button
+                            type="button"
+                            className="product-landing__ctaGhost story-manage__btnCompact"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/immersivecomics/season/${season.id}/edit/`);
+                            }}
+                          >
+                            <i className="fas fa-edit me-1" aria-hidden />
+                            Edit
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -704,40 +668,48 @@ const StoryManage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3D Comic Viewer Section */}
-      <div className="row mt-4">
-        <div className="col-12 border-left">
-          {activeSeasonId ? (
-            <Comic3DViewer
-              episodes={allEpisodes.filter(ep => ep.season === activeSeasonId)}
-              dialogues={allDialogues}
-              seasons={seasons}
-              storyId={Number(id)}
-              onEpisodeSelect={handleEpisodeSelect}
-              onDialogueUpdate={(dialogueId, data) => {
-                updateDialogue(dialogueId, data);
-              }}
-            />
-          ) : (
-            <div className="card">
-              <div className="card-body text-center py-5">
-                <i className="fas fa-mouse-pointer fa-3x text-muted mb-3"></i>
-                <h5 className="subtext-btn-sm text-muted mb-3">Select a Season</h5>
-                <p className="subtext-btn-sm text-muted mb-0">
-                  Click on a season above to view its 3D model and episodes.
-                </p>
-              </div>
+      <div className="story-manage__viewerWrap">
+        {activeSeasonId ? (
+          <div className="my-studio__panel">
+            <div className="my-studio__panelHead">
+              <h2 className="my-studio__panelTitle">
+                <i className="fas fa-cube" aria-hidden />
+                <span className="my-studio__panelTitleText">3D preview</span>
+              </h2>
             </div>
-          )}
-        </div>
+            <div className="my-studio__panelBody p-0" style={{ borderRadius: '0 0 18px 18px', overflow: 'hidden' }}>
+              <Comic3DViewer
+                episodes={allEpisodes.filter((ep) => ep.season === activeSeasonId)}
+                dialogues={allDialogues}
+                seasons={seasons}
+                storyId={Number(id)}
+                onEpisodeSelect={handleEpisodeSelect}
+                onDialogueUpdate={(dialogueId, data) => {
+                  updateDialogue(dialogueId, data);
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="my-studio__empty">
+            <div className="stories-landing__emptyIcon" aria-hidden>
+              <i className="fas fa-hand-pointer" />
+            </div>
+            <h3 className="product-landing__h2" style={{ fontSize: '1.2rem' }}>
+              Select a season
+            </h3>
+            <p className="product-landing__body mb-0" style={{ marginTop: '0.35rem' }}>
+              Choose a season above to load its 3D scene and episodes.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Story Collaborators Section */}
-      <div className="row mt-3 border-top">
-        <div className="col-12">
-          <StoryCollaborators />
-        </div>
+      <div className="story-manage__collab">
+        <StoryCollaborators />
       </div>
+        </div>
+      </section>
     </div>
   );
 };
