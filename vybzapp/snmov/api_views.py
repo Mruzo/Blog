@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.db.models import F
-from django.db.models.functions import Greatest
+from django.db.models.functions import Greatest, Trim
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.auth import get_user_model
@@ -107,7 +107,13 @@ def site_image_by_caption_token(request):
         return Response({'detail': 'Missing token.'}, status=status.HTTP_400_BAD_REQUEST)
 
     product_slug = (request.query_params.get('product_slug') or '').strip()
-    qs = SiteImage.objects.filter(caption__iexact=token).exclude(image__isnull=True).exclude(image='')
+    # Match caption ignoring leading/trailing whitespace in DB (common admin copy/paste issue).
+    qs = (
+        SiteImage.objects.annotate(_caption_trim=Trim('caption'))
+        .filter(_caption_trim__iexact=token)
+        .exclude(image__isnull=True)
+        .exclude(image='')
+    )
     if product_slug:
         qs = qs.filter(product__slug__iexact=product_slug)
 

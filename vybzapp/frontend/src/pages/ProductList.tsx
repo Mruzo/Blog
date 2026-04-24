@@ -2,6 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMe
 import { useCart } from '../contexts/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
+import { snmovApiUrl } from '../utils/snmovApi';
 
 interface ProductImage {
   id: number;
@@ -152,7 +153,7 @@ const ProductList: React.FC<ProductListProps> = () => {
     (async () => {
       try {
         const qs = new URLSearchParams({ token: STORE_CATALOG_HERO_CAPTION });
-        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        const res = await fetch(snmovApiUrl(`site-images/by-caption/?${qs.toString()}`));
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as SiteImageHeroPayload;
         if (cancelled) return;
@@ -180,7 +181,7 @@ const ProductList: React.FC<ProductListProps> = () => {
           token,
           product_slug: featuredProduct.slug,
         });
-        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        const res = await fetch(snmovApiUrl(`site-images/by-caption/?${qs.toString()}`));
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as SiteImageHeroPayload;
         if (cancelled) return;
@@ -208,7 +209,7 @@ const ProductList: React.FC<ProductListProps> = () => {
           token,
           product_slug: featuredProduct.slug,
         });
-        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        const res = await fetch(snmovApiUrl(`site-images/by-caption/?${qs.toString()}`));
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as SiteImageHeroPayload;
         if (cancelled) return;
@@ -236,7 +237,7 @@ const ProductList: React.FC<ProductListProps> = () => {
           token,
           product_slug: featuredProduct.slug,
         });
-        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        const res = await fetch(snmovApiUrl(`site-images/by-caption/?${qs.toString()}`));
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as SiteImageHeroPayload;
         if (cancelled) return;
@@ -264,7 +265,7 @@ const ProductList: React.FC<ProductListProps> = () => {
           token,
           product_slug: featuredProduct.slug,
         });
-        const res = await fetch(`/api/site-images/by-caption/?${qs.toString()}`);
+        const res = await fetch(snmovApiUrl(`site-images/by-caption/?${qs.toString()}`));
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as SiteImageHeroPayload;
         if (cancelled) return;
@@ -314,7 +315,7 @@ const ProductList: React.FC<ProductListProps> = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/coupons/featured/');
+        const res = await fetch(snmovApiUrl('coupons/featured/'));
         if (!res.ok || cancelled) return;
         const data = await res.json();
         if (cancelled) return;
@@ -340,7 +341,7 @@ const ProductList: React.FC<ProductListProps> = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products/');
+      const response = await fetch(snmovApiUrl('products/'));
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
