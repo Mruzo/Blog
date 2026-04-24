@@ -7,7 +7,8 @@ from snmov.utils.security import rate_limit_check, log_security_event, validate_
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
-from django.db.models import F
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import F, Q
 from django.db.models.functions import Greatest, Trim
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -115,7 +116,22 @@ def site_image_by_caption_token(request):
         .exclude(image='')
     )
     if product_slug:
-        qs = qs.filter(product__slug__iexact=product_slug)
+        # Match SiteImage linked via direct `product` FK OR generic FK to Product (admin may use either).
+        # object_id is often str(product.uuid) but legacy rows may use integer pk.
+        products = list(Product.objects.filter(slug__iexact=product_slug))
+        if not products:
+            qs = qs.none()
+        else:
+            product_ct = ContentType.objects.get_for_model(Product)
+            object_ids = set()
+            for p in products:
+                object_ids.add(str(p.pk))
+                object_ids.add(str(p.uuid))
+                object_ids.add(str(p.uuid).replace('-', ''))
+            qs = qs.filter(
+                Q(product__in=products)
+                | Q(content_type=product_ct, object_id__in=list(object_ids))
+            )
 
     qs = qs.order_by('-id')
     img = qs.first()
