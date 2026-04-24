@@ -3288,6 +3288,15 @@ h2 {
     justify-content: center !important;
     padding: 0.2rem 0 !important;
   }
+
+  /* Profile strip (my-studio, story edit, …): same pill row as top nav */
+  #profile-navbar.navbar-state-profile.show {
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+  }
 }
 
 /* Navbar buttons layout - centered on desktop, full-width on mobile */
@@ -3564,7 +3573,8 @@ h2 {
   }
 
   .navbar-buttons-container .app-site-header__link,
-  #default-navbar .app-site-header__link {
+  #default-navbar .app-site-header__link,
+  #profile-navbar .app-site-header__link {
     flex: 1 1 0% !important;
     padding-left: 4px !important;
     padding-right: 4px !important;
@@ -3583,7 +3593,8 @@ h2 {
   }
 
   .navbar-buttons-container .app-site-header__link i,
-  #default-navbar .app-site-header__link i {
+  #default-navbar .app-site-header__link i,
+  #profile-navbar .app-site-header__link i {
     font-size: 0.72rem !important;
     flex-shrink: 0;
   }
@@ -3644,7 +3655,8 @@ h2 {
   }
 
   .navbar-buttons-container .app-site-header__link,
-  #default-navbar .app-site-header__link {
+  #default-navbar .app-site-header__link,
+  #profile-navbar .app-site-header__link {
     padding-left: 3px !important;
     padding-right: 3px !important;
     font-size: 0.72rem !important;
@@ -3659,7 +3671,8 @@ h2 {
   }
 
   .navbar-buttons-container .app-site-header__link i,
-  #default-navbar .app-site-header__link i {
+  #default-navbar .app-site-header__link i,
+  #profile-navbar .app-site-header__link i {
     font-size: 0.65rem !important;
   }
 }
@@ -3685,7 +3698,8 @@ h2 {
   }
 
   .navbar-buttons-container .app-site-header__link,
-  #default-navbar .app-site-header__link {
+  #default-navbar .app-site-header__link,
+  #profile-navbar .app-site-header__link {
     padding-left: 2px !important;
     padding-right: 2px !important;
     font-size: 0.68rem !important;
@@ -3700,7 +3714,8 @@ h2 {
   }
 
   .navbar-buttons-container .app-site-header__link i,
-  #default-navbar .app-site-header__link i {
+  #default-navbar .app-site-header__link i,
+  #profile-navbar .app-site-header__link i {
     font-size: 0.62rem !important;
   }
 }

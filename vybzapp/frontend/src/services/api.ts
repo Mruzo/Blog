@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 // API Configuration
 const API_BASE_URL = process.env.REACT_APP_API_URL || '/api/icvybz';
@@ -34,6 +34,34 @@ function isPublicStudioDetailGetRequest(url: string | undefined, method: string)
   return /\/studios\/\d+\/?$/.test(path);
 }
 
+/** Resolved URL for public-route checks (interceptor `url` may omit baseURL until merge). */
+function getRequestUrlForMatching(config: InternalAxiosRequestConfig | undefined): string {
+  if (!config) return '';
+  try {
+    const uri = axios.getUri(config);
+    if (uri) return uri;
+  } catch {
+    /* pre-send or tests */
+  }
+  const base = config.baseURL || '';
+  const rel = config.url || '';
+  if (rel.startsWith('http://') || rel.startsWith('https://')) return rel;
+  return `${base}${rel}`;
+}
+
+function stripAuthorizationHeader(config: InternalAxiosRequestConfig) {
+  const h = config.headers;
+  if (!h) return;
+  const hdrs = h as Record<string, unknown> & { delete?: (k: string) => void };
+  if (typeof hdrs.delete === 'function') {
+    hdrs.delete('Authorization');
+    hdrs.delete('authorization');
+  } else {
+    delete hdrs.Authorization;
+    delete hdrs.authorization;
+  }
+}
+
 // Helper function to get CSRF token from cookies
 function getCookie(name: string): string | null {
   let cookieValue: string | null = null;
@@ -53,14 +81,16 @@ function getCookie(name: string): string | null {
 // Request interceptor to add auth token and CSRF token
 api.interceptors.request.use(
   (config) => {
-    // Don't send auth token for public endpoints
-    // Public endpoints don't require auth and sending an invalid token can cause 403 errors
-    const url = config.url || '';
+    // Don't send auth token for public endpoints. DRF TokenAuthentication runs first;
+    // a stale Authorization header causes 401 before AllowAny is evaluated.
     const method = config.method?.toUpperCase() || '';
-    
+    const urlForMatch = getRequestUrlForMatching(config);
+    const rel = config.url || '';
+
     // Only exclude auth token for truly public endpoints:
     // - /stories/public/ (public stories list)
     // - /studios/ (public studios list - GET only, no path after /studios/)
+    // - /studios/{id}/ GET (public studio detail — numeric id only in API)
     // - /contact/ (contact form - public POST)
     // - /feedback/ (feedback/ticket creation - public POST)
     // - /auth/login/ (login endpoint - no token needed before login)
@@ -68,19 +98,36 @@ api.interceptors.request.use(
     // But NOT for authenticated endpoints like:
     // - /studios/{id}/collaboration-requests/ (requires auth)
     // - /studios/{id}/collaborators/ (requires auth)
-    const isPublicStoriesEndpoint = url.includes('/stories/public/');
-    const isPublicStudiosListEndpoint = url.match(/\/studios\/$/) && method === 'GET';
-    const isPublicStudioDetailGet = isPublicStudioDetailGetRequest(url, method);
-    const isContactEndpoint = url.includes('/contact/') || url.includes('/feedback/');
-    const isAuthEndpoint = url.includes('/auth/login/') || url.includes('/auth/register/') || url.includes('/auth/password-reset/');
+    const isPublicStoriesEndpoint =
+      urlForMatch.includes('/stories/public/') || rel.includes('/stories/public/');
+    const isPublicStudiosListEndpoint =
+      (Boolean(urlForMatch.match(/\/studios\/$/)) || Boolean(rel.match(/\/studios\/$/))) &&
+      method === 'GET';
+    const isPublicStudioDetailGet =
+      isPublicStudioDetailGetRequest(urlForMatch, method) ||
+      isPublicStudioDetailGetRequest(rel, method);
+    const isContactEndpoint =
+      urlForMatch.includes('/contact/') ||
+      urlForMatch.includes('/feedback/') ||
+      rel.includes('/contact/') ||
+      rel.includes('/feedback/');
+    const isAuthEndpoint =
+      urlForMatch.includes('/auth/login/') ||
+      urlForMatch.includes('/auth/register/') ||
+      urlForMatch.includes('/auth/password-reset/') ||
+      rel.includes('/auth/login/') ||
+      rel.includes('/auth/register/') ||
+      rel.includes('/auth/password-reset/');
     const isPublicEndpoint =
       isPublicStoriesEndpoint ||
       isPublicStudiosListEndpoint ||
       isPublicStudioDetailGet ||
       isContactEndpoint ||
       isAuthEndpoint;
-    
-    if (!isPublicEndpoint) {
+
+    if (isPublicEndpoint) {
+      stripAuthorizationHeader(config);
+    } else {
       const token = localStorage.getItem('authToken');
       if (token) {
         config.headers.Authorization = `Token ${token}`;
@@ -128,25 +175,35 @@ api.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status;
-    const url = error.config?.url;
-    const method = error.config?.method?.toUpperCase();
-    
+    const cfg = error.config as InternalAxiosRequestConfig | undefined;
+    const urlForMatch = getRequestUrlForMatching(cfg);
+    const rel = cfg?.url || '';
+    const method = cfg?.method?.toUpperCase();
+
     // Categorize the error
-    const isLogoutEndpoint = url?.includes('/auth/logout/');
-    const isPublicStoriesEndpoint = url?.includes('/stories/public/');
-    const isPublicStudiosListEndpoint = url?.match(/\/studios\/$/) && method === 'GET';
-    const isPublicStudioDetailGet = isPublicStudioDetailGetRequest(url, method);
+    const isLogoutEndpoint =
+      urlForMatch.includes('/auth/logout/') || rel.includes('/auth/logout/');
+    const isPublicStoriesEndpoint =
+      urlForMatch.includes('/stories/public/') || rel.includes('/stories/public/');
+    const isPublicStudiosListEndpoint =
+      (Boolean(urlForMatch.match(/\/studios\/$/)) || Boolean(rel.match(/\/studios\/$/))) &&
+      method === 'GET';
+    const isPublicStudioDetailGet =
+      isPublicStudioDetailGetRequest(urlForMatch, method || '') ||
+      isPublicStudioDetailGetRequest(rel, method || '');
     const isPublicEndpoint =
       isPublicStoriesEndpoint || isPublicStudiosListEndpoint || isPublicStudioDetailGet;
-    const isAuthEndpoint = url?.includes('/auth/');
+    const url = urlForMatch || rel;
+    const isAuthEndpoint = url.includes('/auth/');
     const is403Or401 = status === 403 || status === 401;
-    
+
     // Check if this is an authenticated endpoint being called without auth
     // These are expected to fail for unauthenticated users on public pages
-    const isAuthenticatedEndpoint = url?.includes('/characters/') || 
-                                    url?.includes('/seasons/') || 
-                                    url?.includes('/episodes/') || 
-                                    url?.includes('/dialogues/');
+    const isAuthenticatedEndpoint =
+      url.includes('/characters/') ||
+      url.includes('/seasons/') ||
+      url.includes('/episodes/') ||
+      url.includes('/dialogues/');
     const hasToken = !!localStorage.getItem('authToken');
     const isPublicPage = window.location.pathname.includes('/immersivecomics/') && 
                        !window.location.pathname.includes('/my-studio/') &&

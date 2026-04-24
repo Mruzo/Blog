@@ -57,19 +57,6 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
     setShowProfileNavbar(false);
   };
 
-  // Shared button styles to ensure consistency
-  const getButtonStyle = (isActive: boolean) => ({
-    ...(isActive ? {
-      backgroundColor: 'rgba(255, 188, 0, 0.1) !important',
-      border: '2px solid #FFBC00 !important',
-      whiteSpace: 'nowrap',
-      margin: '0 4px'
-    } : {
-      whiteSpace: 'nowrap',
-      margin: '0 4px'
-    })
-  });
-
   const path = location.pathname;
   const storiesActive =
     path === '/immersivecomics/' ||
@@ -78,6 +65,15 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
   const studiosActive = path.includes('/immersivecomics/studios');
   const storeActive =
     path.includes('/product') && !path.includes('my-orders');
+  const profileStudioActive =
+    path.includes('my-studio') ||
+    path.includes('/studio/') ||
+    path.includes('/story/') ||
+    path.includes('/season/') ||
+    path.includes('/episode/') ||
+    path.includes('/characters/') ||
+    path.includes('/collaborators/');
+  const myOrdersActive = path.includes('my-orders');
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -153,38 +149,34 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
         </div>
       </nav>
 
-      {/* Profile navbar state */}
+      {/* Profile navbar — same pill links as #default-navbar (esp. mobile bottom bar) */}
       <div className="border-bottom w-100">
         <div className="container-fluid px-0">
-          <div 
-            id="profile-navbar" 
-            className={`navbar-state-profile d-flex justify-content-center align-items-center py-2 navbar-buttons-container ${showProfileNavbar ? 'show' : 'hidden'}`} 
-            style={{ flexWrap: 'nowrap', width: '100%' }}
+          <div
+            id="profile-navbar"
+            className={`navbar-state-profile navbar-buttons-container app-site-header__navTray ${showProfileNavbar ? 'show' : 'hidden'}`}
           >
-            <Link 
-              to="/immersivecomics/" 
-              className="btn btn-light btn-sm px-3 subtext-btn-sm nav-btn"
-              style={getButtonStyle(false)}
+            <Link
+              to="/immersivecomics/"
+              className={`app-site-header__link${storiesActive ? ' active' : ''}`}
               onClick={switchToDefaultNavbar}
             >
-              <i className="fas fa-play me-1" style={{ fontSize: '1em', verticalAlign: 'middle', lineHeight: 'inherit' }}></i>
-              <span> Stories</span>
+              <i className="fas fa-play" aria-hidden />
+              <span>Stories</span>
             </Link>
-            <Link 
-              to="/immersivecomics/my-studio/" 
-              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname.includes('my-studio') || location.pathname.includes('/studio/') || location.pathname.includes('/story/') || location.pathname.includes('/season/') || location.pathname.includes('/episode/') || location.pathname.includes('/characters/') || location.pathname.includes('/collaborators/') ? 'active' : ''}`}
-              style={getButtonStyle(location.pathname.includes('my-studio') || location.pathname.includes('/studio/') || location.pathname.includes('/story/') || location.pathname.includes('/season/') || location.pathname.includes('/episode/') || location.pathname.includes('/characters/') || location.pathname.includes('/collaborators/'))}
+            <Link
+              to="/immersivecomics/my-studio/"
+              className={`app-site-header__link${profileStudioActive ? ' active' : ''}`}
             >
-              <i className="fas fa-user me-1" style={{ fontSize: '1em', verticalAlign: 'middle', lineHeight: 'inherit' }}></i>
-              <span> My Studio</span>
+              <i className="fas fa-user" aria-hidden />
+              <span>My Studio</span>
             </Link>
-            <Link 
-              to="/product/my-orders/" 
-              className={`btn btn-light btn-sm px-3 subtext-btn-sm nav-btn ${location.pathname.includes('my-orders') ? 'active' : ''}`}
-              style={getButtonStyle(location.pathname.includes('my-orders'))}
+            <Link
+              to="/product/my-orders/"
+              className={`app-site-header__link${myOrdersActive ? ' active' : ''}`}
             >
-              <i className="fas fa-receipt me-1" style={{ fontSize: '1em', verticalAlign: 'middle', lineHeight: 'inherit' }}></i>
-              <span> My Orders</span>
+              <i className="fas fa-receipt" aria-hidden />
+              <span>My Orders</span>
             </Link>
           </div>
         </div>
