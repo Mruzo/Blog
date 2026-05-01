@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SmallButton from './SmallButton';
 import BackButton from './BackButton';
@@ -115,7 +115,9 @@ const StoryCreationWizard: React.FC = () => {
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+  /** Characters step registers async save + advance here so footer Next persists before moving on */
+  const footerNextOverrideRef = useRef<(() => Promise<void>) | null>(null);
+
   // Initialize data structure
   const [data, setData] = useState<StoryCreationData>({
     story: {
@@ -209,23 +211,22 @@ const StoryCreationWizard: React.FC = () => {
     }
   }, [currentStep, navigate]);
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+  const handleNext = useCallback(() => {
+    setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
+  }, []);
+
+  const handleFooterNext = async () => {
+    const run = footerNextOverrideRef.current;
+    if (run) {
+      await run();
+      return;
     }
-  };
-
-  // Custom handleNext that calls the step's handleNext if it exists
-  const handleStepNext = () => {
-    // The step components will override this with their own handleNext
     handleNext();
   };
 
-  // Custom onNext for CharactersStep
-  const customOnNext = async () => {
-    // This will be overridden by the CharactersStep component
-    handleNext();
-  };
+  useEffect(() => {
+    footerNextOverrideRef.current = null;
+  }, [currentStep]);
 
   const handlePrevious = () => {
     if (currentStep > 0) {
@@ -339,6 +340,14 @@ const StoryCreationWizard: React.FC = () => {
 
   const currentStepComponent = steps[currentStep];
   const StepComponent = currentStepComponent.component;
+  const stepSharedProps = {
+    data,
+    onDataUpdate: handleDataUpdate,
+    onNext: handleNext,
+    onPrevious: handlePrevious,
+    isFirstStep: currentStep === 0,
+    isLastStep: currentStep === steps.length - 1,
+  };
 
   return (
     <div className="product-landing">
@@ -497,15 +506,15 @@ const StoryCreationWizard: React.FC = () => {
         <div className="card-body p-2">
           {isLoading ? (
             <LoadingSpinner />
-          ) : (
-            <StepComponent
-              data={data}
-              onDataUpdate={handleDataUpdate}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              isFirstStep={currentStep === 0}
-              isLastStep={currentStep === steps.length - 1}
+          ) : currentStepComponent.id === 'characters' ? (
+            <CharactersStep
+              {...stepSharedProps}
+              registerFooterNext={(fn) => {
+                footerNextOverrideRef.current = fn;
+              }}
             />
+          ) : (
+            <StepComponent {...stepSharedProps} />
           )}
         </div>
       </div>
@@ -532,7 +541,7 @@ const StoryCreationWizard: React.FC = () => {
           ) : (
             <SmallButton
               variant="primary"
-              onClick={handleNext}
+              onClick={() => void handleFooterNext()}
             >
               Next <i className="fas fa-arrow-right ms-1"></i>
             </SmallButton>

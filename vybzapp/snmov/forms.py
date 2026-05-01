@@ -163,8 +163,11 @@ class SiteImageForm(forms.ModelForm):
 
 class CouponAdminForm(forms.ModelForm):
     """
-    Admin form for Coupon: use HTML5 datetime-local for starts/ends so values persist reliably
-    (avoids split date/time calendar quirks in some browsers).
+    Admin form for Coupon: use HTML5 datetime-local for starts/ends so values persist reliably.
+
+    ModelAdmin replaces model DateTimeField with SplitDateTimeField + AdminSplitDateTime.
+    Only swapping the widget for DateTimeInput leaves SplitDateTimeField in place; it then
+    expects a list of values and raises "Enter a list of values." Replace the whole field.
     """
 
     class Meta:
@@ -186,9 +189,17 @@ class CouponAdminForm(forms.ModelForm):
             '%Y-%m-%d',
         ]
         for name in ('starts_at', 'ends_at'):
-            if name in self.fields:
-                self.fields[name].widget = dt_widget
-                self.fields[name].input_formats = formats
+            if name not in self.fields:
+                continue
+            old = self.fields[name]
+            self.fields[name] = forms.DateTimeField(
+                required=old.required,
+                widget=dt_widget,
+                input_formats=formats,
+                label=old.label,
+                help_text=old.help_text,
+                initial=self.initial.get(name),
+            )
 
 
 class CustomUserCreationForm(UserCreationForm):

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StoryCreationData } from '../StoryCreationWizard';
 import SmallButton from '../SmallButton';
 import CharacterCard from '../CharacterCard';
@@ -13,6 +13,8 @@ interface CharactersStepProps {
   onPrevious: () => void;
   isFirstStep: boolean;
   isLastStep: boolean;
+  /** Wizard footer Next calls this to persist characters before advancing */
+  registerFooterNext?: (fn: (() => Promise<void>) | null) => void;
 }
 
 interface Character {
@@ -35,7 +37,8 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
   onNext,
   onPrevious,
   isFirstStep,
-  isLastStep
+  isLastStep,
+  registerFooterNext
 }) => {
   const { createStory, createSeason, createCharacter } = useApi();
   const [characters, setCharacters] = useState<Character[]>(data.characters);
@@ -57,14 +60,6 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
   const handleCloseMessage = () => {
     setShowMessage(false);
   };
-
-  // Override the onNext prop to call our custom handleNext
-  const customOnNext = async () => {
-    await handleNext();
-  };
-
-  // Override the onNext prop passed from the wizard
-  onNext = customOnNext;
 
   const personalities = [
     'Brave',
@@ -111,11 +106,7 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
     if (!character.personality) {
       newErrors.personality = 'Please select a personality';
     }
-    
-    if (!character.love_interest.trim()) {
-      newErrors.love_interest = 'Character love interest is required';
-    }
-    
+
     return newErrors;
   };
 
@@ -133,8 +124,9 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
           onDataUpdate({ characters: updatedCharacters });
           setEditingIndex(null);
         } else {
-          // Add new character to local state
-          const newCharacter = { ...currentCharacter, id: Date.now() }; // Temporary ID
+          // Add new character (no id until persisted on Next — avoids skipping createCharacter)
+          const newCharacter = { ...currentCharacter };
+          delete (newCharacter as { id?: number }).id;
           const updatedCharacters = [...characters, newCharacter];
           setCharacters(updatedCharacters);
           // Update the parent data
@@ -174,24 +166,22 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
     onDataUpdate({ characters: updatedCharacters });
   };
 
-  const handleNext = async () => {
+  const persistCharactersAndAdvance = useCallback(async () => {
     if (characters.length === 0) {
       setErrors({ general: 'Please add at least one character' });
       return;
     }
-    
+
     try {
-      // First, create the story if it doesn't exist yet
       let storyId = data.story.id;
       if (!storyId) {
-        // Validate that we have at least a story title
         if (!data.story.title.trim()) {
           setMessage('Please enter a story title before saving.');
           setMessageType('warning');
           setShowMessage(true);
           return;
         }
-        
+
         const story = await createStory({
           title: data.story.title.trim(),
           description: data.story.description.trim() || 'No description provided',
@@ -201,7 +191,6 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
         onDataUpdate({ story: { ...data.story, id: storyId } });
       }
 
-      // Create the season if it doesn't exist yet
       let seasonId = data.season.id;
       if (!seasonId) {
         const season = await createSeason(storyId, {
@@ -214,50 +203,58 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
         onDataUpdate({ season: { ...data.season, id: seasonId } });
       }
 
-      // Create all characters in the database
       const savedCharacters = [];
       for (const character of characters) {
-        if (!character.id || typeof character.id === 'string') {
-          // This is a new character, save it to database
+        if (character.id == null) {
           const savedCharacter = await createCharacter(storyId, {
             name: character.name,
             bio: character.bio,
             personality: character.personality,
-            love_interest: character.love_interest,
+            love_interest: (character.love_interest || '').trim(),
           });
-          // Preserve POV data for the complete story creation
           const characterWithPOV = {
             ...savedCharacter,
             pov_head_x: character.pov_head_x,
             pov_head_y: character.pov_head_y,
-            pov_head_z: character.pov_head_z
+            pov_head_z: character.pov_head_z,
           };
           savedCharacters.push(characterWithPOV);
         } else {
-          // Character already exists in database, preserve POV data
           const characterWithPOV = {
             ...character,
             pov_head_x: character.pov_head_x,
             pov_head_y: character.pov_head_y,
-            pov_head_z: character.pov_head_z
+            pov_head_z: character.pov_head_z,
           };
           savedCharacters.push(characterWithPOV);
         }
       }
 
-      // Update the parent data with saved characters
       onDataUpdate({ characters: savedCharacters });
       onNext();
     } catch (error) {
       console.error('Error saving story data:', error);
       setErrors({ general: 'Failed to save story data. Please try again.' });
-    } finally {
-      // Saving completed
     }
-  };
+  }, [
+    characters,
+    data.story,
+    data.season,
+    createStory,
+    createSeason,
+    createCharacter,
+    onDataUpdate,
+    onNext,
+  ]);
+
+  useEffect(() => {
+    if (!registerFooterNext) return;
+    registerFooterNext(() => persistCharactersAndAdvance());
+    return () => registerFooterNext(null);
+  }, [registerFooterNext, persistCharactersAndAdvance]);
 
   return (
-    <div>
+    <div data-testid="characters-step">
       <MessagePopup
         message={message}
         type={messageType}

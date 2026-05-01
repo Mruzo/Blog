@@ -105,6 +105,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ show, onClose, context })
 
     if (!formData.content.trim()) {
       newErrors.content = 'Message is required';
+    } else if (formData.content.trim().length < 10) {
+      newErrors.content = 'Message must be at least 10 characters (required for support tickets)';
     } else if (formData.content.length > 250) {
       newErrors.content = 'Message must be 250 characters or less';
     }
@@ -154,6 +156,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ show, onClose, context })
       // Include honeypot and form time in submission for backend validation
       const submissionData: any = {
         ...formData,
+        source: 'feedback_modal',
         _honeypot: honeypot, // Hidden field for backend validation
         _form_time: formFillTime.toString() // Time taken to fill form
       };

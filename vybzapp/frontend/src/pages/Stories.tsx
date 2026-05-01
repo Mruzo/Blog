@@ -35,6 +35,27 @@ interface Comic {
   total_views?: number; // Total view count across all episodes (calculated by backend)
 }
 
+const sortEpisodesChronologically = (episodes: any[], seasons: any[]) => {
+  const seasonNumberById = new Map<number, number>();
+  (seasons || []).forEach((season: any) => {
+    seasonNumberById.set(season.id, Number(season.season_number) || 0);
+  });
+
+  return [...(episodes || [])].sort((a: any, b: any) => {
+    const seasonA = seasonNumberById.get(a.season) ?? 0;
+    const seasonB = seasonNumberById.get(b.season) ?? 0;
+    if (seasonA !== seasonB) return seasonA - seasonB;
+
+    const episodeA = Number(a.episode_number) || 0;
+    const episodeB = Number(b.episode_number) || 0;
+    if (episodeA !== episodeB) return episodeA - episodeB;
+
+    const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return createdA - createdB;
+  });
+};
+
 const Stories: React.FC = () => {
   const { stories, loadPublicStories, isLoading, error } = useApi();
   const [searchParams] = useSearchParams();
@@ -482,7 +503,7 @@ const Stories: React.FC = () => {
                 )
               );
               const episodeResults = await Promise.all(episodePromises);
-              allEpisodes = episodeResults.flat();
+              allEpisodes = sortEpisodesChronologically(episodeResults.flat(), seasonsData);
             } catch (error: any) {
               // If 403/401, it's expected for public stories when not authenticated
               if (error?.response?.status === 403 || error?.response?.status === 401) {

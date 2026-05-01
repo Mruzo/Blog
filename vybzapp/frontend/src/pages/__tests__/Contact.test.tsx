@@ -106,7 +106,8 @@ describe('Contact', () => {
         full_name: 'Test User',
         email: 'test@example.com',
         subject: 'Test Subject',
-        content: 'Test message'
+        content: 'Test message',
+        source: 'contact_form',
       });
     });
 

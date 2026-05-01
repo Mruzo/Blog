@@ -81,7 +81,10 @@ const Contact: React.FC = () => {
     setShowMessage(false);
 
     try {
-      const result = await apiService.submitContactForm(formData);
+      const result = await apiService.submitContactForm({
+        ...formData,
+        source: 'contact_form',
+      });
       
       if (result.success) {
         setMessage(result.message || 'Thanks for reaching out. Your message has been sent.');

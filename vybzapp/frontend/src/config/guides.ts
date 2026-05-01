@@ -24,7 +24,17 @@ export const guides: GuideConfig[] = [
     name: 'Story Details',
     route: '/immersivecomics/story/create/story/',
     showOnFirstVisit: false,
-    summary: 'It could be a lengthy process, so feel free to use **Save Draft** at the top right corner.',
+    summary: 'What is the title, and the premise of the story. It could be a lengthy process, so feel free to use **Save Draft** at the top right corner.',
+  },
+  {
+    id: 'story-create-characters',
+    name: 'Characters',
+    route: '/immersivecomics/story/create/',
+    pathContains: '/characters/',
+    showOnFirstVisit: false,
+    showOnce: false,
+    summary:
+      'Who are the actors and the various personalities in your story? Add each one with **Add Character**, then **Next** to save them to your story. Use **Save draft** anytime to keep progress.',
   },
   {
     id: 'story-creation',
@@ -39,7 +49,7 @@ export const guides: GuideConfig[] = [
     name: 'My Studio',
     route: '/immersivecomics/my-studio/',
     showOnFirstVisit: false,
-    summary: 'This is your studio. **Give it a name**, **build stories**, **advance your draft stories**, **invite collaborators** to build with you',
+    summary: 'This is your studio. **Give it a name**, **build stories**, **invite collaboratorate with other builders**',
   },
   {
     id: 'season-edit',

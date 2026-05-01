@@ -17,11 +17,10 @@ class ContactFormIntegrationTest(APITestCase):
     
     @patch('feedback.email_notifications.send_ticket_confirmation_email')
     @patch('snmov.utils.email_notifications.send_feedback_confirmation')
-    def test_contact_form_creates_ticket(self, mock_feedback_email, mock_ticket_email):
-        """Test that contact form creates both ReachOut and FeedbackTicket"""
+    def test_contact_form_creates_reachout_not_ticket(self, mock_feedback_email, mock_ticket_email):
+        """Contact page (/contact/) creates ReachOut but not FeedbackTicket."""
         from django.core.cache import cache
         
-        # Clear rate limiting cache
         cache.clear()
         
         mock_ticket_email.return_value = True
@@ -32,7 +31,7 @@ class ContactFormIntegrationTest(APITestCase):
             'email': 'test@example.com',
             'subject': 'Test Subject',
             'content': 'This is a test message that is long enough',
-            '_form_time': '5'  # Simulate 5 seconds to fill form
+            'source': 'contact_form',
         }
         
         response = self.client.post('/api/contact/', data, format='json')
@@ -40,24 +39,55 @@ class ContactFormIntegrationTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data['success'])
         
-        # Check ReachOut was created (backward compatibility)
         reach_out = ReachOut.objects.filter(email='test@example.com').first()
         self.assertIsNotNone(reach_out)
         
-        # Check FeedbackTicket was created
         ticket = FeedbackTicket.objects.filter(submitted_by_email='test@example.com').first()
-        self.assertIsNotNone(ticket)
-        self.assertEqual(ticket.subject, 'Test Subject')
-        self.assertEqual(ticket.source, 'contact_form')
+        self.assertIsNone(ticket)
+        self.assertNotIn('ticket_number', response.data)
+        
+        mock_ticket_email.assert_not_called()
+        mock_feedback_email.assert_called_once()
+    
+    @patch('feedback.email_notifications.send_ticket_confirmation_email')
+    @patch('snmov.utils.email_notifications.send_feedback_confirmation')
+    def test_feedback_modal_creates_ticket(self, mock_feedback_email, mock_ticket_email):
+        """Floating feedback (source=feedback_modal) creates ReachOut and FeedbackTicket."""
+        from django.core.cache import cache
+        
+        cache.clear()
+        
+        mock_ticket_email.return_value = True
+        mock_feedback_email.return_value = True
+        
+        data = {
+            'full_name': 'Test User',
+            'email': 'modal@example.com',
+            'subject': 'Test Subject',
+            'content': 'This is a test message that is long enough',
+            'source': 'feedback_modal',
+            '_form_time': '5',
+        }
+        
+        response = self.client.post('/api/contact/', data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['success'])
         self.assertIn('ticket_number', response.data)
         
-        # Verify emails were sent
+        ticket = FeedbackTicket.objects.filter(submitted_by_email='modal@example.com').first()
+        self.assertIsNotNone(ticket)
+        self.assertEqual(ticket.subject, 'Test Subject')
+        self.assertEqual(ticket.source, 'feedback_modal')
+        
         mock_ticket_email.assert_called_once()
         mock_feedback_email.assert_called_once()
     
     @patch('feedback.email_notifications.send_ticket_confirmation_email')
     def test_contact_form_category_inference(self, mock_email):
         """Test that category is inferred from subject"""
+        from django.core.cache import cache
+        cache.clear()
         mock_email.return_value = True
         
         # Test bug category
@@ -66,6 +96,7 @@ class ContactFormIntegrationTest(APITestCase):
             'email': 'test@example.com',
             'subject': 'Bug in the system',
             'content': 'This is a test message that is long enough',
+            'source': 'feedback_modal',
             '_form_time': '5'
         }
         
@@ -78,6 +109,7 @@ class ContactFormIntegrationTest(APITestCase):
         # Test feature request category
         data['subject'] = 'Feature suggestion'
         data['email'] = 'test2@example.com'
+        cache.clear()
         response = self.client.post('/api/contact/', data, format='json')
         ticket = FeedbackTicket.objects.filter(submitted_by_email='test2@example.com').first()
         self.assertEqual(ticket.category, 'feature_request')
@@ -98,9 +130,12 @@ class ContactFormIntegrationTest(APITestCase):
             'email': 'test@example.com',
             'subject': 'Test Subject',
             'content': 'This is a test message that is long enough',
+            'source': 'feedback_modal',
             '_form_time': '5'
         }
         
+        from django.core.cache import cache
+        cache.clear()
         response = self.client.post('/api/contact/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
@@ -132,9 +167,10 @@ class ContactFormIntegrationTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
     
     @patch('feedback.email_notifications.send_ticket_confirmation_email')
-    def test_contact_form_ticket_creation_failure_graceful(self, mock_email):
-        """Test that contact form still works if ticket creation fails"""
-        # Make ticket creation fail
+    def test_feedback_modal_ticket_email_failure_still_succeeds(self, mock_email):
+        """Ticket confirmation email failure does not fail the request."""
+        from django.core.cache import cache
+        cache.clear()
         mock_email.side_effect = Exception("Email service down")
         
         data = {
@@ -142,12 +178,13 @@ class ContactFormIntegrationTest(APITestCase):
             'email': 'test@example.com',
             'subject': 'Test Subject',
             'content': 'This is a test message that is long enough',
+            'source': 'feedback_modal',
             '_form_time': '5'
         }
         
-        # Should still succeed (graceful degradation)
         response = self.client.post('/api/contact/', data, format='json')
-        # The response might still be 201 or might fail, but ReachOut should be created
-        reach_out = ReachOut.objects.filter(email='test@example.com').first()
-        # ReachOut creation might fail if ticket creation exception bubbles up
-        # This is acceptable - the important thing is the system doesn't crash
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['success'])
+        self.assertIn('ticket_number', response.data)
+        self.assertIsNotNone(ReachOut.objects.filter(email='test@example.com').first())
+        self.assertIsNotNone(FeedbackTicket.objects.filter(submitted_by_email='test@example.com').first())

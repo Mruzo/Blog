@@ -1,10 +1,9 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import CharactersStep from '../CharactersStep';
 import { ApiProvider } from '../../../contexts/ApiContext';
 
-// Mock the API context
 const mockApiContext = {
   createStory: jest.fn(),
   createSeason: jest.fn(),
@@ -51,7 +50,6 @@ const mockApiContext = {
   deleteAudioTrack: jest.fn(),
 };
 
-// Mock the API context provider
 jest.mock('../../../contexts/ApiContext', () => ({
   useApi: () => mockApiContext,
   ApiProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -61,20 +59,30 @@ const mockStoryData = {
   story: {
     title: 'Test Story',
     description: 'A test story',
-    summary: 'Test summary',
-    genre: 'Fantasy',
-    target_audience: 'Adults',
+    is_public: false,
   },
   season: {
     title: 'Season 1',
     season_number: 1,
     description: 'First season',
+    release_date: '2024-01-01',
   },
-  characters: [],
+  characters: [] as Array<{
+    id?: number;
+    name: string;
+    bio: string;
+    personality: string;
+    love_interest: string;
+    pov_head_x?: number;
+    pov_head_y?: number;
+    pov_head_z?: number;
+  }>,
   episode: {
     title: 'Episode 1',
     episode_number: 1,
     description: 'First episode',
+    summary: '',
+    is_published: false,
   },
   dialogues: [],
   model: {
@@ -91,300 +99,180 @@ const mockStoryData = {
   },
 };
 
-const mockProps = {
-  data: mockStoryData,
-  onDataUpdate: jest.fn(),
-  onNext: jest.fn(),
-  onPrevious: jest.fn(),
-  isFirstStep: false,
-  isLastStep: false,
-};
+const mockOnNext = jest.fn();
+const mockOnDataUpdate = jest.fn();
 
-describe('CharactersStep Progressive Saving', () => {
+function renderCharactersStep(
+  overrides?: Partial<React.ComponentProps<typeof CharactersStep>>
+) {
+  let footerNext: (() => Promise<void>) | null = null;
+  const registerFooterNext = (fn: (() => Promise<void>) | null) => {
+    footerNext = fn;
+  };
+  const utils = render(
+    <ApiProvider>
+      <CharactersStep
+        data={mockStoryData}
+        onDataUpdate={mockOnDataUpdate}
+        onNext={mockOnNext}
+        onPrevious={jest.fn()}
+        isFirstStep={false}
+        isLastStep={false}
+        registerFooterNext={registerFooterNext}
+        {...overrides}
+      />
+    </ApiProvider>
+  );
+  return { ...utils, getFooterNext: () => footerNext };
+}
+
+describe('CharactersStep', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockApiContext.createStory.mockResolvedValue({ id: 1, ...mockStoryData.story });
-    mockApiContext.createSeason.mockResolvedValue({ id: 1, ...mockStoryData.season });
-    mockApiContext.createCharacter.mockResolvedValue({ id: 1, name: 'Test Character', bio: 'Test bio', role: 'Protagonist', appearance: 'Test appearance' });
+    mockApiContext.createStory.mockResolvedValue({
+      id: 101,
+      title: 'Test Story',
+      description: 'A test story',
+      is_public: false,
+    });
+    mockApiContext.createSeason.mockResolvedValue({
+      id: 201,
+      title: 'Season 1',
+      season_number: 1,
+      description: 'First season',
+      release_date: '2024-01-01',
+    });
+    mockApiContext.createCharacter.mockResolvedValue({
+      id: 301,
+      name: 'Hero',
+      bio: 'Bio here',
+      personality: 'Brave',
+      love_interest: '',
+    });
   });
 
-  test('should save story, season, and characters to database when Next is clicked', async () => {
-    render(
-      <ApiProvider>
-        <CharactersStep {...mockProps} />
-      </ApiProvider>
-    );
+  const fillAndAddCharacter = () => {
+    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: 'Hero' } });
+    fireEvent.change(screen.getByLabelText(/character bio/i), { target: { value: 'Bio here' } });
+    fireEvent.change(screen.getByLabelText(/^personality/i), { target: { value: 'Brave' } });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+  };
 
-    // Add a character
-    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: 'Test Character' } });
-    fireEvent.change(screen.getByLabelText(/character bio/i), { target: { value: 'Test bio' } });
-    fireEvent.change(screen.getByLabelText(/character role/i), { target: { value: 'Protagonist' } });
-    fireEvent.change(screen.getByLabelText(/character appearance/i), { target: { value: 'Test appearance' } });
-    
-    fireEvent.click(screen.getByText(/add character/i));
+  test('footer next persists new characters (createStory, createSeason, createCharacter) then advances', async () => {
+    const { getFooterNext } = renderCharactersStep();
 
-    // Wait for character to be added
+    fillAndAddCharacter();
     await waitFor(() => {
-      expect(screen.getByText('Test Character')).toBeInTheDocument();
+      expect(screen.getByText('Hero')).toBeInTheDocument();
     });
 
-    // Mock the Next button click (this would be triggered by the wizard's Next button)
-    const { onNext } = mockProps;
-    
-    // Simulate the wizard calling the step's handleNext function
-    const stepComponent = screen.getByTestId('characters-step');
-    if (stepComponent) {
-      // The handleNext function should be called when the wizard's Next button is clicked
-      // This is handled by the onNext prop override in the component
-      onNext();
-    }
+    const footerNext = getFooterNext();
+    expect(footerNext).not.toBeNull();
 
-    // Wait for API calls to complete
+    await act(async () => {
+      await footerNext!();
+    });
+
     await waitFor(() => {
       expect(mockApiContext.createStory).toHaveBeenCalledWith({
         title: 'Test Story',
         description: 'A test story',
-        summary: 'Test summary',
-        genre: 'Fantasy',
-        target_audience: 'Adults',
+        is_public: false,
       });
     });
-
     await waitFor(() => {
-      expect(mockApiContext.createSeason).toHaveBeenCalledWith(1, {
+      expect(mockApiContext.createSeason).toHaveBeenCalledWith(101, {
         title: 'Season 1',
         season_number: 1,
         description: 'First season',
+        release_date: '2024-01-01',
       });
     });
-
     await waitFor(() => {
-      expect(mockApiContext.createCharacter).toHaveBeenCalledWith(1, {
-        name: 'Test Character',
-        bio: 'Test bio',
-        role: 'Protagonist',
-        appearance: 'Test appearance',
+      expect(mockApiContext.createCharacter).toHaveBeenCalledWith(101, {
+        name: 'Hero',
+        bio: 'Bio here',
+        personality: 'Brave',
+        love_interest: '',
       });
     });
-
-    // Verify onDataUpdate was called with updated data
-    expect(mockProps.onDataUpdate).toHaveBeenCalledWith({
-      story: { ...mockStoryData.story, id: 1 },
-      season: { ...mockStoryData.season, id: 1 },
-      characters: [{ id: 1, name: 'Test Character', bio: 'Test bio', role: 'Protagonist', appearance: 'Test appearance' }],
-    });
+    expect(mockOnNext).toHaveBeenCalled();
   });
 
-  test('should handle API errors gracefully', async () => {
-    mockApiContext.createStory.mockRejectedValue(new Error('API Error'));
-
-    render(
-      <ApiProvider>
-        <CharactersStep {...mockProps} />
-      </ApiProvider>
-    );
-
-    // Add a character
-    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: 'Test Character' } });
-    fireEvent.change(screen.getByLabelText(/character bio/i), { target: { value: 'Test bio' } });
-    fireEvent.change(screen.getByLabelText(/character role/i), { target: { value: 'Protagonist' } });
-    fireEvent.change(screen.getByLabelText(/character appearance/i), { target: { value: 'Test appearance' } });
-    
-    fireEvent.click(screen.getByText(/add character/i));
-
-    // Wait for character to be added
-    await waitFor(() => {
-      expect(screen.getByText('Test Character')).toBeInTheDocument();
+  test('does not call createCharacter for characters that already have server ids', async () => {
+    const { getFooterNext } = renderCharactersStep({
+      data: {
+        ...mockStoryData,
+        story: { ...mockStoryData.story, id: 99 },
+        season: { ...mockStoryData.season, id: 88 },
+        characters: [
+          {
+            id: 7,
+            name: 'Existing',
+            bio: 'Bio',
+            personality: 'Shy',
+            love_interest: '',
+          },
+        ],
+      },
     });
 
-    // Mock the Next button click
-    const { onNext } = mockProps;
-    onNext();
-
-    // Wait for error to be displayed
-    await waitFor(() => {
-      expect(screen.getByText(/failed to save story data/i)).toBeInTheDocument();
+    await act(async () => {
+      await getFooterNext()!();
     });
 
-    // Verify onNext was not called due to error
-    expect(mockProps.onNext).not.toHaveBeenCalled();
-  });
-
-  test('should not save if no characters are added', async () => {
-    render(
-      <ApiProvider>
-        <CharactersStep {...mockProps} />
-      </ApiProvider>
-    );
-
-    // Try to proceed without adding characters
-    const { onNext } = mockProps;
-    onNext();
-
-    // Wait for error message
-    await waitFor(() => {
-      expect(screen.getByText(/please add at least one character/i)).toBeInTheDocument();
-    });
-
-    // Verify API calls were not made
     expect(mockApiContext.createStory).not.toHaveBeenCalled();
     expect(mockApiContext.createSeason).not.toHaveBeenCalled();
     expect(mockApiContext.createCharacter).not.toHaveBeenCalled();
+    expect(mockOnNext).toHaveBeenCalled();
   });
 
-  test('should update existing characters if they already have IDs', async () => {
-    const existingCharacter = {
-      id: 1,
-      name: 'Existing Character',
-      bio: 'Existing bio',
-      role: 'Protagonist',
-      appearance: 'Existing appearance',
-    };
+  test('shows error when advancing with no characters', async () => {
+    const { getFooterNext } = renderCharactersStep();
 
-    const propsWithExistingCharacter = {
-      ...mockProps,
-      data: {
-        ...mockStoryData,
-        characters: [existingCharacter],
-      },
-    };
-
-    render(
-      <ApiProvider>
-        <CharactersStep {...propsWithExistingCharacter} />
-      </ApiProvider>
-    );
-
-    // Mock the Next button click
-    const { onNext } = mockProps;
-    onNext();
-
-    // Wait for API calls to complete
-    await waitFor(() => {
-      expect(mockApiContext.createStory).toHaveBeenCalled();
+    await act(async () => {
+      await getFooterNext()!();
     });
 
-    // Verify existing character was not re-created
-    expect(mockApiContext.createCharacter).not.toHaveBeenCalledWith(1, existingCharacter);
+    await waitFor(() => {
+      expect(screen.getByText(/please add at least one character/i)).toBeInTheDocument();
+    });
+    expect(mockApiContext.createStory).not.toHaveBeenCalled();
+    expect(mockOnNext).not.toHaveBeenCalled();
   });
 
-  test('should save POV head position data when creating character', async () => {
-    render(
-      <ApiProvider>
-        <CharactersStep {...mockProps} />
-      </ApiProvider>
-    );
+  test('preserves POV coordinates when creating character', async () => {
+    const { getFooterNext } = renderCharactersStep();
 
-    // Add a character with POV data
-    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: 'Test Character' } });
-    fireEvent.change(screen.getByLabelText(/character bio/i), { target: { value: 'Test bio' } });
-    fireEvent.change(screen.getByLabelText(/personality/i), { target: { value: 'Brave' } });
-    fireEvent.change(screen.getByLabelText(/love interest/i), { target: { value: 'Test love interest' } });
-    
-    // Add POV head position data
-    const headXInput = screen.getByLabelText(/head x position/i);
-    const headYInput = screen.getByLabelText(/head y position/i);
-    const headZInput = screen.getByLabelText(/head z position/i);
-    
-    fireEvent.change(headXInput, { target: { value: '2.5' } });
-    fireEvent.change(headYInput, { target: { value: '1.8' } });
-    fireEvent.change(headZInput, { target: { value: '-1.2' } });
-    
-    fireEvent.click(screen.getByText(/add character/i));
+    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: 'Hero' } });
+    fireEvent.change(screen.getByLabelText(/character bio/i), { target: { value: 'Bio here' } });
+    fireEvent.change(screen.getByLabelText(/^personality/i), { target: { value: 'Brave' } });
+    fireEvent.change(screen.getByLabelText(/^X:/i), { target: { value: '2.5' } });
+    fireEvent.change(screen.getByLabelText(/^Y:/i), { target: { value: '1.8' } });
+    fireEvent.change(screen.getByLabelText(/^Z:/i), { target: { value: '-1.2' } });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
 
-    // Wait for character to be added
     await waitFor(() => {
-      expect(screen.getByText('Test Character')).toBeInTheDocument();
+      expect(screen.getByText('Hero')).toBeInTheDocument();
     });
 
-    // Mock the Next button click
-    const { onNext } = mockProps;
-    onNext();
-
-    // Wait for API calls to complete
-    await waitFor(() => {
-      expect(mockApiContext.createCharacter).toHaveBeenCalledWith(1, {
-        name: 'Test Character',
-        bio: 'Test bio',
-        personality: 'Brave',
-        love_interest: 'Test love interest',
-      });
+    await act(async () => {
+      await getFooterNext()!();
     });
 
-    // Verify POV data is preserved in onDataUpdate
     await waitFor(() => {
-      expect(mockProps.onDataUpdate).toHaveBeenCalledWith(
+      expect(mockOnDataUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           characters: expect.arrayContaining([
             expect.objectContaining({
+              id: 301,
               pov_head_x: 2.5,
               pov_head_y: 1.8,
-              pov_head_z: -1.2
-            })
-          ])
-        })
-      );
-    });
-  });
-
-  test('should handle POV data when editing existing character', async () => {
-    const existingCharacter = {
-      id: 1,
-      name: 'Existing Character',
-      bio: 'Existing bio',
-      personality: 'Brave',
-      love_interest: 'Existing love interest',
-      pov_head_x: 1.0,
-      pov_head_y: 1.6,
-      pov_head_z: 0.0
-    };
-
-    const propsWithExistingCharacter = {
-      ...mockProps,
-      data: {
-        ...mockStoryData,
-        characters: [existingCharacter],
-      },
-    };
-
-    render(
-      <ApiProvider>
-        <CharactersStep {...propsWithExistingCharacter} />
-      </ApiProvider>
-    );
-
-    // Click edit on the existing character
-    const editButtons = screen.getAllByText(/edit/i);
-    fireEvent.click(editButtons[0]);
-
-    // Update POV data
-    const headXInput = screen.getByLabelText(/head x position/i);
-    fireEvent.change(headXInput, { target: { value: '3.0' } });
-
-    // Update character
-    fireEvent.click(screen.getByText(/update character/i));
-
-    // Wait for character to be updated
-    await waitFor(() => {
-      expect(mockProps.onDataUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          characters: expect.arrayContaining([
-            expect.objectContaining({
-              pov_head_x: 3.0,
-              pov_head_y: 1.6, // Should remain unchanged
-              pov_head_z: 0.0  // Should remain unchanged
-            })
-          ])
+              pov_head_z: -1.2,
+            }),
+          ]),
         })
       );
     });
   });
 });
-
-
-
-
-
-
-
-

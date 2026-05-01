@@ -535,7 +535,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       // Update sliders (this will be handled by the slider components)
       setSliderValue('orbitAzimuth', azimuth, -180, 180);
       setSliderValue('orbitPolar', polar, 0, 180);
-      setSliderValue('orbitRadius', radius, 1, 10);
+      setSliderValue('orbitRadius', radius, 0.1, 10);
     }
     
     // Parse camera target
@@ -583,6 +583,31 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         valueDisplay.textContent = value + 'x';
       }
     }
+  };
+
+  /** Sliders are uncontrolled — always compose orbit/target from DOM so one dial never clobbers others with stale React state. */
+  const readCameraOrbitFromDom = (): string | null => {
+    const azEl = document.getElementById('orbitAzimuth') as HTMLInputElement | null;
+    const polEl = document.getElementById('orbitPolar') as HTMLInputElement | null;
+    const radEl = document.getElementById('orbitRadius') as HTMLInputElement | null;
+    if (!azEl || !polEl || !radEl) return null;
+    const azimuth = parseFloat(azEl.value);
+    const polar = parseFloat(polEl.value);
+    const radius = parseFloat(radEl.value);
+    if ([azimuth, polar, radius].some((n) => Number.isNaN(n))) return null;
+    return `${azimuth}deg ${polar}deg ${radius}m`;
+  };
+
+  const readCameraTargetFromDom = (): string | null => {
+    const xEl = document.getElementById('targetX') as HTMLInputElement | null;
+    const yEl = document.getElementById('targetY') as HTMLInputElement | null;
+    const zEl = document.getElementById('targetZ') as HTMLInputElement | null;
+    if (!xEl || !yEl || !zEl) return null;
+    const x = parseFloat(xEl.value);
+    const y = parseFloat(yEl.value);
+    const z = parseFloat(zEl.value);
+    if ([x, y, z].some((n) => Number.isNaN(n))) return null;
+    return `${x}m ${y}m ${z}m`;
   };
 
   // Update dialogue text with current dial values (real-time)
@@ -799,7 +824,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     // Update all sliders
     setSliderValue('orbitAzimuth', azimuth, -180, 180);
     setSliderValue('orbitPolar', polar, 0, 180);
-    setSliderValue('orbitRadius', radius, 1, 10);
+    setSliderValue('orbitRadius', radius, 0.1, 10);
     setSliderValue('targetX', targetX, -5, 5);
     setSliderValue('targetY', targetY, 0, 3);
     setSliderValue('targetZ', targetZ, -5, 5);
@@ -1308,7 +1333,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     interaction-prompt="none"
                     interpolation-decay="200"
                     interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
-                    min-camera-orbit="auto auto 1m"
+                    min-camera-orbit="auto auto 0.1m"
                     max-camera-orbit="auto auto 30m"
                     min-field-of-view="10deg"
                     max-field-of-view="90deg"
@@ -1694,7 +1719,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                             return;
                           }
                           
-                          const newOrbit = `${azimuth}deg ${current.camera_orbit.split(' ')[1]} ${current.camera_orbit.split(' ')[2]}`;
+                          const newOrbit = readCameraOrbitFromDom();
+                          if (!newOrbit) return;
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
@@ -1739,7 +1765,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           const polar = e.target.value;
                           const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
                           if (!current) return;
-                          const newOrbit = `${current.camera_orbit.split(' ')[0]} ${polar}deg ${current.camera_orbit.split(' ')[2]}`;
+                          const newOrbit = readCameraOrbitFromDom();
+                          if (!newOrbit) return;
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
@@ -1777,14 +1804,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                         id="orbitRadius"
                         className="form-range modern-slider"
                         style={{ flex: 1 }}
-                        min="1"
+                        min="0.1"
                         max="10"
                         step="0.1"
                         onChange={(e) => {
                           const radius = e.target.value;
                           const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
                           if (!current) return;
-                          const newOrbit = `${current.camera_orbit.split(' ')[0]} ${current.camera_orbit.split(' ')[1]} ${radius}m`;
+                          const newOrbit = readCameraOrbitFromDom();
+                          if (!newOrbit) return;
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
@@ -1876,17 +1904,20 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           const x = e.target.value;
                           const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
                           if (!current) return;
-                          const newTarget = `${x}m ${current.camera_target.split(' ')[1]} ${current.camera_target.split(' ')[2]}`;
+                          const newTarget = readCameraTargetFromDom();
+                          if (!newTarget) return;
+                          const orbitToKeep = readCameraOrbitFromDom();
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
                           
                           // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget });
+                          updateCameraDebounced(current.dialogue_id, orbitToKeep ? { camera_target: newTarget, camera_orbit: orbitToKeep } : { camera_target: newTarget });
                           
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
+                            if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
                             logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           
@@ -1921,17 +1952,20 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           const y = e.target.value;
                           const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
                           if (!current) return;
-                          const newTarget = `${current.camera_target.split(' ')[0]} ${y}m ${current.camera_target.split(' ')[2]}`;
+                          const newTarget = readCameraTargetFromDom();
+                          if (!newTarget) return;
+                          const orbitToKeep = readCameraOrbitFromDom();
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
                           
                           // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget });
+                          updateCameraDebounced(current.dialogue_id, orbitToKeep ? { camera_target: newTarget, camera_orbit: orbitToKeep } : { camera_target: newTarget });
                           
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
+                            if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
                             logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           
@@ -1966,17 +2000,20 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           const z = e.target.value;
                           const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
                           if (!current) return;
-                          const newTarget = `${current.camera_target.split(' ')[0]} ${current.camera_target.split(' ')[1]} ${z}m`;
+                          const newTarget = readCameraTargetFromDom();
+                          if (!newTarget) return;
+                          const orbitToKeep = readCameraOrbitFromDom();
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
                           
                           // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget });
+                          updateCameraDebounced(current.dialogue_id, orbitToKeep ? { camera_target: newTarget, camera_orbit: orbitToKeep } : { camera_target: newTarget });
                           
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
+                            if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
                             logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           

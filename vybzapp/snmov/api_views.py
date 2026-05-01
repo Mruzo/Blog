@@ -1490,7 +1490,9 @@ def contact_form(request):
     """
     API endpoint for contact form submissions.
     Saves to ReachOut model and sends email notification.
-    Includes spam protection: honeypot, rate limiting, and time-based validation.
+    Floating feedback (JSON source=feedback_modal) also creates a FeedbackTicket.
+    /contact/ page sends source=contact_form — ReachOut only, no ticket.
+    Spam protection: honeypot, rate limiting, and time-based validation when _form_time is sent.
     """
     from django.core.cache import cache
     from django.utils import timezone
@@ -1518,17 +1520,19 @@ def contact_form(request):
             'message': 'Thanks for reaching out. Your message has been sent.'
         }, status=status.HTTP_201_CREATED)
     
-    # 2. Time-based validation - if form was filled too quickly (< 3 seconds), likely spam
-    form_time = request.data.get('_form_time', '0')
-    try:
-        fill_time = float(form_time)
-        if fill_time < 3:
-            return Response({
-                'success': False,
-                'message': 'Please take your time filling out the form.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-    except (ValueError, TypeError):
-        pass  # If time not provided, continue (for backward compatibility)
+    # 2. Time-based validation (floating feedback modal only — sends _form_time)
+    # Contact page does not send timing; skipping avoids treating missing time as 0s / spam.
+    if '_form_time' in request.data:
+        form_time = request.data.get('_form_time', '0')
+        try:
+            fill_time = float(form_time)
+            if fill_time < 3:
+                return Response({
+                    'success': False,
+                    'message': 'Please take your time filling out the form.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            pass
     
     # 3. Rate limiting - max 3 submissions per IP per hour
     rate_limit_key = f'contact_form_rate_limit_{client_ip}'
@@ -1547,56 +1551,55 @@ def contact_form(request):
         # Save the contact form submission (for backward compatibility)
         reach_out = serializer.save()
         
-        # Also create a FeedbackTicket
-        try:
-            from feedback.models import FeedbackTicket
-            from feedback.email_notifications import send_ticket_confirmation_email
-            
-            # Determine source
-            source = 'feedback_modal' if request.data.get('source') == 'feedback_modal' else 'contact_form'
-            
-            # Try to infer category from subject
-            subject_lower = (reach_out.subject or '').lower()
-            category = 'other'
-            if any(word in subject_lower for word in ['bug', 'error', 'broken', 'issue']):
-                category = 'bug'
-            elif any(word in subject_lower for word in ['feature', 'suggestion', 'improvement']):
-                category = 'feature_request'
-            elif any(word in subject_lower for word in ['question', 'help', 'how']):
-                category = 'question'
-            elif any(word in subject_lower for word in ['order', 'payment', 'billing', 'refund']):
-                category = 'billing'
-            
-            # Get user if authenticated
-            user = request.user if request.user.is_authenticated else None
-            
-            # Create ticket
-            ticket = FeedbackTicket.objects.create(
-                user=user,
-                submitted_by_name=reach_out.full_name,
-                submitted_by_email=reach_out.email,
-                subject=reach_out.subject or 'Contact Form Submission',
-                message=reach_out.content,
-                category=category,
-                source=source,
-                ip_address=client_ip,
-                user_agent=request.META.get('HTTP_USER_AGENT', '')
-            )
-            
-            # Send ticket confirmation email
+        # Feedback tickets only for floating feedback modal (SPA sends source=feedback_modal).
+        # /contact/ submissions omit this and only create ReachOut + legacy emails.
+        ticket_number = None
+        should_create_ticket = request.data.get('source') == 'feedback_modal'
+        
+        if should_create_ticket:
             try:
-                send_ticket_confirmation_email(ticket, request)
+                from feedback.models import FeedbackTicket
+                from feedback.email_notifications import send_ticket_confirmation_email
+                
+                # Try to infer category from subject
+                subject_lower = (reach_out.subject or '').lower()
+                category = 'other'
+                if any(word in subject_lower for word in ['bug', 'error', 'broken', 'issue']):
+                    category = 'bug'
+                elif any(word in subject_lower for word in ['feature', 'suggestion', 'improvement']):
+                    category = 'feature_request'
+                elif any(word in subject_lower for word in ['question', 'help', 'how']):
+                    category = 'question'
+                elif any(word in subject_lower for word in ['order', 'payment', 'billing', 'refund']):
+                    category = 'billing'
+                
+                # Get user if authenticated
+                user = request.user if request.user.is_authenticated else None
+                
+                ticket = FeedbackTicket.objects.create(
+                    user=user,
+                    submitted_by_name=reach_out.full_name,
+                    submitted_by_email=reach_out.email,
+                    subject=reach_out.subject or 'Contact Form Submission',
+                    message=reach_out.content,
+                    category=category,
+                    source='feedback_modal',
+                    ip_address=client_ip,
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+                
+                try:
+                    send_ticket_confirmation_email(ticket, request)
+                except Exception as e:
+                    print(f"Failed to send ticket confirmation email: {e}")
+                
+                ticket_number = ticket.ticket_number
             except Exception as e:
-                print(f"Failed to send ticket confirmation email: {e}")
-            
-            ticket_number = ticket.ticket_number
-        except Exception as e:
-            # If ticket creation fails, still proceed with ReachOut
-            # Log error but don't fail the request
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to create feedback ticket: {e}")
-            ticket_number = None
+                # If ticket creation fails, still proceed with ReachOut
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to create feedback ticket: {e}")
+                ticket_number = None
         
         # Increment rate limit counter
         cache.set(rate_limit_key, submission_count + 1, 3600)  # 1 hour expiry

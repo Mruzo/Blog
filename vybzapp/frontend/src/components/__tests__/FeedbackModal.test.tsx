@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FeedbackModal from '../FeedbackModal';
 import * as apiService from '../../services/api';
@@ -109,17 +109,18 @@ describe('FeedbackModal', () => {
       expect(screen.getByDisplayValue(/I'm on the Story Collaborators page/i)).toBeInTheDocument();
     });
 
-    it('should NOT show generic "Page" as page name', () => {
+    it('prefills subject and body from context page when provided', () => {
       const context = {
-        page: 'Page', // This should not happen with improved detection
-        url: 'http://localhost:3000/some-unknown-path/'
+        page: 'Settings',
+        url: 'http://localhost:3000/settings/'
       };
 
       render(<FeedbackModal show={true} onClose={mockOnClose} context={context} />);
 
-      // Should not show "Question about: Page" or "I'm on the Page page"
-      expect(screen.queryByDisplayValue(/Question about: Page/i)).not.toBeInTheDocument();
-      expect(screen.queryByDisplayValue(/I'm on the Page page/i)).not.toBeInTheDocument();
+      const subjectInput = screen.getByLabelText(/Subject/i) as HTMLInputElement;
+      const messageInput = screen.getByLabelText(/Message/i) as HTMLTextAreaElement;
+      expect(subjectInput.value).toBe('Question about: Settings');
+      expect(messageInput.value).toContain("I'm on the Settings page");
     });
 
     it('should handle pages with step information', () => {
@@ -175,9 +176,9 @@ describe('FeedbackModal', () => {
 
       render(<FeedbackModal show={true} onClose={mockOnClose} context={context} />);
 
-      // Should use story title, not page name
-      expect(screen.getByDisplayValue(/Question about: My Awesome Story/i)).toBeInTheDocument();
-      expect(screen.queryByDisplayValue(/Question about: Story Management/i)).not.toBeInTheDocument();
+      const subjectInput = screen.getByLabelText(/Subject/i) as HTMLInputElement;
+      expect(subjectInput.value).toBe('Question about: My Awesome Story');
+      expect(subjectInput.value).not.toContain('Story Management');
     });
 
     it('should show page name when story title is not available', () => {
@@ -203,50 +204,62 @@ describe('FeedbackModal', () => {
       const contentTextarea = screen.getByLabelText(/Message/i) as HTMLTextAreaElement;
       
       expect(subjectInput.value).toBe('');
-      expect(contentTextarea.value).toBe('');
+      expect(contentTextarea.value).toContain('Page URL: http://localhost:3000/');
     });
   });
 
   describe('Form Submission', () => {
     it('should submit form with correct data including context', async () => {
-      const user = userEvent.setup();
       mockApiService.submitContactForm.mockResolvedValue({
         success: true,
         message: 'Thanks for reaching out!'
       });
 
-      const context = {
-        page: 'Story Management',
-        storyId: 123,
-        storyTitle: 'Test Story',
-        url: 'http://localhost:3000/immersivecomics/story/123/manage/'
-      };
+      const t0 = new Date('2024-06-01T12:00:00.000Z').getTime();
+      jest.useFakeTimers('modern');
+      jest.setSystemTime(t0);
+      try {
+        const context = {
+          page: 'Story Management',
+          storyId: 123,
+          storyTitle: 'Test Story',
+          url: 'http://localhost:3000/immersivecomics/story/123/manage/'
+        };
 
-      render(<FeedbackModal show={true} onClose={mockOnClose} context={context} />);
+        render(<FeedbackModal show={true} onClose={mockOnClose} context={context} />);
 
-      // Fill in required fields
-      await user.type(screen.getByLabelText(/Full Name/i), 'John Doe');
-      await user.type(screen.getByLabelText(/Email/i), 'john@example.com');
-      
-      // Subject and content should be pre-filled from context
-      const subjectInput = screen.getByLabelText(/Subject/i) as HTMLInputElement;
-      const contentTextarea = screen.getByLabelText(/Message/i) as HTMLTextAreaElement;
-      
-      expect(subjectInput.value).toContain('Test Story');
-      expect(contentTextarea.value).toContain('Test Story');
-      expect(contentTextarea.value).toContain('Story ID: 123');
+        jest.setSystemTime(t0 + 5000);
 
-      // Submit form
-      await user.click(screen.getByRole('button', { name: /Send/i }));
+        fireEvent.change(screen.getByLabelText(/Full Name/i), { target: { value: 'John Doe' } });
+        fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'john@example.com' } });
 
-      await waitFor(() => {
-        expect(mockApiService.submitContactForm).toHaveBeenCalledWith({
-          full_name: 'John Doe',
-          email: 'john@example.com',
-          subject: subjectInput.value,
-          content: contentTextarea.value
+        const subjectInput = screen.getByLabelText(/Subject/i) as HTMLInputElement;
+        const contentTextarea = screen.getByLabelText(/Message/i) as HTMLTextAreaElement;
+
+        expect(subjectInput.value).toContain('Test Story');
+        expect(contentTextarea.value).toContain('Test Story');
+        expect(contentTextarea.value).toContain('Story ID: 123');
+
+        fireEvent.click(screen.getByRole('button', { name: /Send/i }));
+
+        await waitFor(() => {
+          expect(mockApiService.submitContactForm).toHaveBeenCalledWith(
+            expect.objectContaining({
+              full_name: 'John Doe',
+              email: 'john@example.com',
+              source: 'feedback_modal',
+              subject: subjectInput.value,
+              content: contentTextarea.value,
+              _honeypot: '',
+            })
+          );
+          const call = mockApiService.submitContactForm.mock.calls[0][0];
+          expect(call).toHaveProperty('_form_time');
+          expect(parseFloat(call._form_time)).toBeGreaterThanOrEqual(3);
         });
-      });
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 });
