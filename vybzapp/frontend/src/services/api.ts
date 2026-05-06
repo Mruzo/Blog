@@ -702,7 +702,12 @@ class ApiService {
     await api.delete(`/episodes/${id}/`);
   }
 
-  async incrementEpisodeView(episodeId: number): Promise<{ success: boolean; view_count: number }> {
+  async incrementEpisodeView(episodeId: number): Promise<{
+    success: boolean;
+    view_count: number;
+    story_id?: number;
+    story_total_views?: number;
+  }> {
     const response = await api.post(`/episodes/${episodeId}/increment-view/`);
     return response.data;
   }

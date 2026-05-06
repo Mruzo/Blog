@@ -785,15 +785,31 @@ const Stories: React.FC = () => {
                         onEpisodeSelect={(episode) => {
                           handleEpisodeSelect(comic.id, episode);
                         }}
-                        onViewIncremented={(storyId) => {
+                        onViewIncremented={(storyId, storyTotalViews) => {
                           setComics((prev) =>
                             prev.map((c) =>
-                              c.id === storyId ? { ...c, total_views: (c.total_views || 0) + 1 } : c
+                              c.id === storyId
+                                ? {
+                                    ...c,
+                                    total_views:
+                                      typeof storyTotalViews === 'number'
+                                        ? storyTotalViews
+                                        : (c.total_views || 0) + 1,
+                                  }
+                                : c
                             )
                           );
                           setFilteredStories((prev) =>
                             prev.map((s) =>
-                              s.id === storyId ? { ...s, total_views: (s.total_views || 0) + 1 } : s
+                              s.id === storyId
+                                ? {
+                                    ...s,
+                                    total_views:
+                                      typeof storyTotalViews === 'number'
+                                        ? storyTotalViews
+                                        : (s.total_views || 0) + 1,
+                                  }
+                                : s
                             )
                           );
                         }}

@@ -350,27 +350,37 @@ def increment_episode_view(request, episode_id):
         
         # Increment view count
         episode.increment_view()
+
+        # Sum of all episode view_count for this story (matches ComicSerializer total_views annotation)
+        story = episode.season.comic
+        story_total_views = (
+            Episode.objects.filter(season__comic_id=story.id).aggregate(
+                total=Sum('view_count')
+            )['total']
+            or 0
+        )
         
         # Log traffic source (similar to Django view)
         from .views import log_traffic_source
         log_traffic_source(request, episode)
         
         # Clear cache for episodes list to reflect updated view count
-        from django.core.cache import cache
         season_id = episode.season.id
-        story_id = episode.season.comic.id
+        story_id = story.id
         cache.delete(f"episodes_public_{season_id}")
         # Also clear private cache for story owner
-        if episode.season.comic.user:
-            cache.delete(f"episodes_{season_id}_{episode.season.comic.user.id}")
+        if story.user:
+            cache.delete(f"episodes_{season_id}_{story.user.id}")
             # Clear user stories cache so total_views updates in My Studio
-            cache.delete(f"user_comics_{episode.season.comic.user.id}")
+            cache.delete(f"user_comics_{story.user.id}")
         # Note: PublicStoriesView doesn't use cache (annotated querysets aren't cached),
         # so the updated total_views will be reflected on next API call
         
         return Response({
             'success': True,
-            'view_count': episode.view_count
+            'view_count': episode.view_count,
+            'story_id': story_id,
+            'story_total_views': story_total_views,
         }, status=status.HTTP_200_OK)
         
     except Episode.DoesNotExist:

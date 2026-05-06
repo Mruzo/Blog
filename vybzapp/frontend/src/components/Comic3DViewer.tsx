@@ -21,7 +21,8 @@ interface Comic3DViewerProps {
   seasonId?: number;
   onEpisodeSelect?: (episode: Episode) => void;
   onDialogueUpdate?: (dialogueId: number, data: Partial<Dialogue>) => void;
-  onViewIncremented?: (storyId: number) => void; // Callback when an episode view is incremented
+  /** Fired after a successful view increment; `storyTotalViews` is the server sum for the story when provided. */
+  onViewIncremented?: (storyId: number, storyTotalViews?: number) => void;
   readOnly?: boolean; // Hide edit controls and show only 3D viewer with navigation
 }
 
@@ -402,7 +403,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
             .then((response) => {
               logger.log('[Comic3DViewer] Episode view incremented successfully:', response);
               if (onViewIncremented) {
-                onViewIncremented(storyId);
+                onViewIncremented(storyId, response.story_total_views);
               }
             })
             .catch((error) => {
@@ -439,7 +440,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
           .then((response) => {
             logger.log('[Comic3DViewer] Episode view incremented successfully:', response);
             if (onViewIncremented) {
-              onViewIncremented(storyId);
+              onViewIncremented(storyId, response.story_total_views);
             }
           })
           .catch((error) => {
@@ -504,6 +505,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         if (data.field_of_view) {
           modelViewerRef.current.fieldOfView = `${data.field_of_view}deg`;
         }
+        jumpModelViewerCameraToGoal();
       }
     }, 100); // 100ms debounce
   }, [onDialogueUpdate, isModelReady]);
@@ -608,6 +610,18 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     const z = parseFloat(zEl.value);
     if ([x, y, z].some((n) => Number.isNaN(n))) return null;
     return `${x}m ${y}m ${z}m`;
+  };
+
+  /**
+   * model-viewer keeps an internal "smooth" camera goal. Setting `cameraTarget` / `cameraOrbit`
+   * alone can leave the rendered camera pulled away (reads as "zoomed out"), especially for
+   * large or origin-offset GLBs. `jumpCameraToGoal()` snaps internal state to the current attributes.
+   */
+  const jumpModelViewerCameraToGoal = () => {
+    const mv = modelViewerRef.current as { jumpCameraToGoal?: () => void } | null;
+    if (mv && typeof mv.jumpCameraToGoal === 'function') {
+      mv.jumpCameraToGoal();
+    }
   };
 
   // Update dialogue text with current dial values (real-time)
@@ -746,6 +760,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       modelViewerRef.current.cameraTarget = originalValues.camera_target;
       modelViewerRef.current.cameraOrbit = originalValues.camera_orbit;
       modelViewerRef.current.fieldOfView = `${originalValues.field_of_view}deg`;
+      jumpModelViewerCameraToGoal();
     }
     
     setSaveMessage({ type: 'success', text: 'Changes reset to original values' });
@@ -888,6 +903,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       // Try setting camera orbit directly first (Django pattern)
       modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
       logger.camera('Comic3DViewer: Camera orbit after direct setting:', modelViewerRef.current.cameraOrbit);
+      jumpModelViewerCameraToGoal();
       
       // Use the animation system for smooth camera movement (Django pattern)
       logger.camera('Comic3DViewer: About to animate with orbit value:', currentDialogue.camera_orbit);
@@ -895,7 +911,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       
       try {
         const animation = modelViewerRef.current.animate({
-          cameraOrbit: currentDialogue.camera_orbit
+          cameraOrbit: currentDialogue.camera_orbit,
+          cameraTarget: currentDialogue.camera_target,
         }, {
           duration: 500, // 500ms animation like Django
           easing: 'ease-in-out'
@@ -904,10 +921,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         logger.camera('Comic3DViewer: Animation started with orbit:', currentDialogue.camera_orbit);
         logger.log('Comic3DViewer: Animation object:', animation);
         
-        // Wait for animation to complete (Django pattern)
-        if (animation && animation.onfinish) {
+        if (animation && typeof animation.finished !== 'undefined') {
+          void animation.finished.then(() => {
+            logger.camera('Comic3DViewer: Camera animation complete');
+            jumpModelViewerCameraToGoal();
+          });
+        } else if (animation && animation.onfinish) {
           animation.onfinish = () => {
             logger.camera('Comic3DViewer: Camera animation complete');
+            jumpModelViewerCameraToGoal();
           };
         }
         
@@ -916,6 +938,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       } catch (error) {
         logger.camera('Comic3DViewer: Error animating camera:', error);
         // Still update dials even if animation fails
+        jumpModelViewerCameraToGoal();
         updateDialsFromDialogue(currentDialogue);
       }
     } else {
@@ -979,6 +1002,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       // Try setting camera orbit directly first (Django pattern)
       modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
       logger.camera('Comic3DViewer: Camera orbit after direct setting:', modelViewerRef.current.cameraOrbit);
+      jumpModelViewerCameraToGoal();
       
       // Use the animation system for smooth camera movement (Django pattern)
       logger.camera('Comic3DViewer: About to animate with orbit value:', currentDialogue.camera_orbit);
@@ -986,7 +1010,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       
       try {
         const animation = modelViewerRef.current.animate({
-          cameraOrbit: currentDialogue.camera_orbit
+          cameraOrbit: currentDialogue.camera_orbit,
+          cameraTarget: currentDialogue.camera_target,
         }, {
           duration: 500, // 500ms animation like Django
           easing: 'ease-in-out'
@@ -995,10 +1020,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         logger.camera('Comic3DViewer: Animation started with orbit:', currentDialogue.camera_orbit);
         logger.log('Comic3DViewer: Animation object:', animation);
         
-        // Wait for animation to complete (Django pattern)
-        if (animation && animation.onfinish) {
+        if (animation && typeof animation.finished !== 'undefined') {
+          void animation.finished.then(() => {
+            logger.camera('Comic3DViewer: Camera animation complete');
+            jumpModelViewerCameraToGoal();
+          });
+        } else if (animation && animation.onfinish) {
           animation.onfinish = () => {
             logger.camera('Comic3DViewer: Camera animation complete');
+            jumpModelViewerCameraToGoal();
           };
         }
         
@@ -1007,6 +1037,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       } catch (error) {
         logger.camera('Comic3DViewer: Error animating camera:', error);
         // Still update dials even if animation fails
+        jumpModelViewerCameraToGoal();
         updateDialsFromDialogue(currentDialogue);
       }
     } else {
@@ -1072,7 +1103,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         // Notify parent component that a view was incremented so it can update the story's total_views
         if (onViewIncremented) {
           logger.log('[Comic3DViewer] Calling onViewIncremented callback with storyId:', storyId);
-          onViewIncremented(storyId);
+          onViewIncremented(storyId, response.story_total_views);
         } else {
           logger.warn('[Comic3DViewer] onViewIncremented callback not provided');
         }
@@ -1731,6 +1762,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraOrbit = newOrbit;
+                            jumpModelViewerCameraToGoal();
                             logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
                           }
                           
@@ -1777,6 +1809,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraOrbit = newOrbit;
+                            jumpModelViewerCameraToGoal();
                             logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
                           }
                           
@@ -1823,6 +1856,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           // Update 3D model camera in real-time (Django pattern)
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraOrbit = newOrbit;
+                            jumpModelViewerCameraToGoal();
                             logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
                           }
                           
@@ -1918,6 +1952,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
                             if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
+                            jumpModelViewerCameraToGoal();
                             logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           
@@ -1966,6 +2001,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
                             if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
+                            jumpModelViewerCameraToGoal();
                             logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           
@@ -2014,6 +2050,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           if (modelViewerRef.current && isModelReady) {
                             modelViewerRef.current.cameraTarget = newTarget;
                             if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
+                            jumpModelViewerCameraToGoal();
                             logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           }
                           

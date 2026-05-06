@@ -572,6 +572,9 @@ class IncrementEpisodeViewTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['success'], True)
         self.assertEqual(response.data['view_count'], initial_count + 1)
+        self.assertEqual(response.data['story_id'], self.public_story.id)
+        # Published + unpublished episode in same season: sum of view_count
+        self.assertEqual(response.data['story_total_views'], initial_count + 1 + self.unpublished_episode.view_count)
         
         # Verify database was updated
         self.published_episode.refresh_from_db()
@@ -629,11 +632,16 @@ class IncrementEpisodeViewTestCase(APITestCase):
         """Test that view count increments correctly with multiple calls"""
         url = reverse('icvybz-api:episode-increment-view', kwargs={'episode_id': self.published_episode.id})
         initial_count = self.published_episode.view_count
+        tail_sum = self.unpublished_episode.view_count
         
         # Increment 3 times
         for i in range(3):
             response = self.client.post(url)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                response.data['story_total_views'],
+                initial_count + i + 1 + tail_sum,
+            )
         
         # Verify final count
         self.published_episode.refresh_from_db()
