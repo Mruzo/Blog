@@ -562,8 +562,9 @@ class ApiService {
   }
 
   // Seasons
-  async getSeasons(storyId: number): Promise<Season[]> {
-    const response = await api.get(`/stories/${storyId}/seasons/`);
+  async getSeasons(storyId: number, options?: { catalogue?: boolean }): Promise<Season[]> {
+    const params = options?.catalogue ? { catalogue: '1' } : undefined;
+    const response = await api.get(`/stories/${storyId}/seasons/`, { params });
     return response.data.results || response.data;
   }
 
@@ -651,8 +652,9 @@ class ApiService {
   }
 
   // Episodes
-  async getEpisodes(seasonId: number): Promise<Episode[]> {
-    const response = await api.get(`/seasons/${seasonId}/episodes/`);
+  async getEpisodes(seasonId: number, options?: { catalogue?: boolean }): Promise<Episode[]> {
+    const params = options?.catalogue ? { catalogue: '1' } : undefined;
+    const response = await api.get(`/seasons/${seasonId}/episodes/`, { params });
     return response.data.results || response.data;
   }
 
@@ -663,6 +665,9 @@ class ApiService {
     if (episodeData.title) formData.append('title', episodeData.title);
     if (episodeData.episode_number) formData.append('episode_number', episodeData.episode_number.toString());
     if (episodeData.description) formData.append('description', episodeData.description);
+    if (typeof episodeData.is_published === 'boolean') {
+      formData.append('is_published', episodeData.is_published ? 'true' : 'false');
+    }
     
     // Add file if present
     if (episodeData.cover_image && episodeData.cover_image instanceof File) {
@@ -684,6 +689,9 @@ class ApiService {
     if (episodeData.title) formData.append('title', episodeData.title);
     if (episodeData.episode_number) formData.append('episode_number', episodeData.episode_number.toString());
     if (episodeData.description) formData.append('description', episodeData.description);
+    if (typeof episodeData.is_published === 'boolean') {
+      formData.append('is_published', episodeData.is_published ? 'true' : 'false');
+    }
     
     // Add file if present
     if (episodeData.cover_image && episodeData.cover_image instanceof File) {

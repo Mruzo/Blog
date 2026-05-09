@@ -33,6 +33,7 @@ interface EpisodeFormData {
   episode_number: number;
   description: string;
   cover_image?: File | null; // File object for uploads
+  is_published: boolean;
 }
 
 interface DialogueFormData {
@@ -81,7 +82,8 @@ const EpisodeManage: React.FC = () => {
     title: '',
     episode_number: 1,
     description: '',
-    cover_image: null
+    cover_image: null,
+    is_published: false,
   });
   
   const [dialogueFormData, setDialogueFormData] = useState<DialogueFormData>({
@@ -209,10 +211,16 @@ const EpisodeManage: React.FC = () => {
     : [];
 
   const handleEpisodeInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setEpisodeFormData(prev => ({
       ...prev,
-      [name]: name === 'episode_number' ? parseInt(value) || 1 : value
+      [name]:
+        type === 'checkbox'
+          ? checked
+          : name === 'episode_number'
+            ? parseInt(value) || 1
+            : value
     }));
   };
 
@@ -313,7 +321,8 @@ const EpisodeManage: React.FC = () => {
       title: episode.title,
       episode_number: episode.episode_number,
       description: episode.description,
-      cover_image: null // Reset cover image for editing
+      cover_image: null, // Reset cover image for editing
+      is_published: !!episode.is_published,
     });
     setShowEpisodeForm(true);
   };
@@ -400,7 +409,8 @@ const EpisodeManage: React.FC = () => {
       title: '',
       episode_number: 1,
       description: '',
-      cover_image: null
+      cover_image: null,
+      is_published: false,
     });
     setEditingEpisode(null);
     setShowEpisodeForm(false);
@@ -767,6 +777,21 @@ const EpisodeManage: React.FC = () => {
                         <small className="text-muted">Current: {editingEpisode.cover_image}</small>
                       </div>
                     )}
+                  </div>
+                  <div className="mb-1">
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="episodeIsPublished"
+                        name="is_published"
+                        checked={episodeFormData.is_published}
+                        onChange={handleEpisodeInputChange}
+                      />
+                      <label className="form-check-label subtext-btn-sm" htmlFor="episodeIsPublished">
+                        Publish episode (visible on public stories)
+                      </label>
+                    </div>
                   </div>
                 </div>
                 <div className="modal-footer gap-2 d-flex flex-wrap justify-content-end">

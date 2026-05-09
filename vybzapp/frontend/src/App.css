@@ -926,11 +926,28 @@ a.product-landing__ctaGhost:active {
   color: rgba(15, 23, 42, 0.75);
 }
 
+/* Browse grids (Stories, Studio detail): 1 col through tablet; max 2 cols on large screens */
 .stories-landing__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  grid-template-columns: 1fr;
   gap: 1.15rem;
   align-items: stretch;
+  width: 100%;
+}
+
+@media (min-width: 992px) {
+  .stories-landing__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 72rem;
+    margin-inline: auto;
+  }
+
+  /* One story: don’t leave a card hugging the left column of a 2-col grid */
+  .stories-landing__grid--single {
+    grid-template-columns: 1fr;
+    max-width: 42rem;
+    margin-inline: auto;
+  }
 }
 
 .stories-landing__viewerWrap {

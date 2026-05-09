@@ -182,7 +182,7 @@ const StudioDetail: React.FC = () => {
             // Load seasons - may require auth, handle gracefully
             let seasonsData: any[] = [];
             try {
-              seasonsData = await apiService.getSeasons(story.id);
+              seasonsData = await apiService.getSeasons(story.id, { catalogue: true });
             } catch (error: any) {
               // If 403/401, it's expected for public stories when not authenticated
               if (error?.response?.status === 403 || error?.response?.status === 401) {
@@ -207,7 +207,9 @@ const StudioDetail: React.FC = () => {
             // Load episodes for all seasons in parallel - may require auth
             let allEpisodes: any[] = [];
             try {
-              const episodePromises = seasonsData.map(season => apiService.getEpisodes(season.id));
+              const episodePromises = seasonsData.map(season =>
+                apiService.getEpisodes(season.id, { catalogue: true })
+              );
               const episodeResults = await Promise.all(episodePromises);
               allEpisodes = episodeResults.flat();
             } catch (error: any) {
@@ -517,7 +519,13 @@ const StudioDetail: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="stories-landing__grid">
+            <div
+              className={
+                stories.length === 1
+                  ? 'stories-landing__grid stories-landing__grid--single'
+                  : 'stories-landing__grid'
+              }
+            >
               {stories.map((comic) => (
                 <article key={comic.id} className="stories-landing__card">
                   <div className="stories-landing__cardMeta">

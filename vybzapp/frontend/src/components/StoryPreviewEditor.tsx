@@ -275,7 +275,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                 {currentDialogue && (
                   <div className="comic3d-dialogue-overlay">
                     <div
-                      className="speech-bubble p-1 rounded-2 border border-secondary align-top"
+                      className="speech-bubble rounded-2 border border-secondary align-top"
                       style={{
                         position: 'relative',
                         textAlign: 'left',

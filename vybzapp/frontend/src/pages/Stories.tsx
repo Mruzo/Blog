@@ -469,8 +469,8 @@ const Stories: React.FC = () => {
             let seasonsData: any[] = [];
             try {
               seasonsData = await cachedRequest(
-                `seasons-${story.id}`,
-                () => apiService.getSeasons(story.id)
+                `seasons-${story.id}-catalogue`,
+                () => apiService.getSeasons(story.id, { catalogue: true })
               );
             } catch (error: any) {
               // If 403/401, it's expected for public stories when not authenticated
@@ -498,8 +498,8 @@ const Stories: React.FC = () => {
             try {
               const episodePromises = seasonsData.map(season => 
                 cachedRequest(
-                  `episodes-${season.id}`,
-                  () => apiService.getEpisodes(season.id)
+                  `episodes-${season.id}-catalogue`,
+                  () => apiService.getEpisodes(season.id, { catalogue: true })
                 )
               );
               const episodeResults = await Promise.all(episodePromises);
@@ -696,7 +696,13 @@ const Stories: React.FC = () => {
       ) : (
         <section className="product-landing__section">
           <div className="product-landing__container">
-            <div className="stories-landing__grid">
+            <div
+              className={
+                comics.length === 1
+                  ? 'stories-landing__grid stories-landing__grid--single'
+                  : 'stories-landing__grid'
+              }
+            >
               {comics.map((comic) => (
                 <article key={comic.id} className="stories-landing__card">
                   <div className="stories-landing__cardMeta">

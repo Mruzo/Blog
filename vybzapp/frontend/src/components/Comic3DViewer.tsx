@@ -624,6 +624,50 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }
   };
 
+  /**
+   * When `cameraTarget` changes, model-viewer can momentarily re-resolve the camera goal, which
+   * can feel like the zoom (orbit radius) "jumps". We aggressively re-apply the current orbit
+   * radius from the DOM to keep the user's last dialed zoom consistent.
+   */
+  const getOrbitToKeep = (): string => {
+    const mv = modelViewerRef.current as any;
+    return (
+      readCameraOrbitFromDom() ||
+      (typeof mv?.cameraOrbit === 'string' ? mv.cameraOrbit : null) ||
+      currentEditingDialogue?.camera_orbit ||
+      dialogueData[currentDialogueIndex]?.camera_orbit ||
+      '0deg 75deg 3m'
+    );
+  };
+
+  const applyCameraTargetKeepingOrbit = (newTarget: string, orbitToKeep: string): void => {
+    const mv = modelViewerRef.current as any;
+
+    if (mv && isModelReady) {
+      // Apply orbit before + after target, then snap to goal.
+      mv.cameraOrbit = orbitToKeep;
+      mv.cameraTarget = newTarget;
+      mv.cameraOrbit = orbitToKeep;
+      jumpModelViewerCameraToGoal();
+
+      // Re-apply on next frame in case model-viewer recomputes internally.
+      requestAnimationFrame(() => {
+        const mv2 = modelViewerRef.current as any;
+        if (!mv2) return;
+        mv2.cameraOrbit = orbitToKeep;
+        jumpModelViewerCameraToGoal();
+      });
+
+      // And again shortly after; some models trigger a second internal framing pass.
+      window.setTimeout(() => {
+        const mv3 = modelViewerRef.current as any;
+        if (!mv3) return;
+        mv3.cameraOrbit = orbitToKeep;
+        jumpModelViewerCameraToGoal();
+      }, 50);
+    }
+  };
+
   // Update dialogue text with current dial values (real-time)
   const updateDialogueTextWithCurrentValues = () => {
     if (!isEditMode || !currentEditingDialogue) return;
@@ -1112,7 +1156,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         // Backend returns 403 if episode not published or story/season not public
         const msg = error.response?.data?.error || error.message;
         if (error.response?.status === 403) {
-          logger.warn('[Comic3DViewer] View increment blocked:', msg, '(Check episode is published, story & season are public)');
+          logger.warn('[Comic3DViewer] View increment blocked:', msg, '(Check episode is published and story is public & approved)');
         } else {
           logger.error('[Comic3DViewer] Error incrementing episode view:', error.response?.data || error.message);
         }
@@ -1384,7 +1428,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   {/* Speech bubble: flex-centered wrapper (no transform) so WebGL does not composite above the opaque HTML layer */}
                   <div className="comic3d-dialogue-overlay">
                     <div
-                      className="speech-bubble p-0 rounded-2 border border-secondary align-top"
+                      className="speech-bubble rounded-2 border border-secondary align-top"
                       style={{
                         position: 'relative',
                         textAlign: 'left',
@@ -1940,21 +1984,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           if (!current) return;
                           const newTarget = readCameraTargetFromDom();
                           if (!newTarget) return;
-                          const orbitToKeep = readCameraOrbitFromDom();
+                          const orbitToKeep = getOrbitToKeep();
+                          applyCameraTargetKeepingOrbit(newTarget, orbitToKeep);
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
                           
                           // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, orbitToKeep ? { camera_target: newTarget, camera_orbit: orbitToKeep } : { camera_target: newTarget });
-                          
-                          // Update 3D model camera in real-time (Django pattern)
-                          if (modelViewerRef.current && isModelReady) {
-                            modelViewerRef.current.cameraTarget = newTarget;
-                            if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
-                            jumpModelViewerCameraToGoal();
-                            logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
-                          }
+                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget, camera_orbit: orbitToKeep });
+                          logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           
                           // Update value badge
                           const valueBadge = document.getElementById('targetXValue');
@@ -1989,21 +2027,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           if (!current) return;
                           const newTarget = readCameraTargetFromDom();
                           if (!newTarget) return;
-                          const orbitToKeep = readCameraOrbitFromDom();
+                          const orbitToKeep = getOrbitToKeep();
+                          applyCameraTargetKeepingOrbit(newTarget, orbitToKeep);
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
                           
                           // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, orbitToKeep ? { camera_target: newTarget, camera_orbit: orbitToKeep } : { camera_target: newTarget });
-                          
-                          // Update 3D model camera in real-time (Django pattern)
-                          if (modelViewerRef.current && isModelReady) {
-                            modelViewerRef.current.cameraTarget = newTarget;
-                            if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
-                            jumpModelViewerCameraToGoal();
-                            logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
-                          }
+                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget, camera_orbit: orbitToKeep });
+                          logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           
                           // Update value badge
                           const valueBadge = document.getElementById('targetYValue');
@@ -2038,21 +2070,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                           if (!current) return;
                           const newTarget = readCameraTargetFromDom();
                           if (!newTarget) return;
-                          const orbitToKeep = readCameraOrbitFromDom();
+                          const orbitToKeep = getOrbitToKeep();
+                          applyCameraTargetKeepingOrbit(newTarget, orbitToKeep);
                           
                           // Update dialogue text in real-time
                           updateDialogueTextWithCurrentValues();
                           
                           // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, orbitToKeep ? { camera_target: newTarget, camera_orbit: orbitToKeep } : { camera_target: newTarget });
-                          
-                          // Update 3D model camera in real-time (Django pattern)
-                          if (modelViewerRef.current && isModelReady) {
-                            modelViewerRef.current.cameraTarget = newTarget;
-                            if (orbitToKeep) modelViewerRef.current.cameraOrbit = orbitToKeep;
-                            jumpModelViewerCameraToGoal();
-                            logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
-                          }
+                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget, camera_orbit: orbitToKeep });
+                          logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
                           
                           // Update value badge
                           const valueBadge = document.getElementById('targetZValue');

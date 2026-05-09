@@ -41,6 +41,13 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
         style={{ top: '8px', right: '8px', zIndex: 10 }}
       >
         <span
+          className={`stories-landing__chip ${episode.is_published ? 'stories-landing__chip--success' : ''}`}
+          style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }}
+          title={episode.is_published ? 'Published' : 'Draft'}
+        >
+          {episode.is_published ? 'Published' : 'Draft'}
+        </span>
+        <span
           className={`stories-landing__chip ${dialogueCount > 0 ? 'stories-landing__chip--success' : ''}`}
           style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }}
         >

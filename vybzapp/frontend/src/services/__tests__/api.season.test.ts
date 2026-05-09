@@ -313,8 +313,16 @@ describe('ApiService - Season Operations', () => {
 
       const result = await apiService.getSeasons(123);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/stories/123/seasons/');
+      expect(mockedAxios.get).toHaveBeenCalledWith('/stories/123/seasons/', { params: undefined });
       expect(result).toEqual(mockResponse.data);
+    });
+
+    it('should pass catalogue param for public browse', async () => {
+      mockedAxios.get.mockResolvedValue({ data: [] });
+      await apiService.getSeasons(123, { catalogue: true });
+      expect(mockedAxios.get).toHaveBeenCalledWith('/stories/123/seasons/', {
+        params: { catalogue: '1' },
+      });
     });
 
     it('should handle paginated response', async () => {
@@ -342,7 +350,7 @@ describe('ApiService - Season Operations', () => {
 
       const result = await apiService.getSeasons(123);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/stories/123/seasons/');
+      expect(mockedAxios.get).toHaveBeenCalledWith('/stories/123/seasons/', { params: undefined });
       expect(result).toEqual(mockResponse.data.results);
     });
 

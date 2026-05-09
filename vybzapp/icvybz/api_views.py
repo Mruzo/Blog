@@ -10,7 +10,7 @@ from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.db import connection
-from django.db.models import Q, Sum, Prefetch
+from django.db.models import Q, Sum, Prefetch, Exists, OuterRef
 from django.utils import timezone
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.forms import PasswordResetForm
@@ -20,7 +20,7 @@ from django.urls import reverse
 from django.conf import settings
 import time
 import logging
-from .models import Comic, Season, Episode, Dialogue, Character, POV, Studio, AudioTrack, StudioCollaborator, StudioCollaborationRequest
+from .models import Comic, Season, Episode, Dialogue, Character, POV, Studio, AudioTrack, StudioCollaborator, StudioCollaborationRequest, StoryCollaborator
 from .serializers import (
     ComicSerializer, SeasonSerializer, EpisodeSerializer,
     DialogueSerializer, CharacterSerializer, StudioSerializer, StudioReadSerializer,
@@ -95,15 +95,23 @@ class PublicStoriesView(generics.ListAPIView):
     
     def get_queryset(self):
         try:
-            # Only show stories that are both public AND approved (published)
-            # Include total_views annotation (sum of all episode views) for consistency with authenticated views
-            queryset = Comic.objects.filter(
+            # Only show stories that are both public AND approved (published),
+            # AND have at least one public season with at least one published episode.
+            # This prevents "empty" story cards for anonymous browsing.
+            eligible_story_ids = Season.objects.filter(
+                comic_id=OuterRef('pk'),
                 is_public=True,
-                moderation_status='approved'
-            ).select_related('user').annotate(
-                total_views=Sum('seasons__episodes__view_count', default=0)
-            ).order_by('-created_at')
-            return queryset
+                episodes__is_published=True,
+            )
+
+            return (
+                Comic.objects.filter(is_public=True, moderation_status='approved')
+                .annotate(_has_public_content=Exists(eligible_story_ids))
+                .filter(_has_public_content=True)
+                .select_related('user')
+                .annotate(total_views=Sum('seasons__episodes__view_count', default=0))
+                .order_by('-created_at')
+            )
         except Exception as e:
             # Log the error and return empty queryset instead of crashing
             logger.error(f"Error in PublicStoriesView.get_queryset(): {str(e)}", exc_info=True)
@@ -122,7 +130,24 @@ class SeasonListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         story_id = self.kwargs.get('story_id')
         story = Comic.objects.filter(id=story_id).first()
-        
+        catalogue_only = str(self.request.query_params.get('catalogue', '')).lower() in (
+            '1',
+            'true',
+            'yes',
+        )
+
+        # Public immersivecomics browse (/?studio=…): same seasons as anonymous readers,
+        # even when the viewer is the story owner (draft / private seasons stay in My Studio).
+        if catalogue_only:
+            if story and story.is_public and story.moderation_status == 'approved':
+                return (
+                    Season.objects.filter(comic_id=story_id, is_public=True)
+                    .select_related('comic', 'comic__user')
+                    .annotate(total_views=Sum('episodes__view_count', default=0))
+                    .order_by('season_number')
+                )
+            return Season.objects.none()
+
         # Check if user is authenticated and is the story owner
         is_owner = self.request.user.is_authenticated and story and story.user == self.request.user
         
@@ -253,36 +278,80 @@ class EpisodeListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         season_id = self.kwargs.get('season_id')
         season = Season.objects.filter(id=season_id).select_related('comic').first()
-        
-        # If story is public AND season is public, allow access without authentication
+        catalogue_only = str(self.request.query_params.get('catalogue', '')).lower() in (
+            '1',
+            'true',
+            'yes',
+        )
+
+        # Public catalogue listing (immersivecomics browse): published episodes only on
+        # public seasons, regardless of auth. Private / non-catalogue seasons → empty.
+        if catalogue_only:
+            if (
+                season
+                and season.comic
+                and season.comic.is_public
+                and season.comic.moderation_status == 'approved'
+                and season.is_public
+            ):
+                cache_key = f"episodes_public_{season_id}"
+                cached_queryset = cache.get(cache_key)
+                if cached_queryset:
+                    return cached_queryset
+                queryset = Episode.objects.filter(
+                    season_id=season_id,
+                    is_published=True,
+                ).select_related('season', 'season__comic', 'season__comic__user')
+                cache.set(cache_key, queryset, 60 * 5)
+                return queryset
+            return Episode.objects.none()
+
+        # Owners and active story collaborators must always see all episodes (including drafts)
+        # for manage UIs. Otherwise, when story + season are public, the anonymous-style branch
+        # below would incorrectly hide unpublished episodes from the author.
+        if season and season.comic and self.request.user.is_authenticated:
+            comic = season.comic
+            is_owner = comic.user_id == self.request.user.id
+            is_collaborator = (
+                not is_owner
+                and StoryCollaborator.objects.filter(
+                    story=comic, user=self.request.user, is_active=True
+                ).exists()
+            )
+            if is_owner or is_collaborator:
+                cache_key = f"episodes_{season_id}_{self.request.user.id}"
+                cached_queryset = cache.get(cache_key)
+                if cached_queryset:
+                    return cached_queryset
+                queryset = Episode.objects.filter(season_id=season_id).select_related(
+                    'season', 'season__comic', 'season__comic__user'
+                )
+                cache.set(cache_key, queryset, 60 * 5)
+                return queryset
+
+        # Public catalogue: published episodes only (no auth required)
         if season and season.comic and season.comic.is_public and season.comic.moderation_status == 'approved' and season.is_public:
-            # Check cache first
             cache_key = f"episodes_public_{season_id}"
             cached_queryset = cache.get(cache_key)
             if cached_queryset:
                 return cached_queryset
-            
-            # Only return published episodes for public stories
+
             queryset = Episode.objects.filter(
                 season_id=season_id,
                 is_published=True
             ).select_related('season', 'season__comic', 'season__comic__user')
-            # Cache for 5 minutes
             cache.set(cache_key, queryset, 60 * 5)
             return queryset
-        
-        # For private stories or authenticated users, require authentication
+
         if not self.request.user.is_authenticated:
             return Episode.objects.none()
-        
-        # Check cache first
+
         cache_key = f"episodes_{season_id}_{self.request.user.id}"
         cached_queryset = cache.get(cache_key)
         if cached_queryset:
             return cached_queryset
-        
+
         queryset = Episode.objects.filter(season_id=season_id, season__comic__user=self.request.user).select_related('season', 'season__comic', 'season__comic__user')
-        # Cache for 5 minutes
         cache.set(cache_key, queryset, 60 * 5)
         return queryset
     
@@ -333,20 +402,22 @@ def increment_episode_view(request, episode_id):
     """
     Increment view count for an episode.
     This is called from the React app when an episode is viewed in Comic3DViewer.
-    Only increments for published episodes in public stories.
+    Counts views for published episodes in public, approved stories.
+
+    Season visibility (is_public) controls what appears in anonymous season/episode
+    listings, not whether a completed read counts toward story totals. Otherwise
+    authors who have not toggled every season to public would see no real-time
+    updates on the public Stories page while logged in (they still load private
+    seasons via owner APIs).
     """
     try:
         episode = Episode.objects.select_related('season', 'season__comic').get(id=episode_id)
         
-        # Only allow incrementing views for published episodes in public, approved stories with public seasons
         if not episode.is_published:
             return Response({'error': 'Episode is not published'}, status=status.HTTP_403_FORBIDDEN)
         
         if not episode.season.comic.is_public or episode.season.comic.moderation_status != 'approved':
             return Response({'error': 'Story is not public'}, status=status.HTTP_403_FORBIDDEN)
-        
-        if not episode.season.is_public:
-            return Response({'error': 'Season is not public'}, status=status.HTTP_403_FORBIDDEN)
         
         # Increment view count
         episode.increment_view()

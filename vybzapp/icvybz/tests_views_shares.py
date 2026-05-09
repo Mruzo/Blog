@@ -18,7 +18,7 @@ import os
 import tempfile
 from unittest.mock import patch, mock_open
 
-from .models import Comic, Season, Episode
+from .models import Comic, Season, Episode, StoryCollaborator
 from .serializers import EpisodeSerializer
 from .views import track_share_click, log_share_click
 
@@ -106,6 +106,88 @@ class EpisodeViewCountTestCase(APITestCase):
         
         serializer = EpisodeSerializer(new_episode)
         self.assertEqual(serializer.data['view_count'], 0)
+
+
+class EpisodeListEditorVsPublicTestCase(APITestCase):
+    """Editors must see drafts on public seasons; anonymous readers only see published."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='ep_owner',
+            email='owner@example.com',
+            password='testpass123'
+        )
+        self.collab_user = User.objects.create_user(
+            username='ep_collab',
+            email='collab@example.com',
+            password='testpass123'
+        )
+        self.story = Comic.objects.create(
+            title='Public Story',
+            description='Test',
+            user=self.owner,
+            is_public=True,
+            moderation_status='approved',
+        )
+        self.season = Season.objects.create(
+            comic=self.story,
+            title='Season 1',
+            season_number=1,
+            description='S1',
+            release_date='2024-01-01',
+            is_public=True,
+        )
+        self.episode_published = Episode.objects.create(
+            season=self.season,
+            title='Published',
+            episode_number=1,
+            description='',
+            is_published=True,
+        )
+        self.episode_draft = Episode.objects.create(
+            season=self.season,
+            title='Draft',
+            episode_number=2,
+            description='',
+            is_published=False,
+        )
+
+    def _episode_list_url(self):
+        return reverse('icvybz-api:episode-list-create', kwargs={'season_id': self.season.id})
+
+    def _episode_ids(self, response):
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data
+        episodes = data.get('results', data) if isinstance(data, dict) else data
+        return {e['id'] for e in episodes}
+
+    def test_owner_sees_drafts_when_season_is_public(self):
+        self.client.force_authenticate(user=self.owner)
+        ids = self._episode_ids(self.client.get(self._episode_list_url()))
+        self.assertEqual(ids, {self.episode_published.id, self.episode_draft.id})
+
+    def test_collaborator_sees_drafts_when_season_is_public(self):
+        StoryCollaborator.objects.create(
+            story=self.story,
+            user=self.collab_user,
+            role='editor',
+            invited_by=self.owner,
+        )
+        self.client.force_authenticate(user=self.collab_user)
+        ids = self._episode_ids(self.client.get(self._episode_list_url()))
+        self.assertEqual(ids, {self.episode_published.id, self.episode_draft.id})
+
+    def test_anonymous_only_sees_published_when_season_is_public(self):
+        self.client.force_authenticate(user=None)
+        ids = self._episode_ids(self.client.get(self._episode_list_url()))
+        self.assertEqual(ids, {self.episode_published.id})
+
+    def test_owner_catalogue_query_only_sees_published(self):
+        """Immersivecomics browse uses ?catalogue=1 — same as anonymous readers."""
+        self.client.force_authenticate(user=self.owner)
+        url = self._episode_list_url() + '?catalogue=1'
+        ids = self._episode_ids(self.client.get(url))
+        self.assertEqual(ids, {self.episode_published.id})
 
 
 class ShareTrackingTestCase(APITestCase):
@@ -609,15 +691,18 @@ class IncrementEpisodeViewTestCase(APITestCase):
         self.assertIn('error', response.data)
         self.assertIn('not public', response.data['error'].lower())
     
-    def test_increment_view_private_season(self):
-        """Test that episodes in private seasons cannot have views incremented"""
+    def test_increment_view_private_season_in_public_story(self):
+        """Published episodes count toward views even when the season is not marked public."""
         url = reverse('icvybz-api:episode-increment-view', kwargs={'episode_id': self.episode_in_private_season.id})
-        
+        initial = self.episode_in_private_season.view_count
+
         response = self.client.post(url)
-        
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn('error', response.data)
-        self.assertIn('season is not public', response.data['error'].lower())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data.get('success'))
+        self.assertEqual(response.data['view_count'], initial + 1)
+        self.episode_in_private_season.refresh_from_db()
+        self.assertEqual(self.episode_in_private_season.view_count, initial + 1)
     
     def test_increment_view_nonexistent_episode(self):
         """Test that incrementing view for nonexistent episode returns 404"""
@@ -855,6 +940,17 @@ class SeasonPublicVisibilityTestCase(APITestCase):
         season_ids = [s['id'] for s in seasons]
         
         # Unauthenticated user should only see public seasons
+        self.assertIn(self.public_season.id, season_ids)
+        self.assertNotIn(self.private_season.id, season_ids)
+
+    def test_owner_catalogue_query_sees_only_public_seasons(self):
+        """Story owner on /immersivecomics/ uses ?catalogue=1 — hide private seasons."""
+        self.client.force_authenticate(user=self.user)
+        url = reverse('icvybz-api:season-list-create', kwargs={'story_id': self.public_story.id})
+        response = self.client.get(url, {'catalogue': '1'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        seasons = response.data if isinstance(response.data, list) else response.data.get('results', [])
+        season_ids = [s['id'] for s in seasons]
         self.assertIn(self.public_season.id, season_ids)
         self.assertNotIn(self.private_season.id, season_ids)
 
