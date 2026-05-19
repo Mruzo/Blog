@@ -9,6 +9,16 @@ def get_site_url():
     return f"https://{current_site.domain}"
 
 
+def get_order_recipient_email(order):
+    """Email address for transactional store messages (account or guest)."""
+    email = order.get_contact_email() if hasattr(order, 'get_contact_email') else ''
+    if email:
+        return email
+    if order.customer_id:
+        return (order.customer.email or '').strip()
+    return (getattr(order, 'guest_email', None) or '').strip()
+
+
 def get_customer_facing_base_url():
     """
     Base URL for storefront links in transactional email (React app).
@@ -59,7 +69,7 @@ def send_order_confirmation(order):
         subject=subject,
         message=plain_message,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[order.customer.email],
+        recipient_list=[get_order_recipient_email(order)],
         html_message=html_message
     )
 
@@ -83,7 +93,7 @@ def send_order_status_update(order):
         subject=subject,
         message=plain_message,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[order.customer.email],
+        recipient_list=[get_order_recipient_email(order)],
         html_message=html_message
     )
 
@@ -104,7 +114,7 @@ def send_order_cancellation_confirmation(order):
         subject=subject,
         message=plain_message,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[order.customer.email],
+        recipient_list=[get_order_recipient_email(order)],
         html_message=html_message,
         fail_silently=False
     )
@@ -186,7 +196,7 @@ def send_order_refund_processed(order, refund_amount, refund_method=None):
         subject=subject,
         message=plain_message,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[order.customer.email],
+        recipient_list=[get_order_recipient_email(order)],
         html_message=html_message,
         fail_silently=False
     )

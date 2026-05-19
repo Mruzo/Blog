@@ -4,7 +4,7 @@ from .models import FeedbackTicket, TicketComment, TicketStatusHistory
 
 @admin.register(FeedbackTicket)
 class FeedbackTicketAdmin(admin.ModelAdmin):
-    list_display = ('ticket_number', 'subject', 'user', 'submitted_by_email', 'category', 'priority', 'status', 'assigned_to', 'created_at', 'updated_at')
+    list_display = ('ticket_number', 'status', 'subject', 'user', 'submitted_by_email', 'category', 'priority',  'assigned_to', 'created_at', 'updated_at')
     list_filter = ('status', 'priority', 'category', 'assigned_to', 'created_at', 'source')
     search_fields = ('ticket_number', 'subject', 'message', 'submitted_by_name', 'submitted_by_email', 'user__username', 'user__email')
     readonly_fields = ('ticket_number', 'created_at', 'updated_at', 'resolved_at', 'closed_at', 'first_response_at')

@@ -831,21 +831,37 @@ def check_auth(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def checkout(request):
-    """Process checkout and create order"""
+    """Process checkout and create order (authenticated or guest)."""
     import logging
     from django.contrib.sessions.models import Session
+    from django.core.exceptions import ValidationError as DjangoValidationError
     from django.utils import timezone
-    
+    from snmov.utils.checkout_auth import (
+        generate_guest_checkout_token,
+        store_guest_order_access,
+        validate_guest_email,
+    )
+
     logger = logging.getLogger(__name__)
-    
-    # CRITICAL FIX: When using Token Auth, the session cookie might not be sent
-    # So we need to find the user's session by looking up sessions with their user ID
-    # Try to get cart from current session first
+    is_guest = not request.user.is_authenticated
+    guest_email = ''
+
     current_cart = request.session.get('cart', {})
-    
-    if not current_cart:
+
+    if is_guest:
+        try:
+            guest_email = validate_guest_email(request.data.get('email'))
+        except DjangoValidationError as e:
+            return Response({
+                'success': False,
+                'error': str(e),
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if not request.session.session_key:
+            request.session.create()
+            request.session.save()
+    elif not current_cart:
         # If no cart in current session, try to find user's session by user ID
         # Look for active sessions associated with this user
         logger.info(f"Searching for cart in user {request.user.id} sessions...")
@@ -868,24 +884,20 @@ def checkout(request):
             except Exception as e:
                 logger.debug(f"Error decoding session {session.session_key}: {e}")
                 continue
-    
-    # Ensure session is associated with user
-    if not request.session.get('_auth_user_id'):
-        request.session['_auth_user_id'] = str(request.user.id)
-        request.session.modified = True
-    
-    # Ensure session exists
-    if not request.session.session_key:
-        request.session.create()
-        request.session.save()
-    
-    # Debug: Log session info
-    logger.info(
-        f"Checkout - Session key: {request.session.session_key}, "
-        f"Session user ID: {request.session.get('_auth_user_id')}, "
-        f"Request user: {request.user.id}, "
-        f"Cart keys in session: {list(request.session.get('cart', {}).keys())}"
-    )
+
+    if not is_guest:
+        if not request.session.get('_auth_user_id'):
+            request.session['_auth_user_id'] = str(request.user.id)
+            request.session.modified = True
+        if not request.session.session_key:
+            request.session.create()
+            request.session.save()
+        logger.info(
+            f"Checkout - Session key: {request.session.session_key}, "
+            f"Session user ID: {request.session.get('_auth_user_id')}, "
+            f"Request user: {request.user.id}, "
+            f"Cart keys in session: {list(request.session.get('cart', {}).keys())}"
+        )
     
     # Get cart from session
     cart_data = get_cart_for_session(request)
@@ -899,10 +911,10 @@ def checkout(request):
             f"Checkout failed - Cart is empty. "
             f"Session key: {request.session.session_key}, "
             f"Session user ID: {request.session.get('_auth_user_id')}, "
-            f"Request user: {request.user.id}, "
+            f"Request user: {getattr(request.user, 'id', None)}, "
             f"Cart in session: {bool(direct_cart)}, "
             f"Cart keys: {list(direct_cart.keys()) if direct_cart else []}, "
-            f"User: {request.user.username}"
+            f"Guest: {is_guest}"
         )
         
         return Response({
@@ -997,9 +1009,24 @@ def checkout(request):
                         )
 
                 shipping = form.save(commit=False)
-                shipping.user = request.user
-                shipping.save()
-                order = Order.objects.create(customer=request.user, shipping_address=shipping)
+                if is_guest:
+                    shipping.user = None
+                    guest_token = generate_guest_checkout_token()
+                    shipping.save()
+                    order = Order.objects.create(
+                        customer=None,
+                        guest_email=guest_email,
+                        guest_checkout_token=guest_token,
+                        shipping_address=shipping,
+                    )
+                    store_guest_order_access(request, order)
+                else:
+                    shipping.user = request.user
+                    shipping.save()
+                    order = Order.objects.create(
+                        customer=request.user,
+                        shipping_address=shipping,
+                    )
 
                 if coupon_obj:
                     merch_total_locked = Decimal('0.00')
@@ -1058,12 +1085,13 @@ def checkout(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_shipping_rates(request, order_id):
     """Get shipping rates for an order"""
-    try:
-        order = Order.objects.get(id=order_id, customer=request.user)
-    except Order.DoesNotExist:
+    from snmov.utils.checkout_auth import get_order_for_request, order_customer_api_payload
+
+    order = get_order_for_request(request, order_id)
+    if not order:
         return Response({
             'success': False,
             'error': 'Order not found'
@@ -1115,7 +1143,7 @@ def get_shipping_rates(request, order_id):
             'success': True,
             'order': {
                 'id': order.id,
-                'customer': {'username': order.customer.username},
+                'customer': order_customer_api_payload(order),
                 'order_date': order.order_date,
                 'status': order.status,
                 'shipping_cost': float(order.shipping_cost),
@@ -1158,12 +1186,13 @@ def get_shipping_rates(request, order_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def select_shipping_rate(request, order_id):
     """Select shipping rate and redirect to Stripe"""
-    try:
-        order = Order.objects.get(id=order_id, customer=request.user)
-    except Order.DoesNotExist:
+    from snmov.utils.checkout_auth import get_order_for_request
+
+    order = get_order_for_request(request, order_id)
+    if not order:
         return Response({
             'success': False,
             'error': 'Order not found'
@@ -1216,6 +1245,13 @@ def select_shipping_rate(request, order_id):
     from snmov.utils.checkout_fulfillment import build_checkout_line_items
     line_items = build_checkout_line_items(order)
 
+    checkout_email = order.get_contact_email()
+    if not checkout_email:
+        return Response({
+            'success': False,
+            'error': 'A contact email is required to complete payment.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     try:
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
         success_url = f'{frontend_url}/product/payment/success/?session_id={{CHECKOUT_SESSION_ID}}'
@@ -1227,7 +1263,7 @@ def select_shipping_rate(request, order_id):
             mode='payment',
             success_url=success_url,
             cancel_url=cancel_url,
-            customer_email=request.user.email,
+            customer_email=checkout_email,
             metadata={'order_id': str(order.id)},
         )
         order.stripe_checkout_session_id = checkout_session.id
@@ -1245,7 +1281,7 @@ def select_shipping_rate(request, order_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def payment_success(request):
     """Handle successful payment (browser redirect); idempotent with Stripe webhook."""
     session_id = request.GET.get('session_id')
@@ -1256,12 +1292,15 @@ def payment_success(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
     from snmov.utils.checkout_fulfillment import complete_order_from_stripe_checkout_session
+    from snmov.utils.checkout_auth import get_order_for_request
 
     try:
         stripe.api_key = settings.STRIPE_SECRET_KEY
         session = stripe.checkout.Session.retrieve(session_id)
         order_id = session.metadata.get('order_id')
-        order = Order.objects.get(id=int(order_id), customer=request.user)
+        order = get_order_for_request(request, int(order_id))
+        if not order:
+            return Response({'success': False, 'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
         payload = complete_order_from_stripe_checkout_session(order, session)
     except ValueError as e:
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -1337,10 +1376,11 @@ def stripe_checkout_webhook(request):
             email_session = (cd.get('email') or '').strip().lower()
         elif cd is not None and getattr(cd, 'email', None):
             email_session = str(cd.email).strip().lower()
-    if email_session and order.customer.email.strip().lower() != email_session:
+    order_email = order.get_contact_email().strip().lower()
+    if email_session and order_email and order_email != email_session:
         logger.warning(
             'Webhook: email mismatch for order %s (session=%s order=%s)',
-            order.id, email_session, order.customer.email,
+            order.id, email_session, order_email,
         )
         return HttpResponse(status=400)
 

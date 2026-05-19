@@ -57,6 +57,7 @@ const Checkout: React.FC = () => {
   const [saveAddress, setSaveAddress] = useState(false);
   const [addressLabel, setAddressLabel] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
 
   const [formData, setFormData] = useState<ShippingAddress>({
     full_name: '',
@@ -148,6 +149,14 @@ const Checkout: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentUser && !guestEmail.trim()) {
+      setMessage('Email is required for guest checkout.');
+      setMessageType('danger');
+      setShowMessage(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -175,6 +184,7 @@ const Checkout: React.FC = () => {
         body: JSON.stringify({
           ...formData,
           ...(couponCode.trim() ? { coupon_code: couponCode.trim() } : {}),
+          ...(!currentUser && guestEmail.trim() ? { email: guestEmail.trim() } : {}),
         })
       });
 
@@ -258,32 +268,6 @@ const Checkout: React.FC = () => {
     setShowMessage(false);
   };
 
-  // Check authentication on mount and handle redirects
-  useEffect(() => {
-    // Check if user is authenticated - check token first (immediate check)
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      // No token, redirect immediately
-      const currentPath = window.location.pathname;
-      sessionStorage.setItem('redirectAfterLogin', currentPath);
-      navigate(`/login/?next=${encodeURIComponent(currentPath)}`, { replace: true });
-      return;
-    }
-    
-    // If we have a token but no user yet, wait a moment for user to load
-    // If after a short delay there's still no user, redirect
-    if (!currentUser) {
-      const timeout = setTimeout(() => {
-        // Still no user after waiting, redirect to login
-        const currentPath = window.location.pathname;
-        sessionStorage.setItem('redirectAfterLogin', currentPath);
-        navigate(`/login/?next=${encodeURIComponent(currentPath)}`, { replace: true });
-      }, 1000); // Wait 1 second for user to load
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [navigate, currentUser]);
-
   // Redirect if cart is empty
   useEffect(() => {
     if (!isLoading && cartItems.length === 0) {
@@ -291,9 +275,7 @@ const Checkout: React.FC = () => {
     }
   }, [cartItems.length, isLoading, navigate]);
 
-  // Show loading spinner while checking authentication or cart
-  const token = localStorage.getItem('authToken');
-  if (isLoading || !token || !currentUser) {
+  if (isLoading) {
     return (
       <div className="product-landing">
         <section className="product-landing__hero">
@@ -392,11 +374,38 @@ const Checkout: React.FC = () => {
           </div>
 
           <div className="store-page__formCard">
+            {!currentUser && (
+              <div className="store-page__guestBlock" style={{ marginBottom: '1.25rem' }}>
+                <p className="product-landing__lead" style={{ marginBottom: '0.75rem' }}>
+                  Checking out as a guest.{' '}
+                  <Link to={`/login/?next=${encodeURIComponent('/product/cart/checkout/')}`}>
+                    Sign in
+                  </Link>{' '}
+                  to use saved addresses and order history.
+                </p>
+                <div className="store-page__field">
+                  <label className="store-page__label" htmlFor="guest_email">
+                    Email for receipt and updates <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="store-page__input"
+                    id="guest_email"
+                    name="guest_email"
+                    autoComplete="email"
+                    required
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
             <h2 className="product-landing__h2" style={{ marginBottom: '1rem' }}>
               Shipping information
             </h2>
 
-            {savedAddresses.length > 0 && (
+            {currentUser && savedAddresses.length > 0 && (
               <div className="store-page__field" style={{ marginBottom: '1rem' }}>
                 <label className="store-page__label" htmlFor="saved_address">
                   Use saved address

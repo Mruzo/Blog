@@ -404,7 +404,15 @@ class Order(models.Model):
         ('FAILED', 'Failed'),
     ]
 
-    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders")
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders",
+        null=True,
+        blank=True,
+    )
+    guest_email = models.EmailField(blank=True, default='')
+    guest_checkout_token = models.CharField(max_length=64, blank=True, default='', db_index=True)
     order_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')  # Increased max_length
     products = models.ManyToManyField(Product, through='OrderItem')
@@ -436,8 +444,19 @@ class Order(models.Model):
     coupon_discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     
 
+    @property
+    def is_guest_order(self):
+        return self.customer_id is None
+
+    def get_contact_email(self):
+        if self.customer_id:
+            return (self.customer.email or '').strip()
+        return (self.guest_email or '').strip()
+
     def __str__(self):
-        return f"Order {self.id} by {self.customer.username}"
+        if self.customer_id:
+            return f"Order {self.id} by {self.customer.username}"
+        return f"Order {self.id} by guest ({self.guest_email})"
 
     @property
     def ref_code(self):

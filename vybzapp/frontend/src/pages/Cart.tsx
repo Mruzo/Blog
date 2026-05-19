@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
-import { useApi } from '../contexts/ApiContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 
 const Cart: React.FC = () => {
   const { cartItems, totalPrice, updateQuantity, removeItem, isLoading } = useCart();
-  const { currentUser } = useApi();
   const navigate = useNavigate();
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
@@ -56,15 +54,6 @@ const Cart: React.FC = () => {
 
   const handleCheckoutClick = (e: React.MouseEvent) => {
     e.preventDefault();
-
-    const token = localStorage.getItem('authToken');
-    if (!token || !currentUser) {
-      const checkoutPath = '/product/cart/checkout/';
-      sessionStorage.setItem('redirectAfterLogin', checkoutPath);
-      navigate(`/login/?next=${encodeURIComponent(checkoutPath)}`);
-      return;
-    }
-
     navigate('/product/cart/checkout/');
   };
 
