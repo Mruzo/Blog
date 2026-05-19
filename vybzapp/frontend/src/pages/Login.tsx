@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import BackButton from '../components/BackButton';
+import PasswordField from '../components/PasswordField';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -137,14 +138,10 @@ const Login: React.FC = () => {
                   </div>
 
                   <div className="col-6 mb-3 p-1">
-                    <label htmlFor="password" className="form-label">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      className="form-control"
+                    <PasswordField
                       id="password"
                       name="password"
+                      label="Password"
                       value={formData.password}
                       onChange={handleInputChange}
                       required

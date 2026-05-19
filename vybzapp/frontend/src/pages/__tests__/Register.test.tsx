@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import Register from '../Register';
 import { ApiProvider } from '../../contexts/ApiContext';
 import { CartProvider } from '../../contexts/CartContext';
@@ -11,6 +10,7 @@ const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
+  useSearchParams: () => [new URLSearchParams(), jest.fn()],
 }));
 
 // Mock useApi
@@ -18,7 +18,7 @@ const mockRegister = jest.fn();
 const mockCurrentUser = null;
 
 jest.mock('../../contexts/ApiContext', () => ({
-  ...jest.requireActual('../../contexts/ApiContext'),
+  ApiProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useApi: () => ({
     register: mockRegister,
     currentUser: mockCurrentUser
@@ -27,13 +27,13 @@ jest.mock('../../contexts/ApiContext', () => ({
 
 const renderWithProviders = (component: React.ReactElement) => {
   return render(
-    <BrowserRouter>
+    <MemoryRouter>
       <ApiProvider>
         <CartProvider>
           {component}
         </CartProvider>
       </ApiProvider>
-    </BrowserRouter>
+    </MemoryRouter>
   );
 };
 
@@ -48,7 +48,7 @@ describe('Register', () => {
     
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i, { selector: '#password' })).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
   });
@@ -56,7 +56,7 @@ describe('Register', () => {
   it('renders registration title and description', () => {
     renderWithProviders(<Register />);
     
-    expect(screen.getByText('Create Account')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
     expect(screen.getByText(/Join Justvybz/i)).toBeInTheDocument();
   });
 
@@ -72,7 +72,7 @@ describe('Register', () => {
     
     const usernameInput = screen.getByLabelText(/username/i);
     const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/^password$/i);
+    const passwordInput = screen.getByLabelText(/password/i, { selector: '#password' });
     const password2Input = screen.getByLabelText(/confirm password/i);
     
     fireEvent.change(usernameInput, { target: { value: 'testuser' } });
@@ -80,10 +80,10 @@ describe('Register', () => {
     fireEvent.change(passwordInput, { target: { value: 'testpass123' } });
     fireEvent.change(password2Input, { target: { value: 'testpass123' } });
     
-    expect(usernameInput).toHaveValue('testuser');
-    expect(emailInput).toHaveValue('test@example.com');
-    expect(passwordInput).toHaveValue('testpass123');
-    expect(password2Input).toHaveValue('testpass123');
+    expect((usernameInput as HTMLInputElement).value).toBe('testuser');
+    expect((emailInput as HTMLInputElement).value).toBe('test@example.com');
+    expect((passwordInput as HTMLInputElement).value).toBe('testpass123');
+    expect((password2Input as HTMLInputElement).value).toBe('testpass123');
   });
 
   it('updates optional fields when user types', () => {
@@ -95,8 +95,8 @@ describe('Register', () => {
     fireEvent.change(firstNameInput, { target: { value: 'John' } });
     fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
     
-    expect(firstNameInput).toHaveValue('John');
-    expect(lastNameInput).toHaveValue('Doe');
+    expect((firstNameInput as HTMLInputElement).value).toBe('John');
+    expect((lastNameInput as HTMLInputElement).value).toBe('Doe');
   });
 
   it('updates accept_terms checkbox', () => {
@@ -104,9 +104,9 @@ describe('Register', () => {
     
     const termsCheckbox = screen.getByLabelText(/I agree to the/i);
     
-    expect(termsCheckbox).not.toBeChecked();
+    expect((termsCheckbox as HTMLInputElement).checked).toBe(false);
     fireEvent.click(termsCheckbox);
-    expect(termsCheckbox).toBeChecked();
+    expect((termsCheckbox as HTMLInputElement).checked).toBe(true);
   });
 
   it('calls register API on form submit with correct data', async () => {
@@ -121,7 +121,7 @@ describe('Register', () => {
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByLabelText(/I agree to the/i));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
@@ -153,7 +153,7 @@ describe('Register', () => {
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
     fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'John' } });
     fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Doe' } });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByLabelText(/I agree to the/i));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
@@ -178,14 +178,16 @@ describe('Register', () => {
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByLabelText(/I agree to the/i));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Creating Account/i)).toBeInTheDocument();
-      expect(screen.getByRole('button')).toBeDisabled();
+      const submitButton = screen.getByText(/Creating Account/i).closest('button');
+      expect(submitButton).not.toBeNull();
+      expect((submitButton as HTMLButtonElement).disabled).toBe(true);
     });
   });
 
@@ -194,7 +196,7 @@ describe('Register', () => {
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'differentpass' } });
     fireEvent.click(screen.getByLabelText(/I agree to the/i));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
@@ -210,7 +212,7 @@ describe('Register', () => {
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'testpass123' } });
     // Don't check terms checkbox
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
@@ -234,14 +236,25 @@ describe('Register', () => {
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'existinguser' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByLabelText(/I agree to the/i));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Username already exists/i)).toBeInTheDocument();
+      expect(screen.getByText(/verification email/i)).toBeInTheDocument();
     });
+  });
+
+  it('toggles password visibility', () => {
+    renderWithProviders(<Register />);
+
+    const showButtons = screen.getAllByRole('button', { name: 'Show password' });
+    expect(showButtons.length).toBeGreaterThanOrEqual(2);
+
+    fireEvent.click(showButtons[0]);
+    expect(screen.getByLabelText(/password/i, { selector: '#password' })).toHaveAttribute('type', 'text');
   });
 
   it('navigates to home after successful registration', async () => {
@@ -256,7 +269,7 @@ describe('Register', () => {
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByLabelText(/I agree to the/i));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
@@ -282,7 +295,7 @@ describe('Register', () => {
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByLabelText(/I agree to the/i));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
@@ -298,15 +311,15 @@ describe('Register', () => {
     
     const usernameInput = screen.getByLabelText(/username/i);
     const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/^password$/i);
+    const passwordInput = screen.getByLabelText(/password/i, { selector: '#password' });
     const password2Input = screen.getByLabelText(/confirm password/i);
     const termsCheckbox = screen.getByLabelText(/I agree to the/i);
     
-    expect(usernameInput).toBeRequired();
-    expect(emailInput).toBeRequired();
-    expect(passwordInput).toBeRequired();
-    expect(password2Input).toBeRequired();
-    expect(termsCheckbox).toBeRequired();
+    expect((usernameInput as HTMLInputElement).required).toBe(true);
+    expect((emailInput as HTMLInputElement).required).toBe(true);
+    expect((passwordInput as HTMLInputElement).required).toBe(true);
+    expect((password2Input as HTMLInputElement).required).toBe(true);
+    expect((termsCheckbox as HTMLInputElement).required).toBe(true);
   });
 
   it('does not require first_name and last_name fields', () => {
@@ -315,8 +328,8 @@ describe('Register', () => {
     const firstNameInput = screen.getByLabelText(/first name/i);
     const lastNameInput = screen.getByLabelText(/last name/i);
     
-    expect(firstNameInput).not.toBeRequired();
-    expect(lastNameInput).not.toBeRequired();
+    expect((firstNameInput as HTMLInputElement).required).toBe(false);
+    expect((lastNameInput as HTMLInputElement).required).toBe(false);
   });
 });
 

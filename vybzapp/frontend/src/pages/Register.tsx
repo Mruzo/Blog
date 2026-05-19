@@ -4,6 +4,8 @@ import { useApi } from '../contexts/ApiContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import BackButton from '../components/BackButton';
+import PasswordField from '../components/PasswordField';
+import { getRegisterErrorMessage } from '../utils/getRegisterErrorMessage';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -87,13 +89,9 @@ const Register: React.FC = () => {
         navigate(redirectTo);
       }, 2000);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
-      const errorMessage = error?.response?.data?.error || 
-                          error?.response?.data?.message || 
-                          error?.message || 
-                          'Registration failed. Please try again.';
-      setMessage(errorMessage);
+      setMessage(getRegisterErrorMessage(error));
       setMessageType('danger');
       setShowMessage(true);
     } finally {
@@ -208,14 +206,10 @@ const Register: React.FC = () => {
 
                 <div className="row">
                   <div className="col-6 mb-3 p-1">
-                    <label htmlFor="password" className="form-label">
-                      Password <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      className="form-control"
+                    <PasswordField
                       id="password"
                       name="password"
+                      label={<>Password <span className="text-danger">*</span></>}
                       value={formData.password}
                       onChange={handleInputChange}
                       required
@@ -224,14 +218,10 @@ const Register: React.FC = () => {
                   </div>
 
                   <div className="col-6 mb-3 p-1">
-                    <label htmlFor="password2" className="form-label">
-                      Confirm Password <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      className="form-control"
+                    <PasswordField
                       id="password2"
                       name="password2"
+                      label={<>Confirm Password <span className="text-danger">*</span></>}
                       value={formData.password2}
                       onChange={handleInputChange}
                       required

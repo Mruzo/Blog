@@ -9,7 +9,7 @@ from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.db import connection
+from django.db import connection, transaction
 from django.db.models import Q, Sum, Prefetch, Exists, OuterRef
 from django.utils import timezone
 from django.contrib.auth.tokens import default_token_generator
@@ -1560,33 +1560,44 @@ def register_api(request):
             'error': 'Email address already in use'
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    verification_token = None
     try:
-        # Create user (inactive until email verification)
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            is_active=False  # Require email verification
-        )
-        
-        # Set email verification fields if User model has them
-        if hasattr(user, 'is_email_verified'):
-            user.is_email_verified = False
-            token = default_token_generator.make_token(user)
-            user.email_verification_token = token
-            user.email_verification_sent_at = timezone.now()
-            user.save()
-            
-            # Send verification email
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                is_active=False,
+            )
+
+            if hasattr(user, 'is_email_verified'):
+                user.is_email_verified = False
+                verification_token = default_token_generator.make_token(user)
+                user.email_verification_token = verification_token
+                user.email_verification_sent_at = timezone.now()
+                user.save()
+
+            auth_token, _created = Token.objects.get_or_create(user=user)
+
+        if verification_token:
             try:
                 current_site = get_current_site(request)
-                verification_url = f"{request.scheme}://{current_site.domain}{reverse('verify_email', kwargs={'user_id': user.id, 'token': token})}"
-                
+                verify_path = reverse(
+                    'verify_email',
+                    kwargs={'user_id': user.id, 'token': verification_token},
+                )
+                verification_url = (
+                    f"{request.scheme}://{current_site.domain}{verify_path}"
+                )
                 subject = 'Verify Your Email - Justvybz'
-                message = f"Hi {user.username},\n\nPlease verify your email address by clicking the link below:\n{verification_url}\n\nBest regards,\nJustVybz Team"
-                
+                message = (
+                    f"Hi {user.username},\n\n"
+                    f"Please verify your email address by clicking the link below:\n"
+                    f"{verification_url}\n\n"
+                    f"Best regards,\nJustVybz Team"
+                )
                 send_mail(
                     subject=subject,
                     message=message,
@@ -1595,14 +1606,10 @@ def register_api(request):
                     fail_silently=False,
                 )
             except Exception as e:
-                # Log error but don't fail registration
                 logger.error(f"Failed to send verification email: {e}")
-        
-        # Create token for immediate API access (user will need to verify email for full access)
-        token, created = Token.objects.get_or_create(user=user)
-        
+
         return Response({
-            'token': token.key,
+            'token': auth_token.key,
             'user': {
                 'id': user.id,
                 'username': user.username,
@@ -1613,11 +1620,12 @@ def register_api(request):
                 'is_email_verified': getattr(user, 'is_email_verified', False),
             },
             'message': 'Registration successful. Please check your email to verify your account.',
-            'email_verification_required': True
+            'email_verification_required': True,
         }, status=status.HTTP_201_CREATED)
-        
+
     except Exception as e:
-        logger.error(f"Registration error: {e}")
-        return Response({
-            'error': f'Registration failed: {str(e)}'
-        }, status=status.HTTP_400_BAD_REQUEST)
+        logger.exception('Registration error')
+        return Response(
+            {'error': 'Registration failed. Please try again later.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

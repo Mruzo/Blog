@@ -428,19 +428,14 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
   }, [reloadAllData, loadCurrentUser]);
 
   const register = useCallback(async (userData: { username: string; email: string; password: string; password2: string; first_name?: string; last_name?: string; accept_terms: boolean }) => {
-    try {
-      const result = await apiService.register(userData);
-      localStorage.setItem('authToken', result.token);
-      setCurrentUser(result.user);
-      // Reload data after registration
-      await loadCurrentUser(); // Load user first
-      await reloadAllData(); // Then reload all other data
-      return result;
-    } catch (err: any) {
-      console.error('[ApiContext] Registration failed:', err);
-      throw err;
-    }
-  }, [reloadAllData, loadCurrentUser]);
+    const result = await apiService.register(userData);
+    localStorage.setItem('authToken', result.token);
+    setCurrentUser(result.user);
+    reloadAllData().catch((err) => {
+      console.warn('[ApiContext] Post-registration data reload failed:', err);
+    });
+    return result;
+  }, [reloadAllData]);
 
   const logout = useCallback(async () => {
     try {

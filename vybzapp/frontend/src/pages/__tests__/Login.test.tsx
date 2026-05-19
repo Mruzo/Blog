@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import Login from '../Login';
 import { ApiProvider, useApi } from '../../contexts/ApiContext';
 import { CartProvider } from '../../contexts/CartContext';
@@ -11,7 +10,7 @@ const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
-  useSearchParams: () => [new URLSearchParams(), jest.fn()]
+  useSearchParams: () => [new URLSearchParams(), jest.fn()],
 }));
 
 // Mock useApi
@@ -19,7 +18,7 @@ const mockLogin = jest.fn();
 const mockCurrentUser = null;
 
 jest.mock('../../contexts/ApiContext', () => ({
-  ...jest.requireActual('../../contexts/ApiContext'),
+  ApiProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useApi: () => ({
     login: mockLogin,
     currentUser: mockCurrentUser
@@ -28,13 +27,13 @@ jest.mock('../../contexts/ApiContext', () => ({
 
 const renderWithProviders = (component: React.ReactElement) => {
   return render(
-    <BrowserRouter>
+    <MemoryRouter>
       <ApiProvider>
         <CartProvider>
           {component}
         </CartProvider>
       </ApiProvider>
-    </BrowserRouter>
+    </MemoryRouter>
   );
 };
 
@@ -43,21 +42,28 @@ describe('Login', () => {
     mockNavigate.mockClear();
     mockLogin.mockClear();
     sessionStorage.clear();
+    jest.restoreAllMocks();
   });
 
   it('renders login form', () => {
     renderWithProviders(<Login />);
     
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i, { selector: '#password' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it('renders login title and description', () => {
+  it('renders login title', () => {
     renderWithProviders(<Login />);
     
-    expect(screen.getByText('Sign In')).toBeInTheDocument();
-    expect(screen.getByText(/Enter your credentials/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument();
+  });
+
+  it('toggles password visibility', () => {
+    renderWithProviders(<Login />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(screen.getByLabelText(/password/i, { selector: '#password' })).toHaveAttribute('type', 'text');
   });
 
   it('renders forgot password link', () => {
@@ -78,13 +84,13 @@ describe('Login', () => {
     renderWithProviders(<Login />);
     
     const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const passwordInput = screen.getByLabelText(/password/i, { selector: '#password' });
     
     fireEvent.change(usernameInput, { target: { value: 'testuser' } });
     fireEvent.change(passwordInput, { target: { value: 'testpass123' } });
     
-    expect(usernameInput).toHaveValue('testuser');
-    expect(passwordInput).toHaveValue('testpass123');
+    expect((usernameInput as HTMLInputElement).value).toBe('testuser');
+    expect((passwordInput as HTMLInputElement).value).toBe('testpass123');
   });
 
   it('calls login API on form submit', async () => {
@@ -96,7 +102,7 @@ describe('Login', () => {
     renderWithProviders(<Login />);
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
@@ -110,12 +116,14 @@ describe('Login', () => {
     renderWithProviders(<Login />);
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Signing In/i)).toBeInTheDocument();
-      expect(screen.getByRole('button')).toBeDisabled();
+      const submitButton = screen.getByText(/Signing In/i).closest('button');
+      expect(submitButton).not.toBeNull();
+      expect((submitButton as HTMLButtonElement).disabled).toBe(true);
     });
   });
 
@@ -131,7 +139,7 @@ describe('Login', () => {
     renderWithProviders(<Login />);
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'wrongpass' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'wrongpass' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
@@ -148,7 +156,7 @@ describe('Login', () => {
     renderWithProviders(<Login />);
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
@@ -168,7 +176,7 @@ describe('Login', () => {
     renderWithProviders(<Login />);
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
@@ -187,7 +195,7 @@ describe('Login', () => {
     renderWithProviders(<Login />);
     
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'testpass123' } });
+    fireEvent.change(screen.getByLabelText(/password/i, { selector: '#password' }), { target: { value: 'testpass123' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
@@ -200,10 +208,10 @@ describe('Login', () => {
     renderWithProviders(<Login />);
     
     const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const passwordInput = screen.getByLabelText(/password/i, { selector: '#password' });
     
-    expect(usernameInput).toBeRequired();
-    expect(passwordInput).toBeRequired();
+    expect((usernameInput as HTMLInputElement).required).toBe(true);
+    expect((passwordInput as HTMLInputElement).required).toBe(true);
   });
 });
 

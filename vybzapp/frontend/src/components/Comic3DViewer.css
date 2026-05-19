@@ -1,6 +1,38 @@
 /* Comic 3D Viewer Styles */
 .comic-3d-viewer {
   font-family: 'quicksand', sans-serif;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/*
+ * Bootstrap .row uses negative horizontal margins to counteract column padding.
+ * Inside story cards (no .container), that extends past the parent and causes
+ * horizontal overflow on phones. Zero gutter for direct rows only.
+ */
+.comic-3d-viewer > .row {
+  --bs-gutter-x: 0;
+  --bs-gutter-y: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.comic-3d-viewer > .row > [class*='col-'] {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Nested rows in flush card bodies (e.g. nav controls) — same overflow fix */
+.comic-3d-viewer .card-body.p-0 > .row {
+  --bs-gutter-x: 0;
+  --bs-gutter-y: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.comic-3d-viewer .card-body.p-0 > .row > [class*='col-'] {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* Used by StoryPreviewEditor / Model3DPreview (same CSS bundle as viewer) */
