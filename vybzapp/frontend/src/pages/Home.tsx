@@ -50,7 +50,7 @@ const Home: React.FC = () => {
           <p className="home-page__eyebrow">JustVybz Studios</p>
           <h1 className="home-page__headline landtext mb-3 land-border">
             <span className="d-block">INSPIRATION</span>
-            <span className="home-page__headlineMeet font-quicksand-italic d-block">meets</span>
+            <span className="home-page__headlineMeet d-block">meets</span>
             <span className="d-block">INNOVATION</span>
           </h1>
           <p className="home-page__tagline">

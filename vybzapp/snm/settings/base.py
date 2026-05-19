@@ -254,7 +254,7 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 
 # Email configuration
 DEFAULT_FROM_EMAIL = 'justvybz@justvybz.com'
-SUPPORT_EMAIL = 'Justvybz@justvybz.com'
+SUPPORT_EMAIL = 'justvybz@justvybz.com'
 
 EMAIL_HOST = 'mail.papamail.net'
 EMAIL_PORT = 587

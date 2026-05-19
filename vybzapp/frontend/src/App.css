@@ -1,24 +1,41 @@
-/* Import only used fonts */
+/* Bundled web fonts (url only — avoids iOS/macOS local() mismatch) */
+@font-face {
+  font-family: 'varela';
+  src: url('./fonts/Varela-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'quicksand';
-  src: local('Quicksand'), url('./fonts/Quicksand.ttf') format("truetype");
+  src: url('./fonts/Quicksand.ttf') format('truetype');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'gillsans';
+  src: url('./fonts/gillsansmt.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* AnimeAce font (referenced as 'Comic' in Django template) */
 @font-face {
   font-family: 'animeace';
-  src: local('AnimeAce2 Italic'), url('./fonts/comic.ttf') format("truetype");
+  src: url('./fonts/comic.ttf') format('truetype');
+  font-weight: 400;
   font-style: italic;
-}
-
-/* GillSans font */
-@font-face {
-  font-family: 'gillsans';
-  src: local('Gill Sans'), url('./fonts/gillsansmt.ttf') format("truetype");
+  font-display: swap;
 }
 
 /* CSS Custom Properties for efficiency */
 :root {
+  --font-body: 'varela', sans-serif;
+  --font-display: 'gillsans', sans-serif;
   --font-primary: 'quicksand', sans-serif;
   --font-size-xs: 0.9rem;    /* 14.4px - Base size */
   --font-size-sm: 1rem;       /* 16px - Small headers */
@@ -62,7 +79,9 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-  font-family: 'varela', sans-serif;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   position: relative;
   background-color: #f2f2f2;
@@ -78,6 +97,8 @@ body {
   --home-ink: #414042;
   background: #f2f2f2;
   color: var(--home-ink);
+  font-family: var(--font-body);
+  font-synthesis: none;
 }
 
 /* Extra breathing room above fixed bottom nav (main already has padding-bottom ~80px on mobile) */
@@ -132,8 +153,10 @@ body {
 
 .home-page__headlineMeet {
   display: block;
+  font-family: var(--font-primary);
   font-size: clamp(1.75rem, 5vw, 2.75rem);
   font-weight: 600;
+  font-style: normal;
   color: rgba(65, 64, 66, 0.85);
   margin: 0.35rem 0;
 }
@@ -153,8 +176,9 @@ body {
 }
 
 .home-page__sectionTitle {
-  font-family: 'gillsans', sans-serif;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.04em;
   font-size: clamp(1.2rem, 2.4vw, 1.45rem);
   color: var(--home-ink);
   text-align: center;
@@ -225,7 +249,7 @@ body {
 }
 
 .home-page__featureTitle {
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
   font-weight: 700;
   font-size: 1.05rem;
   color: var(--home-ink);
@@ -2902,8 +2926,8 @@ button.store-page__linkBtn {
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'varela', sans-serif;
-  font-weight: 800;
+  font-family: var(--font-body);
+  font-weight: 400;
   color: #414042;
   letter-spacing: 0.6px;
 }
@@ -2915,9 +2939,11 @@ h2 {
 }
 
 .landtext {
-  font-family: 'gillsans', sans-serif;
+  font-family: var(--font-display);
   font-size: 4.5rem;
-  font-weight: 800; /* Normal weight - most fonts support this */
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  font-synthesis: none;
 }
 
 /* Legacy font utilities removed from bundle: .subtext, .subtext-md, .subtext-28, .subtext-btn-md, .subtext-smm */
@@ -2953,16 +2979,19 @@ h2 {
 
 /* Font family utility classes */
 .font-gillsans {
-  font-family: 'gillsans', sans-serif;
+  font-family: var(--font-display);
+  font-synthesis: none;
 }
 
 .font-quicksand {
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
 }
 
+/* Quicksand bundle has no italic; use medium weight instead of faux italic */
 .font-quicksand-italic {
-  font-family: 'quicksand', sans-serif;
-  font-style: italic;
+  font-family: var(--font-primary);
+  font-style: normal;
+  font-weight: 500;
 }
 
 /* Custom button styles */

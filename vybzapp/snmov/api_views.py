@@ -1630,15 +1630,15 @@ def contact_form(request):
                 
                 try:
                     send_ticket_confirmation_email(ticket, request)
-                except Exception as e:
-                    print(f"Failed to send ticket confirmation email: {e}")
+                except Exception:
+                    logger.exception(
+                        'Failed to send ticket confirmation email for %s',
+                        ticket.ticket_number,
+                    )
                 
                 ticket_number = ticket.ticket_number
-            except Exception as e:
-                # If ticket creation fails, still proceed with ReachOut
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Failed to create feedback ticket: {e}")
+            except Exception:
+                logger.exception('Failed to create feedback ticket from contact form')
                 ticket_number = None
         
         # Increment rate limit counter
@@ -1654,17 +1654,21 @@ def contact_form(request):
             to_email = SUPPORT_EMAIL
             
             send_mail(subject, message, from_email, [to_email])
-        except Exception as e:
-            # Log email error but don't fail the request
-            print(f"Failed to send contact form email: {e}")
-        
-        # Send confirmation email to user (keep existing behavior for backward compatibility)
+            logger.info('Contact form support notification sent to %s', to_email)
+        except Exception:
+            logger.exception(
+                'Failed to send contact form support notification (ReachOut id=%s)',
+                reach_out.pk,
+            )
+
         try:
             from snmov.utils.email_notifications import send_feedback_confirmation
             send_feedback_confirmation(reach_out)
-        except Exception as e:
-            # Log email error but don't fail the request
-            print(f"Failed to send feedback confirmation email: {e}")
+        except Exception:
+            logger.exception(
+                'Failed to send feedback confirmation email to %s',
+                reach_out.email,
+            )
         
         response_data = {
             'success': True,
@@ -1703,8 +1707,11 @@ def subscribe_newsletter(request):
         try:
             from snmov.utils.email_notifications import send_newsletter_welcome
             send_newsletter_welcome(subscription)
-        except Exception as e:
-            print(f"Failed to send newsletter welcome email: {e}")
+        except Exception:
+            logger.exception(
+                'Failed to send newsletter welcome email to %s',
+                subscription.email,
+            )
         
         return Response({
             'success': True,

@@ -14,7 +14,11 @@ from .serializers import (
     TicketCommentCreateSerializer
 )
 from .utils import update_ticket_status, check_first_response
-from .email_notifications import send_ticket_confirmation_email, send_ticket_resolution_email
+from .email_notifications import (
+    send_ticket_admin_notification,
+    send_ticket_confirmation_email,
+    send_ticket_resolution_email,
+)
 
 # Custom permission for staff-only endpoints
 class IsStaff(IsAuthenticated):
@@ -33,10 +37,10 @@ def create_ticket(request):
     
     if serializer.is_valid():
         ticket = serializer.save()
-        
-        # Send confirmation email
+
+        send_ticket_admin_notification(ticket, request)
         send_ticket_confirmation_email(ticket, request)
-        
+
         return Response({
             'success': True,
             'ticket_number': ticket.ticket_number,

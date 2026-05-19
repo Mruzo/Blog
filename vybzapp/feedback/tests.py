@@ -321,11 +321,13 @@ class FeedbackTicketAPITest(APITestCase):
             is_staff=True
         )
     
+    @patch('feedback.api_views.send_ticket_admin_notification')
     @patch('feedback.api_views.send_ticket_confirmation_email')
-    def test_create_ticket_public(self, mock_email):
+    def test_create_ticket_public(self, mock_confirm_email, mock_admin_email):
         """Test creating a ticket via public API"""
-        mock_email.return_value = True
-        
+        mock_confirm_email.return_value = True
+        mock_admin_email.return_value = True
+
         data = {
             'submitted_by_name': 'Test User',
             'submitted_by_email': 'test@example.com',
@@ -346,9 +348,9 @@ class FeedbackTicketAPITest(APITestCase):
         self.assertEqual(ticket.subject, 'Test Subject')
         self.assertEqual(ticket.status, 'new')
         
-        # Verify email was sent
-        mock_email.assert_called_once()
-    
+        mock_admin_email.assert_called_once()
+        mock_confirm_email.assert_called_once()
+
     @patch('feedback.api_views.send_ticket_confirmation_email')
     def test_create_ticket_authenticated(self, mock_email):
         """Test creating a ticket as authenticated user"""
