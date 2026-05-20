@@ -256,6 +256,20 @@ class CartAPITestCase(TestCase):
         self.assertEqual(cart_data['cart_items'][0]['quantity'], 1, "Should add exactly 1 item when cart is empty")
         self.assertEqual(cart_data['total_price'], 10.00)
 
+    def test_add_to_cart_with_session_cookie_and_no_csrf_token(self):
+        """Regression: cart POST must work when a Django session exists but no CSRF header."""
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_login(self.user)
+        response = client.post(
+            '/api/cart/add/',
+            {'product_id': str(self.product1.uuid), 'quantity': 1},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(response.json()['success'])
+
     def test_add_unavailable_product_to_cart(self):
         """Test adding an unavailable product to cart"""
         response = self.client.post('/api/cart/add/', {
