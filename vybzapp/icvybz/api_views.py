@@ -1422,7 +1422,7 @@ def password_reset_api(request):
     if form.is_valid():
         # Get current site for email context
         current_site = get_current_site(request)
-        domain = current_site.domain
+        domain = getattr(settings, 'PASSWORD_RESET_EMAIL_DOMAIN', current_site.domain)
         site_name = current_site.name
         
         # Save form which sends the email

@@ -1,15 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 
 const PasswordResetComplete: React.FC = () => {
-  const [verificationRequired, setVerificationRequired] = useState(false);
-
-  useEffect(() => {
-    const required = sessionStorage.getItem('passwordResetVerificationRequired') === 'true';
-    setVerificationRequired(required);
-    sessionStorage.removeItem('passwordResetVerificationRequired');
-  }, []);
+  const location = useLocation();
+  const verificationRequired = Boolean(
+    (location.state as { emailVerificationRequired?: boolean } | null)?.emailVerificationRequired
+  );
 
   return (
     <div className="container mt-5" style={{ maxWidth: '600px' }}>

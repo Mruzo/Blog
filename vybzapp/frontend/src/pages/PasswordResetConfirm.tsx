@@ -78,13 +78,9 @@ const PasswordResetConfirm: React.FC = () => {
         new_password2: formData.new_password2,
       });
 
-      if (data.email_verification_required) {
-        sessionStorage.setItem('passwordResetVerificationRequired', 'true');
-      } else {
-        sessionStorage.removeItem('passwordResetVerificationRequired');
-      }
-
-      navigate('/password-reset-complete/');
+      navigate('/password-reset-complete/', {
+        state: { emailVerificationRequired: Boolean(data.email_verification_required) },
+      });
     } catch (error: any) {
       console.error('Password reset confirm error:', error);
       const responseData = error?.response?.data;
