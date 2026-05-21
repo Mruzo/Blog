@@ -69,24 +69,12 @@ urlpatterns = [
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}),
     path('tinymce/', include('tinymce.urls')),
     path('ajax/validate_username/', validate_username, name='validate_username'),
-    # Commented out: React handles password reset routes via catch-all
-    # path('password-reset/',
-    #      auth_views.PasswordResetView.as_view(
-    #          template_name='snmov/password_reset.html',
-    #          extra_email_context={'protocol': 'https'}),
-    #      name='password_reset'),
-    # path('password-reset/done/',
-    #      auth_views.PasswordResetDoneView.as_view(
-    #          template_name='snmov/password_reset_done.html'),
-    #      name='password_reset_done'),
-    # path('password-reset-confirm/<uidb64>/<token>/',
-    #      auth_views.PasswordResetConfirmView.as_view(
-    #          template_name='snmov/password_reset_confirm.html'),
-    #      name='password_reset_confirm'),
-    # path('password-reset-complete/',
-    #      auth_views.PasswordResetCompleteView.as_view(
-    #          template_name='snmov/password_reset_complete.html'),
-    #      name='password_reset_complete'),
+    # Named route for password-reset email links; React handles the page via client routing
+    path(
+        'password-reset-confirm/<uidb64>/<token>/',
+        ReactAppView.as_view(),
+        name='password_reset_confirm',
+    ),
     # Catch-all route for React client-side routing
     # This must be LAST to allow Django URLs to take precedence
     # path('<path:path>', ReactAppView.as_view(), name='react_app'),

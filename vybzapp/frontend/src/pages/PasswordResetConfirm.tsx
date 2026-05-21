@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import BackButton from '../components/BackButton';
+import apiService from '../services/api';
 
 const PasswordResetConfirm: React.FC = () => {
   const { uidb64, token } = useParams<{ uidb64: string; token: string }>();
@@ -28,23 +29,11 @@ const PasswordResetConfirm: React.FC = () => {
       }
 
       try {
-        // Check if token is valid by attempting to load the confirm page
-        const response = await fetch(`/password-reset-confirm/${uidb64}/${token}/`, {
-          method: 'GET',
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          setIsValid(true);
-        } else {
-          setIsValid(false);
-          setMessage('This password reset link is invalid or has expired.');
-          setMessageType('danger');
-          setShowMessage(true);
-        }
-      } catch (error) {
+        await apiService.passwordResetConfirmValidate(uidb64, token);
+        setIsValid(true);
+      } catch {
         setIsValid(false);
-        setMessage('An error occurred while validating the reset link.');
+        setMessage('This password reset link is invalid or has expired.');
         setMessageType('danger');
         setShowMessage(true);
       } finally {
@@ -84,33 +73,28 @@ const PasswordResetConfirm: React.FC = () => {
     setShowMessage(false);
 
     try {
-      const response = await fetch(`/password-reset-confirm/${uidb64}/${token}/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          new_password1: formData.new_password1,
-          new_password2: formData.new_password2
-        })
+      const data = await apiService.passwordResetConfirm(uidb64!, token!, {
+        new_password1: formData.new_password1,
+        new_password2: formData.new_password2,
       });
 
-      if (response.ok) {
-        navigate('/password-reset-complete/');
+      if (data.email_verification_required) {
+        sessionStorage.setItem('passwordResetVerificationRequired', 'true');
       } else {
-        const data = await response.json();
-        const errorMessage = data.new_password2?.[0] || 
-                           data.new_password1?.[0] || 
-                           data.non_field_errors?.[0] || 
-                           'Failed to reset password. Please try again.';
-        setMessage(errorMessage);
-        setMessageType('danger');
-        setShowMessage(true);
+        sessionStorage.removeItem('passwordResetVerificationRequired');
       }
+
+      navigate('/password-reset-complete/');
     } catch (error: any) {
       console.error('Password reset confirm error:', error);
-      setMessage('An error occurred. Please try again later.');
+      const responseData = error?.response?.data;
+      const errorMessage =
+        responseData?.new_password2?.[0] ||
+        responseData?.new_password1?.[0] ||
+        responseData?.non_field_errors?.[0] ||
+        responseData?.error ||
+        'Failed to reset password. Please try again.';
+      setMessage(errorMessage);
       setMessageType('danger');
       setShowMessage(true);
     } finally {

@@ -328,8 +328,11 @@ def verify_email(request, user_id, token):
         user = get_user_model().objects.get(id=user_id)
         
         if default_token_generator.check_token(user, token):
-            # Token is valid, activate the user
             user.is_active = True
+            if hasattr(user, 'is_email_verified'):
+                user.is_email_verified = True
+                user.email_verification_token = None
+                user.email_verification_sent_at = None
             user.save()
             messages.success(request, "Your email has been verified successfully!")
             return redirect('login')  # Redirect to login page

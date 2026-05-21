@@ -13,7 +13,12 @@ from django.db import connection, transaction
 from django.db.models import Q, Sum, Prefetch, Exists, OuterRef
 from django.utils import timezone
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.forms import SetPasswordForm
+from .auth_forms import PasswordResetFormAllowInactive
+from .auth_utils import (
+    get_user_from_uidb64,
+    schedule_post_password_reset_verification,
+)
 from django.core.mail import send_mail
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
@@ -1412,8 +1417,8 @@ def password_reset_api(request):
     if not email:
         return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Use Django's PasswordResetForm to handle email sending
-    form = PasswordResetForm({'email': email})
+    # Include inactive (unverified) accounts so they can reset and verify afterward
+    form = PasswordResetFormAllowInactive({'email': email})
     if form.is_valid():
         # Get current site for email context
         current_site = get_current_site(request)
@@ -1444,6 +1449,61 @@ def password_reset_api(request):
     return Response({
         'message': 'If an account exists with this email, a password reset link has been sent.'
     }, status=status.HTTP_200_OK)
+
+
+@csrf_exempt
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def password_reset_confirm_api(request, uidb64, token):
+    """GET: validate link. POST: set password; unverified users get a verification email."""
+    user = get_user_from_uidb64(uidb64)
+    if user is None or not default_token_generator.check_token(user, token):
+        if request.method == 'GET':
+            return Response(
+                {'valid': False, 'error': 'Invalid or expired reset link.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {'error': 'Invalid or expired reset link.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if request.method == 'GET':
+        return Response({'valid': True}, status=status.HTTP_200_OK)
+
+    form = SetPasswordForm(user, request.data)
+    if not form.is_valid():
+        return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    form.save()
+    try:
+        email_verification_required = schedule_post_password_reset_verification(user, request)
+    except Exception:
+        logger.exception('Password reset succeeded but verification email failed for user %s', user.pk)
+        return Response(
+            {
+                'error': (
+                    'Your password was updated, but we could not send the verification email. '
+                    'Please contact support.'
+                ),
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    message = 'Password reset successful.'
+    if email_verification_required:
+        message = (
+            'Password reset successful. '
+            'We sent a verification email to your address — please verify before signing in.'
+        )
+
+    return Response(
+        {
+            'message': message,
+            'email_verification_required': email_verification_required,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['POST'])

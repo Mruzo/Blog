@@ -4,7 +4,12 @@ from . import api_views, collaboration_views
 
 # Import auth views
 from .api_views import (
-    login_api, logout_api, get_current_user_api, register_api, password_reset_api
+    login_api,
+    logout_api,
+    get_current_user_api,
+    register_api,
+    password_reset_api,
+    password_reset_confirm_api,
 )
 
 # Create router for DRF viewsets
@@ -17,6 +22,11 @@ urlpatterns = [
     path('auth/user/', get_current_user_api, name='auth-user'),
     path('auth/register/', register_api, name='auth-register'),
     path('auth/password-reset/', password_reset_api, name='auth-password-reset'),
+    path(
+        'auth/password-reset-confirm/<uidb64>/<token>/',
+        password_reset_confirm_api,
+        name='auth-password-reset-confirm',
+    ),
     
     # Story/Comic URLs
     path('stories/', api_views.ComicListCreateView.as_view(), name='story-list-create'),

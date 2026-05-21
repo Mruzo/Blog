@@ -114,10 +114,10 @@ api.interceptors.request.use(
     const isAuthEndpoint =
       urlForMatch.includes('/auth/login/') ||
       urlForMatch.includes('/auth/register/') ||
-      urlForMatch.includes('/auth/password-reset/') ||
+      urlForMatch.includes('/auth/password-reset') ||
       rel.includes('/auth/login/') ||
       rel.includes('/auth/register/') ||
-      rel.includes('/auth/password-reset/');
+      rel.includes('/auth/password-reset');
     const isPublicEndpoint =
       isPublicStoriesEndpoint ||
       isPublicStudiosListEndpoint ||
@@ -431,6 +431,26 @@ class ApiService {
 
   async passwordReset(email: string): Promise<{ message: string }> {
     const response = await api.post('/auth/password-reset/', { email });
+    return response.data;
+  }
+
+  async passwordResetConfirmValidate(
+    uidb64: string,
+    token: string
+  ): Promise<{ valid: boolean }> {
+    const response = await api.get(`/auth/password-reset-confirm/${uidb64}/${token}/`);
+    return response.data;
+  }
+
+  async passwordResetConfirm(
+    uidb64: string,
+    token: string,
+    passwords: { new_password1: string; new_password2: string }
+  ): Promise<{ message: string; email_verification_required?: boolean }> {
+    const response = await api.post(
+      `/auth/password-reset-confirm/${uidb64}/${token}/`,
+      passwords
+    );
     return response.data;
   }
 
