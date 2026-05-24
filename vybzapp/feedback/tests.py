@@ -1,6 +1,8 @@
 """Comprehensive tests for feedback/ticketing system"""
 from django.test import TestCase
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.utils import timezone
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status

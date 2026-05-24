@@ -17,7 +17,8 @@ from django.conf import settings
 import random
 import uuid
 from django.contrib.auth import login, logout, authenticate, get_user_model
-from django.contrib.auth.models import User
+
+User = get_user_model()
 from django.contrib.auth.tokens import PasswordResetTokenGenerator, default_token_generator
 from django.db.models.signals import post_save
 from django.contrib.contenttypes.models import ContentType

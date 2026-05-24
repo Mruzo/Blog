@@ -168,3 +168,6 @@ frontend/.cache/
 frontend/.next/
 frontend/.parcel-cache/
 
+# Local ops runbooks (migration steps; not required in repo)
+docs/processes/AUTH_USER_MODEL_MIGRATION.md
+

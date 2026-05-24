@@ -6,7 +6,9 @@ from .forms import ArticleModelForm, CommentForm, ReachOutForm, ShippingAddressF
 from snm.forms import ProductNotificationForm
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate, get_user_model
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
 from django.http import JsonResponse

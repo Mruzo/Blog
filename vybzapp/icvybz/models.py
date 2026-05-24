@@ -1,6 +1,5 @@
 from django.db import models
 from django.db.models import F
-from django.contrib.auth.models import User
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
@@ -8,7 +7,7 @@ from django.conf import settings
 import uuid
 
 class Comic(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comics')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comics')
     title = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
     comic_image = models.ImageField(upload_to='comic_images/', null=True, blank=True)
@@ -108,7 +107,7 @@ class Episode(models.Model):
 
 
 class Intersection(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='intersections')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='intersections')
     name = models.CharField(max_length=100, default="Main Intersection")
     model_gltf = models.FileField(upload_to='intersections/', blank=True, null=True)  # GLTF for Android/Web
     model_usdz = models.FileField(upload_to='intersections/', blank=True, null=True)  # USDZ for iPhones
@@ -139,7 +138,7 @@ class Scene(models.Model):
         return f"E{self.episode.episode_number} - Sc{self.order}"
 
 class Character(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='characters')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='characters')
     story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='characters', null=True, blank=True, help_text="Story this character belongs to")
     name = models.CharField(max_length=50)
     personality = models.CharField(max_length=50, blank=True)
@@ -376,7 +375,7 @@ class Dialogue(models.Model):
 
 class ComicComment(models.Model):
     comment_cont = models.TextField(max_length=200, verbose_name='Comment')
-    user_name = models.ForeignKey(User, default=1, null=True, on_delete=models.SET_NULL)
+    user_name = models.ForeignKey(settings.AUTH_USER_MODEL, default=1, null=True, on_delete=models.SET_NULL)
     episode = models.ForeignKey('Episode', on_delete=models.CASCADE, related_name='comments')
     comment_date = models.DateTimeField(default=timezone.now)
     approved_comment = models.BooleanField(default=False)
@@ -428,7 +427,7 @@ class TrafficSource(models.Model):
 class Studio(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_studios')
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_studios')
     is_public = models.BooleanField(default=True)
     avatar_url = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="Timestamp when record was created. Nullable for imports from other Django apps.")
@@ -460,7 +459,7 @@ class StudioCollaborator(models.Model):
     ]
 
     studio = models.ForeignKey(Studio, on_delete=models.CASCADE, related_name='collaborators')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='studio_collaborations')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='studio_collaborations')
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
     joined_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
@@ -485,7 +484,7 @@ class StudioCollaborationRequest(models.Model):
     ]
     
     studio = models.ForeignKey(Studio, on_delete=models.CASCADE, related_name='collaboration_requests')
-    requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='studio_collaboration_requests')
+    requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='studio_collaboration_requests')
     role = models.CharField(max_length=50, choices=StudioCollaborator.ROLE_CHOICES, default='writer')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     message = models.TextField(blank=True, null=True)
@@ -609,7 +608,7 @@ class AudioTrack(models.Model):
     max_distance = models.FloatField(default=10.0, help_text="Maximum audible distance")
 
     # Metadata
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_audio_tracks')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_audio_tracks')
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="Timestamp when record was created. Nullable for imports from other Django apps.")
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True, help_text="Timestamp when record was last updated. Nullable for imports from other Django apps.")
     is_public = models.BooleanField(default=False)
@@ -709,9 +708,9 @@ class CollaborationInvite(models.Model):
     
     # Core fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    inviter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_invites')
+    inviter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_invites')
     invitee_email = models.EmailField()
-    invitee_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_invites', null=True, blank=True)
+    invitee_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_invites', null=True, blank=True)
     story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='collaboration_invites')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='viewer')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
@@ -893,9 +892,9 @@ class StoryCollaborator(models.Model):
     ]
     
     story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='collaborators')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='story_collaborations')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='story_collaborations')
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='viewer')
-    invited_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='invited_collaborators', null=True, blank=True)
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='invited_collaborators', null=True, blank=True)
     joined_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
     

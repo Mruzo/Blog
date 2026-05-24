@@ -456,7 +456,7 @@ const ProductList: React.FC<ProductListProps> = () => {
                 <p className="product-landing__eyebrow">Desk mat</p>
                 <h2 className="product-landing__h1">Designed for what you see</h2>
                 <p className="product-landing__lead">
-                A desk mat that brings subtle vibrance and comfort to the parts of your workspace that actually stay visible.
+                Bringing subtle vibrance and comfort to the visible parts of your workspace.
                 </p>
                 <div className="product-landing__ctaRow">
                   <button
@@ -545,8 +545,8 @@ const ProductList: React.FC<ProductListProps> = () => {
               <div className="product-landing__twoColCopy">
                 <h3 className="product-landing__h2">Most desk mats are designed inefficiently.</h3>
                 <p className="product-landing__body">
-                When you actually use a desk mat, your keyboard and mouse cover most of the mat's surface.
-                So why is every inch designed the same?.
+                Your keyboard and mouse covers most of the mat's surface.
+                So why does the entire surace need to have the same design?
                 </p>
               </div>
             </div>
@@ -578,8 +578,8 @@ const ProductList: React.FC<ProductListProps> = () => {
         <section ref={buySectionRef} className="product-landing__section product-landing__buy" data-reveal>
           <div className="product-landing__container">
             <div className="product-landing__buyHeader">
-              <h3 className="product-landing__h2">Experience the Bliss</h3>
-              <p className="product-landing__body">Premium feel, clean look, built for daily use.</p>
+              <h3 className="product-landing__h2">The Ethnic Bliss Experience</h3>
+              <p className="product-landing__body">Guarantees premium feel and a clean look for everyday utility.</p>
             </div>
 
             <div className="product-landing__buyGrid">

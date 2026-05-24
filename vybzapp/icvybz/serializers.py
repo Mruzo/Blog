@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Comic, Season, Episode, Dialogue, Character, Studio, AudioTrack, CollaborationInvite, StoryCollaborator, StudioCollaborator, StudioCollaborationRequest
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class ComicSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source='user.username', read_only=True)

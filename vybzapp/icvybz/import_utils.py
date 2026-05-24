@@ -6,7 +6,9 @@ from other Django applications that don't have the timestamp fields.
 """
 
 from django.utils import timezone
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from .models import Comic, Season, Episode, Character, Dialogue, POV
 
 

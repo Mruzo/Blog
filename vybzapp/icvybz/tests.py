@@ -4,7 +4,9 @@ Run with: python manage.py test icvybz
 """
 
 from django.test import TestCase
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from .models import Comic, Season, Episode, Character, Dialogue, POV, Studio, StudioCollaborator, StoryCollaborator, AudioTrack

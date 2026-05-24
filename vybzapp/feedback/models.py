@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinLengthValidator
 
@@ -45,7 +45,7 @@ class FeedbackTicket(models.Model):
     
     # Core fields
     ticket_number = models.CharField(max_length=50, unique=True, db_index=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedback_tickets')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedback_tickets')
     submitted_by_name = models.CharField(max_length=100)
     submitted_by_email = models.EmailField()
     
@@ -59,7 +59,7 @@ class FeedbackTicket(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
     
     # Assignment
-    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
     
     # Source tracking
     source = models.CharField(max_length=50, choices=SOURCE_CHOICES, default='contact_form')
@@ -117,7 +117,7 @@ class TicketComment(models.Model):
     """Comments/notes on tickets (both user and staff)"""
     
     ticket = models.ForeignKey(FeedbackTicket, on_delete=models.CASCADE, related_name='comments')
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ticket_comments')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='ticket_comments')
     author_name = models.CharField(max_length=100, blank=True)  # For non-logged-in users
     author_email = models.EmailField(blank=True)  # For non-logged-in users
     content = models.TextField(validators=[MinLengthValidator(1)])
@@ -141,7 +141,7 @@ class TicketStatusHistory(models.Model):
     ticket = models.ForeignKey(FeedbackTicket, on_delete=models.CASCADE, related_name='status_history')
     old_status = models.CharField(max_length=20, null=True, blank=True)
     new_status = models.CharField(max_length=20)
-    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(blank=True)  # Optional note about change
     created_at = models.DateTimeField(auto_now_add=True)
     

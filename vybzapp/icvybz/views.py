@@ -1542,7 +1542,7 @@ def my_studio_api(request):
 
 def preview_collaboration_email(request):
     """Preview the collaboration invitation email template with sample data"""
-    from django.contrib.auth.models import User
+    from django.contrib.auth import get_user_model
     from .models import CollaborationInvite, Comic
     
     # Create mock data for preview
@@ -1600,8 +1600,9 @@ def preview_all_emails(request):
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden("Email preview is only available in development mode.")
     
-    from django.contrib.auth.models import User
+    from django.contrib.auth import get_user_model
     from django.template.loader import render_to_string
+    User = get_user_model()
     from decimal import Decimal
     from snmov.models import Product, Order, OrderItem, ShippingAddress, ProductNotification
     

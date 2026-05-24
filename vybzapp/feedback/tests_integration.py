@@ -1,6 +1,8 @@
 """Integration tests for feedback system with contact form"""
 from django.test import TestCase
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from unittest.mock import patch, MagicMock

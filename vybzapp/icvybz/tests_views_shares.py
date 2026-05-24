@@ -9,7 +9,9 @@ This test suite covers:
 """
 
 from django.test import TestCase, Client
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status

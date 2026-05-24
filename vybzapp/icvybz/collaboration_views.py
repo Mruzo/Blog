@@ -3,7 +3,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.db.models import Q
 from django.utils import timezone
 from .models import Comic, CollaborationInvite, StoryCollaborator, Studio, StudioCollaborator

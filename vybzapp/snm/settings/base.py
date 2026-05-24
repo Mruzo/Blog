@@ -135,6 +135,9 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Extended user (email verification) — must match snmov.models.User
+AUTH_USER_MODEL = 'snmov.User'
+
 TINYMCE_DEFAULT_CONFIG = {
     'height': 360,
     'width': 'auto',

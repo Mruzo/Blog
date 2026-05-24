@@ -6,8 +6,11 @@ from rest_framework import status
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from django.contrib.auth import get_user_model
 
 from .models import FeedbackTicket, TicketComment
+
+User = get_user_model()
 from .serializers import (
     FeedbackTicketSerializer, FeedbackTicketListSerializer,
     FeedbackTicketCreateSerializer, TicketCommentSerializer,
@@ -239,7 +242,6 @@ def assign_ticket(request, ticket_id):
     
     assigned_to_id = request.data.get('assigned_to')
     if assigned_to_id:
-        from django.contrib.auth.models import User
         try:
             assigned_user = User.objects.get(id=assigned_to_id)
             if not assigned_user.is_staff:
