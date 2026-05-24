@@ -40,42 +40,48 @@ class Migration(migrations.Migration):
     replaces = [('snmov', '0001_initial'), ('snmov', '0002_alter_siteimage_object_id'), ('snmov', '0003_siteimage_product'), ('snmov', '0004_alter_siteimage_object_id'), ('snmov', '0005_alter_siteimage_product'), ('snmov', '0006_auto_20250501_2030'), ('snmov', '0007_shippingaddress_user'), ('snmov', '0008_order_shipping_rate_id'), ('snmov', '0009_auto_20250506_2154'), ('snmov', '0010_auto_20250515_2007'), ('snmov', '0011_auto_20250516_1850'), ('snmov', '0012_auto_20250516_2016'), ('snmov', '0013_auto_20250516_2344'), ('snmov', '0014_alter_user_table'), ('snmov', '0015_auto_20250517_0001'), ('snmov', '0002_update_site_domain'), ('snmov', '0016_merge_0002_update_site_domain_0015_auto_20250517_0001'), ('snmov', '0017_auto_20250518_0312'), ('snmov', '0018_alter_siteimage_object_id'), ('snmov', '0019_add_saved_address_fields'), ('snmov', '0020_add_product_notification_fields'), ('snmov', '0021_add_email_preferences_and_logging'), ('snmov', '0022_add_newsletter_subscription'), ('snmov', '0023_add_security_models'), ('snmov', '0024_fix_security_log_fields')]
 
     dependencies = [
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('contenttypes', '0002_remove_content_type_name'),
         ('sites', '0002_alter_domain_unique'),
         ('auth', '0012_alter_user_first_name_max_length'),
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='User',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('password', models.CharField(max_length=128, verbose_name='password')),
-                ('last_login', models.DateTimeField(blank=True, null=True, verbose_name='last login')),
-                ('is_superuser', models.BooleanField(default=False, help_text='Designates that this user has all permissions without explicitly assigning them.', verbose_name='superuser status')),
-                ('username', models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.', max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator()], verbose_name='username')),
-                ('first_name', models.CharField(blank=True, max_length=150, verbose_name='first name')),
-                ('last_name', models.CharField(blank=True, max_length=150, verbose_name='last name')),
-                ('email', models.EmailField(blank=True, max_length=254, verbose_name='email address')),
-                ('is_staff', models.BooleanField(default=False, help_text='Designates whether the user can log into this admin site.', verbose_name='staff status')),
-                ('is_active', models.BooleanField(default=True, help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.', verbose_name='active')),
-                ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
-                ('is_email_verified', models.BooleanField(default=False)),
-                ('email_verification_token', models.CharField(blank=True, max_length=100, null=True)),
-                ('email_verification_sent_at', models.DateTimeField(blank=True, null=True)),
-                ('groups', models.ManyToManyField(blank=True, help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.', related_name='user_set', related_query_name='user', to='auth.Group', verbose_name='groups')),
-                ('user_permissions', models.ManyToManyField(blank=True, help_text='Specific permissions for this user.', related_name='user_set', related_query_name='user', to='auth.Permission', verbose_name='user permissions')),
+        # State-only: prod applied this squashed migration when AUTH_USER_MODEL was
+        # auth.User, so User was never registered on snmov. Replay adds snmov.user.
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.CreateModel(
+                    name='User',
+                    fields=[
+                        ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                        ('password', models.CharField(max_length=128, verbose_name='password')),
+                        ('last_login', models.DateTimeField(blank=True, null=True, verbose_name='last login')),
+                        ('is_superuser', models.BooleanField(default=False, help_text='Designates that this user has all permissions without explicitly assigning them.', verbose_name='superuser status')),
+                        ('username', models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.', max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator()], verbose_name='username')),
+                        ('first_name', models.CharField(blank=True, max_length=150, verbose_name='first name')),
+                        ('last_name', models.CharField(blank=True, max_length=150, verbose_name='last name')),
+                        ('email', models.EmailField(blank=True, max_length=254, verbose_name='email address')),
+                        ('is_staff', models.BooleanField(default=False, help_text='Designates whether the user can log into this admin site.', verbose_name='staff status')),
+                        ('is_active', models.BooleanField(default=True, help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.', verbose_name='active')),
+                        ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
+                        ('is_email_verified', models.BooleanField(default=False)),
+                        ('email_verification_token', models.CharField(blank=True, max_length=100, null=True)),
+                        ('email_verification_sent_at', models.DateTimeField(blank=True, null=True)),
+                        ('groups', models.ManyToManyField(blank=True, help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.', related_name='user_set', related_query_name='user', to='auth.Group', verbose_name='groups')),
+                        ('user_permissions', models.ManyToManyField(blank=True, help_text='Specific permissions for this user.', related_name='user_set', related_query_name='user', to='auth.Permission', verbose_name='user permissions')),
+                    ],
+                    options={
+                        'verbose_name': 'User',
+                        'verbose_name_plural': 'Users',
+                        'db_table': 'snmov_User',
+                        'swappable': 'AUTH_USER_MODEL',
+                    },
+                    managers=[
+                        ('objects', django.contrib.auth.models.UserManager()),
+                    ],
+                ),
             ],
-            options={
-                'verbose_name': 'User',
-                'verbose_name_plural': 'Users',
-                'db_table': 'snmov_User',
-                'swappable': 'AUTH_USER_MODEL',
-            },
-            managers=[
-                ('objects', django.contrib.auth.models.UserManager()),
-            ],
+            database_operations=[],
         ),
         migrations.CreateModel(
             name='About',
