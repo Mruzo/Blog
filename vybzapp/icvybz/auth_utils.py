@@ -14,6 +14,20 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+def resolve_username_for_login(identifier):
+    """
+    Accept username or email for login. Returns username for AuthTokenSerializer,
+    or None if an email was given but no account matches (caller should fail auth).
+    """
+    identifier = (identifier or '').strip()
+    if not identifier:
+        return None
+    if '@' in identifier:
+        user = User.objects.filter(email__iexact=identifier).first()
+        return user.username if user else None
+    return identifier
+
+
 def get_user_from_uidb64(uidb64):
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))

@@ -19,6 +19,7 @@ from django.contrib.auth.forms import SetPasswordForm
 from .auth_forms import PasswordResetFormAllowInactive
 from .auth_utils import (
     get_user_from_uidb64,
+    resolve_username_for_login,
     schedule_post_password_reset_verification,
 )
 from django.core.mail import send_mail
@@ -1369,8 +1370,19 @@ def login_api(request):
     
     # Preserve cart from anonymous session before authentication
     anonymous_cart = request.session.get('cart', {})
-    
-    serializer = AuthTokenSerializer(data=request.data)
+
+    login_data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+    raw_identifier = login_data.get('username')
+    resolved_username = resolve_username_for_login(raw_identifier)
+    if resolved_username is not None:
+        login_data['username'] = resolved_username
+    elif raw_identifier and '@' in str(raw_identifier):
+        return Response(
+            {'non_field_errors': ['Unable to log in with provided credentials.']},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    serializer = AuthTokenSerializer(data=login_data)
     if serializer.is_valid():
         user = serializer.validated_data['user']
         

@@ -71,7 +71,7 @@ const Login: React.FC = () => {
       setIsLoggingIn(false);
       const errorMessage = getApiErrorMessage(
         error,
-        'Invalid username or password. Please try again.'
+        'Invalid username, email, or password. Please try again.'
       );
       setMessage(errorMessage);
       setMessageType('danger');
@@ -122,7 +122,7 @@ const Login: React.FC = () => {
                 <div className="row">
                   <div className="col-6 mb-3 p-1">
                     <label htmlFor="username" className="form-label">
-                      Username
+                      Username or email
                     </label>
                     <input
                       type="text"
@@ -134,6 +134,7 @@ const Login: React.FC = () => {
                       required
                       autoFocus
                       autoComplete="username"
+                      placeholder="Username or email"
                     />
                   </div>
 
