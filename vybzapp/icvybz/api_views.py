@@ -1,5 +1,5 @@
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -1335,8 +1335,9 @@ def decline_studio_collaboration_request(request, studio_id, request_id):
 
 
 # Authentication API Views
-@csrf_exempt  # Exempt from CSRF since we use Token authentication, not Session
+@csrf_exempt  # Django middleware only; DRF SessionAuthentication still enforces CSRF without the below
 @api_view(['POST'])
+@authentication_classes([])  # No session auth → no CSRF required (HttpOnly csrftoken in production)
 @permission_classes([AllowAny])
 def login_api(request):
     """
@@ -1419,8 +1420,9 @@ def login_api(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@csrf_exempt  # Exempt from CSRF since this is a public API endpoint
+@csrf_exempt
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def password_reset_api(request):
     """
@@ -1467,6 +1469,7 @@ def password_reset_api(request):
 
 @csrf_exempt
 @api_view(['GET', 'POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def password_reset_confirm_api(request, uidb64, token):
     """GET: validate link. POST: set password; unverified users get a verification email."""
@@ -1591,8 +1594,9 @@ def get_current_user_api(request):
     })
 
 
-@csrf_exempt  # Exempt from CSRF since this is a public API endpoint
+@csrf_exempt
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def register_api(request):
     """
