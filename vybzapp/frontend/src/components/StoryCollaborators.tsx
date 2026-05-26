@@ -7,62 +7,63 @@ import MessagePopup from './MessagePopup';
 interface StudioCollaborator {
   id: number;
   user: User;
-  role: string; // Primary role for backward compatibility
-  roles?: string[]; // All roles this user has
+  role: string;
+  roles?: string[];
   is_story_collaborator: boolean;
-  story_roles?: string[]; // Roles this user has on the story
+  story_roles?: string[];
 }
+
+const formatRoleLabel = (role: string): string =>
+  role
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
 const StoryCollaborators: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const storyId = id ? parseInt(id) : 0;
+  const storyId = id ? parseInt(id, 10) : 0;
 
   const [studioCollaborators, setStudioCollaborators] = useState<StudioCollaborator[]>([]);
-  // Track selected roles per user: Map<userId, Set<role>>
   const [selectedUserRoles, setSelectedUserRoles] = useState<Map<number, Set<string>>>(new Map());
   const [story, setStory] = useState<Story | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string>('');
+  const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
 
-  // Check if current user is the story owner
   const isOwner = story && currentUser ? story.user === currentUser.id : false;
 
-  // Load studio collaborators for the story
   const loadStudioCollaborators = async () => {
     if (!storyId) return;
     try {
       setLoading(true);
       const data = await collaborationService.getStudioCollaboratorsForStory(storyId);
       setStudioCollaborators(data);
-      
-      // Set selected roles per user based on who is already a story collaborator
+
       const selectedRoles = new Map<number, Set<string>>();
       data.forEach((collab: StudioCollaborator) => {
         if (collab.is_story_collaborator && collab.story_roles) {
           selectedRoles.set(collab.user.id, new Set(collab.story_roles));
         } else if (collab.is_story_collaborator) {
-          // Fallback: if story_roles not provided, use all their studio roles
           selectedRoles.set(collab.user.id, new Set(collab.roles || [collab.role]));
         }
       });
       setSelectedUserRoles(selectedRoles);
-      
       setError(null);
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to load studio collaborators';
-      setError(errorMsg);
+    } catch (err: unknown) {
+      const detail =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined;
+      setError(detail || 'Failed to load studio collaborators');
       console.error('Error loading studio collaborators:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load story data to check ownership
   const loadStory = async () => {
     if (!storyId) return;
     try {
@@ -73,7 +74,6 @@ const StoryCollaborators: React.FC = () => {
     }
   };
 
-  // Load current user to check ownership
   const loadCurrentUser = async () => {
     try {
       const userData = await apiService.getCurrentUser();
@@ -92,11 +92,10 @@ const StoryCollaborators: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyId]);
 
-  // Handle role toggle for a specific user
   const handleToggleRole = (userId: number, role: string) => {
     const newSelectedRoles = new Map(selectedUserRoles);
-    const userRoles = newSelectedRoles.get(userId) || new Set<string>();
-    
+    const userRoles = new Set(newSelectedRoles.get(userId) || []);
+
     if (userRoles.has(role)) {
       userRoles.delete(role);
       if (userRoles.size === 0) {
@@ -108,43 +107,38 @@ const StoryCollaborators: React.FC = () => {
       userRoles.add(role);
       newSelectedRoles.set(userId, userRoles);
     }
-    
+
     setSelectedUserRoles(newSelectedRoles);
   };
-  
-  // Check if a user has any selected roles
-  const hasSelectedRoles = (userId: number): boolean => {
-    return selectedUserRoles.has(userId) && (selectedUserRoles.get(userId)?.size || 0) > 0;
-  };
-  
-  // Check if a specific role is selected for a user
-  const isRoleSelected = (userId: number, role: string): boolean => {
-    return selectedUserRoles.get(userId)?.has(role) || false;
-  };
 
-  // Handle save
+  const hasSelectedRoles = (userId: number): boolean =>
+    selectedUserRoles.has(userId) && (selectedUserRoles.get(userId)?.size || 0) > 0;
+
+  const isRoleSelected = (userId: number, role: string): boolean =>
+    selectedUserRoles.get(userId)?.has(role) || false;
+
   const handleSave = async () => {
     if (!storyId) return;
-    
+
     try {
       setSaving(true);
-      // Convert Map to array of {user_id, roles} objects
       const userRolesArray = Array.from(selectedUserRoles.entries()).map(([userId, roles]) => ({
         user_id: userId,
-        roles: Array.from(roles)
+        roles: Array.from(roles),
       }));
-      
+
       await collaborationService.bulkAssignStoryCollaborators(storyId, userRolesArray);
-      
-      // Reload to get updated state
       await loadStudioCollaborators();
-      
+
       setMessage('Collaborators updated successfully');
       setMessageType('success');
       setShowMessage(true);
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to update collaborators';
-      setMessage(errorMsg);
+    } catch (err: unknown) {
+      const detail =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined;
+      setMessage(detail || 'Failed to update collaborators');
       setMessageType('danger');
       setShowMessage(true);
       console.error('Error saving collaborators:', err);
@@ -153,184 +147,148 @@ const StoryCollaborators: React.FC = () => {
     }
   };
 
-  // Get role color for badge
-  const getRoleColor = (role: string): string => {
-    const roleColors: { [key: string]: string } = {
-      'writer': 'primary',
-      '3d_artist': 'success',
-      'voice_actor': 'info',
-      'sound_engineer': 'warning',
-      'cinematographer': 'danger',
-    };
-    return roleColors[role] || 'secondary';
-  };
-
-  if (loading) {
-    return (
-      <div className="text-center py-4">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-        <p className="mt-2 subtext-btn-sm">Loading collaborators...</p>
-      </div>
-    );
-  }
-
-  if (!isOwner) {
-    return (
-      <div className="alert alert-info" role="alert">
-        <i className="fas fa-info-circle me-2"></i>
-        Only the story owner can manage collaborators.
-      </div>
-    );
-  }
-
-  return (
-    <div className="container-fluid p-0">
-      <div className="row">
-        <div className="col">
-          <div className="d-flex justify-content-between align-items-center mb-1">
-            <h3 className="subtext-btn mb-0 font-gillsans">Story Collaborators</h3>
-            <button
-              className="btn btn-primary subtext-btn-sm"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-save me-2"></i>
-                  &nbsp;Save
-                </>
-              )}
-            </button>
+  const panelBody = () => {
+    if (loading) {
+      return (
+        <div className="story-collab__loading" aria-busy="true">
+          <div className="spinner-border text-dark" role="status">
+            <span className="visually-hidden">Loading collaborators</span>
           </div>
+          <p className="product-landing__body mb-0">Loading collaborators…</p>
+        </div>
+      );
+    }
 
-          <MessagePopup
-            message={message}
-            type={messageType}
-            show={showMessage}
-            onClose={() => setShowMessage(false)}
-            duration={3000}
-          />
+    if (!isOwner) {
+      return (
+        <div className="story-collab__notice" role="status">
+          <i className="fas fa-info-circle" aria-hidden />
+          <p className="mb-0">Only the story owner can manage collaborators.</p>
+        </div>
+      );
+    }
 
-          {error && (
-            <div className="alert alert-danger" role="alert">
-              <i className="fas fa-exclamation-triangle me-2"></i>
-              {error}
-            </div>
-          )}
+    if (error) {
+      return (
+        <div className="story-collab__notice story-collab__notice--danger" role="alert">
+          <i className="fas fa-exclamation-triangle" aria-hidden />
+          <p className="mb-0">{error}</p>
+        </div>
+      );
+    }
 
-          {studioCollaborators.length === 0 ? (
-            <div className="alert alert-info" role="alert">
-              <i className="fas fa-info-circle me-2"></i>
-              No studio collaborators available. Add collaborators to your studio first.
-            </div>
-          ) : (
-            <div className="card">
-              <div className="card-header">
-                <h5 className="mb-0 subtext-btn-sm font-quicksand">
-                  Select Collaborators for This Story
-                </h5>
-                
-              </div>
-              <div className="card-body p-0">
-                <div className="list-group">
-                  {studioCollaborators.map((collab) => {
-                    const userRoles = collab.roles || [collab.role];
-                    const hasSelected = hasSelectedRoles(collab.user.id);
-                    return (
-                    <div
-                      key={collab.id}
-                      className="list-group-item p-1"
-                      style={{ 
-                        backgroundColor: hasSelected ? '#e7f3ff' : 'transparent',
-                        borderLeft: hasSelected ? '4px solid #0d6efd' : '4px solid transparent',
-                        borderTop: hasSelected ? '2px solid #0d6efd' : '1px solid rgba(0,0,0,.125)',
-                        borderBottom: hasSelected ? '2px solid #0d6efd' : '1px solid rgba(0,0,0,.125)',
-                        borderRight: hasSelected ? '2px solid #0d6efd' : '1px solid rgba(0,0,0,.125)',
-                        transition: 'all 0.2s ease-in-out'
-                      }}
-                    >
-                      <div className="row g-2">
-                        {/* Column 1: Individual ID Information */}
-                        <div className="col-5 col-sm-4">
-                          <div className="d-flex align-items-center">
-                            <div className="me-2">
-                              {collab.user.avatar ? (
-                                <img
-                                  src={collab.user.avatar}
-                                  alt={collab.user.username}
-                                  className="rounded-circle"
-                                  style={{ width: '40px', height: '40px', objectFit: 'cover' }}
-                                />
-                              ) : (
-                                <div
-                                  className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
-                                  style={{ width: '40px', height: '40px', fontSize: '1rem' }}
-                                >
-                                  {(collab.user.username || 'U').charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                              <div className="subtext-btn-sm fw-bold font-quicksand mb-0" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                @{collab.user.username}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Column 2: Roles */}
-                        <div className="col-7 col-sm-8">
-                          <div className="d-flex flex-wrap gap-2 align-items-center">
-                            {userRoles.map((role: string, idx: number) => {
-                              const roleSelected = isRoleSelected(collab.user.id, role);
-                              return (
-                                <div key={idx} className="d-flex align-items-center gap-1">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    checked={roleSelected}
-                                    onChange={() => handleToggleRole(collab.user.id, role)}
-                                    style={{
-                                      width: '1rem',
-                                      height: '1rem',
-                                      cursor: 'pointer',
-                                      borderColor: roleSelected ? '#0d6efd' : '#6c757d',
-                                      backgroundColor: roleSelected ? '#0d6efd' : '#fff',
-                                      margin: 0,
-                                      flexShrink: 0
-                                    }}
-                                    aria-label={`${role} role ${roleSelected ? 'selected' : 'not selected'}`}
-                                  />&nbsp;&nbsp;&nbsp;
-                                  <span 
-                                    className={`badge bg-${getRoleColor(role)} ${roleSelected ? 'opacity-100' : 'opacity-50'}`}
-                                    style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
-                                    onClick={() => handleToggleRole(collab.user.id, role)}
-                                  >
-                                   {role.replace('_', ' ').toUpperCase()}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
+    if (studioCollaborators.length === 0) {
+      return (
+        <div className="story-collab__empty">
+          <div className="stories-landing__emptyIcon" aria-hidden>
+            <i className="fas fa-users" />
+          </div>
+          <p className="product-landing__body mb-0">
+            No studio collaborators yet. Add teammates from your studio first, then assign story roles here.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <p className="story-collab__lead">
+          Choose which studio teammates work on this story and which roles they hold. Tap a role to toggle it on or off.
+        </p>
+        <ul className="story-collab__list">
+          {studioCollaborators.map((collab) => {
+            const userRoles = collab.roles || [collab.role];
+            const active = hasSelectedRoles(collab.user.id);
+            return (
+              <li
+                key={collab.id}
+                className={`story-collab__row${active ? ' story-collab__row--active' : ''}`}
+              >
+                <div className="story-collab__member">
+                  {collab.user.avatar ? (
+                    <img
+                      src={collab.user.avatar}
+                      alt=""
+                      className="story-collab__avatar"
+                    />
+                  ) : (
+                    <div className="story-collab__avatar story-collab__avatar--placeholder" aria-hidden>
+                      {(collab.user.username || 'U').charAt(0).toUpperCase()}
                     </div>
+                  )}
+                  <span className="story-collab__handle">@{collab.user.username}</span>
+                </div>
+                <div className="story-collab__roles" role="group" aria-label={`Roles for @${collab.user.username}`}>
+                  {userRoles.map((role) => {
+                    const selected = isRoleSelected(collab.user.id, role);
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        className={`story-collab__rolePill${selected ? ' story-collab__rolePill--on' : ''}`}
+                        data-role={role}
+                        aria-pressed={selected}
+                        onClick={() => handleToggleRole(collab.user.id, role)}
+                      >
+                        {formatRoleLabel(role)}
+                      </button>
                     );
                   })}
                 </div>
-              </div>
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+  };
+
+  return (
+    <>
+      <MessagePopup
+        message={message}
+        type={messageType}
+        show={showMessage}
+        onClose={() => setShowMessage(false)}
+        duration={3000}
+      />
+
+      <div className="my-studio__panel">
+        <div className="my-studio__panelHead">
+          <h2 className="my-studio__panelTitle">
+            <i className="fas fa-users" aria-hidden />
+            <span className="my-studio__panelTitleText">Story collaborators</span>
+          </h2>
+          {isOwner && !loading && (
+            <div className="my-studio__panelHeadActions">
+              <button
+                type="button"
+                className="product-landing__ctaPrimary story-manage__btnCompact"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm me-1"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-save me-1" aria-hidden />
+                    Save
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>
+        <div className="my-studio__panelBody">{panelBody()}</div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -627,7 +627,7 @@ const Stories: React.FC = () => {
 
   if (error) {
     return (
-      <div className="product-landing">
+      <div className="product-landing stories-landing">
         <div className="product-landing__container product-landing__section">
           <div className="store-page__error" role="alert">
             <i className="fas fa-exclamation-triangle" aria-hidden />
@@ -639,9 +639,9 @@ const Stories: React.FC = () => {
   }
 
   return (
-    <div className="product-landing">
+    <div className="product-landing stories-landing">
       <MetaTags
-        title="Immersive Stories"
+        title="Immersive Comics"
         description="Browse all published interactive & immersive stories"
         keywords="3D comics, published stories, interactive narratives, immersive comics"
       />
@@ -650,12 +650,12 @@ const Stories: React.FC = () => {
         <div className="product-landing__container">
           <p className="product-landing__eyebrow">{studio ? 'Studio' : 'Browse'}</p>
           <h1 className="product-landing__h1">
-            {studio?.name ? `Stories — ${studio.name}` : 'Immersive stories'}
+            {studio?.name ? `Stories — ${studio.name}` : 'Immersive Comics'}
           </h1>
           <p className="product-landing__lead">
             {studio
               ? 'Published stories linked to this studio. Open a card to preview in 3D and share episodes.'
-              : 'Explore published 3D comic stories — preview scenes, see collaborators, and share your favorites.'}
+              : 'Explore published stories — explore scenes and collaborators, and share your favorites.'}
           </p>
           {studio && (
             <div className="stories-landing__contextStrip">
@@ -705,6 +705,7 @@ const Stories: React.FC = () => {
             >
               {comics.map((comic) => (
                 <article key={comic.id} className="stories-landing__card">
+                  <div className="stories-landing__cardBody">
                   <div className="stories-landing__cardMeta">
                     <span>
                       <i className="fas fa-user me-1" aria-hidden />
@@ -779,7 +780,8 @@ const Stories: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  
+                  </div>
+
                   {storyData.has(comic.id) && (
                     <div className="stories-landing__viewerWrap">
                       <Comic3DViewer
@@ -823,6 +825,7 @@ const Stories: React.FC = () => {
                     </div>
                   )}
 
+                  <div className="stories-landing__cardFooter">
                   <p className="stories-landing__meta" aria-label="Total story views">
                     <span className="stories-landing__metaNum">{(comic.total_views || 0).toLocaleString()}</span>{' '}
                     views
@@ -921,6 +924,7 @@ const Stories: React.FC = () => {
                       </button>
                     </div>
                   )}
+                  </div>
                 </article>
               ))}
             </div>

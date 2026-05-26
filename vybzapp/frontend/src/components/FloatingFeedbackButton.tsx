@@ -16,58 +16,57 @@ const FloatingFeedbackButton: React.FC = () => {
     setShowModal(false);
   };
 
-  // Build context from FeedbackContext and current location
-  const context = feedbackContext ? {
-    storyId: feedbackContext.storyId,
-    storyTitle: feedbackContext.storyTitle,
-    step: feedbackContext.step,
-    page: feedbackContext.page || getPageName(location.pathname),
-    url: window.location.href
-  } : {
-    page: getPageName(location.pathname),
-    url: window.location.href
-  };
+  const context = feedbackContext
+    ? {
+        storyId: feedbackContext.storyId,
+        storyTitle: feedbackContext.storyTitle,
+        step: feedbackContext.step,
+        page: feedbackContext.page || getPageName(location.pathname),
+        url: window.location.href,
+      }
+    : {
+        page: getPageName(location.pathname),
+        url: window.location.href,
+      };
 
-  // Check if we're on the Stories page (which has a create story button in bottom-right)
-  const isStoriesPage = location.pathname === '/immersivecomics/' || 
-                        location.pathname === '/immersivecomics/dashboard/';
+  const isStoriesPage =
+    location.pathname === '/immersivecomics/' || location.pathname === '/immersivecomics/dashboard/';
 
-  // Adjust position based on page - if Stories page, position on left side or above create button
-  // On mobile, position higher to avoid fixed navbar at bottom (~70px tall)
-  // Button sticks to the edge of the screen (right: 0)
-  const buttonStyle = isStoriesPage ? {
-    position: 'fixed' as const,
-    bottom: '90px', // Position above the create story button (60px height + 20px bottom + 10px gap)
-    right: '0',
-    zIndex: 1030,
-    borderRadius: '50%',
-    width: '40px',
-    height: '40px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFBC00',
-    borderColor: '#FFBC00',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    transition: 'all 0.3s ease',
-    cursor: 'pointer'
-  } : {
-    position: 'fixed' as const,
-    bottom: '20px',
-    right: '0',
-    zIndex: 1030,
-    borderRadius: '50%',
-    width: '40px',
-    height: '40px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFBC00',
-    borderColor: '#FFBC00',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    transition: 'all 0.3s ease',
-    cursor: 'pointer'
-  };
+  const buttonStyle = isStoriesPage
+    ? ({
+        position: 'fixed' as const,
+        bottom: '90px',
+        right: '0',
+        zIndex: 1030,
+        borderRadius: '50%',
+        width: '40px',
+        height: '40px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFBC00',
+        borderColor: '#FFBC00',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        transition: 'all 0.3s ease',
+        cursor: 'pointer',
+      } as const)
+    : ({
+        position: 'fixed' as const,
+        bottom: '20px',
+        right: '0',
+        zIndex: 1030,
+        borderRadius: '50%',
+        width: '40px',
+        height: '40px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFBC00',
+        borderColor: '#FFBC00',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        transition: 'all 0.3s ease',
+        cursor: 'pointer',
+      } as const);
 
   return (
     <>
@@ -94,9 +93,7 @@ const FloatingFeedbackButton: React.FC = () => {
   );
 };
 
-// Helper function to get a readable page name from pathname
 const getPageName = (pathname: string): string => {
-  // Immersive Comics routes
   if (pathname === '/' || pathname === '/home') return 'Home';
   if (pathname === '/immersivecomics/' || pathname === '/immersivecomics/dashboard/') return 'Stories';
   if (pathname.includes('/immersivecomics/story/create')) return 'Story Creation';
@@ -112,8 +109,6 @@ const getPageName = (pathname: string): string => {
   if (pathname.includes('/immersivecomics/studio/') && pathname.includes('/edit')) return 'Studio Edit';
   if (pathname.includes('/immersivecomics/import/')) return 'Story Import';
   if (pathname.includes('/studios/') && !pathname.includes('/edit')) return 'Studio Detail';
-  
-  // Product/Store routes
   if (pathname === '/product/') return 'Product Store';
   if (pathname === '/product/cart/') return 'Shopping Cart';
   if (pathname.includes('/product/cart/checkout')) return 'Checkout';
@@ -121,30 +116,23 @@ const getPageName = (pathname: string): string => {
   if (pathname.includes('/product/payment/success')) return 'Payment Success';
   if (pathname === '/product/my-orders/') return 'My Orders';
   if (pathname.includes('/product/order/')) return 'Order Detail';
-  
-  // Authentication routes
   if (pathname === '/login/') return 'Login';
   if (pathname === '/register/') return 'Register';
   if (pathname.includes('/password-reset/')) return 'Password Reset';
   if (pathname.includes('/password-reset-confirm/')) return 'Password Reset Confirm';
   if (pathname.includes('/password-reset-complete/')) return 'Password Reset Complete';
-  
-  // Other routes
   if (pathname === '/contact/') return 'Contact';
-  
-  // Fallback: try to extract meaningful name from path
-  const segments = pathname.split('/').filter(s => s);
+
+  const segments = pathname.split('/').filter((s) => s);
   if (segments.length > 0) {
     const lastSegment = segments[segments.length - 1];
-    // Capitalize and format the last segment
     return lastSegment
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
-  
+
   return 'Unknown Page';
 };
 
 export default FloatingFeedbackButton;
-

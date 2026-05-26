@@ -11,7 +11,7 @@ const FloatingActionMenu: React.FC = () => {
   const navigate = useNavigate();
   const feedbackContext = useContext(FeedbackContext);
   const { startGuide, availableGuide } = useGuide();
-  
+
   // Track authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const token = localStorage.getItem('authToken');
@@ -59,24 +59,26 @@ const FloatingActionMenu: React.FC = () => {
   };
 
   // Build context from FeedbackContext and current location
-  const context = feedbackContext ? {
-    storyId: feedbackContext.storyId,
-    storyTitle: feedbackContext.storyTitle,
-    step: feedbackContext.step,
-    page: feedbackContext.page || getPageName(location.pathname),
-    url: window.location.href
-  } : {
-    page: getPageName(location.pathname),
-    url: window.location.href
-  };
+  const context = feedbackContext
+    ? {
+        storyId: feedbackContext.storyId,
+        storyTitle: feedbackContext.storyTitle,
+        step: feedbackContext.step,
+        page: feedbackContext.page || getPageName(location.pathname),
+        url: window.location.href,
+      }
+    : {
+        page: getPageName(location.pathname),
+        url: window.location.href,
+      };
 
   // Check if we're on the Stories page
-  const isStoriesPage = location.pathname === '/immersivecomics/' || 
-                        location.pathname === '/immersivecomics/dashboard/';
+  const isStoriesPage =
+    location.pathname === '/immersivecomics/' || location.pathname === '/immersivecomics/dashboard/';
 
   // Determine positioning based on screen size
   const isMobile = window.innerWidth <= 768;
-  
+
   const getMenuStyle = () => {
     if (isMobile) {
       // Mobile: position behind navbar, 1/3 visible, at 2/3 of navbar width
@@ -91,26 +93,26 @@ const FloatingActionMenu: React.FC = () => {
         flexDirection: 'column' as const,
         alignItems: 'center' as const,
         gap: '12px',
-        opacity: 0.8 // 80% opacity
+        opacity: 0.8, // 80% opacity
       };
     }
-    // Desktop: positioned 65% from the left
+    // Desktop
     return {
       position: 'fixed' as const,
       bottom: '30px',
       left: '90%',
-      transform: 'translateX(-50%)', // Center the button at the 65% position
+      transform: 'translateX(-50%)',
       zIndex: 1030,
       display: 'flex',
       flexDirection: 'column' as const,
       alignItems: 'center' as const,
-      gap: '12px'
+      gap: '12px',
     };
   };
 
   return (
     <>
-      <div 
+      <div
         className={`floating-action-menu ${availableGuide ? 'fab-has-guide' : ''}`}
         style={getMenuStyle()}
         onMouseEnter={() => !isMobile && setIsExpanded(true)}
@@ -118,14 +120,14 @@ const FloatingActionMenu: React.FC = () => {
       >
         {/* Expanded Menu Items */}
         {isExpanded && (
-          <div 
+          <div
             className="fab-menu-items"
             style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
               marginBottom: '8px',
-              animation: 'fadeInUp 0.3s ease-out'
+              animation: 'fadeInUp 0.3s ease-out',
             }}
           >
             {/* Feedback Button */}
@@ -144,15 +146,15 @@ const FloatingActionMenu: React.FC = () => {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                 transition: 'all 0.3s ease',
                 cursor: 'pointer',
-                border: 'none'
+                border: 'none',
               }}
               title="Need Help? Send Feedback"
               aria-label="Open feedback form"
             >
-              <i className="fas fa-question-circle" style={{ fontSize: '24px', color: '#000' }}></i>
+              <i className="fas fa-question-circle" style={{ fontSize: '24px', color: '#000' }} />
             </button>
 
-            {/* Interactive Guide Button (only show if guide available for current page) */}
+            {/* Interactive Guide Button */}
             {availableGuide && (
               <button
                 onClick={handleStartGuide}
@@ -169,16 +171,16 @@ const FloatingActionMenu: React.FC = () => {
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
-                  border: 'none'
+                  border: 'none',
                 }}
                 title={`Start ${availableGuide.name}`}
                 aria-label="Start interactive guide"
               >
-                <i className="fas fa-book" style={{ fontSize: '24px', color: '#fff' }}></i>
+                <i className="fas fa-book" style={{ fontSize: '24px', color: '#fff' }} />
               </button>
             )}
 
-            {/* Create Story Button (only show on Stories page) */}
+            {/* Create Story Button */}
             {isStoriesPage && (
               <button
                 onClick={handleCreateStory}
@@ -196,13 +198,13 @@ const FloatingActionMenu: React.FC = () => {
                   transition: 'all 0.3s ease',
                   cursor: isAuthenticated ? 'pointer' : 'not-allowed',
                   border: 'none',
-                  opacity: isAuthenticated ? 1 : 0.6
+                  opacity: isAuthenticated ? 1 : 0.6,
                 }}
-                title={isAuthenticated ? "Create New Story" : "Login to create stories"}
+                title={isAuthenticated ? 'Create New Story' : 'Login to create stories'}
                 aria-label="Create new story"
                 disabled={!isAuthenticated}
               >
-                <i className="fas fa-plus" style={{ fontSize: '24px', color: '#fff' }}></i>
+                <i className="fas fa-plus" style={{ fontSize: '24px', color: '#fff' }} />
               </button>
             )}
           </div>
@@ -226,20 +228,22 @@ const FloatingActionMenu: React.FC = () => {
               transition: 'all 0.3s ease',
               cursor: 'pointer',
               border: 'none',
-              transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)'
+              transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)',
             }}
-            title={isExpanded ? "Close menu" : "Open menu"}
+            title={isExpanded ? 'Close menu' : 'Open menu'}
             aria-label="Toggle action menu"
           >
-            <i 
+            <i
               key={isMobile ? (isExpanded ? 'chevron-down' : 'chevron-up') : 'plus'}
-              className={`fas ${isMobile ? (isExpanded ? 'fa-chevron-down' : 'fa-chevron-up') : 'fa-plus'} fab-main-icon`}
-              style={{ 
+              className={`fas ${
+                isMobile ? (isExpanded ? 'fa-chevron-down' : 'fa-chevron-up') : 'fa-plus'
+              } fab-main-icon`}
+              style={{
                 fontSize: '28px',
-                color: '#fff', 
-                transition: 'transform 0.3s ease'
+                color: '#fff',
+                transition: 'transform 0.3s ease',
               }}
-            ></i>
+            />
           </button>
         </div>
       </div>
@@ -288,11 +292,9 @@ const FloatingActionMenu: React.FC = () => {
         @keyframes fadeIn {
           from {
             opacity: 0;
-           
           }
           to {
             opacity: 1;
-          
           }
         }
 
@@ -313,48 +315,47 @@ const FloatingActionMenu: React.FC = () => {
         /* Mobile adjustments - button positioned behind navbar */
         @media (max-width: 768px) {
           .floating-action-menu {
-            bottom: 10px !important; /* Only 10px (1/3 of 60px) visible above navbar */
-            left: 90% !important; /* Position at 2/3 of navbar width from left */
-            transform: translateX(-50%) !important; /* Center button at the 66.67% position */
-            z-index: 999 !important; /* Behind navbar (z-index 1000) */
-            opacity: 0.9 !important; /* 80% opacity */
+            bottom: 10px !important;
+            left: 90% !important;
+            transform: translateX(-50%) !important;
+            z-index: 999 !important;
+            opacity: 0.9 !important;
           }
-          
+
           /* When expanded on mobile, menu items should appear above navbar */
           .floating-action-menu .fab-menu-items {
-            z-index: 1001 !important; /* Above navbar for accessibility */
-            margin-bottom: 10px !important; /* Space above navbar */
+            z-index: 1001 !important;
+            margin-bottom: 10px !important;
           }
-          
+
           /* Ensure button maintains color and styling on mobile */
           .fab-main-button {
             background-color: #111e7f !important;
             border-color: #111e7f !important;
-            opacity: 0.9 !important; /* 90% opacity */
-            padding-top: 20px !important; /* Move icon up to fit in visible 1/3 */
-            justify-content: center !important; /* Ensure horizontal centering */
-            align-items: center !important; /* Ensure vertical alignment */
+            opacity: 0.9 !important;
+            padding-top: 20px !important;
+            justify-content: center !important;
+            align-items: center !important;
           }
-          
+
           /* Prevent button rotation on mobile */
           .fab-main-button,
           .fab-main-button.expanded {
-            transform: none !important; /* No rotation on mobile */
+            transform: none !important;
           }
-          
+
           /* Smaller icon on mobile, positioned in visible portion */
           .fab-main-button .fab-main-icon {
-            font-size: 14px !important; /* Reduced from 28px */
-            transform: translateY(-24px) translateX(0) !important; /* Move icon higher and ensure horizontal centering */
-            transform-origin: center !important; /* Rotate about icon's center if needed */
-            display: block !important; /* Ensure proper centering */
-            margin: 0 auto !important; /* Center horizontally */
-            animation: fadeIn 0.3s ease !important; /* Fade in animation when icon changes (key prop triggers remount) */
+            font-size: 14px !important;
+            transform: translateY(-24px) translateX(0) !important;
+            transform-origin: center !important;
+            display: block !important;
+            margin: 0 auto !important;
+            animation: fadeIn 0.3s ease !important;
           }
-          
-          /* When button is expanded on mobile, maintain same styling */
+
           .fab-main-button.expanded .fab-main-icon {
-            transform: translateY(-24px) translateX(0) !important; /* Keep position, no rotation */
+            transform: translateY(-24px) translateX(0) !important;
           }
         }
       `}</style>
@@ -380,7 +381,7 @@ const getPageName = (pathname: string): string => {
   if (pathname.includes('/immersivecomics/studio/') && pathname.includes('/edit')) return 'Studio Edit';
   if (pathname.includes('/immersivecomics/import/')) return 'Story Import';
   if (pathname.includes('/studios/') && !pathname.includes('/edit')) return 'Studio Detail';
-  
+
   // Product/Store routes
   if (pathname === '/product/') return 'Product Store';
   if (pathname === '/product/cart/') return 'Shopping Cart';
@@ -389,30 +390,28 @@ const getPageName = (pathname: string): string => {
   if (pathname.includes('/product/payment/success')) return 'Payment Success';
   if (pathname === '/product/my-orders/') return 'My Orders';
   if (pathname.includes('/product/order/')) return 'Order Detail';
-  
+
   // Authentication routes
   if (pathname === '/login/') return 'Login';
   if (pathname === '/register/') return 'Register';
   if (pathname.includes('/password-reset/')) return 'Password Reset';
   if (pathname.includes('/password-reset-confirm/')) return 'Password Reset Confirm';
   if (pathname.includes('/password-reset-complete/')) return 'Password Reset Complete';
-  
+
   // Other routes
   if (pathname === '/contact/') return 'Contact';
-  
+
   // Fallback: try to extract meaningful name from path
-  const segments = pathname.split('/').filter(s => s);
+  const segments = pathname.split('/').filter((s) => s);
   if (segments.length > 0) {
     const lastSegment = segments[segments.length - 1];
-    // Capitalize and format the last segment
     return lastSegment
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
-  
+
   return 'Unknown Page';
 };
 
 export default FloatingActionMenu;
-

@@ -339,7 +339,7 @@ const StudioDetail: React.FC = () => {
 
   if (error || !studio) {
     return (
-      <div className="product-landing">
+      <div className="product-landing stories-landing studio-detail">
         <div className="product-landing__container product-landing__section">
           <div className="store-page__error" role="alert">
             <i className="fas fa-exclamation-triangle" aria-hidden />
@@ -351,7 +351,7 @@ const StudioDetail: React.FC = () => {
   }
 
   return (
-    <div className="product-landing">
+    <div className="product-landing stories-landing studio-detail">
       <MetaTags
         title={`${studio.name} - Studio Stories - JustVybz`}
         description={studio.description || `Browse published stories from ${studio.name}`}
@@ -497,8 +497,8 @@ const StudioDetail: React.FC = () => {
 
       <section className="product-landing__section">
         <div className="product-landing__container">
-          <h2 className="product-landing__h2">Published stories</h2>
-          <p className="product-landing__body" style={{ marginBottom: '1.25rem', maxWidth: '48rem' }}>
+          <h2 className="product-landing__h2 studio-detail__storiesHeading">Published stories</h2>
+          <p className="product-landing__body studio-detail__storiesLead">
             Stories published by this studio's owner and collaborators.
           </p>
 
@@ -528,54 +528,56 @@ const StudioDetail: React.FC = () => {
             >
               {stories.map((comic) => (
                 <article key={comic.id} className="stories-landing__card">
-                  <div className="stories-landing__cardMeta">
-                    <span>
-                      <i className="fas fa-user me-1" aria-hidden />
-                      <strong>{comic.user_username || 'Unknown'}</strong>
-                    </span>
-                    <span aria-hidden>·</span>
-                    <span>
-                      {comic.updated_at !== comic.created_at ? (
-                        <>Updated {new Date(comic.updated_at).toLocaleDateString()}</>
-                      ) : (
-                        <>Posted {new Date(comic.created_at).toLocaleDateString()}</>
-                      )}
-                    </span>
-                  </div>
+                  <div className="stories-landing__cardBody">
+                    <div className="stories-landing__cardMeta">
+                      <span>
+                        <i className="fas fa-user me-1" aria-hidden />
+                        <strong>{comic.user_username || 'Unknown'}</strong>
+                      </span>
+                      <span aria-hidden>·</span>
+                      <span>
+                        {comic.updated_at !== comic.created_at ? (
+                          <>Updated {new Date(comic.updated_at).toLocaleDateString()}</>
+                        ) : (
+                          <>Posted {new Date(comic.created_at).toLocaleDateString()}</>
+                        )}
+                      </span>
+                    </div>
 
-                  <h3 className="stories-landing__cardTitle">
-                    {comic.title}
-                    {storyData.has(comic.id) &&
-                      (() => {
-                        const storySeasons = storyData.get(comic.id)?.seasons || [];
-                        const storyEpisodes = storyData.get(comic.id)?.episodes || [];
-                        const firstEpisode = storyEpisodes[0];
-                        if (firstEpisode && storySeasons.length > 0) {
-                          const season = storySeasons.find((s: any) => s.id === firstEpisode.season);
-                          if (season) {
+                    <h3 className="stories-landing__cardTitle">
+                      {comic.title}
+                      {storyData.has(comic.id) &&
+                        (() => {
+                          const storySeasons = storyData.get(comic.id)?.seasons || [];
+                          const storyEpisodes = storyData.get(comic.id)?.episodes || [];
+                          const firstEpisode = storyEpisodes[0];
+                          if (firstEpisode && storySeasons.length > 0) {
+                            const season = storySeasons.find((s: any) => s.id === firstEpisode.season);
+                            if (season) {
+                              return (
+                                <span className="stories-landing__cardTitleSuffix">
+                                  {' '}
+                                  · Season {season.season_number}
+                                </span>
+                              );
+                            }
+                          }
+                          if (storySeasons.length > 0) {
                             return (
                               <span className="stories-landing__cardTitleSuffix">
                                 {' '}
-                                · Season {season.season_number}
+                                · Season {storySeasons[0].season_number}
                               </span>
                             );
                           }
-                        }
-                        if (storySeasons.length > 0) {
-                          return (
-                            <span className="stories-landing__cardTitleSuffix">
-                              {' '}
-                              · Season {storySeasons[0].season_number}
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
-                  </h3>
+                          return null;
+                        })()}
+                    </h3>
 
-                  {comic.description ? (
-                    <p className="studio-detail__storyDesc">{comic.description}</p>
-                  ) : null}
+                    {comic.description ? (
+                      <p className="studio-detail__storyDesc">{comic.description}</p>
+                    ) : null}
+                  </div>
 
                   {storyData.has(comic.id) && (
                     <div className="stories-landing__viewerWrap">
@@ -590,6 +592,7 @@ const StudioDetail: React.FC = () => {
                   )}
 
                   {storyData.has(comic.id) && (
+                    <div className="stories-landing__cardFooter">
                     <div className="stories-landing__subsection">
                       <div className="stories-landing__subsectionLabel">
                         Collaborators ({storyData.get(comic.id)?.collaborators?.length || 0})
@@ -638,6 +641,7 @@ const StudioDetail: React.FC = () => {
                           </div>
                         );
                       })()}
+                    </div>
                     </div>
                   )}
                 </article>
