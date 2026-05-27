@@ -32,6 +32,7 @@ interface EpisodeFormData {
   title: string;
   episode_number: number;
   description: string;
+  summary: string;
   cover_image?: File | null; // File object for uploads
   is_published: boolean;
 }
@@ -82,6 +83,7 @@ const EpisodeManage: React.FC = () => {
     title: '',
     episode_number: 1,
     description: '',
+    summary: '',
     cover_image: null,
     is_published: false,
   });
@@ -321,6 +323,7 @@ const EpisodeManage: React.FC = () => {
       title: episode.title,
       episode_number: episode.episode_number,
       description: episode.description,
+      summary: episode.summary || '',
       cover_image: null, // Reset cover image for editing
       is_published: !!episode.is_published,
     });
@@ -409,6 +412,7 @@ const EpisodeManage: React.FC = () => {
       title: '',
       episode_number: 1,
       description: '',
+      summary: '',
       cover_image: null,
       is_published: false,
     });
@@ -757,6 +761,24 @@ const EpisodeManage: React.FC = () => {
                       onChange={handleEpisodeInputChange}
                       required
                     />
+                    <small className="text-muted">
+                      Shown before dialogues when viewers start the episode.
+                    </small>
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="episodeSummary" className="form-label subtext-btn-sm">Summary</label>
+                    <textarea
+                      className="form-control form-control-sm"
+                      id="episodeSummary"
+                      name="summary"
+                      rows={3}
+                      value={episodeFormData.summary}
+                      onChange={handleEpisodeInputChange}
+                      placeholder="Closing text after the last dialogue (optional)"
+                    />
+                    <small className="text-muted">
+                      Shown after the final dialogue for episode closure.
+                    </small>
                   </div>
                   <div className="mb-3">
                     <label htmlFor="episodeCoverImage" className="form-label subtext-btn-sm">Cover Image</label>

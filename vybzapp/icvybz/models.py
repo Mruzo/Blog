@@ -19,7 +19,7 @@ class Comic(models.Model):
             ('approved', 'Approved'),
             ('rejected', 'Rejected')
         ],
-        default='approved'
+        default='pending'
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="Timestamp when record was created. Nullable for imports from other Django apps.")
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True, help_text="Timestamp when record was last updated. Nullable for imports from other Django apps.")

@@ -14,7 +14,7 @@ class ComicSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'comic_image', 'is_public', 'moderation_status',
             'created_at', 'updated_at', 'user', 'user_username', 'total_views'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'user', 'total_views']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'user', 'total_views', 'moderation_status']
     
     def validate_title(self, value):
         """Validate title length"""

@@ -31,7 +31,7 @@ const Privacy: React.FC = () => {
             <p>We collect the following types of information:</p>
             <ul className="list-unstyled">
               <li>✓ <strong>Account Information:</strong> Name, email, password, and profile details when you create an account</li>
-              <li>✓ <strong>Content Information:</strong> Stories, characters, dialogues, 3D models, images, and other creative content you upload</li>
+              <li>✓ <strong>Content Information:</strong> Stories, seasons, episodes, characters, dialogues, 3D models, images, audio, and other creative content you upload</li>
               <li>✓ <strong>Collaboration Data:</strong> Information about your collaborations, studio memberships, and creative partnerships</li>
               <li>✓ <strong>Usage Analytics:</strong> How you interact with stories, view counts, engagement metrics, and platform usage patterns</li>
               <li>✓ <strong>Technical Information:</strong> IP address, browser type, device information, and cookies</li>
@@ -65,6 +65,17 @@ const Privacy: React.FC = () => {
             <p>
               We do not sell your personal information to third parties. Your creative content remains yours, and we 
               respect your privacy and creative rights.
+            </p>
+
+            <h2 className="h5 mt-4 font-quicksand">Content Moderation</h2>
+            <p>
+              If you choose to publish content publicly, we may review it to help keep the Platform safe. Public content
+              may be placed in a pending review state before it appears in public browsing. We may also restrict, reject,
+              or remove content that violates our Terms or community standards.
+            </p>
+            <p className="mb-0">
+              If you contact support, we may create a support ticket using the information you provide (such as your name,
+              email address, and message) to respond to your request.
             </p>
 
             <h2 className="h5 mt-4 font-quicksand">Data Security</h2>

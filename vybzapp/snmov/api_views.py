@@ -43,6 +43,13 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
+
+class IsStaff(IsAuthenticated):
+    """Permission class that requires user to be authenticated + staff."""
+
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and bool(getattr(request.user, "is_staff", False))
+
 # Cart/checkout use Django sessions for storage. Omit SessionAuthentication so POST/PUT/DELETE
 # are not blocked by CSRF when a session cookie exists without a CSRF header (e.g. admin + SPA).
 CART_CHECKOUT_AUTHENTICATION = [TokenAuthentication]
@@ -2039,7 +2046,7 @@ class ReturnRequestDetailView(generics.RetrieveAPIView):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsStaff])
 def approve_return_request(request, return_id):
     """Approve return request (admin only)"""
     from django.contrib.auth.models import AnonymousUser
@@ -2080,7 +2087,7 @@ def approve_return_request(request, return_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsStaff])
 def reject_return_request(request, return_id):
     """Reject return request (admin only)"""
     if not request.user.is_staff:
@@ -2122,7 +2129,7 @@ def reject_return_request(request, return_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsStaff])
 def generate_return_label(request, return_id):
     """Generate return shipping label (admin only)"""
     if not request.user.is_staff:

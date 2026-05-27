@@ -50,6 +50,33 @@ expect.extend({
         : `Expected element to have attribute "${attribute}"${value ? ` with value "${value}"` : ''}`
     };
   }
+  ,
+  toHaveStyle(received, expected) {
+    if (!received || !expected || typeof expected !== 'object') {
+      return {
+        pass: false,
+        message: () => 'Expected an element and a style object',
+      };
+    }
+
+    const style = (received as HTMLElement).style;
+    const failures: string[] = [];
+    Object.entries(expected).forEach(([key, value]) => {
+      const actual = (style as any)[key] || style.getPropertyValue(key);
+      if (String(actual || '').trim() !== String(value).trim()) {
+        failures.push(`${key}: expected "${value}" but got "${actual}"`);
+      }
+    });
+
+    const pass = failures.length === 0;
+    return {
+      pass,
+      message: () =>
+        pass
+          ? 'Expected element not to have the provided styles'
+          : `Expected element to have styles. ${failures.join('; ')}`,
+    };
+  }
 });
 
 // Mock window.matchMedia

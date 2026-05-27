@@ -97,11 +97,10 @@ describe('FloatingFeedbackButton - Page Name Detection', () => {
   });
 
   it('should NOT show generic "Page" for unknown routes', async () => {
-    const user = userEvent.setup();
     renderWithRouter('/some-unknown-route/');
     
     const button = screen.getByLabelText(/Open feedback form/i);
-    await user.click(button);
+    await userEvent.click(button);
 
     const modal = screen.getByTestId('feedback-modal');
     // Should show "Unknown Page" or a formatted version, not just "Page"
@@ -110,18 +109,16 @@ describe('FloatingFeedbackButton - Page Name Detection', () => {
   });
 
   it('should pass correct page name to modal', async () => {
-    const user = userEvent.setup();
     renderWithRouter('/immersivecomics/story/123/manage/');
     
     const button = screen.getByLabelText(/Open feedback form/i);
-    await user.click(button);
+    await userEvent.click(button);
 
     const modal = screen.getByTestId('feedback-modal');
     expect(modal).toHaveTextContent('Page: Story Management');
   });
 
   it('should pass context from FeedbackContext when available', async () => {
-    const user = userEvent.setup();
     const TestComponent = () => {
       const { setContext } = React.useContext(require('../../contexts/FeedbackContext').FeedbackContext);
       
@@ -146,7 +143,7 @@ describe('FloatingFeedbackButton - Page Name Detection', () => {
     );
 
     const button = screen.getByLabelText(/Open feedback form/i);
-    await user.click(button);
+    await userEvent.click(button);
 
     const modal = screen.getByTestId('feedback-modal');
     expect(modal).toHaveTextContent('Story: My Test Story');

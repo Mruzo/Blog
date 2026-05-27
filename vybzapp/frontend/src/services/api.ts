@@ -270,7 +270,7 @@ export interface Story {
   updated_at: string;
   user: number;
   user_username?: string; // Username of the story owner
-  moderation_status: string;
+  moderation_status: 'pending' | 'approved' | 'rejected';
   total_views?: number; // Total view count across all episodes
 }
 
@@ -685,6 +685,9 @@ class ApiService {
     if (episodeData.title) formData.append('title', episodeData.title);
     if (episodeData.episode_number) formData.append('episode_number', episodeData.episode_number.toString());
     if (episodeData.description) formData.append('description', episodeData.description);
+    if (episodeData.summary !== undefined && episodeData.summary !== null) {
+      formData.append('summary', episodeData.summary);
+    }
     if (typeof episodeData.is_published === 'boolean') {
       formData.append('is_published', episodeData.is_published ? 'true' : 'false');
     }
@@ -709,6 +712,9 @@ class ApiService {
     if (episodeData.title) formData.append('title', episodeData.title);
     if (episodeData.episode_number) formData.append('episode_number', episodeData.episode_number.toString());
     if (episodeData.description) formData.append('description', episodeData.description);
+    if (episodeData.summary !== undefined && episodeData.summary !== null) {
+      formData.append('summary', episodeData.summary);
+    }
     if (typeof episodeData.is_published === 'boolean') {
       formData.append('is_published', episodeData.is_published ? 'true' : 'false');
     }

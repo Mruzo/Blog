@@ -546,7 +546,7 @@ const ProductList: React.FC<ProductListProps> = () => {
                 <h3 className="product-landing__h2">Most desk mats are designed inefficiently.</h3>
                 <p className="product-landing__body">
                 Your keyboard and mouse covers most of the mat's surface.
-                So why does the entire surace need to have the same design?
+                So why does the entire surface need to have the same design?
                 </p>
               </div>
             </div>
@@ -670,7 +670,7 @@ const ProductList: React.FC<ProductListProps> = () => {
           <div className="product-landing__container product-landing__finalInner">
             <h3 className="product-landing__h2">Ready to upgrade your desk?</h3>
             <p className="product-landing__body">
-              Keep it clean. Keep it visible. Make your setup feel intentional.
+              Keep it clean. Keep it vibrant. Make your setup feel intentional.
             </p>
             <button
               type="button"

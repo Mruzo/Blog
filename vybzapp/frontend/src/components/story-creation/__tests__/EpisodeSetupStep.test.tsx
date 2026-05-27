@@ -124,7 +124,7 @@ describe('EpisodeSetupStep Progressive Saving', () => {
     );
 
     // Fill out episode form
-    fireEvent.change(screen.getByLabelText(/episode title/i), { target: { value: 'Test Episode' } });
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Test Episode' } });
     fireEvent.change(screen.getByLabelText(/episode number/i), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText(/episode description/i), { target: { value: 'Test episode description' } });
 
@@ -165,7 +165,7 @@ describe('EpisodeSetupStep Progressive Saving', () => {
     );
 
     // Fill out episode form
-    fireEvent.change(screen.getByLabelText(/episode title/i), { target: { value: 'Test Episode' } });
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Test Episode' } });
     fireEvent.change(screen.getByLabelText(/episode number/i), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText(/episode description/i), { target: { value: 'Test episode description' } });
 
@@ -198,7 +198,7 @@ describe('EpisodeSetupStep Progressive Saving', () => {
     );
 
     // Fill out episode form
-    fireEvent.change(screen.getByLabelText(/episode title/i), { target: { value: 'Test Episode' } });
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Test Episode' } });
     fireEvent.change(screen.getByLabelText(/episode number/i), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText(/episode description/i), { target: { value: 'Test episode description' } });
 
@@ -243,7 +243,7 @@ describe('EpisodeSetupStep Progressive Saving', () => {
     );
 
     // Type in episode title
-    fireEvent.change(screen.getByLabelText(/episode title/i), { target: { value: 'New Episode Title' } });
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Episode Title' } });
 
     // Verify the input value is updated
     expect(screen.getByDisplayValue('New Episode Title')).toBeInTheDocument();

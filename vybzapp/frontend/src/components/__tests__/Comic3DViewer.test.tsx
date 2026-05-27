@@ -42,6 +42,8 @@ const mockEpisodes: Episode[] = [
     title: 'Episode 1',
     episode_number: 1,
     description: 'First episode description',
+    summary: 'Episode 1 closing summary',
+    is_published: true,
     season: 1,
     model_url: 'https://example.com/model1.gltf',
     created_at: '2023-01-01T00:00:00Z',
@@ -52,6 +54,8 @@ const mockEpisodes: Episode[] = [
     title: 'Episode 2',
     episode_number: 2,
     description: 'Second episode description',
+    summary: 'Episode 2 closing summary',
+    is_published: true,
     season: 1,
     model_url: 'https://example.com/model2.gltf',
     created_at: '2023-01-02T00:00:00Z',
@@ -259,19 +263,21 @@ describe('Comic3DViewer', () => {
     expect(screen.getByText('Hello, this is the first dialogue')).toBeInTheDocument();
   });
 
-  it('shows episode summary when at the end', () => {
-    render(<Comic3DViewer {...defaultProps} />);
+  it('shows episode summary (not description) after the last dialogue', () => {
+    render(<Comic3DViewer {...defaultProps} readOnly />);
     
-    const episodeButton = screen.getByText('Episode 1');
-    fireEvent.click(episodeButton);
+    fireEvent.click(screen.getByText('Episode 1'));
+    fireEvent.click(screen.getByText(/Start/i));
     
-    // Navigate to last dialogue
     const nextButton = screen.getByRole('button', { name: /next/i });
-    fireEvent.click(nextButton);
+    fireEvent.click(nextButton); // intro → first dialogue
+    expect(screen.getByText('Hello, this is the first dialogue')).toBeInTheDocument();
     
-    // Should show summary
-    expect(screen.getByText('Episode Summary')).toBeInTheDocument();
-    expect(screen.getByText('First episode description')).toBeInTheDocument();
+    fireEvent.click(nextButton); // first → second dialogue
+    fireEvent.click(nextButton); // second (last) → outro summary
+    
+    expect(screen.getByText('Episode 1 closing summary')).toBeInTheDocument();
+    expect(screen.queryByText('First episode description')).not.toBeInTheDocument();
   });
 
   it('filters dialogues by selected episode', () => {

@@ -109,7 +109,7 @@ describe('Story Creation Data Synchronization', () => {
       );
 
       // Find the title input field
-      const titleInput = screen.getByLabelText(/story title/i);
+      const titleInput = screen.getByLabelText(/title/i);
       
       // Type in the title field
       fireEvent.change(titleInput, { target: { value: 'My Test Story' } });
@@ -149,7 +149,7 @@ describe('Story Creation Data Synchronization', () => {
       );
 
       // Find the description textarea
-      const descriptionTextarea = screen.getByLabelText(/story description/i);
+      const descriptionTextarea = screen.getByLabelText(/description/i);
       
       // Type in the description field
       fireEvent.change(descriptionTextarea, { target: { value: 'My test story description' } });
@@ -212,13 +212,13 @@ describe('Story Creation Data Synchronization', () => {
       renderWithContext(<StoryCreationWizard />);
 
       // Find the title input field
-      const titleInput = screen.getByLabelText(/story title/i);
+      const titleInput = screen.getByLabelText(/title/i);
       
       // Type in the title
       fireEvent.change(titleInput, { target: { value: 'My Test Story' } });
 
       // Find the description textarea
-      const descriptionTextarea = screen.getByLabelText(/story description/i);
+      const descriptionTextarea = screen.getByLabelText(/description/i);
       
       // Type in the description
       fireEvent.change(descriptionTextarea, { target: { value: 'My test story description' } });

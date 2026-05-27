@@ -39,6 +39,9 @@ interface DialogueData {
   head_z: number;
 }
 
+/** intro = episode description before dialogues; outro = episode summary after last dialogue */
+type EpisodePlaybackPhase = 'intro' | 'dialogue' | 'outro';
+
 const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   episodes,
   dialogues,
@@ -58,7 +61,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const [isStarted, setIsStarted] = useState(false);
   const [isAnimating] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(5000);
-  const [isShowingSummary, setIsShowingSummary] = useState(false);
+  const [playbackPhase, setPlaybackPhase] = useState<EpisodePlaybackPhase>('dialogue');
   const [currentEditingDialogue, setCurrentEditingDialogue] = useState<DialogueData | null>(null);
   const [originalValues, setOriginalValues] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -364,7 +367,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     setSelectedEpisode(episode);
     setCurrentDialogueIndex(0);
     setIsPlaying(false);
-    setIsShowingSummary(false);
+    setPlaybackPhase('dialogue');
     onEpisodeSelect?.(episode);
   };
 
@@ -381,8 +384,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     // Reset isModelReady - it will be set to true when model actually loads
     setIsModelReady(false);
     
-    // ALWAYS show summary first - user will navigate to first dialogue by clicking Next
-    setIsShowingSummary(true);
+    // Show episode description first; user clicks Next to enter dialogues, then sees summary at the end
+    setPlaybackPhase('intro');
     setCurrentDialogueIndex(0); // Set index to 0 so Next button will go to first dialogue
     
     // If dialogues are not loaded yet, wait for them
@@ -1095,9 +1098,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const goToPreviousDialogue = () => {
     logger.log('Comic3DViewer: Previous button clicked, current index:', currentDialogueIndex);
     
-    if (isShowingSummary) {
-      // If showing summary, go back to last dialogue
-      setIsShowingSummary(false);
+    if (playbackPhase === 'outro') {
+      setPlaybackPhase('dialogue');
       loadDialogue(currentDialogueIndex);
       showDialogue(currentDialogueIndex);
     } else if (currentDialogueIndex > 0) {
@@ -1165,18 +1167,27 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   const goToNextDialogue = () => {
     logger.log('Comic3DViewer: Next button clicked, current index:', currentDialogueIndex);
-    logger.log('Comic3DViewer: isShowingSummary:', isShowingSummary);
+    logger.log('Comic3DViewer: playbackPhase:', playbackPhase);
     logger.log('Comic3DViewer: episodeDialogues.length:', episodeDialogues.length);
     
-    // If showing summary, move to first dialogue (count as view once they start reading)
-    if (isShowingSummary && episodeDialogues.length > 0) {
-      logger.log('Comic3DViewer: Moving from summary to first dialogue');
-      setIsShowingSummary(false);
+    // Intro: episode description → first dialogue (count as view once they start reading)
+    if (playbackPhase === 'intro' && episodeDialogues.length > 0) {
+      logger.log('Comic3DViewer: Moving from intro to first dialogue');
+      setPlaybackPhase('dialogue');
       setCurrentDialogueIndex(0);
       loadDialogue(0);
       showDialogue(0);
       // Count view when user starts reading (first dialogue), not only when they reach the end
       incrementEpisodeViewIfNeeded();
+      return;
+    }
+
+    // Outro: optional replay from first dialogue
+    if (playbackPhase === 'outro' && episodeDialogues.length > 0) {
+      setPlaybackPhase('dialogue');
+      setCurrentDialogueIndex(0);
+      loadDialogue(0);
+      showDialogue(0);
       return;
     }
     
@@ -1197,8 +1208,9 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       logger.verbose('Comic3DViewer: ========== AT LAST DIALOGUE - COMPLETING EPISODE ==========');
       logger.log('Comic3DViewer: currentDialogueIndex:', currentDialogueIndex);
       logger.log('Comic3DViewer: episodeDialogues.length:', episodeDialogues.length);
-      logger.log('Comic3DViewer: Setting isShowingSummary to true');
-      setIsShowingSummary(true);
+      logger.log('Comic3DViewer: Setting playbackPhase to outro (episode summary)');
+      setPlaybackPhase('outro');
+      setCurrentDialogueText('');
       
       // Increment view count when user completes the episode
       logger.log('Comic3DViewer: About to call incrementEpisodeViewIfNeeded');
@@ -1231,9 +1243,9 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
           
           return newIndex; // Update the index
         } else {
-          logger.log('Comic3DViewer: Auto-play reached end - showing summary');
-          // End of dialogues, show summary
-          setIsShowingSummary(true);
+          logger.log('Comic3DViewer: Auto-play reached end - showing episode summary');
+          setPlaybackPhase('outro');
+          setCurrentDialogueText('');
           pausePlayback();
           
           // Increment view count when auto-play completes the episode
@@ -1284,7 +1296,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       setIsStarted(false);
       setCurrentDialogueIndex(0);
       setIsPlaying(false);
-      setIsShowingSummary(false);
+      setPlaybackPhase('dialogue');
       setCurrentDialogueText('');
       animationsStartedRef.current = false; // Reset animations flag
       
@@ -1442,10 +1454,16 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       }}
                     >
                     <div id="top-dialogue" style={{ padding: 0, margin: 0 }}>
-                      {isShowingSummary ? (
+                      {playbackPhase !== 'dialogue' ? (
                         <div>
-                          {selectedEpisode.description ? (
-                            <div dangerouslySetInnerHTML={{ __html: selectedEpisode.description }} />
+                          {playbackPhase === 'intro' ? (
+                            selectedEpisode.description ? (
+                              <div dangerouslySetInnerHTML={{ __html: selectedEpisode.description }} />
+                            ) : (
+                              <p>No description available for this episode.</p>
+                            )
+                          ) : selectedEpisode.summary ? (
+                            <div dangerouslySetInnerHTML={{ __html: selectedEpisode.summary }} />
                           ) : (
                             <p>No summary available for this episode.</p>
                           )}
@@ -1556,16 +1574,26 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 <div 
                   className="progress-bar bg-success" 
                   style={{ 
-                    width: `${isShowingSummary ? 100 : (episodeDialogues.length > 0 ? ((currentDialogueIndex + 1) / episodeDialogues.length) * 100 : 0)}%`,
+                    width: `${
+                      playbackPhase === 'outro'
+                        ? 100
+                        : playbackPhase === 'intro'
+                          ? 0
+                          : episodeDialogues.length > 0
+                            ? ((currentDialogueIndex + 1) / episodeDialogues.length) * 100
+                            : 0
+                    }%`,
                     transition: 'width 0.3s ease'
                   }}
                 />
               </div>
               <div className="text-end" style={{ fontSize: '0.8rem', minWidth: '40px' }}>
                 <span>
-                  {isShowingSummary 
+                  {playbackPhase === 'outro'
                     ? (episodeDialogues.length > 0 ? `${episodeDialogues.length} / ${episodeDialogues.length}` : '0 / 0')
-                    : (episodeDialogues.length > 0 ? `${currentDialogueIndex + 1} / ${episodeDialogues.length}` : '0 / 0')}
+                    : playbackPhase === 'intro'
+                      ? (episodeDialogues.length > 0 ? `0 / ${episodeDialogues.length}` : '0 / 0')
+                      : (episodeDialogues.length > 0 ? `${currentDialogueIndex + 1} / ${episodeDialogues.length}` : '0 / 0')}
                 </span>
               </div>
             </div>
@@ -1584,7 +1612,11 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     <button
                       className="btn btn-primary"
                       onClick={goToPreviousDialogue}
-                      disabled={(episodeDialogues.length === 0) || (currentDialogueIndex === 0 && !isShowingSummary)}
+                      disabled={
+                        episodeDialogues.length === 0 ||
+                        playbackPhase === 'intro' ||
+                        (playbackPhase === 'dialogue' && currentDialogueIndex === 0)
+                      }
                       title={episodeDialogues.length > 0 ? `Previous dialogue (${currentDialogueIndex}/${episodeDialogues.length})` : 'Waiting for dialogues...'}
                     >
                       <i className="fas fa-chevron-left"></i>
@@ -1623,9 +1655,11 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       onClick={goToNextDialogue}
                       disabled={episodeDialogues.length === 0}
                       title={
-                        isShowingSummary 
+                        playbackPhase === 'intro'
                           ? (episodeDialogues.length > 0 ? 'Go to first dialogue' : 'Waiting for dialogues...')
-                          : (episodeDialogues.length > 0 ? `Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})` : 'Waiting for dialogues...')
+                          : playbackPhase === 'outro'
+                            ? (episodeDialogues.length > 0 ? 'Replay from first dialogue' : 'Episode complete')
+                            : (episodeDialogues.length > 0 ? `Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})` : 'Waiting for dialogues...')
                       }
                     >
                       <i className="fas fa-chevron-right"></i>

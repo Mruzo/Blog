@@ -62,13 +62,30 @@ class ComicListCreateView(generics.ListCreateAPIView):
         return queryset
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        # moderation_status is server-authoritative:
+        # - default is 'pending' (model default)
+        # - if a creator tries to publish immediately, keep it pending for review
+        is_public = bool(serializer.validated_data.get('is_public', False))
+        moderation_status = 'approved' if getattr(self.request.user, 'is_staff', False) else 'pending'
+        serializer.save(
+            user=self.request.user,
+            moderation_status=moderation_status if is_public else serializer.instance.moderation_status,
+        )
         # Clear cache when new comic is created
         cache_key = f"user_comics_{self.request.user.id}"
         cache.delete(cache_key)
     
     def perform_update(self, serializer):
-        serializer.save()
+        # If story is being made public, ensure it goes through moderation.
+        instance = getattr(serializer, 'instance', None)
+        was_public = bool(getattr(instance, 'is_public', False)) if instance is not None else False
+        will_be_public = bool(serializer.validated_data.get('is_public', was_public))
+
+        extra = {}
+        if not getattr(self.request.user, 'is_staff', False) and (not was_public and will_be_public):
+            extra['moderation_status'] = 'pending'
+
+        serializer.save(**extra)
         # Clear cache when comic is updated
         cache_key = f"user_comics_{self.request.user.id}"
         cache.delete(cache_key)
@@ -95,6 +112,24 @@ class ComicDetailView(generics.RetrieveUpdateDestroyAPIView):
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("Only the story owner can modify or delete the story.")
         return obj
+
+    def perform_update(self, serializer):
+        """
+        Keep moderation_status server-authoritative.
+        If a creator flips a story from private -> public, send it to pending review.
+        """
+        instance = getattr(serializer, 'instance', None)
+        was_public = bool(getattr(instance, 'is_public', False)) if instance is not None else False
+        will_be_public = bool(serializer.validated_data.get('is_public', was_public))
+
+        extra = {}
+        if not getattr(self.request.user, 'is_staff', False) and (not was_public and will_be_public):
+            extra['moderation_status'] = 'pending'
+
+        serializer.save(**extra)
+
+        cache_key = f"user_comics_{self.request.user.id}"
+        cache.delete(cache_key)
 
 # Public Stories View - shows all published stories from all users
 class PublicStoriesView(generics.ListAPIView):

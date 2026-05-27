@@ -1,5 +1,5 @@
 """API views for feedback/ticketing system"""
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,6 +7,7 @@ from rest_framework import generics
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.contrib.auth import get_user_model
+from rest_framework.throttling import AnonRateThrottle
 
 from .models import FeedbackTicket, TicketComment
 
@@ -34,6 +35,7 @@ class IsStaff(IsAuthenticated):
 @api_view(['POST'])
 @authentication_classes([])  # Disable authentication (and CSRF) for this endpoint
 @permission_classes([AllowAny])
+@throttle_classes([AnonRateThrottle])
 def create_ticket(request):
     """Create a new feedback ticket (public endpoint)"""
     serializer = FeedbackTicketCreateSerializer(data=request.data, context={'request': request})
@@ -59,8 +61,15 @@ def create_ticket(request):
 @api_view(['GET'])
 @authentication_classes([])  # Disable authentication (and CSRF) for this endpoint
 @permission_classes([AllowAny])
+@throttle_classes([AnonRateThrottle])
 def get_ticket_by_number(request, ticket_number):
-    """Get ticket by ticket number (public, but only if user has access)"""
+    """
+    Get ticket by ticket number (public).
+
+    Access control:
+    - Authenticated users: must be the ticket owner
+    - Anonymous users: must present the ticket's access_token (secret link)
+    """
     try:
         ticket = FeedbackTicket.objects.get(ticket_number=ticket_number)
     except FeedbackTicket.DoesNotExist:
@@ -68,14 +77,12 @@ def get_ticket_by_number(request, ticket_number):
             'error': 'Ticket not found'
         }, status=status.HTTP_404_NOT_FOUND)
     
-    # Check access: user must be the submitter (by email or user account)
     has_access = False
     if request.user.is_authenticated:
         has_access = ticket.user == request.user
     else:
-        # Check by email (for non-authenticated users)
-        submitted_email = request.GET.get('email', '')
-        has_access = ticket.submitted_by_email.lower() == submitted_email.lower()
+        provided = (request.GET.get('access_token') or '').strip()
+        has_access = bool(provided) and provided == (ticket.access_token or '')
     
     if not has_access:
         return Response({

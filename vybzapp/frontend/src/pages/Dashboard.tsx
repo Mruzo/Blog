@@ -18,7 +18,7 @@ interface Comic {
 }
 
 const Stories: React.FC = () => {
-  const { stories, loadStories, isLoading, error } = useApi();
+  const { stories, loadStories, error } = useApi();
   const [comics, setComics] = useState<Comic[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -36,7 +36,7 @@ const Stories: React.FC = () => {
             description: story.description,
             comic_image: "/api/placeholder/300/200", // TODO: Add image field to story
             is_public: story.is_public,
-            moderation_status: 'approved' as const, // Published stories are considered approved
+            moderation_status: story.moderation_status,
             created_at: story.created_at,
             updated_at: story.updated_at,
             user: story.user

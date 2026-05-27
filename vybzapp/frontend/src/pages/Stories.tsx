@@ -421,7 +421,7 @@ const Stories: React.FC = () => {
               description: story.description,
               comic_image: story.comic_image || null,
               is_public: story.is_public,
-              moderation_status: 'approved' as const, // Published stories are considered approved
+              moderation_status: story.moderation_status,
               created_at: story.created_at,
               updated_at: story.updated_at,
               user: story.user,

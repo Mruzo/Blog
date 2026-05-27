@@ -99,22 +99,24 @@ const DialogueCard: React.FC<DialogueCardProps> = ({
             )}
           </div>
           {showActions && (
-            <div className="d-flex gap-2">
-              <button 
-                className="btn btn-sm btn-outline-primary" 
-                type="button" 
+            <div className="episode-manage__cardActions">
+              <button
+                type="button"
+                className="product-landing__ctaGhost story-manage__btnCompact"
                 onClick={() => onEdit(dialogue)}
                 title="Edit dialogue"
               >
-                <i className="fas fa-edit"></i>
+                <i className="fas fa-edit me-1" aria-hidden />
+                Edit
               </button>
-              <button 
-                className="btn btn-sm btn-outline-danger" 
-                type="button" 
+              <button
+                type="button"
+                className="product-landing__ctaGhost story-manage__btnCompact story-manage__ghostDanger"
                 onClick={() => onDelete(dialogue.id)}
                 title="Delete dialogue"
               >
-                <i className="fas fa-trash"></i>
+                <i className="fas fa-trash me-1" aria-hidden />
+                Delete
               </button>
             </div>
           )}

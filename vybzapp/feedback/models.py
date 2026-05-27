@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinLengthValidator
+import secrets
 
 
 class FeedbackTicket(models.Model):
@@ -45,6 +46,8 @@ class FeedbackTicket(models.Model):
     
     # Core fields
     ticket_number = models.CharField(max_length=50, unique=True, db_index=True)
+    # Public ticket access token (for unauthenticated viewers). Treat like a secret link.
+    access_token = models.CharField(max_length=64, unique=True, db_index=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedback_tickets')
     submitted_by_name = models.CharField(max_length=100)
     submitted_by_email = models.EmailField()
@@ -102,6 +105,9 @@ class FeedbackTicket(models.Model):
             # Generate ticket number: TKT-YYYYMMDD-XXXXX (sequential per day)
             from .utils import generate_ticket_number
             self.ticket_number = generate_ticket_number()
+        if not self.access_token:
+            # URL-safe high entropy token (32 bytes -> ~43 chars); store in 64-char field.
+            self.access_token = secrets.token_urlsafe(32)
         super().save(*args, **kwargs)
     
     @property
