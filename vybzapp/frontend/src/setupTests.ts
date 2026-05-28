@@ -6,6 +6,9 @@
 // Custom matchers for older Node.js versions
 import { expect } from '@jest/globals';
 
+// Global axios mock: prevents Jest from loading axios' ESM entry.
+jest.mock('axios');
+
 // Add custom matchers manually to avoid nullish coalescing operator issues
 expect.extend({
   toBeInTheDocument(received) {

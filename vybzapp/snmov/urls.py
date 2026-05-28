@@ -1,51 +1,37 @@
 from django.urls import path
+from snm.views import ReactAppView
 from .views import (
-    ProductDetailView,
-    ProductListView,
-    article_update_view,
-    article_delete_view,
-    add_comment_to_article,
-    article_preference,
-    comment_delete_view,
     add_product,
     update_quantity,
     remove_product,
-    view_cart,
-    checkout_view,
-    select_shipping,
-    payment_success,
     cancel_order,
-    my_orders,
-    order_detail,
     verify_email,
     resend_verification,
     register,
     email_preferences,
-    unsubscribe
+    unsubscribe,
 )
 
 app_name = 'snmov'
 
 urlpatterns = [
-    path('', ProductListView.as_view(), name='product_list'),
-    path('my-orders/', my_orders, name='my_orders'),
-    path('order/<int:order_id>/', order_detail, name='order_detail'),
-    path('order/<int:order_id>/cancel/', cancel_order, name='cancel_order'),
-    path('cart/', view_cart, name='view_cart'),
+    # UI routes: React owns all user-facing pages (serve app shell).
+    path('', ReactAppView.as_view(), name='product_list'),
+    path('my-orders/', ReactAppView.as_view(), name='my_orders'),
+    path('order/<int:order_id>/', ReactAppView.as_view(), name='order_detail'),
+    path('cart/', ReactAppView.as_view(), name='view_cart'),
+    path('cart/checkout/', ReactAppView.as_view(), name='checkout'),
+    path('cart/shipping/<int:order_id>/', ReactAppView.as_view(), name='select_shipping'),
+    path('payment/success/', ReactAppView.as_view(), name='payment_success'),
+    path('<slug:slug>/', ReactAppView.as_view(), name='product_detail'),
+
+    # Keep backend action endpoints (non-/api/) for compatibility.
     path('add-to-cart/<uuid:product_id>/', add_product, name='add_to_cart'),
     path('cart/update/<uuid:item_id>/', update_quantity, name='update_quantity'),
     path('cart/remove/<uuid:item_id>/', remove_product, name='remove_product'),
-    path('cart/checkout/', checkout_view, name='checkout'),
-    path('cart/shipping/<int:order_id>/', select_shipping, name='select_shipping'),
-    path('payment/success/', payment_success, name='payment_success'),
-    path('<str:slug>/addc/', add_comment_to_article, name='add_comment'),
-    path('<str:slug>/userpreference/<int:value>/',
-         article_preference, name='artclepreference'),
-    path('<str:slug>/edit/', article_update_view),
-    path('<str:slug>/delete/', article_delete_view),
-    path('<str:slug>/<int:pk>/delete/',
-         comment_delete_view, name='delete_comment'),
-    path('<slug:slug>/', ProductDetailView.as_view(), name='product_detail'),
+    path('order/<int:order_id>/cancel/', cancel_order, name='cancel_order'),
+
+    # Auth/email endpoints (backend).
     path('verify-email/<int:user_id>/<str:token>/', verify_email, name='verify_email'),
     path('resend-verification/', resend_verification, name='resend_verification'),
     path('register/', register, name='register'),

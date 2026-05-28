@@ -8,22 +8,22 @@
  */
 
 // Import all test files
-import './pages/__tests__/StoryManage.test';
-import './pages/__tests__/MyStudio.test';
-import './pages/__tests__/StoryCreate.test';
-import './pages/__tests__/StoryEdit.test';
-import './pages/__tests__/CharacterManage.test';
-import './pages/__tests__/SeasonCreationWizard.test';
-import './pages/__tests__/EpisodeManage.test';
-import './pages/__tests__/Stories.integration.test';
+import '../pages/__tests__/StoryManage.test';
+import '../pages/__tests__/MyStudio.test';
+import '../pages/__tests__/StoryCreate.test';
+import '../pages/__tests__/StoryEdit.test';
+import '../pages/__tests__/CharacterManage.test';
+import '../pages/__tests__/SeasonCreationWizard.test';
+import '../pages/__tests__/EpisodeManage.test';
+import '../pages/__tests__/Stories.integration.test';
 
-import './components/__tests__/LoadingSpinner.test';
-import './components/__tests__/Comic3DViewer.test';
-import './components/__tests__/BackButton.test';
-import './components/__tests__/PageHeader.test';
+import '../components/__tests__/LoadingSpinner.test';
+import '../components/__tests__/Comic3DViewer.test';
+import '../components/__tests__/BackButton.test';
+import '../components/__tests__/PageHeader.test';
 
-import './contexts/__tests__/ApiContext.test';
-import './services/__tests__/api.test';
+import '../contexts/__tests__/ApiContext.test';
+import '../services/__tests__/api.test';
 
 // Test suite configuration
 describe('🧪 Complete Test Suite', () => {
