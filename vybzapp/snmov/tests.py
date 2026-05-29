@@ -1118,6 +1118,21 @@ class CheckoutAPITestCase(TestCase):
                 self.assertTrue(data['success'])
                 self.assertIn('order', data)
                 self.assertIn('rates', data)
+                self.assertIn('pricing', data)
+                pricing = data['pricing']
+                self.assertGreater(pricing['merchandise_subtotal'], 0)
+                rate = data['rates'][0]
+                shipping = float(rate['amount'])
+                total = float(rate['total_with_shipping'])
+                self.assertAlmostEqual(
+                    total,
+                    pricing['merchandise_after_coupon'] + shipping,
+                    places=2,
+                )
+                line = data['order']['orderitem_set'][0]
+                self.assertIn('unit_price', line)
+                self.assertIn('line_total', line)
+                self.assertGreater(line['line_total'], 0)
             else:
                 self.assertIn(response.status_code, [500, 400])
 

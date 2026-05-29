@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useApi } from '../contexts/ApiContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
+import OrderPricingBreakdown from '../components/OrderPricingBreakdown';
+import { OrderPricingSummary } from '../utils/orderPricing';
 
 // Helper function to get CSRF token from cookies
 function getCookie(name: string): string | null {
@@ -44,8 +46,14 @@ interface SavedAddress {
   is_default: boolean;
 }
 
+interface CouponPreview {
+  coupon_code: string;
+  coupon_discount: number;
+  merchandise_after_coupon: number;
+}
+
 const Checkout: React.FC = () => {
-  const { cartItems, totalPrice, isLoading } = useCart();
+  const { cartItems, totalPrice, cartTotals, isLoading } = useCart();
   const { currentUser } = useApi();
   const navigate = useNavigate();
   const [message, setMessage] = useState<string>('');
@@ -57,6 +65,9 @@ const Checkout: React.FC = () => {
   const [saveAddress, setSaveAddress] = useState(false);
   const [addressLabel, setAddressLabel] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponApplying, setCouponApplying] = useState(false);
   const [guestEmail, setGuestEmail] = useState('');
 
   const [formData, setFormData] = useState<ShippingAddress>({
@@ -134,6 +145,66 @@ const Checkout: React.FC = () => {
     });
     setSelectedAddressId(null);
   };
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) {
+      setCouponPreview(null);
+      setCouponError('');
+      return;
+    }
+    setCouponApplying(true);
+    setCouponError('');
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+      const csrfToken =
+        getCookie('csrftoken') ||
+        document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+      const response = await fetch('/api/coupons/preview/', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ coupon_code: code }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setCouponPreview(null);
+        setCouponError(data.error || 'Invalid coupon code.');
+        return;
+      }
+      setCouponPreview({
+        coupon_code: data.coupon_code,
+        coupon_discount: data.coupon_discount,
+        merchandise_after_coupon: data.merchandise_after_coupon,
+      });
+      setCouponCode(data.coupon_code);
+    } catch {
+      setCouponPreview(null);
+      setCouponError('Could not validate coupon. Try again.');
+    } finally {
+      setCouponApplying(false);
+    }
+  };
+
+  const checkoutPricing: OrderPricingSummary = useMemo(
+    () => ({
+      listSubtotal: cartTotals.listSubtotal,
+      productSaleSavings: cartTotals.productSaleSavings,
+      merchandiseSubtotal: cartTotals.merchandiseSubtotal || totalPrice,
+      couponCode: couponPreview?.coupon_code,
+      couponDiscount: couponPreview?.coupon_discount,
+      totalLabel: 'Estimated before shipping',
+      totalAmount: couponPreview?.merchandise_after_coupon ?? cartTotals.merchandiseSubtotal ?? totalPrice,
+    }),
+    [cartTotals, totalPrice, couponPreview]
+  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -342,16 +413,24 @@ const Checkout: React.FC = () => {
                       <div className="store-page__itemQty">Qty {item.quantity}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div className="store-page__itemQty">${item.price.toFixed(2)} each</div>
+                      <div className="store-page__itemQty">
+                        {item.list_price != null && item.list_price > item.price ? (
+                          <>
+                            <span className="order-pricing-breakdown__was">
+                              ${item.list_price.toFixed(2)}
+                            </span>{' '}
+                            ${item.price.toFixed(2)} each
+                          </>
+                        ) : (
+                          <>${item.price.toFixed(2)} each</>
+                        )}
+                      </div>
                       <div className="store-page__itemPrice">${item.item_total.toFixed(2)}</div>
                     </div>
                   </li>
                 ))}
               </ul>
-              <div className="store-page__summaryRow store-page__summaryRow--strong">
-                <span>Subtotal</span>
-                <span>${totalPrice.toFixed(2)}</span>
-              </div>
+              <OrderPricingBreakdown pricing={checkoutPricing} />
             </div>
           </div>
 
@@ -359,18 +438,42 @@ const Checkout: React.FC = () => {
             <label className="store-page__label" htmlFor="coupon_code" style={{ marginBottom: 0 }}>
               Coupon
             </label>
-            <input
-              type="text"
-              className="store-page__input"
-              id="coupon_code"
-              name="coupon_code"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="Enter code"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-              style={{ maxWidth: '16rem' }}
-            />
+            <div className="store-page__couponApply">
+              <input
+                type="text"
+                className="store-page__input"
+                id="coupon_code"
+                name="coupon_code"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Enter code"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value);
+                  setCouponPreview(null);
+                  setCouponError('');
+                }}
+              />
+              <button
+                type="button"
+                className="product-landing__ctaGhost store-page__linkBtn"
+                onClick={handleApplyCoupon}
+                disabled={couponApplying || !couponCode.trim()}
+              >
+                {couponApplying ? 'Checking…' : 'Apply'}
+              </button>
+            </div>
+            {couponError && (
+              <p className="store-page__couponError" role="alert">
+                {couponError}
+              </p>
+            )}
+            {couponPreview && !couponError && (
+              <p className="store-page__couponOk" role="status">
+                Coupon <strong>{couponPreview.coupon_code}</strong> applied — saves $
+                {couponPreview.coupon_discount.toFixed(2)} on items.
+              </p>
+            )}
           </div>
 
           <div className="store-page__formCard">

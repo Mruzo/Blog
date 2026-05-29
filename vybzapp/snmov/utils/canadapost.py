@@ -11,6 +11,32 @@ import xml.etree.ElementTree as ET
 from .province_codes import normalize_province_code
 
 
+def filter_checkout_shipping_rates(rates):
+    """
+    Keep only Canada Post services enabled for checkout (settings.CANADAPOST_CHECKOUT_SERVICE_CODES).
+    Preserves API order; caller may sort by price.
+    """
+    allowed = getattr(settings, 'CANADAPOST_CHECKOUT_SERVICE_CODES', None)
+    if not allowed:
+        return rates
+    allowed_set = {code.strip().upper() for code in allowed if code}
+    if not allowed_set:
+        return rates
+    return [
+        rate for rate in rates
+        if (rate.get('service_code') or '').upper() in allowed_set
+    ]
+
+
+def get_checkout_service_label(service_code, api_service_name=''):
+    """User-facing checkout label for a Canada Post service code."""
+    labels = getattr(settings, 'CANADAPOST_CHECKOUT_SERVICE_LABELS', {}) or {}
+    code = (service_code or '').upper()
+    if code in labels:
+        return labels[code]
+    return api_service_name or service_code or 'Standard shipping'
+
+
 class CanadaPostAPI:
     """Canada Post Developer Portal REST API client"""
     
@@ -489,7 +515,8 @@ def get_canadapost_rates(order, use_production=None):
     
     api = CanadaPostAPI(use_production=use_production)
     rates = api.get_shipping_rates(from_address, to_address, parcel)
-    
+    rates = filter_checkout_shipping_rates(rates)
+
     if not rates:
         raise ValueError("No shipping options available.")
     
@@ -497,6 +524,9 @@ def get_canadapost_rates(order, use_production=None):
     # Also match frontend expectations (SelectShipping.tsx interface)
     formatted_rates = []
     for rate in rates:
+        service_code = rate.get('service_code', '')
+        api_service_name = rate.get('service_name', '')
+        checkout_label = get_checkout_service_label(service_code, api_service_name)
         # Use estimated_delivery_days directly from API (from service-standard.expected-transit-time)
         # This is more accurate than calculating from delivery date
         estimated_days = rate.get('estimated_delivery_days', 0)
@@ -514,11 +544,11 @@ def get_canadapost_rates(order, use_production=None):
                     pass
         
         formatted_rates.append({
-            'object_id': rate.get('service_code', ''),
+            'object_id': service_code,
             'provider': 'Canada Post',
             'provider_image_200': '',  # Frontend may handle missing image
             'servicelevel': {
-                'name': rate.get('service_name', ''),
+                'name': checkout_label,
             },
             'amount': str(rate.get('amount', '0.00')),
             'currency': rate.get('currency', 'CAD'),
@@ -528,8 +558,9 @@ def get_canadapost_rates(order, use_production=None):
                 'amount': str(rate.get('amount', '0.00')),
                 'currency': rate.get('currency', 'CAD'),
             },
-            '_canadapost_service_code': rate.get('service_code', ''),
-            '_canadapost_service_name': rate.get('service_name', ''),
+            '_canadapost_service_code': service_code,
+            '_canadapost_service_name': checkout_label,
+            '_canadapost_api_service_name': api_service_name,
         })
     
     return formatted_rates

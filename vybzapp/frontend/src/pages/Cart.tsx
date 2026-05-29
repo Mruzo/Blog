@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
+import OrderPricingBreakdown from '../components/OrderPricingBreakdown';
 
 const Cart: React.FC = () => {
-  const { cartItems, totalPrice, updateQuantity, removeItem, isLoading } = useCart();
+  const { cartItems, totalPrice, cartTotals, updateQuantity, removeItem, isLoading } = useCart();
   const navigate = useNavigate();
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
@@ -88,7 +89,7 @@ const Cart: React.FC = () => {
           <div className="store-page__heroMain">
             <p className="product-landing__eyebrow">Store</p>
             <h1 className="product-landing__h1">Shopping cart</h1>
-            <p className="product-landing__lead">Review quantities before checkout—up to four per product.</p>
+            <p className="product-landing__lead">Review quantities before checkout.</p>
           </div>
           {cartItems.length > 0 && (
             <div className="store-page__heroActions">
@@ -129,7 +130,19 @@ const Cart: React.FC = () => {
                       </button>
                     </div>
                     <div className="store-page__cartControls">
-                      <span className="store-page__cartEach">${product.price.toFixed(2)} each</span>
+                      <span className="store-page__cartEach">
+                        {product.list_price != null &&
+                        product.list_price > product.price ? (
+                          <>
+                            <span className="order-pricing-breakdown__was">
+                              ${product.list_price.toFixed(2)}
+                            </span>{' '}
+                            ${product.price.toFixed(2)} each
+                          </>
+                        ) : (
+                          <>${product.price.toFixed(2)} each</>
+                        )}
+                      </span>
                       <label className="visually-hidden" htmlFor={`qty-${product.uuid}`}>
                         Quantity for {product.title}
                       </label>
@@ -153,10 +166,24 @@ const Cart: React.FC = () => {
                 ))}
               </div>
 
+              <div className="store-page__panel store-page__cartPricingPanel">
+                <div className="store-page__panelBody store-page__panelBody--padded">
+                  <OrderPricingBreakdown
+                    pricing={{
+                      listSubtotal: cartTotals.listSubtotal,
+                      productSaleSavings: cartTotals.productSaleSavings,
+                      merchandiseSubtotal: cartTotals.merchandiseSubtotal || totalPrice,
+                      totalLabel: 'Cart subtotal',
+                      totalAmount: cartTotals.merchandiseSubtotal || totalPrice,
+                    }}
+                  />
+                  <p className="select-shipping__summaryNote">
+                    Shipping, coupons, and tax are calculated at checkout.
+                  </p>
+                </div>
+              </div>
+
               <div className="store-page__cartTotBar">
-                <span className="store-page__cartTotalLabel" id="cart-total-price">
-                  Total: ${totalPrice.toFixed(2)}
-                </span>
                 <button
                   type="button"
                   onClick={handleCheckoutClick}

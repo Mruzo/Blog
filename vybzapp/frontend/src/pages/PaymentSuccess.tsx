@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
+import OrderPricingBreakdown from '../components/OrderPricingBreakdown';
 import { parseJsonApiError } from '../utils/parseJsonApiError';
+import { OrderPricingSummary } from '../utils/orderPricing';
 
 interface Order {
   id: number;
@@ -12,6 +14,12 @@ interface Order {
   tracking_number?: string;
   label_url?: string;
   shipping_provider?: string;
+  coupon_code?: string;
+  coupon_discount?: number;
+  merchandise_subtotal?: number;
+  product_sale_savings?: number;
+  tax_amount?: number;
+  grand_total?: number;
   orderitem_set: Array<{
     product: {
       title: string;
@@ -29,9 +37,25 @@ interface Order {
   };
 }
 
+function buildPricingFromOrder(order: Order): OrderPricingSummary {
+  const merch = order.merchandise_subtotal ?? 0;
+  const productSavings = order.product_sale_savings ?? 0;
+  return {
+    listSubtotal: merch + productSavings,
+    productSaleSavings: productSavings,
+    merchandiseSubtotal: merch,
+    couponCode: order.coupon_code,
+    couponDiscount: order.coupon_discount,
+    shippingCost: order.shipping_cost ?? 0,
+    taxAmount: order.tax_amount,
+    showTax: (order.tax_amount ?? 0) > 0,
+    totalLabel: 'Total paid',
+    totalAmount: order.grand_total,
+  };
+}
+
 const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string>('');
@@ -60,7 +84,7 @@ const PaymentSuccess: React.FC = () => {
       if (token) {
         headers['Authorization'] = `Token ${token}`;
       }
-      
+
       const response = await fetch(`/api/payment/success/?session_id=${sessionId}`, {
         headers,
         credentials: 'include',
@@ -75,18 +99,21 @@ const PaymentSuccess: React.FC = () => {
       const data = await response.json();
       setOrder(data.order);
       setShippingSuccess(data.shipping_success || false);
-      
+
       if (data.shipping_success) {
         setMessage('Order placed successfully! Shipping label has been created.');
         setMessageType('success');
       } else {
-        setMessage('Order placed successfully, but there was an issue creating the shipping label. Our team will handle this manually.');
+        setMessage(
+          'Order placed successfully, but there was an issue creating the shipping label. Our team will handle this manually.'
+        );
         setMessageType('warning');
       }
       setShowMessage(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Failed to load order details';
       console.error('Error fetching order details:', error);
-      setMessage(error.message || 'Failed to load order details');
+      setMessage(msg);
       setMessageType('danger');
       setShowMessage(true);
     } finally {
@@ -94,141 +121,141 @@ const PaymentSuccess: React.FC = () => {
     }
   };
 
-  const handleCloseMessage = () => {
-    setShowMessage(false);
-  };
-
   if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (!order) {
     return (
-      <div className="container text-center p-5">
-        <div className="alert alert-danger" role="alert">
-          Order not found
-        </div>
-        <button 
-          className="btn btn-primary" 
-          onClick={() => navigate('/product/')}
-        >
-          Continue Shopping
-        </button>
+      <div className="product-landing">
+        <section className="product-landing__section store-page__section">
+          <div className="product-landing__container store-page__loadingWrap">
+            <LoadingSpinner />
+          </div>
+        </section>
       </div>
     );
   }
 
+  if (!order) {
+    return (
+      <div className="product-landing">
+        <section className="product-landing__section store-page__section">
+          <div className="product-landing__container">
+            <div className="store-page__error" role="alert">
+              Order not found
+            </div>
+            <Link to="/product/" className="product-landing__ctaPrimary store-page__linkBtn">
+              Continue shopping
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  const pricing = buildPricingFromOrder(order);
+
   return (
-    <div className="container text-center p-5">
-      <MessagePopup
-        message={message}
-        type={messageType}
-        show={showMessage}
-        onClose={handleCloseMessage}
-        duration={8000}
-      />
+    <div className="product-landing payment-success">
+      <section className="product-landing__hero">
+        <div className="product-landing__container">
+          <p className="product-landing__eyebrow">Store</p>
+          <h1 className="product-landing__h1">Thank you!</h1>
+          <p className="product-landing__lead">
+            Payment received for order #{order.id}.
+          </p>
+        </div>
+      </section>
 
-      <div className="row justify-content-center">
-        <div className="col-md-8">
-          <div className="card">
-            <div className="card-header">
-              <h2 className="subtext-btn-sm text-decoration-none mb-0">Order Confirmation</h2>
+      <section className="product-landing__section store-page__section">
+        <div className="product-landing__container">
+          <MessagePopup
+            message={message}
+            type={messageType}
+            show={showMessage}
+            onClose={() => setShowMessage(false)}
+            duration={8000}
+          />
+
+          <div className="payment-success__layout">
+            <div className="store-page__panel">
+              <div className="store-page__panelHead">
+                <h2 className="store-page__panelTitle">Order items</h2>
+              </div>
+              <div className="store-page__panelBody store-page__panelBody--padded">
+                <ul className="store-page__itemList">
+                  {order.orderitem_set.map((item, index) => (
+                    <li key={index} className="store-page__itemRow">
+                      <span className="store-page__itemName">{item.product.title}</span>
+                      <span className="store-page__itemQty">×{item.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <div className="card-body">
-              <div className="alert alert-success" role="alert">
-                <h4 className="alert-heading">Payment Successful!</h4>
-                <p>Thank you for your order. Your payment has been processed successfully.</p>
-                <hr />
-                <p className="mb-0">
-                  <strong>Order ID:</strong> #{order.id}
+
+            <div className="store-page__panel">
+              <div className="store-page__panelHead">
+                <h2 className="store-page__panelTitle">Order total</h2>
+              </div>
+              <div className="store-page__panelBody store-page__panelBody--padded">
+                <OrderPricingBreakdown pricing={pricing} />
+              </div>
+            </div>
+
+            <div className="store-page__panel">
+              <div className="store-page__panelHead">
+                <h2 className="store-page__panelTitle">Ship to</h2>
+              </div>
+              <div className="store-page__panelBody store-page__panelBody--padded">
+                <address className="payment-success__address">
+                  <strong>{order.shipping_address.full_name}</strong>
+                  <br />
+                  {order.shipping_address.address_line_1}
+                  <br />
+                  {order.shipping_address.address_line_2 && (
+                    <>
+                      {order.shipping_address.address_line_2}
+                      <br />
+                    </>
+                  )}
+                  {order.shipping_address.city}, {order.shipping_address.state}{' '}
+                  {order.shipping_address.postal_code}
+                  <br />
+                  {order.shipping_address.country_code}
+                </address>
+              </div>
+            </div>
+
+            {shippingSuccess && order.tracking_number && (
+              <div className="store-page__infoBanner payment-success__tracking">
+                <p>
+                  <strong>Tracking:</strong> {order.tracking_number}
+                  {order.shipping_provider ? ` (${order.shipping_provider})` : ''}
                 </p>
+                {order.label_url && (
+                  <a
+                    href={order.label_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="product-landing__ctaGhost store-page__linkBtn"
+                  >
+                    View shipping label
+                  </a>
+                )}
               </div>
+            )}
+          </div>
 
-              {/* Order Details */}
-              <div className="row mt-4">
-                <div className="col-md-6">
-                  <h5 className="subtext-btn-sm">Order Items</h5>
-                  <table className="table table-sm">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>Qty</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {order.orderitem_set.map((item, index) => (
-                        <tr key={index}>
-                          <td>{item.product.title}</td>
-                          <td>{item.quantity}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="col-md-6">
-                  <h5 className="subtext-btn-sm">Shipping Address</h5>
-                  <address>
-                    <strong>{order.shipping_address.full_name}</strong><br />
-                    {order.shipping_address.address_line_1}<br />
-                    {order.shipping_address.address_line_2 && (
-                      <>
-                        {order.shipping_address.address_line_2}<br />
-                      </>
-                    )}
-                    {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}<br />
-                    {order.shipping_address.country_code}
-                  </address>
-                </div>
-              </div>
-
-              {/* Shipping Information */}
-              {shippingSuccess && order.tracking_number && (
-                <div className="alert alert-info mt-3">
-                  <h6>Shipping Information</h6>
-                  <p><strong>Tracking Number:</strong> {order.tracking_number}</p>
-                  {order.shipping_provider && (
-                    <p><strong>Carrier:</strong> {order.shipping_provider}</p>
-                  )}
-                  {order.label_url && (
-                    <p>
-                      <a href={order.label_url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary">
-                        View Shipping Label
-                      </a>
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="mt-4">
-                <button 
-                  className="btn btn-primary me-2" 
-                  onClick={() => navigate('/product/')}
-                >
-                  Continue Shopping
-                </button>
-                <button 
-                  className="btn btn-outline-primary" 
-                  onClick={() => navigate('/product/my-orders/')}
-                >
-                  View My Orders
-                </button>
-              </div>
-            </div>
+          <div className="store-page__ctaRow payment-success__actions">
+            <Link to="/product/" className="product-landing__ctaPrimary store-page__linkBtn">
+              Continue shopping
+            </Link>
+            <Link to="/product/my-orders/" className="product-landing__ctaGhost store-page__linkBtn">
+              View my orders
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };
 
 export default PaymentSuccess;
-
-
-
-
-
-
-
-
-

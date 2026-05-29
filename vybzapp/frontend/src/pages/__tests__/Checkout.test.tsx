@@ -36,6 +36,11 @@ jest.mock('../../contexts/CartContext', () => ({
       }
     ],
     totalPrice: 29.99,
+    cartTotals: {
+      listSubtotal: 29.99,
+      productSaleSavings: 0,
+      merchandiseSubtotal: 29.99,
+    },
     isLoading: false
   })
 }));

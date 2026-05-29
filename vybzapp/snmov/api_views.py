@@ -106,6 +106,52 @@ def featured_storefront_coupon(request):
     )
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def preview_coupon(request):
+    """
+    Preview coupon discount for the current session cart (checkout page).
+    Does not create an order or increment redemption counts.
+    """
+    coupon_code = (request.data.get('coupon_code') or request.data.get('coupon') or '').strip().upper()
+    if not coupon_code:
+        return Response({'success': False, 'error': 'Enter a coupon code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        coupon_obj = Coupon.objects.get(code=coupon_code)
+    except Coupon.DoesNotExist:
+        return Response({'success': False, 'error': 'Invalid coupon code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not coupon_obj.is_valid_now():
+        return Response(
+            {'success': False, 'error': 'This coupon is not active or has expired.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    cart_data = get_cart_for_session(request)
+    merch = Decimal(str(cart_data.get('merchandise_subtotal') or cart_data.get('total_price') or 0))
+    if merch <= 0:
+        return Response({'success': False, 'error': 'Your cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    discount = coupon_obj.compute_discount(merch)
+    if discount <= 0:
+        return Response(
+            {'success': False, 'error': 'This coupon cannot be applied to your cart.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    merch_after = (merch - discount).quantize(Decimal('0.01'))
+    return Response({
+        'success': True,
+        'coupon_code': coupon_obj.code,
+        'coupon_discount': float(discount),
+        'merchandise_subtotal': float(merch),
+        'merchandise_after_coupon': float(merch_after),
+        'product_sale_savings': float(cart_data.get('product_sale_savings') or 0),
+        'list_subtotal': float(cart_data.get('list_subtotal') or merch),
+    })
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def site_image_by_caption_token(request):
@@ -1119,11 +1165,26 @@ def get_shipping_rates(request, order_id):
     # Get shipping rates
     try:
         rates = get_shipping_rates_for_order(order)
-        
-        # Calculate cart total for total_with_shipping
-        merch = order.calculate_merchandise_subtotal() or Decimal('0.00')
+
+        order_items = list(order.orderitem_set.select_related('product').all())
+        merch = Decimal('0.00')
+        orderitem_payload = []
+        for item in order_items:
+            list_unit = item.product.price or Decimal('0.00')
+            unit_price = item.product.get_discounted_price() or Decimal('0.00')
+            line_total = (unit_price * item.quantity).quantize(Decimal('0.01'))
+            merch += line_total
+            orderitem_payload.append({
+                'product': {'title': item.product.title},
+                'quantity': item.quantity,
+                'list_price': float(list_unit),
+                'unit_price': float(unit_price),
+                'line_total': float(line_total),
+            })
+        merch = merch.quantize(Decimal('0.01'))
+
         coupon = order.calculate_coupon_discount() or Decimal('0.00')
-        cart_total = merch - coupon
+        cart_total = (merch - coupon).quantize(Decimal('0.01'))
         if cart_total < 0:
             cart_total = Decimal('0.00')
         
@@ -1158,6 +1219,7 @@ def get_shipping_rates(request, order_id):
         from snmov.utils.checkout_fulfillment import snapshot_shipping_rates_on_order
         snapshot_shipping_rates_on_order(order, rates)
         
+        coupon_discount = coupon if coupon > 0 else Decimal('0.00')
         return Response({
             'success': True,
             'order': {
@@ -1166,13 +1228,15 @@ def get_shipping_rates(request, order_id):
                 'order_date': order.order_date,
                 'status': order.status,
                 'shipping_cost': float(order.shipping_cost),
-                'orderitem_set': [
-                    {
-                        'product': {'title': item.product.title},
-                        'quantity': item.quantity
-                    }
-                    for item in order.orderitem_set.all()
-                ]
+                'orderitem_set': orderitem_payload,
+            },
+            'pricing': {
+                'list_subtotal': float(order.calculate_merchandise_subtotal() + order.calculate_product_sale_savings()),
+                'product_sale_savings': float(order.calculate_product_sale_savings()),
+                'merchandise_subtotal': float(merch),
+                'coupon_code': (order.coupon_code or '').strip(),
+                'coupon_discount': float(coupon_discount),
+                'merchandise_after_coupon': float(cart_total),
             },
             'rates': rates
         })

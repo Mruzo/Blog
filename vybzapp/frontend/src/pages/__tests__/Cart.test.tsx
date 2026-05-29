@@ -28,6 +28,11 @@ const defaultCart = {
     },
   ],
   totalPrice: 59.98,
+  cartTotals: {
+    listSubtotal: 59.98,
+    productSaleSavings: 0,
+    merchandiseSubtotal: 59.98,
+  },
   cartCount: 2,
   updateQuantity: jest.fn(),
   removeItem: jest.fn(),
@@ -50,7 +55,7 @@ describe('Cart', () => {
   it('renders cart items', () => {
     renderWithProviders(<Cart />);
     expect(screen.getByText('Test Product')).toBeInTheDocument();
-    expect(screen.getByText('$59.98')).toBeInTheDocument();
+    expect(screen.getAllByText('$59.98').length).toBeGreaterThan(0);
   });
 
   it('renders empty cart message when cart is empty', () => {

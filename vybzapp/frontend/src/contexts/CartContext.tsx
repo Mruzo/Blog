@@ -6,6 +6,16 @@ interface CartItem {
   price: number;
   quantity: number;
   item_total: number;
+  list_price?: number;
+  item_list_total?: number;
+  item_sale_savings?: number;
+  discount_percentage?: number;
+}
+
+interface CartTotals {
+  listSubtotal: number;
+  productSaleSavings: number;
+  merchandiseSubtotal: number;
 }
 
 // Helper function to get CSRF token from cookies
@@ -64,6 +74,7 @@ interface CartContextType {
   cartItems: CartItem[];
   cartCount: number;
   totalPrice: number;
+  cartTotals: CartTotals;
   isLoading: boolean;
   addToCart: (productId: string, quantity?: number) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
@@ -90,7 +101,32 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartCount, setCartCount] = useState<number>(0);
   const [totalPrice, setTotalPrice] = useState<number>(0);
+  const [cartTotals, setCartTotals] = useState<CartTotals>({
+    listSubtotal: 0,
+    productSaleSavings: 0,
+    merchandiseSubtotal: 0,
+  });
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const applyCartPayload = (data: {
+    cart_items?: CartItem[];
+    total_price?: number;
+    list_subtotal?: number;
+    product_sale_savings?: number;
+    merchandise_subtotal?: number;
+  }) => {
+    const items = [...(data.cart_items || [])];
+    const count = items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
+    const merchandise = data.merchandise_subtotal ?? data.total_price ?? 0;
+    setCartItems(items);
+    setCartCount(count);
+    setTotalPrice(merchandise);
+    setCartTotals({
+      listSubtotal: data.list_subtotal ?? merchandise,
+      productSaleSavings: data.product_sale_savings ?? 0,
+      merchandiseSubtotal: merchandise,
+    });
+  };
 
   const fetchCart = async () => {
     try {
@@ -108,16 +144,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       });
       if (response.ok) {
         const data = await response.json();
-        // Create a new array to ensure React detects the state change
-        const items = [...(data.cart_items || [])];
-        // Calculate cart count by summing all quantities
-        const count = items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
-        const total = data.total_price || 0;
-        
-        // Update all state in a single batch
-        setCartItems(items);
-        setCartCount(count);
-        setTotalPrice(total);
+        applyCartPayload(data);
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
@@ -154,18 +181,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         
         // Use cart data directly from the response if available (more reliable on mobile)
         if (responseData.cart && responseData.cart.cart_items) {
-          // Create a new array to ensure React detects the state change
-          const items = [...(responseData.cart.cart_items || [])];
-          const count = items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
-          const total = responseData.cart.total_price || 0;
-          
-          // Update all state in a single batch to ensure consistency
-          setCartItems(items);
-          setCartCount(count);
-          setTotalPrice(total);
-          
-          // Log for debugging
-          console.log('Cart updated:', { items, count, total });
+          applyCartPayload(responseData.cart);
         } else {
           // Fallback: fetch cart data (for backward compatibility)
           await fetchCart();
@@ -220,27 +236,18 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         const cartData = responseData.cart || responseData;
         
         if (cartData && cartData.cart_items) {
-          // Create a new array to ensure React detects the state change
-          // Map items to ensure UUIDs are strings and all fields are properly typed
-          const items = (cartData.cart_items || []).map((item: any) => ({
+          const items = (cartData.cart_items || []).map((item: CartItem & Record<string, unknown>) => ({
             uuid: String(item.uuid),
             title: item.title,
-            price: parseFloat(item.price) || 0,
-            quantity: parseInt(String(item.quantity)) || 0, // Ensure quantity is parsed correctly
-            item_total: parseFloat(item.item_total) || 0,
+            price: parseFloat(String(item.price)) || 0,
+            quantity: parseInt(String(item.quantity), 10) || 0,
+            item_total: parseFloat(String(item.item_total)) || 0,
+            list_price: item.list_price != null ? parseFloat(String(item.list_price)) : undefined,
+            item_list_total: item.item_list_total != null ? parseFloat(String(item.item_list_total)) : undefined,
+            item_sale_savings: item.item_sale_savings != null ? parseFloat(String(item.item_sale_savings)) : undefined,
+            discount_percentage: item.discount_percentage != null ? parseFloat(String(item.discount_percentage)) : undefined,
           }));
-          const count = items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
-          const total = parseFloat(cartData.total_price) || 0;
-          
-          // Log detailed info for debugging
-          console.log('Cart items from response:', cartData.cart_items);
-          console.log('Processed items:', items);
-          console.log('Cart updated from response:', { items, count, total, responseData });
-          
-          // Force state update by creating completely new objects
-          setCartItems([...items]);
-          setCartCount(count);
-          setTotalPrice(total);
+          applyCartPayload({ ...cartData, cart_items: items });
         } else {
           // Fallback: fetch cart data (for backward compatibility)
           console.log('Cart data not in expected format, fetching cart...', { cartData, responseData });
@@ -291,23 +298,16 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         const cartData = responseData.cart || responseData;
         
         if (cartData && cartData.cart_items) {
-          // Create a new array to ensure React detects the state change
-          const items = (cartData.cart_items || []).map((item: any) => ({
+          const items = (cartData.cart_items || []).map((item: CartItem & Record<string, unknown>) => ({
             uuid: String(item.uuid),
             title: item.title,
-            price: parseFloat(item.price) || 0,
-            quantity: parseInt(String(item.quantity)) || 0,
-            item_total: parseFloat(item.item_total) || 0,
+            price: parseFloat(String(item.price)) || 0,
+            quantity: parseInt(String(item.quantity), 10) || 0,
+            item_total: parseFloat(String(item.item_total)) || 0,
+            list_price: item.list_price != null ? parseFloat(String(item.list_price)) : undefined,
+            item_sale_savings: item.item_sale_savings != null ? parseFloat(String(item.item_sale_savings)) : undefined,
           }));
-          const count = items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
-          const total = parseFloat(cartData.total_price) || 0;
-          
-          // Update all state in a single batch
-          setCartItems([...items]);
-          setCartCount(count);
-          setTotalPrice(total);
-          
-          console.log('Item removed, cart updated:', { items, count, total });
+          applyCartPayload({ ...cartData, cart_items: items });
         } else {
           // Fallback: fetch cart data
           await fetchCart();
@@ -391,6 +391,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     cartItems,
     cartCount,
     totalPrice,
+    cartTotals,
     isLoading,
     addToCart,
     updateQuantity,

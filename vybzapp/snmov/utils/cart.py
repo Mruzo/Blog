@@ -59,7 +59,8 @@ def get_cart_for_session(request, clean_expired=True):
             request.session.modified = True
             request.session.save()
     cart_items = []
-    total_price = 0
+    total_price = Decimal('0.00')
+    list_subtotal = Decimal('0.00')
     cart_modified = False
     
     # High Priority: Cart expiration - 30 days
@@ -89,16 +90,24 @@ def get_cart_for_session(request, clean_expired=True):
             
             product = Product.objects.get(uuid=product_id)
             quantity = details.get('quantity', 1)
+            list_unit = product.price or Decimal('0.00')
             unit_price = product.get_discounted_price()
-            total = unit_price * quantity
+            line_list = (list_unit * quantity).quantize(Decimal('0.01'))
+            line_total = (unit_price * quantity).quantize(Decimal('0.01'))
+            line_savings = max(Decimal('0.00'), line_list - line_total)
             cart_items.append({
                 'uuid': product.uuid,
                 'title': product.title,
-                'price': round(unit_price,2),
+                'list_price': float(list_unit),
+                'price': float(unit_price),
                 'quantity': quantity,
-                'item_total': round(total,2),
+                'item_total': float(line_total),
+                'item_list_total': float(line_list),
+                'item_sale_savings': float(line_savings),
+                'discount_percentage': float(product.discount_percentage or 0),
             })
-            total_price += total
+            total_price += line_total
+            list_subtotal += line_list
         except (Product.DoesNotExist, ValueError):
             # Skip invalid UUIDs or non-existent products
             cart_modified = True
@@ -126,9 +135,14 @@ def get_cart_for_session(request, clean_expired=True):
         request.session['cart'] = cleaned_cart
         request.session.modified = True
 
+    product_sale_savings = max(Decimal('0.00'), list_subtotal - total_price).quantize(Decimal('0.01'))
+    merchandise_subtotal = total_price.quantize(Decimal('0.01'))
     return {
         'cart_items': cart_items,
-        'total_price': total_price,
+        'total_price': float(merchandise_subtotal),
+        'list_subtotal': float(list_subtotal.quantize(Decimal('0.01'))),
+        'product_sale_savings': float(product_sale_savings),
+        'merchandise_subtotal': float(merchandise_subtotal),
     }
 
 def get_sender_address():

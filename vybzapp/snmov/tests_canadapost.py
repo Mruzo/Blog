@@ -15,7 +15,9 @@ from snmov.models import Product, Order, OrderItem, ShippingAddress
 from snmov.utils.canadapost import (
     CanadaPostAPI,
     get_canadapost_rates,
-    create_canadapost_label
+    create_canadapost_label,
+    filter_checkout_shipping_rates,
+    get_checkout_service_label,
 )
 
 User = get_user_model()
@@ -587,6 +589,33 @@ class CanadaPostIntegrationTestCase(TestCase):
                     self.assertEqual(parcel['height'], 10.0)
                     # Weight should be sum: (500*2 + 1000*1) / 1000 = 2.0 kg
                     self.assertEqual(parcel['weight'], 2.0)
+
+
+class CanadaPostCheckoutFilterTestCase(TestCase):
+    """Checkout service allowlist and display labels."""
+
+    def test_filter_checkout_shipping_rates_keeps_regular_and_expedited_only(self):
+        rates = [
+            {'service_code': 'DOM.RP', 'service_name': 'Regular Parcel', 'amount': Decimal('8.00')},
+            {'service_code': 'DOM.EP', 'service_name': 'Expedited Parcel', 'amount': Decimal('12.00')},
+            {'service_code': 'DOM.PC', 'service_name': 'Priority', 'amount': Decimal('20.00')},
+            {'service_code': 'DOM.XP', 'service_name': 'Xpresspost', 'amount': Decimal('15.00')},
+        ]
+        with override_settings(CANADAPOST_CHECKOUT_SERVICE_CODES=['DOM.RP', 'DOM.EP']):
+            filtered = filter_checkout_shipping_rates(rates)
+        self.assertEqual(len(filtered), 2)
+        self.assertEqual([r['service_code'] for r in filtered], ['DOM.RP', 'DOM.EP'])
+
+    def test_get_checkout_service_label_maps_codes_to_friendly_names(self):
+        with override_settings(
+            CANADAPOST_CHECKOUT_SERVICE_LABELS={
+                'DOM.RP': 'Regular shipping',
+                'DOM.EP': 'Expedited shipping',
+            }
+        ):
+            self.assertEqual(get_checkout_service_label('DOM.RP', 'Regular Parcel'), 'Regular shipping')
+            self.assertEqual(get_checkout_service_label('DOM.EP', 'Expedited Parcel'), 'Expedited shipping')
+            self.assertEqual(get_checkout_service_label('DOM.PC', 'Priority'), 'Priority')
 
 
 class CanadaPostXMLParsingTestCase(TestCase):

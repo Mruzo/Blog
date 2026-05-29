@@ -2787,6 +2787,312 @@ button.store-page__linkBtn {
 }
 
 /* Order detail, cart, checkout, shipping */
+.select-shipping__section {
+  padding-top: 0.5rem;
+}
+
+.select-shipping__layout {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 992px) {
+  .select-shipping__layout {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  }
+}
+
+.select-shipping__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.select-shipping__summaryPanel .store-page__panelHead {
+  padding-bottom: 0.65rem;
+}
+
+.select-shipping__backLink {
+  align-self: flex-start;
+}
+
+.select-shipping__muted {
+  font-family: var(--font-primary);
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.55);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.select-shipping__summaryNote {
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  color: rgba(15, 23, 42, 0.5);
+  margin: 0.35rem 0 0;
+  line-height: 1.4;
+}
+
+.select-shipping__optionsPanel {
+  min-width: 0;
+}
+
+.select-shipping__optionsHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.select-shipping__optionsSub {
+  margin-top: 0.2rem;
+}
+
+.select-shipping__carrierMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(15, 23, 42, 0.03);
+  flex-shrink: 0;
+}
+
+.select-shipping__carrierIcon {
+  color: #c8102e;
+  font-size: 0.95rem;
+}
+
+.select-shipping__carrierName {
+  font-family: var(--font-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #c8102e;
+  text-transform: none;
+}
+
+.select-shipping__rateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.select-shipping__rateItem {
+  margin: 0;
+}
+
+.select-shipping__rateCard {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.select-shipping__rateCard:hover:not(:disabled) {
+  border-color: rgba(15, 23, 42, 0.2);
+  box-shadow: 0 6px 18px rgba(17, 24, 39, 0.06);
+}
+
+.select-shipping__rateCard--selected {
+  border-color: rgba(255, 188, 0, 0.95);
+  box-shadow: 0 0 0 2px rgba(255, 188, 0, 0.28);
+  background: linear-gradient(180deg, rgba(255, 188, 0, 0.06), #fff);
+}
+
+.select-shipping__rateCard:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.select-shipping__radio {
+  color: rgba(15, 23, 42, 0.35);
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.select-shipping__rateCard--selected .select-shipping__radio {
+  color: #b45309;
+}
+
+.select-shipping__rateMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.select-shipping__rateName {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.select-shipping__rateEta {
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  color: rgba(15, 23, 42, 0.52);
+  line-height: 1.35;
+}
+
+.select-shipping__ratePrices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.select-shipping__priceBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.select-shipping__summaryDiscount span:last-child {
+  color: #166534;
+  font-weight: 700;
+}
+
+.select-shipping__totalDue {
+  margin-top: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 188, 0, 0.14), rgba(255, 188, 0, 0.05));
+  border: 1px solid rgba(255, 188, 0, 0.45);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.select-shipping__totalDueLabel {
+  font-family: var(--font-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.72);
+}
+
+.select-shipping__totalDueAmt {
+  font-family: var(--font-primary);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.select-shipping__lineList {
+  margin-bottom: 0.15rem;
+}
+
+.select-shipping__lineRow {
+  align-items: flex-start;
+}
+
+.select-shipping__lineMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.select-shipping__lineMeta {
+  font-family: var(--font-primary);
+  font-size: 0.78rem;
+  color: rgba(15, 23, 42, 0.5);
+}
+
+.select-shipping__lineTotal {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #0f172a;
+  flex-shrink: 0;
+}
+
+.select-shipping__warn {
+  font-family: var(--font-primary);
+  font-size: 0.78rem;
+  color: #92400e;
+  margin: 0.5rem 0 0;
+  line-height: 1.4;
+}
+
+.select-shipping__rateShippingAmt {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #0f172a;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.select-shipping__actions {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.85rem;
+}
+
+.select-shipping__cta {
+  width: 100%;
+}
+
+.select-shipping__ctaNote {
+  font-family: var(--font-primary);
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.58);
+  text-align: center;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.select-shipping__ctaNote strong {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+@media (max-width: 520px) {
+  .select-shipping__rateCard {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .select-shipping__rateShippingAmt {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .select-shipping__actions {
+    justify-content: stretch;
+  }
+}
+
+.select-shipping__empty {
+  margin: 0;
+}
+
 .store-page__heroRow {
   display: flex;
   justify-content: space-between;
@@ -3176,10 +3482,87 @@ button.store-page__linkBtn {
 .store-page__couponRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem 0.75rem;
   margin: 1rem 0 0.25rem;
   font-family: var(--font-primary);
+}
+
+.store-page__couponApply {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: min(100%, 14rem);
+}
+
+.store-page__couponApply .store-page__input {
+  flex: 1;
+  min-width: 10rem;
+  max-width: 16rem;
+}
+
+.store-page__couponError {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #b91c1c;
+}
+
+.store-page__couponOk {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #166534;
+}
+
+.order-pricing-breakdown__discount span:last-child {
+  color: #166534;
+  font-weight: 600;
+}
+
+.order-pricing-breakdown__was {
+  text-decoration: line-through;
+  color: rgba(15, 23, 42, 0.45);
+  font-weight: 400;
+}
+
+.order-pricing-breakdown__subrow {
+  font-size: 0.88rem;
+  color: rgba(15, 23, 42, 0.62);
+}
+
+.store-page__cartPricingPanel {
+  margin-top: 1rem;
+}
+
+.payment-success__layout {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .payment-success__layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .payment-success__layout .store-page__panel:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.payment-success__address {
+  font-style: normal;
+  line-height: 1.55;
+}
+
+.payment-success__actions {
+  margin-top: 1.5rem;
+}
+
+.payment-success__tracking {
+  grid-column: 1 / -1;
 }
 
 .store-page__rateProvider {

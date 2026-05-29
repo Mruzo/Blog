@@ -70,6 +70,16 @@ CANADAPOST_USE_PRODUCTION = False
 CANADAPOST_KEY_NUMBER = CANADAPOST_DEVELOPMENT_KEY_NUMBER
 CANADAPOST_CUSTOMER_NUMBER = CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER
 
+# Checkout: only offer these Canada Post domestic services (see Canada Post rate API docs).
+# DOM.RP = Regular Parcel, DOM.EP = Expedited Parcel (not Priority/Xpresspost).
+CANADAPOST_CHECKOUT_SERVICE_CODES = ['DOM.RP', 'DOM.EP']
+
+# Labels shown at checkout (Canada Post returns names like "Expedited Parcel", "Regular Parcel").
+CANADAPOST_CHECKOUT_SERVICE_LABELS = {
+    'DOM.RP': 'Regular shipping',
+    'DOM.EP': 'Expedited shipping',
+}
+
 
 # Return/Refund System Configuration
 DEFAULT_RETURN_WINDOW_DAYS = 30  # Default return window in days

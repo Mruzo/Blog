@@ -4,7 +4,7 @@ Used by the browser success API and by the Stripe webhook.
 """
 import json
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.utils import timezone
@@ -37,6 +37,57 @@ def snapshot_shipping_rates_on_order(order, rates):
     order.save(update_fields=['shipping_rates_snapshot'])
 
 
+def _price_to_cents(amount: Decimal) -> int:
+    """Convert dollars to Stripe cents (non-negative integer)."""
+    cents = (amount * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+    return max(0, int(cents))
+
+
+def _merchandise_product_lines(order_items):
+    """One Stripe line per cart item (no coupon applied on lines)."""
+    lines = []
+    for item in order_items:
+        unit_price = item.product.get_discounted_price()
+        lines.append({
+            'price_data': {
+                'currency': 'cad',
+                'product_data': {'name': item.product.title},
+                'unit_amount': _price_to_cents(unit_price),
+            },
+            'quantity': item.quantity or 1,
+        })
+    return lines
+
+
+def _merchandise_after_coupon_line(order, order_items, coupon_discount: Decimal):
+    """
+    Single merchandise charge: subtotal minus coupon, before shipping and tax.
+    Stripe requires non-negative unit_amount, so the coupon is baked into this line.
+    """
+    merch = order.calculate_merchandise_subtotal() or Decimal('0')
+    merch_after = (merch - coupon_discount).quantize(Decimal('0.01'))
+    if merch_after < 0:
+        merch_after = Decimal('0.00')
+
+    item_summary = ', '.join(
+        f'{item.quantity}× {item.product.title}' for item in order_items
+    )
+    product_data = {'name': 'Merchandise'}
+    if order.coupon_code:
+        product_data['name'] = f'Merchandise (coupon {order.coupon_code})'
+    if item_summary:
+        product_data['description'] = item_summary[:500]
+
+    return [{
+        'price_data': {
+            'currency': 'cad',
+            'product_data': product_data,
+            'unit_amount': _price_to_cents(merch_after),
+        },
+        'quantity': 1,
+    }]
+
+
 def stripe_tax_line_item_cents(order):
     """
     Tax amount in cents for Stripe line_items, aligned with invoice PDF (tax on subtotal + shipping).
@@ -60,35 +111,19 @@ def stripe_tax_line_item_cents(order):
 
 def build_checkout_line_items(order):
     """Stripe Checkout line_items for an order (products + shipping + optional tax)."""
-    line_items = [
-        {
-            'price_data': {
-                'currency': 'cad',
-                'product_data': {'name': item.product.title},
-                'unit_amount': int(item.product.get_discounted_price() * 100),
-            },
-            'quantity': item.quantity,
-        }
-        for item in order.orderitem_set.all()
-    ]
+    order_items = list(order.orderitem_set.select_related('product').all())
     coupon_discount = order.calculate_coupon_discount() or Decimal('0')
+
     if coupon_discount > 0:
-        discount_cents = int((coupon_discount * 100).to_integral_value())
-        if discount_cents > 0:
-            label = f"Coupon discount ({order.coupon_code})" if order.coupon_code else 'Coupon discount'
-            line_items.append({
-                'price_data': {
-                    'currency': 'cad',
-                    'product_data': {'name': label},
-                    'unit_amount': -discount_cents,
-                },
-                'quantity': 1,
-            })
+        line_items = _merchandise_after_coupon_line(order, order_items, coupon_discount)
+    else:
+        line_items = _merchandise_product_lines(order_items)
+
     line_items.append({
         'price_data': {
             'currency': 'cad',
             'product_data': {'name': 'Shipping'},
-            'unit_amount': int((order.shipping_cost or Decimal('0')) * 100),
+            'unit_amount': _price_to_cents(order.shipping_cost or Decimal('0')),
         },
         'quantity': 1,
     })
