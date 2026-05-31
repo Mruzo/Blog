@@ -1,25 +1,33 @@
 {% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
 
 {% block vybcheq_title %}Run screen{% endblock %}
 
 {% block vybcheq_content %}
-<h1 class="h3 mb-3">Run screen</h1>
-<p class="text-secondary mb-4">Choose a screening rule set. The watchlist is the universe.</p>
+<h1 class="h3 mb-1">Run a check</h1>
+<p class="text-secondary mb-4">Pick a saved rule set. Every ticker on your <a href="{% url 'vybcheq_staff:watchlist' %}" class="link-warning">watchlist</a> is evaluated against its latest stored quarter.</p>
 
 {% if rule_sets %}
 <ul class="list-group list-group-flush border border-secondary rounded overflow-hidden">
     {% for rs in rule_sets %}
-    <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center">
-        <div>
+    <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-3">
+        <div class="flex-grow-1 min-w-0">
             <strong>{{ rs.name }}</strong>
             {% if rs.is_active %}<span class="badge bg-success ms-1">active</span>{% endif %}
-            <div class="small text-secondary">Created {{ rs.created_at|date:"Y-m-d" }}</div>
+            <div class="small mt-1">{% include "vybcheq/staff/_rule_set_rules.html" with rs=rs %}</div>
         </div>
-        <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=rs.pk %}" class="btn btn-warning btn-sm">Continue</a>
+        <div class="d-flex flex-shrink-0 gap-2">
+            <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=rs.pk %}" class="btn btn-warning btn-sm">Run</a>
+            <a href="{% url 'vybcheq_staff:rule_set_edit' pk=rs.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+        </div>
     </li>
     {% endfor %}
 </ul>
+<p class="small text-secondary mt-3 mb-0">
+    <a href="{% url 'vybcheq_staff:rule_set_list' %}" class="link-secondary">← Back to criteria</a>
+    · <a href="{% url 'vybcheq_staff:rule_set_create' %}" class="link-secondary">New rule set</a>
+</p>
 {% else %}
-<p class="text-secondary">No rule sets. <a href="{% url 'admin:vybcheq_screeningruleset_add' %}">Create one in admin</a>.</p>
+<p class="text-secondary">No rule sets saved yet. <a href="{% url 'vybcheq_staff:rule_set_list' %}">Set up your six checks</a> first.</p>
 {% endif %}
 {% endblock %}

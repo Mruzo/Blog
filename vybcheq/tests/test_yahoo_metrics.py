@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import ANY, patch
 
 from django.test import TestCase
@@ -5,7 +6,9 @@ from django.test import TestCase
 from vybcheq.models import Security
 from vybcheq.yahoo_metrics import (
     YahooMetricsError,
+    _last_price_from_yahoo_info,
     fetch_screening_metrics_yahoo,
+    fetch_yahoo_security_data,
     yahoo_ticker_for_security,
 )
 
@@ -69,3 +72,23 @@ class FetchRetryTests(TestCase):
         data = fetch_screening_metrics_yahoo(s, max_retries=3)
         self.assertEqual(data["pe_ratio"], 12.0)
         self.assertEqual(mock_once.call_count, 2)
+
+
+class FetchYahooSecurityDataTests(TestCase):
+    @patch("yfinance.Ticker")
+    def test_returns_metrics_and_last_price(self, mock_ticker_cls):
+        mock_ticker_cls.return_value.info = {
+            "trailingPE": 20.0,
+            "regularMarketPrice": 142.5,
+        }
+        s = Security.objects.create(symbol="AAPL", exchange="NASDAQ", currency="USD")
+        metrics, price = fetch_yahoo_security_data(s)
+        self.assertEqual(metrics["pe_ratio"], 20.0)
+        self.assertEqual(price, Decimal("142.5"))
+
+    def test_last_price_from_info_fallback_fields(self):
+        self.assertEqual(
+            _last_price_from_yahoo_info({"currentPrice": 99.01}),
+            Decimal("99.01"),
+        )
+        self.assertIsNone(_last_price_from_yahoo_info({}))

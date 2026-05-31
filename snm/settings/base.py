@@ -196,6 +196,15 @@ EMAIL_HOST_USER = config.get('section','MG_USER')
 EMAIL_HOST_PASSWORD = config.get('section', 'MG_PASS')
 EMAIL_USE_TLS = True
 
+# Vybcheq — Financial Modeling Prep (EOD prices); key in /etc/snmov/settings.ini [section] FMP_API_KEY
+VYBCHEQ_FMP_API_KEY = config.get(
+    "section",
+    "FMP_API_KEY",
+    fallback=os.environ.get("VYBCHEQ_FMP_API_KEY", ""),
+)
+# FMP free tier: max ~5 years EOD history and 250 API calls/day. Raise on paid plans.
+VYBCHEQ_FMP_EOD_YEARS = int(os.environ.get("VYBCHEQ_FMP_EOD_YEARS", "5"))
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 

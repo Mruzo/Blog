@@ -4,8 +4,11 @@ from decimal import Decimal, ROUND_FLOOR
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.forms import formset_factory
 
-from .models import Security, WatchlistEntry
+from .models import ScreeningRuleSet, Security, WatchlistEntry
+from .money import format_money, quantize_money
+from .screening_metrics import latest_screening_metrics
 
 
 class SecuritySelectWithQuote(forms.Select):
@@ -31,7 +34,8 @@ class SecuritySelectWithQuote(forms.Select):
         cur = (self._currency_by_pk.get(pk) or "").strip().upper()
         option.setdefault("attrs", {})
         if q is not None and q > 0:
-            option["attrs"]["data-quote"] = format(q, "f")
+            q2 = quantize_money(q)
+            option["attrs"]["data-quote"] = format(q2, "f") if q2 is not None else ""
         else:
             option["attrs"]["data-quote"] = ""
         option["attrs"]["data-currency"] = cur
@@ -70,21 +74,111 @@ def currency_prefix(code: str) -> str:
     return (c + " ") if c else ""
 
 
-# Keys we surface in the staff UI (same vocabulary as Yahoo merge + screening rules).
+# Keys we surface in the staff UI (same vocabulary as FMP merge + screening rules).
 SCREENING_METRIC_FIELDS = [
-    ("pe_ratio", "P/E (trailing)"),
-    ("forward_pe_ratio", "P/E (forward)"),
-    ("price_to_book", "Price / book"),
-    ("roe", "Return on equity (fraction, e.g. 0.25)"),
+    ("gross_margin", "Gross margin (fraction)"),
+    ("pretax_margin", "Pre-tax margin (fraction)"),
     ("net_margin", "Net margin (fraction)"),
     ("debt_to_equity", "Debt / equity"),
     ("current_ratio", "Current ratio"),
     ("quick_ratio", "Quick ratio"),
-    ("revenue_growth_yoy", "Revenue growth (Yahoo field)"),
-    ("earnings_growth_yoy", "Earnings growth (Yahoo field)"),
+    ("pe_ratio", "P/E (trailing)"),
+    ("forward_pe_ratio", "P/E (forward)"),
+    ("price_to_book", "Price / book"),
+    ("roe", "Return on equity (fraction, e.g. 0.25)"),
+    ("revenue_growth_yoy", "Revenue growth (TTM)"),
+    ("earnings_growth_yoy", "Earnings growth (TTM)"),
     ("dividend_yield", "Dividend yield (fraction)"),
     ("market_cap", "Market cap"),
 ]
+
+SCREENING_OPS = [
+    ("<=", "≤ at most"),
+    (">=", "≥ at least"),
+    ("<", "< less than"),
+    (">", "> greater than"),
+    ("==", "= equals"),
+    ("!=", "≠ not equal"),
+]
+
+RULE_METRIC_CHOICES = [("", "— select —")] + list(SCREENING_METRIC_FIELDS) + [
+    ("close", "Close / implied price"),
+]
+
+
+class ScreeningRuleForm(forms.Form):
+    """One row in the staff rule-set editor."""
+
+    metric = forms.ChoiceField(
+        choices=RULE_METRIC_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+    op = forms.ChoiceField(
+        choices=[("", "—")] + SCREENING_OPS,
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+    value = forms.DecimalField(
+        required=False,
+        max_digits=24,
+        decimal_places=6,
+        widget=forms.NumberInput(
+            attrs={"class": "form-control form-control-sm", "step": "any"}
+        ),
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        metric = (cleaned.get("metric") or "").strip()
+        op = (cleaned.get("op") or "").strip()
+        value = cleaned.get("value")
+        filled = [bool(metric), bool(op), value is not None]
+        if not any(filled):
+            cleaned["_skip"] = True
+            return cleaned
+        if not all(filled):
+            raise ValidationError("Each rule row needs metric, operator, and value.")
+        cleaned["metric"] = metric
+        cleaned["op"] = op
+        return cleaned
+
+
+def screening_rule_formset(*, extra: int = 6):
+    return formset_factory(
+        ScreeningRuleForm,
+        extra=extra,
+        max_num=15,
+        validate_min=False,
+        can_delete=False,
+    )
+
+
+def rules_from_formset(formset) -> list[dict]:
+    rules: list[dict] = []
+    for form in formset:
+        data = form.cleaned_data
+        if not data or data.get("_skip"):
+            continue
+        val = data["value"]
+        rules.append(
+            {
+                "metric": data["metric"],
+                "op": data["op"],
+                "value": float(val) if val is not None else None,
+            }
+        )
+    return rules
+
+
+class ScreeningRuleSetForm(forms.ModelForm):
+    class Meta:
+        model = ScreeningRuleSet
+        fields = ["name", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
 
 
 class ScreeningMetricsForm(forms.Form):
@@ -104,12 +198,12 @@ class ScreeningMetricsForm(forms.Form):
                 label=label,
                 required=False,
                 max_digits=24,
-                decimal_places=8,
+                decimal_places=2,
                 widget=forms.NumberInput(attrs={"class": "form-control", "step": "any"}),
             )
 
-        if security and security.screening_metrics:
-            m = security.screening_metrics
+        if security:
+            m = latest_screening_metrics(security)
             for name, _label in SCREENING_METRIC_FIELDS:
                 if name in m and m[name] is not None:
                     self.initial[name] = m[name]
@@ -143,7 +237,7 @@ class ScreeningMetricsForm(forms.Form):
 
 
 class SimTradeOpenForm(forms.Form):
-    """Open a simulated position using the cached last quote on Security (no Yahoo on submit)."""
+    """Open a simulated position using the cached last quote on Security (no API call on submit)."""
 
     security = forms.ModelChoiceField(
         queryset=Security.objects.filter(
@@ -172,7 +266,7 @@ class SimTradeOpenForm(forms.Form):
         help_text=(
             "Cheqs deducted ≈ shares × cached last price on file "
             "(1 cheq ≈ 1 USD notional). The +/− control steps by 1 share. "
-            "Ensure an up-to-date cached quote exists (e.g. Yahoo merge in admin) before trading."
+            "Ensure an up-to-date cached quote exists (admin → FMP fundamentals refresh) before trading."
         ),
     )
 
@@ -188,7 +282,8 @@ class SimTradeOpenForm(forms.Form):
             base = f"{obj.symbol}.{obj.exchange}"
             pq = quote_by_pk.get(obj.pk)
             if pq is not None and pq > 0:
-                return f"{base} — {currency_prefix(obj.currency)}{pq:.2f}"
+                pq2 = quantize_money(pq)
+                return f"{base} — {currency_prefix(obj.currency)}{format_money(pq2)}"
             return f"{base} — (no cached quote)"
 
         field.label_from_instance = label_from_instance

@@ -7,7 +7,7 @@
 <h1 class="h3 mb-1">Screen run #{{ run.pk }}</h1>
 <p class="text-secondary mb-3">
     <span class="badge bg-secondary">{{ run.get_status_display }}</span>
-    · {{ run.rule_set.name }}
+    · <a href="{% url 'vybcheq_staff:rule_set_edit' pk=run.rule_set_id %}" class="link-light">{{ run.rule_set.name }}</a>
     · {{ run.started_at|date:"Y-m-d H:i" }}
     {% if run.universe_note %}· {{ run.universe_note }}{% endif %}
 </p>
@@ -16,8 +16,8 @@
 {% endif %}
 
 <p class="mb-3">
-    <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=run.rule_set_id %}" class="btn btn-sm btn-outline-warning">Run screen again (same rule set)</a>
-    <a href="{% url 'vybcheq_staff:screen_runs' %}" class="btn btn-sm btn-outline-secondary">All runs</a>
+    <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=run.rule_set_id %}" class="btn btn-sm btn-outline-warning">Run again</a>
+    <a href="{% url 'vybcheq_staff:screen_runs' %}" class="btn btn-sm btn-outline-secondary">All results</a>
 </p>
 
 {% with results=run.screen_results.all %}
@@ -30,6 +30,7 @@
                 <th>Pass</th>
                 <th>Score</th>
                 <th>Details</th>
+                <th>Metrics at run</th>
             </tr>
         </thead>
         <tbody>
@@ -50,6 +51,34 @@
                     {% else %}
                     <span class="text-secondary">—</span>
                     {% endif %}
+                </td>
+                <td class="align-top py-3" style="min-width: 12rem; max-width: 22rem;">
+                    {% with metric_rows=row.metrics_snapshot|metrics_snapshot_rows %}
+                    {% if metric_rows %}
+                    <dl class="small mb-0">
+                        {% for m in metric_rows %}
+                        <div class="mb-1">
+                            <dt class="text-secondary d-inline fw-normal">{{ m.label }}:</dt>
+                            <dd class="d-inline ms-1 mb-0 font-monospace">{{ m.value }}</dd>
+                        </div>
+                        {% endfor %}
+                    </dl>
+                    {% else %}
+                    <span class="text-secondary">—</span>
+                    {% endif %}
+                    {% endwith %}
+                    {% with internal=row.metrics_snapshot|metrics_snapshot_internal_keys %}
+                    {% if internal %}
+                    <details class="small mt-2">
+                        <summary class="text-secondary">Internal keys ({{ internal|length }})</summary>
+                        <ul class="list-unstyled mb-0 mt-1 font-monospace text-secondary">
+                            {% for key in internal %}
+                            <li>{{ key }}</li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                    {% endif %}
+                    {% endwith %}
                 </td>
             </tr>
             {% endfor %}

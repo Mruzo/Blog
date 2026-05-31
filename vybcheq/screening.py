@@ -14,6 +14,7 @@ from typing import Any
 from django.utils import timezone
 
 from vybcheq.models import ScreenResult, ScreenRun, ScreeningRuleSet, Security
+from vybcheq.screening_metrics import latest_screening_metrics
 
 OPS = {
     "<=": lambda a, b: a <= b,
@@ -113,7 +114,7 @@ def evaluate_rules(rules: list, metrics: dict) -> tuple[bool, Decimal | None, st
 def run_screen_against_watchlist(rule_set: ScreeningRuleSet) -> ScreenRun:
     """
     Create a ScreenRun, evaluate each watchlist Security, attach ScreenResults.
-    Uses security.screening_metrics as the metric source.
+    Uses the most recent SecurityFiscalQuarter row when present, else screening_metrics.
     """
     securities = Security.objects.filter(
         watchlist_entry__isnull=False,
@@ -129,7 +130,7 @@ def run_screen_against_watchlist(rule_set: ScreeningRuleSet) -> ScreenRun:
     try:
         rules = rule_set.rules or []
         for security in securities:
-            metrics = security.screening_metrics or {}
+            metrics = latest_screening_metrics(security)
             passed, score, details = evaluate_rules(rules, metrics)
             ScreenResult.objects.create(
                 run=run,

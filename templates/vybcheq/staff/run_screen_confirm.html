@@ -1,15 +1,24 @@
 {% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
 
 {% block vybcheq_title %}Confirm run{% endblock %}
 
 {% block vybcheq_content %}
-<h1 class="h3 mb-3">Run screen</h1>
-<p>Rule set: <strong>{{ rule_set.name }}</strong></p>
-<p class="text-secondary">This creates a new screen run and evaluates every <strong>watchlist</strong> security using each row’s screening metrics.</p>
+<h1 class="h3 mb-1">Confirm run</h1>
+<p class="text-secondary mb-4">
+    Check: <strong>{{ rule_set.name }}</strong>
+    {% if rule_set.is_active %}<span class="badge bg-success">active</span>{% endif %}
+    · all <a href="{% url 'vybcheq_staff:watchlist' %}" class="link-warning">watchlist</a> tickers
+</p>
+
+<div class="border border-secondary rounded p-3 mb-4 col-lg-8">
+    <div class="small text-secondary mb-2">Threshold</div>
+    {% include "vybcheq/staff/_rule_set_rules.html" with rs=rule_set %}
+</div>
 
 <form method="post">
     {% csrf_token %}
-    <button type="submit" class="btn btn-warning">Run screen</button>
+    <button type="submit" class="btn btn-warning">Run now</button>
     <a href="{% url 'vybcheq_staff:run_screen_pick' %}" class="btn btn-outline-secondary">Cancel</a>
 </form>
 {% endblock %}

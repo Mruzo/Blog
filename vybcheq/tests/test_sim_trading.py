@@ -1,5 +1,4 @@
 from decimal import Decimal
-from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -81,23 +80,11 @@ class SimTradingLogicTests(TestCase):
         acct = CheqAccount.objects.get(user=self.user)
         self.assertEqual(acct.balance, Decimal("10100"))
 
-    def _persist_quote(security, **kwargs):
-        now = timezone.now()
-        Security.objects.filter(pk=security.pk).update(
-            quote_last_price=Decimal("110"),
-            quote_updated_at=now,
-        )
-        return Decimal("110")
-
-    @patch(
-        "vybcheq.sim_trading.update_security_quote",
-        side_effect=_persist_quote,
-    )
-    @patch("vybcheq.sim_trading.yahoo_action_gap_seconds", return_value=0.0)
-    def test_record_marks_appends_rows(self, _gap, _mock_q):
+    def test_record_marks_appends_rows(self):
         self._set_cached_quote(Decimal("100"))
         get_or_create_cheq_account(self.user)
         pos = open_position(self.user, self.sec, cheqs=Decimal("100"))
         n, errs = record_marks_for_user_open_positions(self.user)
+        self.assertEqual(errs, [])
         self.assertGreaterEqual(n, 1)
         self.assertGreaterEqual(PositionMark.objects.filter(position=pos).count(), 2)

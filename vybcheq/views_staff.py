@@ -9,10 +9,22 @@ from django.utils.translation import gettext_lazy as _
 
 from django.views.decorators.http import require_POST
 
-from .forms import ScreeningMetricsForm, SimTradeOpenForm
+from .chart_data import build_fiscal_chart_data
+from .forms import (
+    ScreeningMetricsForm,
+    ScreeningRuleSetForm,
+    rules_from_formset,
+    screening_rule_formset,
+    SimTradeOpenForm,
+)
 from .models import ScreenRun, ScreeningRuleSet, Security, SimPosition, WatchlistEntry
+from .money import format_money
+from .rule_set_briefing import (
+    BRIEFING_CATALOG,
+    build_briefing_rows,
+    extended_rule_sets,
+)
 from .screening import run_screen_against_watchlist
-from .yahoo_metrics import YahooMetricsError, quote_min_interval_seconds
 from .sim_trading import (
     close_position,
     get_or_create_cheq_account,
@@ -53,7 +65,10 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         .order_by("-started_at")[:2]
     )
     screen_run_rows = [_screen_run_dashboard_row(r) for r in recent_screen_runs]
-    rule_sets_top5 = list(ScreeningRuleSet.objects.all()[:5])
+    all_rule_sets = list(ScreeningRuleSet.objects.all().order_by("-is_active", "name"))
+    briefing_rows = build_briefing_rows(all_rule_sets)
+    briefing_configured = sum(1 for r in briefing_rows if r.rule_set is not None)
+    briefing_unconfigured = len(briefing_rows) - briefing_configured
     watchlist_top5 = list(
         WatchlistEntry.objects.select_related("security")
         .filter(
@@ -64,7 +79,6 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     )
     active_securities_cap = 300
     active_qs = Security.objects.filter(is_active=True).order_by("exchange", "symbol")
-    active_securities = list(active_qs.values("symbol", "exchange")[:active_securities_cap])
     active_securities_truncated = sec_count > active_securities_cap
 
     cheq_acct = get_or_create_cheq_account(request.user)
@@ -97,6 +111,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         .order_by("_portfolio_bucket", "_portfolio_sort", "pk")[:5]
     )
 
+    chart_data = build_fiscal_chart_data()
+
     return render(
         request,
         "vybcheq/staff/dashboard.html",
@@ -104,13 +120,17 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "watchlist_count": wl_count,
             "security_count": sec_count,
             "screen_run_rows": screen_run_rows,
-            "rule_sets_top5": rule_sets_top5,
+            "briefing_rows": briefing_rows,
+            "briefing_configured": briefing_configured,
+            "briefing_unconfigured": briefing_unconfigured,
+            "briefing_total": len(briefing_rows),
+            "rule_set_count": len(all_rule_sets),
             "watchlist_top5": watchlist_top5,
-            "active_securities": active_securities,
             "active_securities_truncated": active_securities_truncated,
             "wallet_balance": wallet_balance,
             "portfolio_top5": portfolio_top5,
             "open_position_count": open_position_count,
+            "chart_data": chart_data,
         },
     )
 
@@ -140,6 +160,90 @@ def security_metrics(request: HttpRequest, pk: int) -> HttpResponse:
         request,
         "vybcheq/staff/security_metrics.html",
         {"security": security, "form": form},
+    )
+
+
+@staff_member_required
+def rule_set_list(request: HttpRequest) -> HttpResponse:
+    rule_sets = list(ScreeningRuleSet.objects.all().order_by("-is_active", "name"))
+    rows = build_briefing_rows(rule_sets)
+    configured = sum(1 for r in rows if r.rule_set is not None)
+    return render(
+        request,
+        "vybcheq/staff/rule_sets.html",
+        {
+            "rule_sets": rule_sets,
+            "briefing_rows": rows,
+            "briefing_configured": configured,
+            "briefing_total": len(rows),
+            "watchlist_count": WatchlistEntry.objects.count(),
+            "extended_rule_sets": extended_rule_sets(rule_sets, rows),
+        },
+    )
+
+
+@staff_member_required
+def rule_set_create(request: HttpRequest) -> HttpResponse:
+    return _rule_set_edit(request, rule_set=None)
+
+
+@staff_member_required
+def rule_set_edit(request: HttpRequest, pk: int) -> HttpResponse:
+    rule_set = get_object_or_404(ScreeningRuleSet, pk=pk)
+    return _rule_set_edit(request, rule_set=rule_set)
+
+
+def _brief_item(slug: str) -> dict | None:
+    for item in BRIEFING_CATALOG:
+        if item["slug"] == slug:
+            return item
+    return None
+
+
+def _rule_set_edit(
+    request: HttpRequest,
+    *,
+    rule_set: ScreeningRuleSet | None,
+) -> HttpResponse:
+    existing_rules = list(rule_set.rules or []) if rule_set else []
+    extra = max(1, 6 - len(existing_rules))
+    FormSet = screening_rule_formset(extra=extra)
+
+    brief_slug = (request.GET.get("brief") or "").strip() if rule_set is None else ""
+    brief_item = _brief_item(brief_slug) if brief_slug else None
+    brief_prefill = brief_item is not None and request.method == "GET"
+
+    if request.method == "POST":
+        form = ScreeningRuleSetForm(request.POST, instance=rule_set)
+        formset = FormSet(request.POST)
+        if form.is_valid() and formset.is_valid():
+            obj = form.save(commit=False)
+            obj.rules = rules_from_formset(formset)
+            obj.save()
+            messages.success(
+                request,
+                _("Saved rule set “%(name)s”.") % {"name": obj.name},
+            )
+            return redirect("vybcheq_staff:rule_set_list")
+    else:
+        form = ScreeningRuleSetForm(instance=rule_set)
+        if brief_prefill and brief_item:
+            form.initial.setdefault("name", brief_item["title"])
+        initial = existing_rules
+        if not initial and brief_prefill and brief_item:
+            initial = [brief_item["suggested_rule"]]
+        formset = FormSet(initial=initial)
+
+    return render(
+        request,
+        "vybcheq/staff/rule_set_form.html",
+        {
+            "form": form,
+            "formset": formset,
+            "rule_set": rule_set,
+            "is_create": rule_set is None,
+            "brief_item": brief_item if brief_prefill else None,
+        },
     )
 
 
@@ -232,7 +336,6 @@ def sim_portfolio(request: HttpRequest) -> HttpResponse:
             "cheq_account": acct,
             "open_positions": open_positions,
             "closed_positions": closed_positions,
-            "quote_interval": int(quote_min_interval_seconds()),
         },
     )
 
@@ -254,14 +357,14 @@ def sim_open_trade(request: HttpRequest) -> HttpResponse:
                     request,
                     _("Opened %(cheqs)s cheqs on %(sym)s at cached price %(p)s (shares %(m)s).")
                     % {
-                        "cheqs": pos.cheqs_opened,
+                        "cheqs": format_money(pos.cheqs_opened),
                         "sym": pos.security,
-                        "p": pos.entry_price,
+                        "p": format_money(pos.entry_price),
                         "m": form.cleaned_data["price_multiple"],
                     },
                 )
                 return redirect("vybcheq_staff:sim_position_detail", pk=pos.pk)
-            except (ValueError, YahooMetricsError) as exc:
+            except ValueError as exc:
                 messages.error(request, str(exc))
     else:
         form = SimTradeOpenForm(wallet_balance=wallet)
@@ -288,11 +391,11 @@ def sim_close_trade(request: HttpRequest, position_id: int) -> HttpResponse:
         messages.success(
             request,
             _("Closed position; %(proceeds)s cheqs returned to wallet.")
-            % {"proceeds": pos.cheqs_proceeds},
+            % {"proceeds": format_money(pos.cheqs_proceeds)},
         )
     except SimPosition.DoesNotExist:
         messages.error(request, _("Position not found or already closed."))
-    except (ValueError, YahooMetricsError) as exc:
+    except ValueError as exc:
         messages.error(request, str(exc))
     return redirect("vybcheq_staff:sim_portfolio")
 
@@ -304,8 +407,7 @@ def sim_record_marks(request: HttpRequest) -> HttpResponse:
     if n:
         messages.success(
             request,
-            _("Recorded %(n)s new mark(s). Quotes skip Yahoo if refreshed recently.")
-            % {"n": n},
+            _("Recorded %(n)s new mark(s) from cached quotes.") % {"n": n},
         )
     else:
         messages.warning(

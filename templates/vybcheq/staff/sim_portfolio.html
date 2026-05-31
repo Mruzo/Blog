@@ -6,14 +6,14 @@
 {% block vybcheq_content %}
 <h1 class="h3 mb-2">Sim trading (cheqs)</h1>
 <p class="text-secondary small mb-4">
-    Paper portfolio for staff. <strong>1 cheq ≈ 1 USD</strong> notional vs cached quotes.
-    Yahoo refreshes are <strong>rate-limited</strong> (default {{ quote_interval }}s between refreshes per symbol).
+    Paper portfolio for staff. <strong>1 cheq ≈ 1 USD</strong> notional vs cached valuation price.
+    Refresh fundamentals manually in admin (FMP action) — uses your daily API quota.
 </p>
 
 <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
     <div class="card bg-dark border-warning text-light px-4 py-3">
         <div class="small text-secondary">Wallet balance</div>
-        <div class="h4 mb-0 text-warning">{{ cheq_account.balance|floatformat:2 }} cheqs</div>
+        <div class="h4 mb-0 text-warning">{{ cheq_account.balance|format_cheqs }} cheqs</div>
     </div>
     <a href="{% url 'vybcheq_staff:sim_open_trade' %}" class="btn btn-warning">Trade</a>
 </div>
@@ -37,17 +37,17 @@
             {% for p in open_positions %}
             <tr>
                 <td class="font-monospace">{{ p.security.symbol }} · {{ p.security.exchange }}</td>
-                <td>{{ p.cheqs_opened|floatformat:2 }}</td>
-                <td>{{ p.entry_price|floatformat:2 }}</td>
+                <td>{{ p.cheqs_opened|format_money }}</td>
+                <td>{{ p.entry_price|format_money }}</td>
                 <td>
                     {% if p.security.quote_last_price %}
-                        {{ p.security.currency|currency_prefix }}{{ p.security.quote_last_price|floatformat:2 }}
+                        {{ p.security.currency|currency_prefix }}{{ p.security.quote_last_price|format_money }}
                     {% else %}
                         —
                     {% endif %}
                 </td>
-                <td>{{ p.mark_value_cheqs|floatformat:2 }}</td>
-                <td class="{% if p.unrealized_pnl_cheqs > 0 %}text-success{% elif p.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.unrealized_pnl_cheqs|floatformat:2 }}</td>
+                <td>{{ p.mark_value_cheqs|format_money }}</td>
+                <td class="{% if p.unrealized_pnl_cheqs > 0 %}text-success{% elif p.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.unrealized_pnl_cheqs|format_money }}</td>
                 <td class="text-nowrap">
                     <a href="{% url 'vybcheq_staff:sim_position_detail' pk=p.pk %}" class="btn btn-sm btn-outline-secondary">History</a>
                     <form method="post" action="{% url 'vybcheq_staff:sim_close_trade' position_id=p.pk %}" class="d-inline" onsubmit="return confirm('Close at the currently cached quote?');">
@@ -82,9 +82,9 @@
             <tr>
                 <td class="font-monospace">{{ p.security.symbol }}</td>
                 <td>{{ p.opened_at|date:"Y-m-d" }}</td>
-                <td>{{ p.cheqs_opened|floatformat:2 }}</td>
-                <td>{{ p.cheqs_proceeds|floatformat:2 }}</td>
-                <td class="{% if p.realized_pnl_cheqs > 0 %}text-success{% elif p.realized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.realized_pnl_cheqs|floatformat:2 }}</td>
+                <td>{{ p.cheqs_opened|format_money }}</td>
+                <td>{{ p.cheqs_proceeds|format_money }}</td>
+                <td class="{% if p.realized_pnl_cheqs > 0 %}text-success{% elif p.realized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.realized_pnl_cheqs|format_money }}</td>
             </tr>
             {% endfor %}
         </tbody>

@@ -2,7 +2,7 @@ from .base import *
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['64867196bc82.ngrok-free.app', 'localhost', '062b-2607-fea8-60d8-ad20-aa5e-45ff-fee4-e701.ngrok-free.app', '127.0.0.1']
+ALLOWED_HOSTS = ['64867196bc82.ngrok-free.app ', 'localhost', '062b-2607-fea8-60d8-ad20-aa5e-45ff-fee4-e701.ngrok-free.app', '127.0.0.1']
 
 CSRF_COOKIE_SECURE = False
 

@@ -4,158 +4,114 @@
 {% block vybcheq_title %}Dashboard{% endblock %}
 
 {% block vybcheq_content %}
-<h1 class="h3 mb-3">Vybcheq</h1>
-<p class="text-secondary mb-4">Staff-only vibe-check tools. Nothing here is linked from public pages.</p>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Vybcheq</h1>
+        <p class="text-secondary mb-0 small">Research cockpit — watchlist, screening, sim trading.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'vybcheq_staff:rule_set_list' %}" class="btn btn-warning btn-sm">Criteria</a>
+        <a href="{% url 'vybcheq_staff:run_screen_pick' %}" class="btn btn-outline-warning btn-sm">Run a check</a>
+    </div>
+</div>
 
-<div class="row g-3 mb-4 align-items-stretch">
-    <div class="col-12 col-md-8 order-2 order-md-1">
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
         <div class="card bg-dark border-secondary text-light h-100">
-            <div class="card-body d-flex flex-column">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                    <h2 class="h5 card-title mb-0">Watchlist · by cached price (low → high)</h2>
-                    <span class="badge bg-secondary">{{ watchlist_count }} on list</span>
-                </div>
-                <p class="small text-secondary mb-3">Up to 5 watchlist tickers that have a cached Yahoo quote, sorted from smallest price to largest.</p>
-                {% if watchlist_top5 %}
-                <div class="table-responsive border border-secondary rounded flex-grow-1">
-                    <table class="table table-dark table-sm table-striped mb-0 small">
-                        <thead>
-                            <tr>
-                                <th scope="col">Ticker</th>
-                                <th scope="col">Price</th>
-                                <th scope="col">Quote at</th>
-                                <th scope="col"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for e in watchlist_top5 %}
-                            {% with s=e.security %}
-                            <tr>
-                                <td class="font-monospace">{{ s.symbol }} · {{ s.exchange }}</td>
-                                <td class="font-monospace">{{ s.currency|currency_prefix }}{{ s.quote_last_price|floatformat:2 }}</td>
-                                <td class="text-secondary">{% if s.quote_updated_at %}{{ s.quote_updated_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
-                                <td class="text-nowrap">
-                                    <a href="{% url 'vybcheq_staff:security_metrics' pk=s.pk %}" class="btn btn-sm btn-outline-warning py-0">Metrics</a>
-                                </td>
-                            </tr>
-                            {% endwith %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-secondary mb-3 flex-grow-1">No watchlist entries with a cached price yet. Populate quotes from Yahoo (e.g. merge metrics in admin) so prices appear here.</p>
-                {% endif %}
-                <a href="{% url 'vybcheq_staff:watchlist' %}" class="btn btn-outline-warning btn-sm align-self-start mt-3">Full watchlist</a>
+            <div class="card-body py-3">
+                <div class="small text-secondary text-uppercase mb-1" style="font-size: 0.65rem;">Watchlist</div>
+                <div class="fs-4 fw-semibold">{{ watchlist_count }}</div>
+                <a href="{% url 'vybcheq_staff:watchlist' %}" class="small link-warning">View →</a>
             </div>
         </div>
     </div>
-    <div class="col-12 col-md-4 order-1 order-md-2 d-flex">
-        <div class="row g-3 g-md-3 w-100 flex-grow-1">
-            <div class="col-6 col-md-12 d-flex">
-                <div class="card bg-dark border-warning text-light w-100 flex-md-shrink-0" style="min-height: 9rem;">
-                    <div class="card-body d-flex flex-column justify-content-center h-100 py-2 py-md-3">
-                        <h2 class="h6 text-secondary mb-1">Sim wallet (cheqs)</h2>
-                        <p class="fs-3 fw-semibold text-warning mb-0 text-break">{{ wallet_balance|floatformat:2 }}</p>
-                        <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="btn btn-outline-warning btn-sm align-self-stretch align-self-md-start mt-2">Portfolio</a>
-                    </div>
-                </div>
+    <div class="col-6 col-md-3">
+        <div class="card bg-dark border-secondary text-light h-100">
+            <div class="card-body py-3">
+                <div class="small text-secondary text-uppercase mb-1" style="font-size: 0.65rem;">Securities catalog</div>
+                <div class="fs-4 fw-semibold">{{ security_count }}</div>
+                <a href="{% url 'admin:vybcheq_security_changelist' %}" class="small link-secondary">Admin →</a>
             </div>
-            <div class="col-6 col-md-12 d-flex min-h-0">
-                <div class="card bg-dark border-secondary text-light flex-grow-1 d-flex flex-column min-h-0 w-100">
-                    <div class="card-body d-flex flex-column flex-grow-1 min-h-0 py-2 py-md-3">
-                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-1 gap-md-2 mb-2">
-                            <h2 class="h6 card-title mb-0 text-truncate">Active securities</h2>
-                            <span class="badge bg-secondary flex-shrink-0">{{ security_count }}</span>
-                        </div>
-                        <p class="small text-secondary mb-2 d-none d-md-block">Active tickers (symbol · exchange).</p>
-                        {% if active_securities %}
-                        <div class="border border-secondary rounded flex-grow-1 min-h-0" style="max-height: min(18rem, 42vh); overflow-y: auto;">
-                            <ul class="list-group list-group-flush small mb-0">
-                                {% for s in active_securities %}
-                                <li class="list-group-item bg-dark text-light border-secondary py-1 font-monospace text-truncate">{{ s.symbol }} · {{ s.exchange }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        {% if active_securities_truncated %}
-                        <p class="small text-secondary mb-0 mt-2 d-none d-md-block">Showing first {{ active_securities|length }} of {{ security_count }}.</p>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card bg-dark border-warning text-light h-100">
+            <div class="card-body py-3">
+                <div class="small text-secondary text-uppercase mb-1" style="font-size: 0.65rem;">Checks saved</div>
+                <div class="fs-4 fw-semibold">{{ briefing_configured }}<span class="fs-6 text-secondary fw-normal"> / {{ briefing_total }}</span></div>
+                <a href="{% url 'vybcheq_staff:rule_set_list' %}" class="small link-warning">Criteria →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card bg-dark border-warning text-light h-100">
+            <div class="card-body py-3">
+                <div class="small text-secondary text-uppercase mb-1" style="font-size: 0.65rem;">Sim wallet</div>
+                <div class="fs-4 fw-semibold text-warning">{{ wallet_balance|format_cheqs }}</div>
+                <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="small link-warning">Portfolio →</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card bg-dark border-warning text-light mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <div>
+                <h2 class="h5 card-title mb-1">Six screening checks</h2>
+                <p class="small text-secondary mb-0">
+                    Margin, leverage, and liquidity thresholds —
+                    {{ rule_set_count }} rule set{{ rule_set_count|pluralize }} saved.
+                    {% if briefing_unconfigured %}
+                    <span class="text-warning">{{ briefing_unconfigured }} not set up yet.</span>
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{% url 'vybcheq_staff:rule_set_list' %}" class="btn btn-outline-warning btn-sm flex-shrink-0">View all</a>
+        </div>
+        <div class="row g-2">
+            {% for row in briefing_rows %}
+            <div class="col-6 col-md-4 col-xl-2">
+                <a href="{% url 'vybcheq_staff:rule_set_list' %}#brief-{{ row.slug }}" class="text-decoration-none d-block h-100">
+                    <div class="border border-secondary rounded p-2 h-100{% if row.rule_set %} border-warning border-opacity-50{% endif %}">
+                        <div class="small text-secondary text-uppercase mb-1" style="font-size: 0.6rem;">{{ row.category }}</div>
+                        <div class="small fw-semibold text-light mb-1">{{ row.title }}</div>
+                        {% if row.effective_rules %}
+                        <div class="font-monospace text-warning" style="font-size: 0.7rem;">{{ row.effective_rules.0|format_screening_rule }}</div>
                         {% endif %}
+                        {% if row.last_run_total %}
+                        <div class="text-secondary mt-1" style="font-size: 0.65rem;">{{ row.last_run_pass_count }}/{{ row.last_run_total }} last run</div>
+                        {% elif row.rule_set %}
+                        <div class="text-secondary mt-1" style="font-size: 0.65rem;">Not run yet</div>
                         {% else %}
-                        <p class="text-secondary small mb-0">No active securities.</p>
+                        <div class="text-secondary mt-1" style="font-size: 0.65rem;">Suggested</div>
                         {% endif %}
-                        <a href="{% url 'admin:vybcheq_security_changelist' %}" class="btn btn-outline-secondary btn-sm align-self-stretch align-self-md-start mt-2 mt-md-3">Admin</a>
                     </div>
-                </div>
+                </a>
             </div>
+            {% endfor %}
         </div>
     </div>
 </div>
 
 <div class="row g-3 mb-4 align-items-stretch">
     <div class="col-md-8">
-        <div class="card bg-dark border-warning text-light h-100">
+        <div class="card bg-dark border-secondary text-light h-100">
             <div class="card-body d-flex flex-column">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                    <h2 class="h5 card-title mb-0">Portfolio · open positions (by cached price, low → high)</h2>
-                    <span class="badge bg-secondary">{{ open_position_count }} open</span>
+                    <h2 class="h5 card-title mb-0">Last screen runs</h2>
+                    <a href="{% url 'vybcheq_staff:screen_runs' %}" class="btn btn-outline-secondary btn-sm py-0">All runs</a>
                 </div>
-                <p class="small text-secondary mb-3">Up to 5 of your open sim lots, same ordering as the watchlist table (cached quote price ascending).</p>
-                {% if portfolio_top5 %}
-                <div class="table-responsive border border-secondary rounded flex-grow-1">
-                    <table class="table table-dark table-sm table-striped mb-0 small">
-                        <thead>
-                            <tr>
-                                <th scope="col">Ticker</th>
-                                <th scope="col">Price</th>
-                                <th scope="col">Quote at</th>
-                                <th scope="col">Value</th>
-                                <th scope="col">P&amp;L</th>
-                                <th scope="col"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for p in portfolio_top5 %}
-                            {% with s=p.security %}
-                            <tr>
-                                <td class="font-monospace">{{ s.symbol }} · {{ s.exchange }}</td>
-                                <td class="font-monospace">
-                                    {% if s.quote_last_price %}
-                                        {{ s.currency|currency_prefix }}{{ s.quote_last_price|floatformat:2 }}
-                                    {% else %}
-                                        {{ s.currency|currency_prefix }}{{ p.entry_price|floatformat:2 }}
-                                        <span class="text-secondary">(entry)</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-secondary">{% if s.quote_updated_at %}{{ s.quote_updated_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
-                                <td class="font-monospace">{{ p.mark_value_cheqs|floatformat:2 }}</td>
-                                <td class="font-monospace {% if p.unrealized_pnl_cheqs > 0 %}text-success{% elif p.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.unrealized_pnl_cheqs|floatformat:2 }}</td>
-                                <td class="text-nowrap">
-                                    <a href="{% url 'vybcheq_staff:sim_position_detail' pk=p.pk %}" class="btn btn-sm btn-outline-warning py-0">History</a>
-                                </td>
-                            </tr>
-                            {% endwith %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-secondary mb-3 flex-grow-1">No open sim positions.</p>
-                {% endif %}
-                <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="btn btn-warning btn-sm align-self-start mt-3">Full portfolio</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 d-flex flex-column gap-3 h-100">
-        <div class="card bg-dark border-secondary text-light flex-shrink-0" style="flex: 0 1 48%; max-height: 16rem;">
-            <div class="card-body py-2 px-3 d-flex flex-column min-h-0">
-                <h2 class="h6 text-secondary mb-2 text-uppercase small">Last screen runs</h2>
                 {% if screen_run_rows %}
-                <ul class="list-unstyled small mb-2 flex-grow-1 overflow-auto">
+                <ul class="list-unstyled small mb-0 flex-grow-1">
                     {% for row in screen_run_rows %}
-                    <li class="mb-2 pb-2 border-bottom border-secondary">
+                    <li class="mb-3 pb-3 border-bottom border-secondary{% if forloop.last %} border-0 mb-0 pb-0{% endif %}">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
-                            <span class="fw-semibold text-truncate me-1" title="{{ row.run.rule_set.name }}">{{ row.run.rule_set.name }}</span>
-                            <a href="{% url 'vybcheq_staff:screen_run_detail' pk=row.run.pk %}" class="btn btn-outline-warning btn-sm py-0 flex-shrink-0">View</a>
+                            <div>
+                                <span class="fw-semibold">{{ row.run.rule_set.name }}</span>
+                                <span class="text-secondary"> · {{ row.run.started_at|date:"M j, H:i" }}</span>
+                            </div>
+                            <a href="{% url 'vybcheq_staff:screen_run_detail' pk=row.run.pk %}" class="btn btn-outline-warning btn-sm py-0 flex-shrink-0">Results</a>
                         </div>
                         <div class="d-flex flex-wrap gap-2 align-items-center">
                             <span class="text-secondary">Pass</span>
@@ -166,39 +122,281 @@
                             {% else %}
                             <span class="badge bg-secondary">—</span>
                             {% endif %}
-                            <span class="text-secondary">·</span>
-                            <span class="text-secondary">Score</span>
-                            <span class="fw-semibold font-monospace">{{ row.score_display }}</span>
+                            <span class="text-secondary">Score {{ row.score_display }}</span>
                         </div>
                     </li>
                     {% endfor %}
                 </ul>
-                <a href="{% url 'vybcheq_staff:screen_runs' %}" class="btn btn-outline-secondary btn-sm py-0 align-self-start">All runs</a>
                 {% else %}
-                <p class="text-secondary small mb-0">None yet</p>
+                <p class="text-secondary small mb-0 flex-grow-1">No screen runs yet. Set up checks on the <a href="{% url 'vybcheq_staff:rule_set_list' %}">Criteria</a> page, then run against the watchlist.</p>
                 {% endif %}
             </div>
         </div>
-        <div class="card bg-dark border-secondary text-light flex-grow-1 min-h-0 d-flex flex-column">
-            <div class="card-body py-2 px-3 d-flex flex-column flex-grow-1 min-h-0">
-                <h2 class="h6 text-secondary mb-2 text-uppercase small">Rule sets (top 5)</h2>
-                {% if rule_sets_top5 %}
-                <div class="border border-secondary rounded flex-grow-1 min-h-0 overflow-auto small">
-                    <ul class="list-group list-group-flush mb-0">
-                        {% for rs in rule_sets_top5 %}
-                        <li class="list-group-item bg-dark text-light border-secondary py-2 d-flex justify-content-between align-items-center gap-2">
-                            <span class="text-truncate">{{ rs.name }}{% if rs.is_active %} <span class="badge bg-success">active</span>{% endif %}</span>
-                            <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=rs.pk %}" class="btn btn-sm btn-outline-warning py-0 flex-shrink-0">Run</a>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% else %}
-                <p class="text-secondary small mb-2 flex-grow-1">No rule sets yet. Add one in <a href="{% url 'admin:vybcheq_screeningruleset_changelist' %}">admin</a>.</p>
-                {% endif %}
-                <a href="{% url 'vybcheq_staff:run_screen_pick' %}" class="btn btn-outline-secondary btn-sm mt-2 align-self-start">Pick rule set…</a>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-dark border-secondary text-light h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary text-uppercase small mb-3">Data workflow</h2>
+                <ol class="small ps-3 mb-0">
+                    <li class="mb-2">Add tickers in admin → <strong>Securities</strong></li>
+                    <li class="mb-2">Star the ones you track → <strong>Watch list entries</strong></li>
+                    <li class="mb-2">Refresh fundamentals (2 FMP calls / ticker)</li>
+                    <li class="mb-0">Run screens — zero API calls; snapshots saved on each run</li>
+                </ol>
             </div>
         </div>
     </div>
 </div>
+
+<div class="card bg-dark border-secondary text-light mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+            <div>
+                <h2 class="h5 card-title mb-1">Quarterly history</h2>
+                <p class="small text-secondary mb-0">Stored fiscal quarters — implied price and screening metrics over time.</p>
+            </div>
+        </div>
+        {% if chart_data.securities %}
+        <div class="row g-2 g-md-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-security">Security</label>
+                <select id="vybcheq-chart-security" class="form-select form-select-sm bg-dark text-light border-secondary">
+                    {% for s in chart_data.securities %}
+                    <option value="{{ s.id }}"{% if not s.has_data %} disabled{% endif %}>{{ s.label }}{% if not s.has_data %} (no history){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-5">
+                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-metric">Metric</label>
+                <select id="vybcheq-chart-metric" class="form-select form-select-sm bg-dark text-light border-secondary"></select>
+            </div>
+        </div>
+        <div class="border border-secondary rounded p-2 p-md-3" style="position: relative; height: 280px;">
+            <canvas id="vybcheq-fiscal-chart" aria-label="Quarterly metric history"></canvas>
+        </div>
+        <p id="vybcheq-chart-empty" class="small text-secondary mb-0 mt-2 d-none">No data for this security and metric. Run quarterly fundamentals refresh in admin.</p>
+        {{ chart_data|json_script:"vybcheq-chart-data" }}
+        {% else %}
+        <p class="text-secondary small mb-0">No active securities. Add tickers in admin, then refresh quarterly fundamentals.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-4 align-items-stretch">
+    <div class="col-12 col-lg-6">
+        <div class="card bg-dark border-secondary text-light h-100">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                    <h2 class="h5 card-title mb-0">Watchlist · low → high price</h2>
+                    <span class="badge bg-secondary">{{ watchlist_count }}</span>
+                </div>
+                {% if watchlist_top5 %}
+                <div class="table-responsive border border-secondary rounded flex-grow-1">
+                    <table class="table table-dark table-sm table-striped mb-0 small">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Price</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in watchlist_top5 %}
+                            {% with s=e.security %}
+                            <tr>
+                                <td class="font-monospace">{{ s.symbol }} · {{ s.exchange }}</td>
+                                <td class="font-monospace">{{ s.currency|currency_prefix }}{{ s.quote_last_price|format_money }}</td>
+                                <td><a href="{% url 'vybcheq_staff:security_metrics' pk=s.pk %}" class="btn btn-sm btn-outline-warning py-0">Metrics</a></td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-secondary small flex-grow-1">No cached prices on watchlist. Refresh fundamentals in admin.</p>
+                {% endif %}
+                <a href="{% url 'vybcheq_staff:watchlist' %}" class="btn btn-outline-warning btn-sm align-self-start mt-3">Full watchlist</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-6">
+        <div class="card bg-dark border-warning text-light h-100">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                    <h2 class="h5 card-title mb-0">Open sim positions</h2>
+                    <span class="badge bg-secondary">{{ open_position_count }} open</span>
+                </div>
+                {% if portfolio_top5 %}
+                <div class="table-responsive border border-secondary rounded flex-grow-1">
+                    <table class="table table-dark table-sm table-striped mb-0 small">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Value</th>
+                                <th>P&amp;L</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in portfolio_top5 %}
+                            <tr>
+                                <td class="font-monospace">{{ p.security.symbol }}</td>
+                                <td class="font-monospace">{{ p.mark_value_cheqs|format_money }}</td>
+                                <td class="font-monospace {% if p.unrealized_pnl_cheqs > 0 %}text-success{% elif p.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.unrealized_pnl_cheqs|format_money }}</td>
+                                <td><a href="{% url 'vybcheq_staff:sim_position_detail' pk=p.pk %}" class="btn btn-sm btn-outline-warning py-0">History</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-secondary small flex-grow-1">No open sim positions.</p>
+                {% endif %}
+                <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="btn btn-warning btn-sm align-self-start mt-3">Portfolio</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% if chart_data.securities %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script>
+(function () {
+    var dataEl = document.getElementById("vybcheq-chart-data");
+    var secSel = document.getElementById("vybcheq-chart-security");
+    var metSel = document.getElementById("vybcheq-chart-metric");
+    var canvas = document.getElementById("vybcheq-fiscal-chart");
+    var emptyEl = document.getElementById("vybcheq-chart-empty");
+    if (!dataEl || !secSel || !metSel || !canvas || typeof Chart === "undefined") return;
+
+    var payload = JSON.parse(dataEl.textContent);
+    var chart = null;
+
+    function metricsForSecurity(secId) {
+        var points = payload.series[String(secId)] || [];
+        var out = [];
+        payload.metrics.forEach(function (m) {
+            var has = points.some(function (p) { return p[m.key] != null && !isNaN(p[m.key]); });
+            if (has) out.push(m);
+        });
+        return out;
+    }
+
+    function fillMetricSelect(secId) {
+        var metrics = metricsForSecurity(secId);
+        var prev = metSel.value;
+        metSel.innerHTML = "";
+        metrics.forEach(function (m) {
+            var opt = document.createElement("option");
+            opt.value = m.key;
+            opt.textContent = m.label;
+            metSel.appendChild(opt);
+        });
+        if (prev && metrics.some(function (m) { return m.key === prev; })) {
+            metSel.value = prev;
+        }
+    }
+
+    function fmtVal(v, key) {
+        if (v == null || isNaN(v)) return "—";
+        if (key === "close") {
+            return Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        var abs = Math.abs(v);
+        if (abs >= 1e12) return (v / 1e12).toFixed(2) + "T";
+        if (abs >= 1e9) return (v / 1e9).toFixed(2) + "B";
+        if (abs >= 1e6) return (v / 1e6).toFixed(2) + "M";
+        if (abs >= 1000) return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+        return Number(v).toLocaleString("en-US", { maximumFractionDigits: 4 });
+    }
+
+    function draw() {
+        var secId = secSel.value;
+        var metricKey = metSel.value;
+        var points = payload.series[String(secId)] || [];
+        var labels = [];
+        var values = [];
+        points.forEach(function (p) {
+            var v = p[metricKey];
+            if (v == null || isNaN(v)) return;
+            labels.push(p.period);
+            values.push(Number(v));
+        });
+
+        if (emptyEl) {
+            emptyEl.classList.toggle("d-none", values.length > 0);
+        }
+        if (canvas.parentElement) {
+            canvas.parentElement.style.opacity = values.length ? "1" : "0.35";
+        }
+
+        var metricLabel = (payload.metrics.find(function (m) { return m.key === metricKey; }) || {}).label || metricKey;
+
+        if (chart) {
+            chart.destroy();
+            chart = null;
+        }
+        chart = new Chart(canvas, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: metricLabel,
+                    data: values,
+                    borderColor: "#ffc107",
+                    backgroundColor: "rgba(255, 193, 7, 0.12)",
+                    pointBackgroundColor: "#ffc107",
+                    pointRadius: 3,
+                    tension: 0.15,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: "#dee2e6" } },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return metricLabel + ": " + fmtVal(ctx.parsed.y, metricKey);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: "#adb5bd", maxRotation: 45, autoSkip: true, maxTicksLimit: 12 },
+                        grid: { color: "rgba(108, 117, 125, 0.35)" }
+                    },
+                    y: {
+                        ticks: {
+                            color: "#adb5bd",
+                            callback: function (v) { return fmtVal(v, metricKey); }
+                        },
+                        grid: { color: "rgba(108, 117, 125, 0.35)" }
+                    }
+                }
+            }
+        });
+    }
+
+    function onSecurityChange() {
+        fillMetricSelect(secSel.value);
+        draw();
+    }
+
+    secSel.addEventListener("change", onSecurityChange);
+    metSel.addEventListener("change", draw);
+
+    for (var i = 0; i < secSel.options.length; i++) {
+        if (!secSel.options[i].disabled) {
+            secSel.selectedIndex = i;
+            break;
+        }
+    }
+    onSecurityChange();
+})();
+</script>
+{% endif %}
 {% endblock %}

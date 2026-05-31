@@ -33,6 +33,7 @@ class StaffVybcheqUITests(TestCase):
         resp = self.client.get(reverse("vybcheq_staff:dashboard"))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "Vybcheq")
+        self.assertContains(resp, "Quarterly history")
 
     def test_dashboard_watchlist_top5_sorted_price_low_to_high(self):
         self.client.login(username="staff_ui", password="pw")
@@ -64,8 +65,13 @@ class StaffVybcheqUITests(TestCase):
         resp = self.client.get(reverse("vybcheq_staff:dashboard"))
         self.assertEqual(resp.status_code, 200)
         body = resp.content.decode()
-        self.assertLess(body.find("WLLO"), body.find("WLMD"))
-        self.assertLess(body.find("WLMD"), body.find("WLHI"))
+        wl_start = body.find("Watchlist · low → high price")
+        wl_end = body.find("Open sim positions")
+        self.assertGreater(wl_start, -1)
+        self.assertGreater(wl_end, wl_start)
+        section = body[wl_start:wl_end]
+        self.assertLess(section.find("WLLO"), section.find("WLMD"))
+        self.assertLess(section.find("WLMD"), section.find("WLHI"))
 
     def test_watchlist_and_metrics_flow(self):
         self.client.login(username="staff_ui", password="pw")
@@ -109,3 +115,93 @@ class StaffVybcheqUITests(TestCase):
         resp = self.client.post(url, {})
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(ScreenRun.objects.count(), 1)
+
+    def test_rule_set_list_staff(self):
+        self.client.login(username="staff_ui", password="pw")
+        ScreeningRuleSet.objects.create(
+            name="Margins",
+            rules=[{"metric": "gross_margin", "op": ">=", "value": 0.4}],
+        )
+        resp = self.client.get(reverse("vybcheq_staff:rule_set_list"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Screening criteria")
+        self.assertContains(resp, "Gross margin")
+        self.assertContains(resp, "Threshold")
+
+    def test_dashboard_shows_briefing_summary(self):
+        self.client.login(username="staff_ui", password="pw")
+        resp = self.client.get(reverse("vybcheq_staff:dashboard"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Six screening checks")
+        self.assertContains(resp, "Criteria")
+
+    def test_rule_set_create_prefill_from_brief(self):
+        self.client.login(username="staff_ui", password="pw")
+        url = reverse("vybcheq_staff:rule_set_create") + "?brief=quick_ratio"
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Quick ratio")
+        self.assertContains(resp, "Setting up")
+
+    def test_rule_set_create_and_edit(self):
+        self.client.login(username="staff_ui", password="pw")
+        create_url = reverse("vybcheq_staff:rule_set_create")
+        resp = self.client.get(create_url)
+        self.assertEqual(resp.status_code, 200)
+
+        post_data = {
+            "name": "Dividend check",
+            "is_active": "on",
+            "form-TOTAL_FORMS": "6",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "15",
+            "form-0-metric": "dividend_yield",
+            "form-0-op": ">=",
+            "form-0-value": "0.02",
+        }
+        for i in range(1, 6):
+            post_data[f"form-{i}-metric"] = ""
+            post_data[f"form-{i}-op"] = ""
+            post_data[f"form-{i}-value"] = ""
+
+        resp = self.client.post(create_url, post_data)
+        self.assertEqual(resp.status_code, 302)
+        rs = ScreeningRuleSet.objects.get(name="Dividend check")
+        self.assertTrue(rs.is_active)
+        self.assertEqual(rs.rules, [{"metric": "dividend_yield", "op": ">=", "value": 0.02}])
+
+        edit_url = reverse("vybcheq_staff:rule_set_edit", kwargs={"pk": rs.pk})
+        resp = self.client.get(edit_url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "dividend_yield")
+
+    def test_screen_run_detail_shows_metrics_snapshot(self):
+        from vybcheq.models import ScreenResult
+
+        self.client.login(username="staff_ui", password="pw")
+        rs = ScreeningRuleSet.objects.create(
+            name="PE",
+            rules=[{"metric": "pe_ratio", "op": "<=", "value": 30}],
+        )
+        sec = Security.objects.create(
+            symbol="SNAP",
+            exchange="NASDAQ",
+            currency="USD",
+            screening_metrics={"pe_ratio": 18.5, "roe": 0.22},
+        )
+        run = ScreenRun.objects.create(rule_set=rs, status=ScreenRun.Status.OK)
+        ScreenResult.objects.create(
+            run=run,
+            security=sec,
+            passed=True,
+            score=Decimal("100"),
+            metrics_snapshot={"pe_ratio": 18.5, "roe": 0.22, "close": 225.0},
+            details="Rule 1: pe_ratio — 18.5 <= 30 → PASS",
+        )
+        resp = self.client.get(reverse("vybcheq_staff:screen_run_detail", kwargs={"pk": run.pk}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Metrics at run")
+        self.assertContains(resp, "P/E (trailing)")
+        self.assertContains(resp, "Return on equity")
+        self.assertContains(resp, "225")

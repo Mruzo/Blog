@@ -1,0 +1,81 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+
+{% block vybcheq_title %}{% if is_create %}New rule set{% else %}Edit · {{ rule_set.name }}{% endif %}{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-1">{% if is_create %}New rule set{% else %}Edit rule set{% endif %}</h1>
+{% if not is_create %}
+<p class="text-secondary mb-4">{{ rule_set.name }}</p>
+{% else %}
+<p class="text-secondary mb-4">Define screening criteria for the watchlist universe.</p>
+{% endif %}
+
+{% if brief_item %}
+<div class="alert alert-secondary small mb-4">
+    Setting up <strong>{{ brief_item.title }}</strong> — adjust the threshold if you want, then save.
+</div>
+{% endif %}
+
+<form method="post" class="border border-secondary rounded p-3 bg-dark bg-opacity-50">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <label class="form-label" for="{{ form.name.id_for_label }}">Name</label>
+            {{ form.name }}
+            {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check mb-2">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="h6 text-secondary mb-2">Rules</h2>
+    <p class="small text-secondary mb-3">Leave blank rows unused. Every filled row must have metric, operator, and threshold. Empty rule list = all securities pass.</p>
+
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+    <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+    {% endif %}
+
+    <div class="table-responsive border border-secondary rounded mb-3">
+        <table class="table table-dark table-sm mb-0 align-middle">
+            <thead>
+                <tr class="small text-secondary">
+                    <th style="width: 38%;">Metric</th>
+                    <th style="width: 22%;">Operator</th>
+                    <th style="width: 40%;">Threshold</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule_form in formset %}
+                <tr>
+                    <td>
+                        {{ rule_form.metric }}
+                        {% if rule_form.metric.errors %}<div class="text-danger small">{{ rule_form.metric.errors }}</div>{% endif %}
+                    </td>
+                    <td>
+                        {{ rule_form.op }}
+                        {% if rule_form.op.errors %}<div class="text-danger small">{{ rule_form.op.errors }}</div>{% endif %}
+                    </td>
+                    <td>
+                        {{ rule_form.value }}
+                        {% if rule_form.value.errors %}<div class="text-danger small">{{ rule_form.value.errors }}</div>{% endif %}
+                        {% if rule_form.non_field_errors %}<div class="text-danger small">{{ rule_form.non_field_errors }}</div>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-warning">Save rule set</button>
+    <a href="{% url 'vybcheq_staff:rule_set_list' %}" class="btn btn-outline-secondary">Cancel</a>
+</form>
+{% endblock %}

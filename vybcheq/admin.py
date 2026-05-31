@@ -14,18 +14,19 @@ from .models import (
     ScreenRun,
     ScreeningRuleSet,
     Security,
+    SecurityDailyQuote,
+    SecurityFiscalQuarter,
     SimPosition,
     WatchlistEntry,
 )
 import time
 
+import requests
+
+from .fmp_client import FmpError, fmp_action_gap_seconds
+from .fmp_fundamentals import merge_screening_metrics_from_fmp
+from .market_symbols import MarketSymbolError
 from .screening import run_screen_against_watchlist
-from .yahoo_metrics import (
-    YahooMetricsError,
-    build_yahoo_finance_session,
-    fetch_screening_metrics_yahoo,
-    yahoo_action_gap_seconds,
-)
 
 
 def _details_as_html(obj: ScreenResult | None) -> str:
@@ -53,20 +54,32 @@ def _details_as_html(obj: ScreenResult | None) -> str:
     return format_html("".join(blocks)) if blocks else "—"
 
 
-@admin.action(description=_("Merge screening metrics from Yahoo Finance (yfinance)"))
-def fetch_yahoo_screening_metrics(modeladmin, request, queryset):
+@admin.action(
+    description=_("FMP: refresh quarterly fundamentals + implied price (2 API calls per security)")
+)
+def fmp_refresh_screening_metrics(modeladmin, request, queryset):
+    securities = list(queryset)
+    n = len(securities)
+    if n:
+        modeladmin.message_user(
+            request,
+            _(
+                "Quarterly fundamentals (ratios + key-metrics) uses %(calls)s FMP API call(s) "
+                "(2× per security)."
+            )
+            % {"calls": n * 2},
+            level=messages.INFO,
+        )
+    session = requests.Session()
+    gap = fmp_action_gap_seconds()
     updated = 0
-    session = build_yahoo_finance_session()
-    gap = yahoo_action_gap_seconds()
-    for i, sec in enumerate(queryset):
+    for i, sec in enumerate(securities):
         if i > 0:
             time.sleep(gap)
         try:
-            fetched = fetch_screening_metrics_yahoo(sec, session=session)
-            sec.screening_metrics = {**(sec.screening_metrics or {}), **fetched}
-            sec.save(update_fields=["screening_metrics"])
+            merge_screening_metrics_from_fmp(sec, session=session)
             updated += 1
-        except YahooMetricsError as exc:
+        except (FmpError, MarketSymbolError) as exc:
             modeladmin.message_user(
                 request,
                 _("%(sec)s: %(err)s") % {"sec": sec, "err": exc},
@@ -81,7 +94,11 @@ def fetch_yahoo_screening_metrics(modeladmin, request, queryset):
     if updated:
         modeladmin.message_user(
             request,
-            _("Updated screening metrics for %(n)s security(ies).") % {"n": updated},
+            _(
+                "Stored quarterly fundamentals, implied valuation price, and cached last price "
+                "for %(n)s security(ies)."
+            )
+            % {"n": updated},
             level=messages.SUCCESS,
         )
 
@@ -91,7 +108,25 @@ class SecurityAdmin(admin.ModelAdmin):
     list_display = ("symbol", "exchange", "name", "sector", "currency", "is_active")
     list_filter = ("exchange", "is_active", "sector")
     search_fields = ("symbol", "name", "cik")
-    actions = [fetch_yahoo_screening_metrics]
+    actions = [fmp_refresh_screening_metrics]
+
+
+@admin.register(SecurityFiscalQuarter)
+class SecurityFiscalQuarterAdmin(admin.ModelAdmin):
+    list_display = ("security", "period_end", "trade_date", "close", "source")
+    list_filter = ("source", "period_end")
+    search_fields = ("security__symbol", "security__exchange")
+    date_hierarchy = "period_end"
+    ordering = ("-period_end", "security__symbol")
+
+
+@admin.register(SecurityDailyQuote)
+class SecurityDailyQuoteAdmin(admin.ModelAdmin):
+    list_display = ("security", "trade_date", "close", "volume", "source")
+    list_filter = ("source", "trade_date")
+    search_fields = ("security__symbol", "security__exchange")
+    date_hierarchy = "trade_date"
+    ordering = ("-trade_date", "security__symbol")
 
 
 @admin.register(WatchlistEntry)

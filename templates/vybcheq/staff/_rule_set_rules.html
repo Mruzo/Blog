@@ -1,0 +1,12 @@
+{% load vybcheq_tags %}
+{% if rs.rules %}
+<ul class="list-unstyled small mb-0">
+    {% for rule in rs.rules %}
+    <li class="py-1 {% if not forloop.last %}border-bottom border-secondary border-opacity-25{% endif %}">
+        <span class="font-monospace">{{ rule|format_screening_rule }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="small text-secondary mb-0">No rules defined — every watchlist security passes.</p>
+{% endif %}

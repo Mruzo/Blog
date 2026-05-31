@@ -6,7 +6,7 @@
 {% block vybcheq_content %}
 <h1 class="h3 mb-1">{{ position.security.symbol }} <span class="text-secondary fs-6">{{ position.security.exchange }}</span></h1>
 <p class="text-secondary small mb-3">
-    Opened {{ position.opened_at|date:"Y-m-d H:i" }} · {{ position.cheqs_opened|floatformat:2 }} cheqs in · entry {{ position.entry_price|floatformat:2 }} · shares {{ position.shares|floatformat:4 }}
+    Opened {{ position.opened_at|date:"Y-m-d H:i" }} · {{ position.cheqs_opened|format_money }} cheqs in · entry {{ position.entry_price|format_money }} · shares {{ position.shares|floatformat:4 }}
     {% if position.closed_at %}· <span class="text-warning">Closed {{ position.closed_at|date:"Y-m-d" }}</span>{% endif %}
 </p>
 
@@ -30,9 +30,9 @@
             {% for m in marks %}
             <tr>
                 <td>{{ m.marked_at|date:"Y-m-d H:i" }}</td>
-                <td>{{ position.security.currency|currency_prefix }}{{ m.price|floatformat:2 }}</td>
-                <td>{{ m.value_cheqs|floatformat:2 }}</td>
-                <td class="{% if m.delta_vs_opened_cheqs > 0 %}text-success{% elif m.delta_vs_opened_cheqs < 0 %}text-danger{% endif %}">{{ m.delta_vs_opened_cheqs|floatformat:2 }}</td>
+                <td>{{ position.security.currency|currency_prefix }}{{ m.price|format_money }}</td>
+                <td>{{ m.value_cheqs|format_money }}</td>
+                <td class="{% if m.delta_vs_opened_cheqs > 0 %}text-success{% elif m.delta_vs_opened_cheqs < 0 %}text-danger{% endif %}">{{ m.delta_vs_opened_cheqs|format_money }}</td>
             </tr>
             {% endfor %}
         </tbody>

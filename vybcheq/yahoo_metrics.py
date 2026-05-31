@@ -1,11 +1,8 @@
 """
-Pull a small set of fundamentals from Yahoo Finance via yfinance (unofficial).
+Legacy: Yahoo Finance via yfinance (unofficial). Not used by Vybcheq staff flows anymore.
 
-This is convenient for personal use but:
-- Yahoo may rate-limit or change behavior; not a contractual data feed.
-- Respect Yahoo's terms; do not hammer the service (use admin action sparingly).
-
-Metric names match common screening_rules keys (snake_case).
+Market data is refreshed manually from Django admin using FMP (see fmp_eod.py, fmp_fundamentals.py).
+This module remains for reference and unit tests only.
 """
 from __future__ import annotations
 
@@ -74,6 +71,21 @@ def _num(x: Any) -> float | None:
     return v
 
 
+def _last_price_from_yahoo_info(info: dict) -> Decimal | None:
+    """Extract last/market price from yfinance Ticker.info when present."""
+    lp = (
+        info.get("regularMarketPrice")
+        or info.get("currentPrice")
+        or info.get("previousClose")
+    )
+    if lp is None:
+        return None
+    try:
+        return Decimal(str(lp))
+    except Exception:
+        return None
+
+
 def _map_yahoo_info(info: dict) -> dict[str, Any]:
     """Turn yfinance Ticker.info into screening_metrics-style flat numbers."""
     out: dict[str, Any] = {}
@@ -138,11 +150,11 @@ def build_yahoo_finance_session():
     return s
 
 
-def _fetch_screening_metrics_yahoo_once(
+def _fetch_yahoo_info_once(
     security: Security,
     *,
     session: Any = None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict]:
     try:
         import yfinance as yf
     except ImportError as exc:
@@ -161,6 +173,15 @@ def _fetch_screening_metrics_yahoo_once(
             "Check symbol/exchange or try again later."
         )
     mapped["_yahoo_symbol"] = ysym
+    return mapped, info
+
+
+def _fetch_screening_metrics_yahoo_once(
+    security: Security,
+    *,
+    session: Any = None,
+) -> dict[str, Any]:
+    mapped, _info = _fetch_yahoo_info_once(security, session=session)
     return mapped
 
 
@@ -191,6 +212,51 @@ def fetch_screening_metrics_yahoo(
             time.sleep(delay)
         try:
             return _fetch_screening_metrics_yahoo_once(security, session=session)
+        except YahooMetricsError as exc:
+            if _looks_like_rate_limit(exc):
+                last_exc = exc
+                continue
+            raise
+        except Exception as exc:
+            if _looks_like_rate_limit(exc):
+                last_exc = exc
+                continue
+            raise YahooMetricsError(str(exc)) from exc
+
+    msg = (
+        "Yahoo Finance rate-limited this request after several tries. "
+        "Wait a few minutes, fetch one ticker at a time, or try again later."
+    )
+    raise YahooMetricsError(msg) from last_exc
+
+
+def fetch_yahoo_security_data(
+    security: Security,
+    *,
+    session: Any = None,
+    max_retries: int = 4,
+) -> tuple[dict[str, Any], Decimal | None]:
+    """
+    One Yahoo ``Ticker.info`` pull: screening metrics plus last price when available.
+
+    Same retry/backoff behaviour as ``fetch_screening_metrics_yahoo``.
+    """
+    backoffs = getattr(
+        settings,
+        "VYBCHEQ_YAHOO_RATE_LIMIT_BACKOFFS",
+        _DEFAULT_RATE_LIMIT_BACKOFFS,
+    )
+    if not isinstance(backoffs, (list, tuple)) or not backoffs:
+        backoffs = _DEFAULT_RATE_LIMIT_BACKOFFS
+
+    last_exc: BaseException | None = None
+    for attempt in range(max_retries):
+        if attempt > 0:
+            delay = backoffs[min(attempt - 1, len(backoffs) - 1)]
+            time.sleep(delay)
+        try:
+            mapped, info = _fetch_yahoo_info_once(security, session=session)
+            return mapped, _last_price_from_yahoo_info(info)
         except YahooMetricsError as exc:
             if _looks_like_rate_limit(exc):
                 last_exc = exc

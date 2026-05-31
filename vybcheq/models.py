@@ -5,6 +5,8 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from vybcheq.money import MONEY_QUANT, quantize_money
+
 
 def _default_sections():
     return {}
@@ -37,10 +39,10 @@ class Security(models.Model):
     )
     quote_last_price = models.DecimalField(
         max_digits=24,
-        decimal_places=8,
+        decimal_places=2,
         null=True,
         blank=True,
-        help_text="Cached last price (Yahoo); used for simulated marks. 1 cheq ≈ 1 USD notional.",
+        help_text="Cached last EOD close (FMP); used for simulated marks. 1 cheq ≈ 1 USD notional.",
     )
     quote_updated_at = models.DateTimeField(null=True, blank=True)
 
@@ -56,6 +58,78 @@ class Security(models.Model):
 
     def __str__(self):
         return f"{self.symbol}.{self.exchange}"
+
+
+class SecurityDailyQuote(models.Model):
+    """End-of-day OHLCV from a licensed feed (FMP); one row per security per trade date."""
+
+    security = models.ForeignKey(
+        Security,
+        on_delete=models.CASCADE,
+        related_name="daily_quotes",
+    )
+    trade_date = models.DateField(db_index=True)
+    close = models.DecimalField(max_digits=24, decimal_places=2)
+    open = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    high = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    low = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    volume = models.BigIntegerField(null=True, blank=True)
+    source = models.CharField(max_length=16, default="fmp")
+
+    class Meta:
+        ordering = ["-trade_date"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["security", "trade_date"],
+                name="vybcheq_securitydailyquote_security_date_uniq",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.security} EOD {self.trade_date} @ {self.close}"
+
+
+class SecurityFiscalQuarter(models.Model):
+    """
+    Calendar quarter-end snapshot: EOD close on last trading day on/before period_end,
+    plus optional fundamentals JSON for that period (FMP when plan allows).
+    """
+
+    security = models.ForeignKey(
+        Security,
+        on_delete=models.CASCADE,
+        related_name="fiscal_quarters",
+    )
+    period_end = models.DateField(
+        db_index=True,
+        help_text="Calendar quarter end (Mar 31, Jun 30, Sep 30, Dec 31).",
+    )
+    trade_date = models.DateField(
+        help_text="Last trading day on or before period_end used for the close.",
+    )
+    close = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    open = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    high = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    low = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    volume = models.BigIntegerField(null=True, blank=True)
+    metrics = models.JSONField(
+        default=_default_metrics_snapshot,
+        blank=True,
+        help_text="Fundamentals for this quarter (_raw FMP row + mapped rule keys).",
+    )
+    source = models.CharField(max_length=16, default="fmp")
+
+    class Meta:
+        ordering = ["-period_end"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["security", "period_end"],
+                name="vybcheq_securityfiscalquarter_security_period_uniq",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.security} Q {self.period_end} @ {self.close}"
 
 
 class WatchlistEntry(models.Model):
@@ -214,8 +288,8 @@ class DecisionLog(models.Model):
         help_text="What would prove this thesis wrong?",
     )
     quantity = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
-    notional = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
-    price = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
+    notional = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    price = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
 
     class Meta:
         ordering = ["-decided_at"]
@@ -234,8 +308,8 @@ class CheqAccount(models.Model):
     )
     balance = models.DecimalField(
         max_digits=20,
-        decimal_places=4,
-        default=Decimal("10000"),
+        decimal_places=2,
+        default=Decimal("10000.00"),
         validators=[MinValueValidator(Decimal("0"))],
     )
 
@@ -262,22 +336,22 @@ class SimPosition(models.Model):
     )
     cheqs_opened = models.DecimalField(
         max_digits=20,
-        decimal_places=4,
-        validators=[MinValueValidator(Decimal("0.0001"))],
+        decimal_places=2,
+        validators=[MinValueValidator(MONEY_QUANT)],
     )
-    entry_price = models.DecimalField(max_digits=24, decimal_places=8)
+    entry_price = models.DecimalField(max_digits=24, decimal_places=2)
     shares = models.DecimalField(max_digits=24, decimal_places=12)
     opened_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(null=True, blank=True)
     exit_price = models.DecimalField(
         max_digits=24,
-        decimal_places=8,
+        decimal_places=2,
         null=True,
         blank=True,
     )
     cheqs_proceeds = models.DecimalField(
         max_digits=20,
-        decimal_places=4,
+        decimal_places=2,
         null=True,
         blank=True,
         help_text="Cheqs returned to wallet on close.",
@@ -298,10 +372,10 @@ class SimPosition(models.Model):
         """Current notional in cheqs using cached quote, else entry."""
         if self.closed_at and self.cheqs_proceeds is not None:
             return self.cheqs_proceeds
-        p = self.security.quote_last_price
+        p = quantize_money(self.security.quote_last_price)
         if p is None or p <= 0:
             return self.cheqs_opened
-        return (self.shares * p).quantize(Decimal("0.0001"))
+        return quantize_money(self.shares * p) or self.cheqs_opened
 
     @property
     def unrealized_pnl_cheqs(self) -> Decimal:
@@ -325,8 +399,8 @@ class PositionMark(models.Model):
         related_name="marks",
     )
     marked_at = models.DateTimeField(default=timezone.now, db_index=True)
-    price = models.DecimalField(max_digits=24, decimal_places=8)
-    value_cheqs = models.DecimalField(max_digits=20, decimal_places=4)
+    price = models.DecimalField(max_digits=24, decimal_places=2)
+    value_cheqs = models.DecimalField(max_digits=20, decimal_places=2)
 
     class Meta:
         ordering = ["marked_at"]

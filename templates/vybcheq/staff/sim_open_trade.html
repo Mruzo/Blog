@@ -1,10 +1,11 @@
 {% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
 
 {% block vybcheq_title %}Open sim trade{% endblock %}
 
 {% block vybcheq_content %}
 <h1 class="h3 mb-2">Open simulated trade</h1>
-<p class="text-secondary small mb-3">Wallet: <strong class="text-warning">{{ balance|floatformat:2 }} cheqs</strong>. Symbols come from your <a href="{% url 'vybcheq_staff:watchlist' %}">watchlist</a> only. <strong>Trades use the cached price on file</strong> (no Yahoo on submit). Ensure each row has a quote (e.g. Yahoo merge in admin) before trading.</p>
+<p class="text-secondary small mb-3">Wallet: <strong class="text-warning">{{ balance|format_cheqs }} cheqs</strong>. Symbols come from your <a href="{% url 'vybcheq_staff:watchlist' %}">watchlist</a> only. <strong>Trades use the cached valuation price on file</strong> (no API call on submit). Refresh fundamentals in admin before trading.</p>
 
 {% if not sim_watchlist_has_securities %}
 <div class="alert alert-warning col-lg-8">No watchlist tickers yet. Add securities on the <a href="{% url 'vybcheq_staff:watchlist' %}" class="alert-link">Watchlist</a> page (or in admin), then return here.</div>
@@ -74,7 +75,7 @@
     function fmtMoney2(n) {
         if (typeof n !== "number" || !isFinite(n)) return "—";
         var r = Math.round(n * 100) / 100;
-        return r.toFixed(2);
+        return r.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function currencyPrefix(code) {
