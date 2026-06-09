@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import BackButton from '../components/BackButton';
+import { useApi } from '../contexts/ApiContext';
 
 const Privacy: React.FC = () => {
-  const currentDate = new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const { currentUser } = useApi();
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 
   return (
@@ -22,8 +24,8 @@ const Privacy: React.FC = () => {
 
           <div className="policy-content font-quicksand">
             <p>
-              This Privacy Policy describes how Justvybz Inc. ("we", "us", or "our") collects, uses, and protects 
-              your personal information when you use our immersive storytelling platform www.justvybz.com (the "Platform"). 
+              This Privacy Policy describes how Justvybz Inc. ("we", "us", or "our") collects, uses, and protects
+              your personal information when you use our immersive storytelling platform www.justvybz.com (the "Platform").
               Our Platform enables creators to build, share, and experience interactive 3D comic stories.
             </p>
 
@@ -37,6 +39,9 @@ const Privacy: React.FC = () => {
               <li>✓ <strong>Technical Information:</strong> IP address, browser type, device information, and cookies</li>
               <li>✓ <strong>Communication Data:</strong> Support inquiries, feedback, and correspondence</li>
               <li>✓ <strong>E-Commerce Information (if applicable):</strong> Shipping address, billing address, payment details, and purchase history</li>
+              <li>✓ <strong>Payment Processing:</strong> Stripe processes card payments; we receive transaction IDs and order status, not full card numbers</li>
+              <li>✓ <strong>Authentication Data:</strong> Login tokens stored in your browser (see our <Link to="/cookies/">Cookie Policy</Link>)</li>
+              <li>✓ <strong>Support Tickets:</strong> Information you submit through contact forms, feedback, or support requests</li>
             </ul>
 
             <h2 className="h5 mt-4 font-quicksand">How We Use Your Information</h2>
@@ -63,7 +68,7 @@ const Privacy: React.FC = () => {
               <li>✓ <strong>Shipping Partners (if applicable):</strong> To deliver orders</li>
             </ul>
             <p>
-              We do not sell your personal information to third parties. Your creative content remains yours, and we 
+              We do not sell your personal information to third parties. Your creative content remains yours, and we
               respect your privacy and creative rights.
             </p>
 
@@ -93,13 +98,40 @@ const Privacy: React.FC = () => {
               <li>✓ Access your personal information</li>
               <li>✓ Correct inaccurate information</li>
               <li>✓ Request deletion of your information</li>
+              <li>✓ Export a copy of your data in a portable format</li>
               <li>✓ Opt-out of marketing communications</li>
               <li>✓ Lodge a complaint with a supervisory authority</li>
             </ul>
+            <p>
+              You may exercise these rights at any time by contacting us at{' '}
+              <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a>.
+              If you are signed in to your account, you can also use the self-service tools in the
+              Privacy &amp; Data section at the bottom of this page.
+            </p>
+
+            <h2 className="h5 mt-4 font-quicksand">GDPR (European Economic Area &amp; UK)</h2>
+            <p>
+              If you are in the EEA or UK, we process your data under lawful bases including contract
+              (providing the Platform), legitimate interests (security and improvement), and consent
+              (marketing where applicable). You have rights to access, rectification, erasure, restriction,
+              portability, and objection. We respond to requests within one month where required by law.
+              Order records needed for tax or accounting may be retained in anonymized form after account deletion.
+              Submit requests to <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a>; signed-in account
+              holders may also use the Privacy &amp; Data section below.
+            </p>
+
+            <h2 className="h5 mt-4 font-quicksand">CCPA / CPRA (California Residents)</h2>
+            <p>
+              We do <strong>not sell</strong> your personal information. California residents may request to know
+              what categories of personal information we collect, request deletion, and opt out of any future sale
+              (not applicable today). We do not discriminate against you for exercising these rights. Email{' '}
+              <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a> with &quot;California Privacy Request&quot;
+              in the subject line, or use the self-service tools in the Privacy &amp; Data section below when signed in.
+            </p>
 
             <h2 className="h5 mt-4 font-quicksand">International Transfers</h2>
             <p>
-              We process data in Canada and comply with applicable data protection laws. If you are located outside 
+              We process data in Canada and comply with applicable data protection laws. If you are located outside
               Canada, your information may be transferred to and processed in Canada.
             </p>
 
@@ -108,7 +140,7 @@ const Privacy: React.FC = () => {
 
             <h2 className="h5 mt-4 font-quicksand">Changes to This Policy</h2>
             <p>
-              We may update this Privacy Policy periodically. We will notify you of any material changes by posting 
+              We may update this Privacy Policy periodically. We will notify you of any material changes by posting
               the new Privacy Policy on this page.
             </p>
 
@@ -118,6 +150,19 @@ const Privacy: React.FC = () => {
               <li>Email: <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a></li>
               <li>Website: <Link to="/contact/">www.justvybz.com/contact</Link></li>
             </ul>
+
+            {currentUser && (
+              <>
+                <h2 className="h5 mt-4 font-quicksand">Privacy &amp; Data</h2>
+                <p>
+                  Download a copy of your personal data or permanently delete your account and associated content.
+                  These self-service tools are available while you are signed in.
+                </p>
+                <Link to="/account/privacy/" className="btn btn-primary">
+                  Manage my data
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -126,4 +171,3 @@ const Privacy: React.FC = () => {
 };
 
 export default Privacy;
-

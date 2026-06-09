@@ -129,13 +129,14 @@ describe('Studios Component', () => {
     mockApiContext.error = null;
   });
 
-  it('should render studios header', () => {
+  it('should render studios header', async () => {
     mockApiContext.studios = mockStudios;
+    mockApiContext.loadStudios.mockResolvedValue(mockStudios);
     renderWithProviders(<Studios />);
-    
-    expect(screen.getByText('Collaborative Studios')).toBeInTheDocument();
+
+    expect(await screen.findByText('Studios')).toBeInTheDocument();
     expect(
-      screen.getByText(/Discover creative studios where artists collaborate/i)
+      screen.getByText(/artists collaborate to create immersive stories/i)
     ).toBeInTheDocument();
   });
 

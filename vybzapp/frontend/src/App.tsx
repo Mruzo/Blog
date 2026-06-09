@@ -36,6 +36,7 @@ import PasswordResetComplete from './pages/PasswordResetComplete';
 import Contact from './pages/Contact';
 import About from './pages/About';
 import Privacy from './pages/Privacy';
+import PrivacySettings from './pages/PrivacySettings';
 import Terms from './pages/Terms';
 import CookiePolicy from './pages/CookiePolicy';
 import { CartProvider } from './contexts/CartContext';
@@ -75,6 +76,7 @@ function AppContent() {
           {/* Policy Pages */}
           <Route path="/about/" element={<About />} />
           <Route path="/privacy/" element={<Privacy />} />
+          <Route path="/account/privacy/" element={<PrivacySettings />} />
           <Route path="/terms/" element={<Terms />} />
           <Route path="/cookies/" element={<CookiePolicy />} />
           

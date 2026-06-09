@@ -641,21 +641,23 @@ const Stories: React.FC = () => {
   return (
     <div className="product-landing stories-landing">
       <MetaTags
-        title="Immersive Comics"
-        description="Browse all published interactive & immersive stories"
+        title={studio?.name ? `Stories — ${studio.name}` : 'Stories'}
+        description={
+          studio
+            ? `Published immersive stories from ${studio.name}`
+            : 'Explore published immersive 3D comic stories'
+        }
         keywords="3D comics, published stories, interactive narratives, immersive comics"
       />
 
       <section className="product-landing__section product-landing__hero">
         <div className="product-landing__container">
-          <p className="product-landing__eyebrow">{studio ? 'Studio' : 'Browse'}</p>
-          <h1 className="product-landing__h1">
-            {studio?.name ? `Stories — ${studio.name}` : 'Immersive Comics'}
-          </h1>
+          <p className="product-landing__eyebrow">{studio ? 'Studio' : 'Explore'}</p>
+          <h1 className="product-landing__h1">{studio?.name ?? 'Stories'}</h1>
           <p className="product-landing__lead">
             {studio
-              ? 'Published stories linked to this studio. Open a card to preview in 3D and share episodes.'
-              : 'Explore published stories — explore scenes and collaborators, and share your favorites.'}
+              ? 'Published stories from this studio. Open a card to preview in 3D and share episodes.'
+              : 'Immersive 3D comics you can preview, share, and explore.'}
           </p>
           {studio && (
             <div className="stories-landing__contextStrip">

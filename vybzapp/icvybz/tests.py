@@ -1521,6 +1521,37 @@ class StudioAPITests(TestCase):
         studio_data = data['studios'][0]  # Should be the test studio
         # Should count 6 stories (1 from setUp + 5 new public stories)
         self.assertEqual(studio_data['stories_count'], 6)
+
+    def test_studio_list_api_stories_count_not_inflated_by_episodes(self):
+        """stories_count must count comics, not episodes (join inflation regression)."""
+        from datetime import date
+
+        comic = Comic.objects.create(
+            title='Story With Episodes',
+            description='Has multiple episodes',
+            user=self.user,
+            is_public=True,
+            moderation_status='approved',
+        )
+        season = Season.objects.create(
+            comic=comic,
+            season_number=1,
+            title='Season 1',
+            release_date=date.today(),
+        )
+        for i in range(1, 4):
+            Episode.objects.create(
+                season=season,
+                title=f'Episode {i}',
+                episode_number=i,
+            )
+
+        response = self.client.get(reverse('immersivecomics:studio_list_api'))
+        self.assertEqual(response.status_code, 200)
+
+        studio_data = response.json()['studios'][0]
+        # setUp story + this comic = 2 stories, not 2 + 3 episodes
+        self.assertEqual(studio_data['stories_count'], 2)
     
     def test_studio_list_api_collaborators(self):
         """Test that collaborators data is included"""

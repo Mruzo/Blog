@@ -7,7 +7,27 @@
 import { expect } from '@jest/globals';
 
 // Global axios mock: prevents Jest from loading axios' ESM entry.
-jest.mock('axios');
+jest.mock('axios', () => {
+  const instance = {
+    interceptors: {
+      request: { use: jest.fn() },
+      response: { use: jest.fn() },
+    },
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: {
+      create: jest.fn(() => instance),
+      ...instance,
+    },
+    create: jest.fn(() => instance),
+  };
+});
 
 // Add custom matchers manually to avoid nullish coalescing operator issues
 expect.extend({

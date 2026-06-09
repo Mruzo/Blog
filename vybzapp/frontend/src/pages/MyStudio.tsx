@@ -578,10 +578,10 @@ const MyStudio: React.FC = () => {
 
       <section className="product-landing__section product-landing__hero">
         <div className="product-landing__container">
-          <p className="product-landing__eyebrow">Dashboard</p>
-          <h1 className="product-landing__h1">My studio</h1>
+          <p className="product-landing__eyebrow">Manage</p>
+          <h1 className="product-landing__h1">My Studio</h1>
           <p className="product-landing__lead">
-            Manage your studio profile, team, and stories in one place.
+            Your profile, team, and immersive stories in one place.
           </p>
         </div>
       </section>

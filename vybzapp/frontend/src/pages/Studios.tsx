@@ -169,10 +169,10 @@ const Studios: React.FC = () => {
 
       <section className="product-landing__section product-landing__hero">
         <div className="product-landing__container">
-          <p className="product-landing__eyebrow">Directory</p>
-          <h1 className="product-landing__h1">Collaborative Studios</h1>
+          <p className="product-landing__eyebrow">Explore</p>
+          <h1 className="product-landing__h1">Studios</h1>
           <p className="product-landing__lead">
-            Discover creative studios where artists collaborate to bring immersive stories to life.
+            Where where artists collaborate to create immersive stories.
           </p>
         </div>
       </section>

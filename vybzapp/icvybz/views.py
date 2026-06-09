@@ -1122,7 +1122,7 @@ class StudioListView(ListView):
     def get_queryset(self):
         return Studio.objects.filter(is_public=True).prefetch_related('collaborators__user').annotate(
             annotated_collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
-            annotated_stories_count=Count('owner__comics', filter=Q(owner__comics__is_public=True))
+            annotated_stories_count=Count('owner__comics', filter=Q(owner__comics__is_public=True), distinct=True)
         ).order_by('-created_at')
     
     def get_context_data(self, **kwargs):
@@ -1158,7 +1158,7 @@ class StudioDetailView(DetailView):
             'owner__comics__collaborators__user'
         ).annotate(
             annotated_collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
-            annotated_stories_count=Count('owner__comics', filter=Q(owner__comics__is_public=True))
+            annotated_stories_count=Count('owner__comics', filter=Q(owner__comics__is_public=True), distinct=True)
         )
     
     def get_context_data(self, **kwargs):
@@ -1390,7 +1390,7 @@ def studio_list_api(request):
     # Use different annotation names to avoid conflict with model properties
     studios = Studio.objects.filter(is_public=True).select_related('owner').prefetch_related(active_collaborators_prefetch).annotate(
         annotated_collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
-        annotated_stories_count=Count('owner__comics', filter=owner_public_approved_comics),
+        annotated_stories_count=Count('owner__comics', filter=owner_public_approved_comics, distinct=True),
         annotated_total_episode_views=Sum(
             'owner__comics__seasons__episodes__view_count',
             filter=owner_public_approved_comics,

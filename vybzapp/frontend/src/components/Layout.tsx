@@ -40,7 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
       '/immersivecomics/episode/', // Full path for episode pages
       '/immersivecomics/characters/', // Full path for characters pages
       '/immersivecomics/collaborators/', // Full path for collaborators pages
-      '/product/my-orders' // Full path for my-orders
+      '/product/my-orders', // Full path for my-orders
     ];
     
     const isProfilePage = profilePaths.some(path => location.pathname.includes(path));

@@ -1,30 +1,23 @@
 """
-GDPR compliance utilities for data export and deletion.
+GDPR / privacy compliance utilities for data export and deletion.
 """
-import json
-from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-import zipfile
-import io
-
-User = get_user_model()
 
 
 def export_user_data(user):
     """
-    Export all user data in JSON format (GDPR Right to Access).
-    
-    Args:
-        user: User object
-    
-    Returns:
-        dict: User data in structured format
+    Export all user data in JSON format (GDPR Right to Access / CCPA Right to Know).
     """
-    from snmov.models import Order, ShippingAddress, ReachOut, ProductNotification, EmailPreference, NewsletterSubscription
-    from icvybz.models import Comic, Season, Episode, Character, StoryCollaborator, CollaborationInvite, Studio, StudioCollaborator
-    
+    from snmov.models import (
+        Order, ShippingAddress, ReachOut, ProductNotification,
+        NewsletterSubscription,
+    )
+    from icvybz.models import (
+        Comic, StoryCollaborator, Studio, StudioCollaborator, AudioTrack,
+    )
+
     data = {
         'export_date': timezone.now().isoformat(),
         'user_id': user.id,
@@ -36,9 +29,8 @@ def export_user_data(user):
         'last_login': user.last_login.isoformat() if user.last_login else None,
         'is_email_verified': getattr(user, 'is_email_verified', False),
     }
-    
-    # Orders
-    orders = Order.objects.filter(customer=user)
+
+    orders = Order.objects.filter(customer=user).prefetch_related('orderitem_set__product')
     data['orders'] = [
         {
             'id': order.id,
@@ -66,8 +58,7 @@ def export_user_data(user):
         }
         for order in orders
     ]
-    
-    # Shipping addresses
+
     addresses = ShippingAddress.objects.filter(user=user)
     data['shipping_addresses'] = [
         {
@@ -78,13 +69,11 @@ def export_user_data(user):
             'state': addr.state,
             'postal_code': addr.postal_code,
             'country_code': addr.country_code,
-            'is_default': addr.is_default,
         }
         for addr in addresses
     ]
-    
-    # Feedback submissions
-    feedback = ReachOut.objects.filter(email=user.email)
+
+    feedback = ReachOut.objects.filter(email__iexact=user.email)
     data['feedback_submissions'] = [
         {
             'subject': f.subject,
@@ -93,9 +82,26 @@ def export_user_data(user):
         }
         for f in feedback
     ]
-    
-    # Product notifications
-    notifications = ProductNotification.objects.filter(email=user.email)
+
+    try:
+        from feedback.models import FeedbackTicket
+        tickets = FeedbackTicket.objects.filter(
+            Q(user=user) | Q(submitted_by_email__iexact=user.email)
+        )
+        data['support_tickets'] = [
+            {
+                'ticket_number': t.ticket_number,
+                'subject': t.subject,
+                'category': t.category,
+                'status': t.status,
+                'created_at': t.created_at.isoformat(),
+            }
+            for t in tickets
+        ]
+    except Exception:
+        data['support_tickets'] = []
+
+    notifications = ProductNotification.objects.filter(email__iexact=user.email)
     data['product_notifications'] = [
         {
             'product_title': n.product.title,
@@ -104,8 +110,7 @@ def export_user_data(user):
         }
         for n in notifications
     ]
-    
-    # Email preferences
+
     try:
         email_pref = user.email_preferences
         data['email_preferences'] = {
@@ -116,11 +121,12 @@ def export_user_data(user):
             'collaboration_notifications': email_pref.collaboration_notifications,
             'newsletter': email_pref.newsletter,
         }
-    except:
+    except Exception:
         data['email_preferences'] = None
-    
-    # Newsletter subscriptions
-    newsletter_subs = NewsletterSubscription.objects.filter(user=user)
+
+    newsletter_subs = NewsletterSubscription.objects.filter(
+        Q(user=user) | Q(email__iexact=user.email)
+    )
     data['newsletter_subscriptions'] = [
         {
             'email': sub.email,
@@ -129,8 +135,7 @@ def export_user_data(user):
         }
         for sub in newsletter_subs
     ]
-    
-    # Stories/Comics
+
     stories = Comic.objects.filter(user=user)
     data['stories'] = [
         {
@@ -138,12 +143,12 @@ def export_user_data(user):
             'title': story.title,
             'description': story.description,
             'is_public': story.is_public,
+            'moderation_status': story.moderation_status,
             'created_at': story.created_at.isoformat() if story.created_at else None,
         }
         for story in stories
     ]
-    
-    # Collaborations
+
     collaborations = StoryCollaborator.objects.filter(user=user)
     data['collaborations'] = [
         {
@@ -153,8 +158,7 @@ def export_user_data(user):
         }
         for collab in collaborations
     ]
-    
-    # Studio memberships
+
     studio_collabs = StudioCollaborator.objects.filter(user=user)
     data['studio_memberships'] = [
         {
@@ -164,121 +168,167 @@ def export_user_data(user):
         }
         for collab in studio_collabs
     ]
-    
+
+    data['owned_studios'] = [
+        {'id': s.id, 'name': s.name, 'is_public': s.is_public}
+        for s in Studio.objects.filter(owner=user)
+    ]
+
+    data['audio_tracks'] = [
+        {'id': t.id, 'name': t.name, 'audio_type': t.audio_type}
+        for t in AudioTrack.objects.filter(created_by=user)
+    ]
+
     return data
+
+
+def _detach_orders_for_erasure(user, summary):
+    """Keep order records for tax/legal; remove link to the user account."""
+    from snmov.models import Order
+
+    orders = Order.objects.filter(customer=user)
+    summary['orders_detached'] = orders.count()
+    orders.update(customer=None, guest_email='', guest_checkout_token='')
+
+
+def _delete_user_content(user, summary):
+    """Delete immersive-comics UGC and related creator assets."""
+    from icvybz.models import (
+        Comic, Character, Studio, AudioTrack, Intersection,
+        CollaborationInvite, StoryCollaborator, StudioCollaborator,
+    )
+
+    stories = Comic.objects.filter(user=user)
+    summary['stories_deleted'] = stories.count()
+    stories.delete()
+
+    characters = Character.objects.filter(user=user)
+    summary['characters_deleted'] = characters.count()
+    characters.delete()
+
+    studios = Studio.objects.filter(owner=user)
+    summary['studios_deleted'] = studios.count()
+    studios.delete()
+
+    audio = AudioTrack.objects.filter(created_by=user)
+    summary['audio_tracks_deleted'] = audio.count()
+    audio.delete()
+
+    intersections = Intersection.objects.filter(user=user)
+    summary['intersections_deleted'] = intersections.count()
+    intersections.delete()
+
+    invites = CollaborationInvite.objects.filter(
+        Q(inviter=user) | Q(invitee_user=user)
+    )
+    summary['collaboration_invites_deleted'] = invites.count()
+    invites.delete()
+
+    story_collabs = StoryCollaborator.objects.filter(user=user)
+    summary['collaborations_removed'] = story_collabs.count()
+    for collab in story_collabs:
+        collab.is_active = False
+        collab.save(update_fields=['is_active'])
+
+    studio_collabs = StudioCollaborator.objects.filter(user=user)
+    summary['studio_memberships_removed'] = studio_collabs.count()
+    for collab in studio_collabs:
+        collab.is_active = False
+        collab.save(update_fields=['is_active'])
+
+
+def _delete_support_and_comms(user, summary):
+    from snmov.models import ReachOut, ProductNotification, NewsletterSubscription
+
+    feedback = ReachOut.objects.filter(email__iexact=user.email)
+    summary['feedback_deleted'] = feedback.count()
+    feedback.delete()
+
+    try:
+        from feedback.models import FeedbackTicket
+        tickets = FeedbackTicket.objects.filter(
+            Q(user=user) | Q(submitted_by_email__iexact=user.email)
+        )
+        summary['support_tickets_deleted'] = tickets.count()
+        tickets.delete()
+    except Exception:
+        summary['support_tickets_deleted'] = 0
+
+    notifications = ProductNotification.objects.filter(email__iexact=user.email)
+    summary['notifications_deleted'] = notifications.count()
+    notifications.delete()
+
+    newsletter_subs = NewsletterSubscription.objects.filter(
+        Q(user=user) | Q(email__iexact=user.email)
+    )
+    summary['newsletter_subscriptions_deleted'] = newsletter_subs.count()
+    newsletter_subs.delete()
 
 
 def delete_user_data(user, anonymize=False):
     """
-    Delete or anonymize user data (GDPR Right to Erasure).
-    
-    Args:
-        user: User object
-        anonymize: If True, anonymize data instead of deleting
-    
-    Returns:
-        dict: Summary of deleted/anonymized data
+    Delete or anonymize user data (GDPR Right to Erasure / CCPA Right to Delete).
+
+    Full delete removes UGC and account data. Order line items are retained for
+    legal/tax purposes but are detached from the deleted account.
     """
-    from snmov.models import Order, ShippingAddress, ReachOut, ProductNotification, EmailPreference, NewsletterSubscription
-    from icvybz.models import Comic, StoryCollaborator, StudioCollaborator, CollaborationInvite
-    
+    from snmov.models import Order, ShippingAddress
+    from rest_framework.authtoken.models import Token
+
     summary = {
         'user_id': user.id,
         'username': user.username,
         'anonymized': anonymize,
         'timestamp': timezone.now().isoformat(),
     }
-    
-    if anonymize:
-        # Anonymize user data
-        user.username = f'deleted_user_{user.id}'
-        user.email = f'deleted_{user.id}@deleted.local'
-        user.first_name = ''
-        user.last_name = ''
-        user.set_unusable_password()
-        user.is_active = False
-        user.save()
-        
-        # Anonymize orders (keep for business records but remove personal data)
-        orders = Order.objects.filter(customer=user)
-        for order in orders:
-            if order.shipping_address:
-                order.shipping_address.full_name = '[Deleted]'
-                order.shipping_address.address_line_1 = '[Deleted]'
-                order.shipping_address.email = f'deleted_{user.id}@deleted.local'
-                order.shipping_address.save()
-        
-        summary['orders_anonymized'] = orders.count()
-        
-        # Anonymize feedback
-        feedback = ReachOut.objects.filter(email=user.email)
-        for f in feedback:
-            f.full_name = '[Deleted]'
-            f.email = f'deleted_{user.id}@deleted.local'
-            f.content = '[Content deleted]'
-            f.save()
-        summary['feedback_anonymized'] = feedback.count()
-        
-    else:
-        # Delete user data (where allowed by business requirements)
-        # Note: Orders may need to be kept for tax/legal purposes
-        
-        # Delete shipping addresses
+
+    with transaction.atomic():
+        if anonymize:
+            user.username = f'deleted_user_{user.id}'
+            user.email = f'deleted_{user.id}@deleted.local'
+            user.first_name = ''
+            user.last_name = ''
+            user.set_unusable_password()
+            user.is_active = False
+            user.save()
+
+            orders = Order.objects.filter(customer=user)
+            for order in orders:
+                if order.shipping_address:
+                    order.shipping_address.full_name = '[Deleted]'
+                    order.shipping_address.address_line_1 = '[Deleted]'
+                    order.shipping_address.save()
+            summary['orders_anonymized'] = orders.count()
+            _detach_orders_for_erasure(user, summary)
+
+            from snmov.models import ReachOut
+            feedback = ReachOut.objects.filter(email__iexact=user.email)
+            for f in feedback:
+                f.full_name = '[Deleted]'
+                f.email = f'deleted_{user.id}@deleted.local'
+                f.content = '[Content deleted]'
+                f.save()
+            summary['feedback_anonymized'] = feedback.count()
+
+            Token.objects.filter(user=user).delete()
+            return summary
+
+        _detach_orders_for_erasure(user, summary)
+        _delete_user_content(user, summary)
+        _delete_support_and_comms(user, summary)
+
         addresses = ShippingAddress.objects.filter(user=user)
         summary['addresses_deleted'] = addresses.count()
         addresses.delete()
-        
-        # Delete feedback
-        feedback = ReachOut.objects.filter(email=user.email)
-        summary['feedback_deleted'] = feedback.count()
-        feedback.delete()
-        
-        # Delete product notifications
-        notifications = ProductNotification.objects.filter(email=user.email)
-        summary['notifications_deleted'] = notifications.count()
-        notifications.delete()
-        
-        # Delete email preferences
+
         try:
             user.email_preferences.delete()
             summary['email_preferences_deleted'] = True
-        except:
+        except Exception:
             summary['email_preferences_deleted'] = False
-        
-        # Delete newsletter subscriptions
-        newsletter_subs = NewsletterSubscription.objects.filter(user=user)
-        summary['newsletter_subscriptions_deleted'] = newsletter_subs.count()
-        newsletter_subs.delete()
-        
-        # Remove from collaborations (soft delete)
-        collaborations = StoryCollaborator.objects.filter(user=user)
-        for collab in collaborations:
-            collab.is_active = False
-            collab.save()
-        summary['collaborations_removed'] = collaborations.count()
-        
-        # Remove from studios (soft delete)
-        studio_collabs = StudioCollaborator.objects.filter(user=user)
-        for collab in studio_collabs:
-            collab.is_active = False
-            collab.save()
-        summary['studio_memberships_removed'] = studio_collabs.count()
-        
-        # Delete user account
+
+        Token.objects.filter(user=user).delete()
         user.delete()
         summary['user_deleted'] = True
-    
+
     return summary
-
-
-
-
-
-
-
-
-
-
-
-
-

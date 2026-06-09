@@ -112,6 +112,22 @@ describe('Stories Component - Character Display', () => {
     mockedApiService.getCharacters.mockResolvedValue(mockCharacters);
   });
 
+  it('renders natural public stories hero copy', async () => {
+    render(
+      <BrowserRouter>
+        <ApiProvider value={{ ...mockApiContext, stories: [] }}>
+          <Stories />
+        </ApiProvider>
+      </BrowserRouter>
+    );
+
+    expect(await screen.findByText('Explore')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Stories' })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Immersive 3D comics you can preview, share, and explore/i)
+    ).toBeInTheDocument();
+  });
+
   it('should display characters for each story', async () => {
     // Mock the API context to return stories
     const contextWithStories = {

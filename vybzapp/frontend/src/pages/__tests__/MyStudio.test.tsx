@@ -4,6 +4,23 @@ import { BrowserRouter } from 'react-router-dom';
 import MyStudio from '../MyStudio';
 import { ApiProvider } from '../../contexts/ApiContext';
 
+jest.mock('../../services/api', () => ({
+  apiService: {
+    getSeasons: jest.fn().mockResolvedValue([]),
+    getEpisodes: jest.fn().mockResolvedValue([]),
+    getStudioCollaborationRequests: jest.fn().mockResolvedValue([]),
+  },
+}));
+
+jest.mock('../../services/collaborationService', () => ({
+  collaborationService: {
+    getStudioCollaborators: jest.fn().mockResolvedValue([]),
+    inviteStudioUser: jest.fn(),
+    inviteStudioByEmail: jest.fn(),
+    removeStudioCollaborator: jest.fn(),
+  },
+}));
+
 // Mock the API context
 const mockApiContext = {
   stories: [
@@ -47,7 +64,9 @@ const mockApiContext = {
   currentEpisode: null,
   isLoading: false,
   error: null,
-  loadStories: jest.fn(),
+  currentUser: { id: 1, username: 'testuser', first_name: 'Test' },
+  logout: jest.fn(),
+  loadStories: jest.fn().mockResolvedValue(undefined),
   loadPublicStories: jest.fn(),
   loadStory: jest.fn(),
   createStory: jest.fn(),
@@ -70,7 +89,7 @@ const mockApiContext = {
   updateDialogue: jest.fn(),
   deleteDialogue: jest.fn(),
   loadStudios: jest.fn(),
-  loadMyStudio: jest.fn(),
+  loadMyStudio: jest.fn().mockResolvedValue(undefined),
   createStudio: jest.fn(),
   updateStudio: jest.fn(),
   deleteStudio: jest.fn(),
@@ -103,6 +122,26 @@ const renderWithRouter = (component: React.ReactElement) => {
 describe('MyStudio Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.setItem('authToken', 'test-token');
+    mockApiContext.loadStories.mockResolvedValue(undefined);
+    mockApiContext.loadMyStudio.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  test('renders natural my studio hero copy', async () => {
+    renderWithRouter(<MyStudio />);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'My Studio' })).toBeInTheDocument();
+    expect(
+      document.querySelector('.product-landing__hero .product-landing__eyebrow')?.textContent
+    ).toBe('Manage');
+    expect(
+      screen.getByText(/Your profile, team, and immersive stories in one place/i)
+    ).toBeInTheDocument();
   });
 
   test('renders studio name and description', async () => {
