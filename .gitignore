@@ -155,6 +155,26 @@ live-static/
 static-root/
 staticfiles.json
 
+# Legacy root-level duplicates (canonical copies under vybzapp/)
+/snmov/
+/static/
+/templates/
+/image/
+# Root media/ covered by /media/ above; keep vybzapp/media/ trackable for dev uploads
+
+# Mistaken venv committed under snmov
+vybzapp/snmov/bin/
+
+# Nested duplicate path (empty stub)
+vybzapp/vybzapp/
+
+# Dev-only frontend test scripts at frontend root (not src/__tests__)
+vybzapp/frontend/test-backup-*/
+vybzapp/frontend/test-consolidated-*.js
+vybzapp/frontend/debug-loading-issues.js
+vybzapp/frontend/detect-loading-issues.js
+vybzapp/frontend/cleanup-old-tests.js
+
 # Node modules and build artifacts
 node_modules/
 npm-debug.log*
