@@ -94,15 +94,65 @@ export interface StoryCreationData {
 }
 
 const steps = [
-  { id: 'story', title: 'Title & Description', component: StoryDetailsStep },
-  { id: 'characters', title: 'Characters', component: CharactersStep },
-  { id: 'season', title: 'Season', component: SeasonSetupStep },
-  { id: 'episode', title: 'Episodes', component: EpisodeSetupStep },
-  { id: 'dialogues', title: 'Dialogues', component: DialoguesStep },
-  { id: 'model', title: 'Scene', component: ModelUploadStep },
-  { id: 'preview', title: 'Preview & Edit', component: PreviewStep },
-  { id: 'publish', title: 'Publish', component: PublishStep },
+  {
+    id: 'story',
+    title: 'Title & description',
+    shortTitle: 'Basics',
+    description: 'Name your story and write a short summary so readers know what to expect.',
+    component: StoryDetailsStep,
+  },
+  {
+    id: 'characters',
+    title: 'Characters',
+    shortTitle: 'Cast',
+    description: 'Add the characters who will speak and appear in your 3D scenes.',
+    component: CharactersStep,
+  },
+  {
+    id: 'season',
+    title: 'Season',
+    shortTitle: 'Season',
+    description: 'Group your episodes into a season with a title and release date.',
+    component: SeasonSetupStep,
+  },
+  {
+    id: 'episode',
+    title: 'Episode',
+    shortTitle: 'Episode',
+    description: 'Set up your first episode with a title and summary.',
+    component: EpisodeSetupStep,
+  },
+  {
+    id: 'dialogues',
+    title: 'Dialogues',
+    shortTitle: 'Script',
+    description: 'Write script lines in standard screenplay format for the comic viewer.',
+    component: DialoguesStep,
+  },
+  {
+    id: 'model',
+    title: 'Scene',
+    shortTitle: 'Scene',
+    description: 'Upload a 3D environment model for your story world.',
+    component: ModelUploadStep,
+  },
+  {
+    id: 'preview',
+    title: 'Preview & edit',
+    shortTitle: 'Preview',
+    description: 'Review how your story looks in the 3D comic viewer.',
+    component: PreviewStep,
+  },
+  {
+    id: 'publish',
+    title: 'Publish',
+    shortTitle: 'Publish',
+    description: 'Choose when to share your story with readers.',
+    component: PublishStep,
+  },
 ];
+
+const STEPS_WITH_FOOTER_NEXT = new Set(['story', 'characters', 'episode', 'dialogues']);
 
 const StoryCreationWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -115,7 +165,7 @@ const StoryCreationWizard: React.FC = () => {
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  /** Characters step registers async save + advance here so footer Next persists before moving on */
+  /** Steps register async validate/save + advance for the footer Next button */
   const footerNextOverrideRef = useRef<(() => Promise<void>) | null>(null);
 
   // Initialize data structure
@@ -224,10 +274,6 @@ const StoryCreationWizard: React.FC = () => {
     handleNext();
   };
 
-  useEffect(() => {
-    footerNextOverrideRef.current = null;
-  }, [currentStep]);
-
   const handlePrevious = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
@@ -268,7 +314,7 @@ const StoryCreationWizard: React.FC = () => {
       // Ensure season has a valid release_date and title
       const seasonData = {
         ...data.season,
-        title: data.season.title.trim() || `Season 1 of ${storyData.title}`,
+        title: data.season.title.trim() || 'Season 1',
         release_date: data.season.release_date || '2024-01-01' // Default date if empty
       };
       
@@ -324,11 +370,15 @@ const StoryCreationWizard: React.FC = () => {
     setShowMessage(false);
   };
 
+  const registerFooterNext = useCallback((fn: (() => Promise<void>) | null) => {
+    footerNextOverrideRef.current = fn;
+  }, []);
+
   // Show loading spinner while checking authentication
   const token = localStorage.getItem('authToken');
   if (!token || !currentUser) {
     return (
-      <div className="product-landing">
+      <div className="product-landing story-wizard">
         <section className="product-landing__section">
           <div className="product-landing__container store-page__loadingWrap">
             <LoadingSpinner message="Checking sign-in…" />
@@ -340,6 +390,7 @@ const StoryCreationWizard: React.FC = () => {
 
   const currentStepComponent = steps[currentStep];
   const StepComponent = currentStepComponent.component;
+  const progressPercent = ((currentStep + 1) / steps.length) * 100;
   const stepSharedProps = {
     data,
     onDataUpdate: handleDataUpdate,
@@ -350,7 +401,7 @@ const StoryCreationWizard: React.FC = () => {
   };
 
   return (
-    <div className="product-landing">
+    <div className="product-landing story-wizard">
       <MessagePopup
         message={message}
         type={messageType}
@@ -360,16 +411,16 @@ const StoryCreationWizard: React.FC = () => {
       />
 
       <section className="product-landing__section product-landing__hero">
-        <div className="product-landing__container" style={{ maxWidth: '1200px' }}>
+        <div className="product-landing__container story-wizard__container">
           <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div>
-              <p className="product-landing__eyebrow">Wizard</p>
-              <h1 className="product-landing__h1 mb-0">Create new story</h1>
+              <p className="product-landing__eyebrow">Create</p>
+              <h1 className="product-landing__h1 mb-0">New story</h1>
               <p className="product-landing__lead mb-0 mt-2">
-                Step through details, characters, season, episode, dialogues, and scene.
+                Build your 3D comic step by step. You can save a draft anytime and finish later.
               </p>
             </div>
-            <div className="d-flex gap-2 flex-wrap">
+            <div className="story-wizard__heroActions">
               <BackButton to="/immersivecomics/my-studio/" />
               <SmallButton variant="outline-primary" onClick={() => handleSave()} disabled={isSaving}>
                 <i className="fas fa-save me-1" aria-hidden />
@@ -380,174 +431,94 @@ const StoryCreationWizard: React.FC = () => {
         </div>
       </section>
 
-      <section className="product-landing__section">
-        <div className="product-landing__container p-0 p-md-2" style={{ maxWidth: '1200px' }}>
-      {/* Step Indicator - Modern Step Wizard Structure */}
-      <div className="card border-0 shadow-sm mb-2 font-quicksand">
-        <div className="card-body p-2 p-md-4">
-          <div className="step-indicator-wrapper" style={{ position: 'relative' }}>
-            {/* Step Items */}
-            <div className="d-flex justify-content-between align-items-start" style={{ position: 'relative', zIndex: 2 }}>
-              {steps.map((step, index) => {
-                const isActive = index === currentStep;
-                const isCompleted = index < currentStep;
-                
-                return (
-                  <div
-                    key={step.id}
-                    className="step-item"
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      position: 'relative',
-                      cursor: index <= currentStep ? 'pointer' : 'not-allowed'
-                    }}
-                    onClick={() => index <= currentStep && handleStepClick(index)}
-                  >
-                    {/* Step Circle */}
-                    <div
-                      className="step-circle"
-                      style={{
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold',
-                        fontSize: '18px',
-                        border: '3px solid',
-                        backgroundColor: isActive 
-                          ? '#007bff' 
-                          : isCompleted 
-                            ? '#28a745' 
-                            : '#e9ecef',
-                        borderColor: isActive 
-                          ? '#007bff' 
-                          : isCompleted 
-                            ? '#28a745' 
-                            : '#dee2e6',
-                        color: isActive || isCompleted ? '#fff' : '#6c757d',
-                        transition: 'all 0.3s ease',
-                        position: 'relative',
-                        zIndex: 3
-                      }}
-                    >
-                      {isCompleted ? (
-                        <i className="fas fa-check step-circle-icon" style={{ fontSize: '10px' }}></i>
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-                    
-                    {/* Step Label */}
-                    <div
-                      className="step-label"
-                      style={{
-                        marginTop: '10px',
-                        textAlign: 'center',
-                        fontSize: '10px',
-                        fontWeight: isActive ? '600' : '400',
-                        color: isActive 
-                          ? '#007bff' 
-                          : isCompleted 
-                            ? '#28a745' 
-                            : '#6c757d',
-                        maxWidth: '100px',
-                        lineHeight: '1.3'
-                      }}
-                    >
-                      {step.title}
-                    </div>
-                    
-                    {/* Connecting Line */}
-                    {index < steps.length - 1 && (
-                      <div
-                        className="step-line"
-                        style={{
-                          position: 'absolute',
-                          top: '25px',
-                          left: 'calc(50% + 25px)',
-                          width: 'calc(100% - 50px)',
-                          height: '3px',
-                          backgroundColor: index < currentStep ? '#28a745' : '#dee2e6',
-                          zIndex: 1,
-                          transition: 'background-color 0.3s ease'
-                        }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
+      <section className="product-landing__section" style={{ paddingTop: '1.5rem' }}>
+        <div className="product-landing__container story-wizard__container">
+          <div className="story-wizard__progressMeta">
+            <span className="story-wizard__progressCount">
+              Step {currentStep + 1} of {steps.length}
+            </span>
+            <div className="story-wizard__progressBar" aria-hidden>
+              <span className="story-wizard__progressFill" style={{ width: `${progressPercent}%` }} />
             </div>
-            
-            {/* Progress Bar Background */}
-            <div
-              className="step-progress-bg"
-              style={{
-                position: 'absolute',
-                top: '25px',
-                left: '25px',
-                right: '25px',
-                height: '3px',
-                backgroundColor: '#e9ecef',
-                zIndex: 1,
-                borderRadius: '2px'
-              }}
-            />
           </div>
-        </div>
-      </div>
 
-      {/* Step Content */}
-      <div className="card border-0 shadow-sm" data-step={steps[currentStep]?.id}>
-        <div className="card-body p-2">
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : currentStepComponent.id === 'characters' ? (
-            <CharactersStep
-              {...stepSharedProps}
-              registerFooterNext={(fn) => {
-                footerNextOverrideRef.current = fn;
-              }}
-            />
-          ) : (
-            <StepComponent {...stepSharedProps} />
-          )}
-        </div>
-      </div>
+          <nav className="story-wizard__stepper" aria-label="Story creation progress">
+            {steps.map((step, index) => {
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              const isClickable = index <= currentStep;
+              const stepClass = [
+                'story-wizard__step',
+                isActive ? 'story-wizard__step--active' : '',
+                isCompleted ? 'story-wizard__step--done' : '',
+                isClickable ? 'story-wizard__step--clickable' : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
 
-      {/* Navigation */}
-      <div className="d-flex justify-content-between mt-2">
-        <SmallButton
-          variant="outline-secondary"
-          onClick={handlePrevious}
-          disabled={currentStep === 0}
-        >
-          <i className="fas fa-arrow-left me-1"></i> Previous
-        </SmallButton>
-        
-        <div className="d-flex gap-2">
-          {currentStep === steps.length - 1 ? (
-            <SmallButton
-              variant="success"
-              onClick={handleSave}
-              disabled={isLoading}
-            >
-              <i className="fas fa-rocket me-1"></i>Publish Story
-            </SmallButton>
-          ) : (
-            <SmallButton
-              variant="primary"
-              onClick={() => void handleFooterNext()}
-            >
-              Next <i className="fas fa-arrow-right ms-1"></i>
-            </SmallButton>
-          )}
-        </div>
-      </div>
+              return (
+                <button
+                  key={step.id}
+                  type="button"
+                  className={stepClass}
+                  onClick={() => isClickable && handleStepClick(index)}
+                  disabled={!isClickable}
+                  aria-current={isActive ? 'step' : undefined}
+                  aria-label={`Step ${index + 1}: ${step.shortTitle}${isCompleted ? ', completed' : isActive ? ', current' : ''}`}
+                >
+                  <span className="story-wizard__stepDot" aria-hidden>
+                    {isCompleted ? <i className="fas fa-check" style={{ fontSize: '0.65rem' }} /> : index + 1}
+                  </span>
+                  <span className="story-wizard__stepLabel">{step.shortTitle}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="story-wizard__panel" data-step={currentStepComponent.id}>
+            <header className="story-wizard__stepHeader">
+              <h2 className="story-wizard__stepTitle">{currentStepComponent.title}</h2>
+              <p className="story-wizard__stepDescription">{currentStepComponent.description}</p>
+            </header>
+
+            <div className="story-wizard__stepContent">
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : STEPS_WITH_FOOTER_NEXT.has(currentStepComponent.id) ? (
+                <StepComponent
+                  {...stepSharedProps}
+                  registerFooterNext={registerFooterNext}
+                />
+              ) : (
+                <StepComponent {...stepSharedProps} />
+              )}
+            </div>
+
+            <footer className="story-wizard__nav">
+              <SmallButton
+                variant="outline-secondary"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+              >
+                <i className="fas fa-arrow-left me-1" aria-hidden />
+                Previous
+              </SmallButton>
+
+              <div className="d-flex gap-2">
+                {currentStep === steps.length - 1 ? (
+                  <SmallButton variant="success" onClick={handleSave} disabled={isLoading}>
+                    <i className="fas fa-rocket me-1" aria-hidden />
+                    Publish story
+                  </SmallButton>
+                ) : (
+                  <SmallButton variant="primary" onClick={() => void handleFooterNext()}>
+                    Next
+                    <i className="fas fa-arrow-right ms-1" aria-hidden />
+                  </SmallButton>
+                )}
+              </div>
+            </footer>
+          </div>
         </div>
       </section>
     </div>

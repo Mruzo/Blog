@@ -7,6 +7,7 @@ interface SimpleRichTextEditorProps {
   placeholder?: string;
   className?: string;
   rows?: number;
+  id?: string;
 }
 
 const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
@@ -15,7 +16,8 @@ const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
   maxLength,
   placeholder = 'Enter text...',
   className = '',
-  rows = 3
+  rows = 3,
+  id,
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [plainTextLength, setPlainTextLength] = useState(0);
@@ -161,7 +163,10 @@ const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
       {/* Editor */}
       <div
         ref={editorRef}
+        id={id}
         contentEditable
+        role="textbox"
+        aria-multiline="true"
         onInput={handleInput}
         onPaste={handlePaste}
         className={`form-control ${className}`}

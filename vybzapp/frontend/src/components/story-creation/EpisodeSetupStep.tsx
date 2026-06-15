@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { StoryCreationData } from '../StoryCreationWizard';
 import { useApi } from '../../contexts/ApiContext';
 import FormFieldWithLimit from '../FormFieldWithLimit';
@@ -10,82 +10,100 @@ interface EpisodeSetupStepProps {
   onPrevious: () => void;
   isFirstStep: boolean;
   isLastStep: boolean;
+  registerFooterNext?: (fn: (() => Promise<void>) | null) => void;
 }
 
 const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
   data,
   onDataUpdate,
   onNext,
-  onPrevious,
-  isFirstStep,
-  isLastStep
+  registerFooterNext,
 }) => {
-  const { createEpisode } = useApi();
+  const { createEpisode, loadEpisodes } = useApi();
   const [formData, setFormData] = useState(data.episode);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  // Sync formData with parent data when it changes
   useEffect(() => {
     setFormData(data.episode);
   }, [data.episode]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const updatedFormData = { ...formData, [name]: value };
+    const updatedFormData = {
+      ...formData,
+      [name]: name === 'episode_number' ? parseInt(value, 10) || 1 : value,
+    };
     setFormData(updatedFormData);
-    
-    // Update parent component with the new data
     onDataUpdate({ episode: updatedFormData });
-    
-    // Clear error when user starts typing
+
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.title.trim()) {
       newErrors.title = 'Episode title is required';
     }
-    
+
     if (formData.episode_number < 1) {
       newErrors.episode_number = 'Episode number must be at least 1';
     }
-    
+
     if (!formData.description.trim()) {
       newErrors.description = 'Episode description is required';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData.title, formData.episode_number, formData.description]);
 
-  const handleNext = async () => {
+  const persistEpisodeAndAdvance = useCallback(async () => {
     if (!validateForm()) {
+      return;
+    }
+
+    if (data.episode.id) {
+      onNext();
       return;
     }
 
     setIsSaving(true);
     try {
-      // Ensure we have a season ID
       if (!data.season.id) {
         setErrors({ general: 'Season not found. Please go back and complete the season setup.' });
         return;
       }
 
-      // Create the episode in the database
+      const existingEpisodes = await loadEpisodes(data.season.id);
+      if (existingEpisodes.length > 0) {
+        const existing = existingEpisodes[0];
+        onDataUpdate({
+          episode: {
+            ...formData,
+            id: existing.id,
+            title: existing.title,
+            episode_number: existing.episode_number,
+            description: existing.description,
+            summary: existing.summary || formData.summary,
+            is_published: existing.is_published ?? formData.is_published,
+          },
+        });
+        onNext();
+        return;
+      }
+
       const savedEpisode = await createEpisode(data.season.id, {
-        title: formData.title,
+        title: formData.title.trim(),
         episode_number: formData.episode_number,
-        description: formData.description,
+        description: formData.description.trim(),
         summary: formData.summary || '',
         is_published: false,
       });
 
-      // Update the parent data with the saved episode
       onDataUpdate({ episode: { ...formData, id: savedEpisode.id } });
       onNext();
     } catch (error) {
@@ -94,16 +112,37 @@ const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [
+    validateForm,
+    data.episode.id,
+    data.season.id,
+    formData,
+    loadEpisodes,
+    createEpisode,
+    onDataUpdate,
+    onNext,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!registerFooterNext) {
+      return;
+    }
+    registerFooterNext(() => persistEpisodeAndAdvance());
+    return () => registerFooterNext(null);
+  }, [registerFooterNext, persistEpisodeAndAdvance]);
 
   return (
-    <div>
+    <div className="episode-setup-step" data-testid="episode-setup-step">
+      {errors.general && (
+        <div className="alert alert-danger" role="alert">
+          <i className="fas fa-exclamation-triangle me-2" aria-hidden />
+          {errors.general}
+        </div>
+      )}
+
       <div className="row">
         <div className="col-12">
           <h4 className="subtext-btn mb-2">Create Episode</h4>
-          {/* <p className="subtext-btn-sm text-muted mb-4">
-            Create the first episode of your story. This will be Episode 1 of Season {data.season.season_number}.
-          </p> */}
         </div>
       </div>
 
@@ -114,17 +153,17 @@ const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
               Title <span className="text-danger">*</span>
             </label>
             <FormFieldWithLimit value={formData.title} maxLength={50}>
-            <input
-              type="text"
-              className={`form-control ${errors.title ? 'is-invalid' : ''}`}
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-                
-            />
+              <input
+                type="text"
+                className={`form-control ${errors.title ? 'is-invalid' : ''}`}
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                disabled={isSaving}
+              />
             </FormFieldWithLimit>
-            {errors.title && <div className="invalid-feedback">{errors.title}</div>}
+            {errors.title && <div className="invalid-feedback d-block">{errors.title}</div>}
           </div>
         </div>
 
@@ -141,8 +180,11 @@ const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
               min="1"
               value={formData.episode_number}
               onChange={handleInputChange}
+              disabled={isSaving}
             />
-            {errors.episode_number && <div className="invalid-feedback">{errors.episode_number}</div>}
+            {errors.episode_number && (
+              <div className="invalid-feedback d-block">{errors.episode_number}</div>
+            )}
           </div>
         </div>
       </div>
@@ -154,46 +196,27 @@ const EpisodeSetupStep: React.FC<EpisodeSetupStepProps> = ({
               Episode Description <span className="text-danger">*</span>
             </label>
             <FormFieldWithLimit value={formData.description} maxLength={150}>
-            <textarea
-              className={`form-control ${errors.description ? 'is-invalid' : ''}`}
-              id="description"
-              name="description"
+              <textarea
+                className={`form-control ${errors.description ? 'is-invalid' : ''}`}
+                id="description"
+                name="description"
                 rows={3}
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Describe what happens in this episode, key events, character interactions, etc."
-            />
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Describe what happens in this episode, key events, character interactions, etc."
+                disabled={isSaving}
+              />
             </FormFieldWithLimit>
-            {errors.description && <div className="invalid-feedback">{errors.description}</div>}
+            {errors.description && <div className="invalid-feedback d-block">{errors.description}</div>}
           </div>
         </div>
       </div>
 
-      {/* <div className="row">
-        <div className="col-12">
-          <div className="card bg-light">
-            <div className="card-body">
-              <h6 className="subtext-btn-sm mb-3">
-                <i className="fas fa-lightbulb me-2"></i>
-                Episode Planning Tips
-              </h6>
-              <ul className="subtext-btn-sm mb-0">
-                <li>This is your first episode - make it engaging to hook readers</li>
-                <li>Introduce your main characters and setting</li>
-                <li>Establish the main conflict or story premise</li>
-                <li>Think about how this episode sets up future episodes</li>
-                <li>Consider the pacing - not too fast, not too slow</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div> */}
-
       <div className="row mt-2">
         <div className="col-12">
           <div className="alert alert-info">
-            <i className="fas fa-info-circle me-2"></i>
-            <strong>Note:</strong> After creating this episode, you'll add dialogues in the next step. 
+            <i className="fas fa-info-circle me-2" aria-hidden />
+            <strong>Note:</strong> After creating this episode, you&apos;ll add dialogues in the next step.
             You can create additional episodes later from the story management page.
           </div>
         </div>

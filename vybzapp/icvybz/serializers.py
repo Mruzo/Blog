@@ -18,8 +18,8 @@ class ComicSerializer(serializers.ModelSerializer):
     
     def validate_title(self, value):
         """Validate title length"""
-        if value and len(value) > 20:
-            raise serializers.ValidationError("Story title cannot exceed 20 characters.")
+        if value and len(value) > 50:
+            raise serializers.ValidationError("Story title cannot exceed 50 characters.")
         return value
     
     def validate_description(self, value):
@@ -40,14 +40,14 @@ class SeasonSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at', 'total_views']
     
     def validate_title(self, value):
-        """Validate title length"""
-        if value and len(value) > 20:
-            raise serializers.ValidationError("Season title cannot exceed 50 characters.")
+        """Validate title length (model max_length=100; wizard allows up to 50)."""
+        if value and len(value) > 100:
+            raise serializers.ValidationError("Season title cannot exceed 100 characters.")
         return value
     
     def validate_description(self, value):
         """Validate description length"""
-        if value and len(value) > 300:
+        if value and len(value) > 150:
             raise serializers.ValidationError("Season description cannot exceed 150 characters.")
         return value
     

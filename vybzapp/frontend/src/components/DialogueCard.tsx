@@ -1,8 +1,9 @@
 import React from 'react';
+import ScriptDialogueBlock, { stripHtmlTags } from './ScriptDialogueBlock';
 
 interface Dialogue {
   id: number;
-  character: number; // Character ID (who is speaking)
+  character: number;
   text: string;
   order: number;
   episode: number;
@@ -29,7 +30,6 @@ interface Character {
   updated_at: string;
 }
 
-/** 'dot' = colored dot + name (default). 'accent' = left border + light background. */
 interface DialogueCardProps {
   dialogue: Dialogue;
   characters: Character[];
@@ -38,35 +38,53 @@ interface DialogueCardProps {
   showActions?: boolean;
   className?: string;
   showCameraInfo?: boolean;
+  /** 'screenplay' = standard script layout; 'default' = compact metadata card */
+  variant?: 'default' | 'screenplay';
   characterStyle?: 'dot' | 'accent';
 }
 
 const CHARACTER_COLORS = [
   '#0d6efd', '#198754', '#0dcaf0', '#fd7e14', '#dc3545',
-  '#6f42c1', '#414042', '#20c997', '#6c757d', '#e83e8c'
+  '#6f42c1', '#414042', '#20c997', '#6c757d', '#e83e8c',
 ];
 
-const DialogueCard: React.FC<DialogueCardProps> = ({ 
-  dialogue, 
+const DialogueCard: React.FC<DialogueCardProps> = ({
+  dialogue,
   characters,
-  onEdit, 
-  onDelete, 
+  onEdit,
+  onDelete,
   showActions = true,
   className = '',
   showCameraInfo = true,
-  characterStyle = 'dot'
+  variant = 'screenplay',
 }) => {
-  const character = characters.find(char => char.id === dialogue.character);
+  const character = characters.find((char) => char.id === dialogue.character);
   const characterName = character ? character.name : `Character ${dialogue.character}`;
-  // One color per character: use index in list so each character is distinct
-  const characterIndex = characters.findIndex(char => char.id === dialogue.character);
+  const characterIndex = characters.findIndex((char) => char.id === dialogue.character);
   const characterColor = CHARACTER_COLORS[characterIndex >= 0 ? characterIndex % CHARACTER_COLORS.length : 0];
 
-  const stripHtmlTags = (html: string): string => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || tempDiv.innerText || '';
-  };
+  if (variant === 'screenplay') {
+    return (
+      <div className={className}>
+        <ScriptDialogueBlock
+          order={dialogue.order}
+          characterName={characterName}
+          text={dialogue.text}
+          sceneTitle={dialogue.scene_title}
+          sceneDescription={dialogue.scene_description}
+          showActions={showActions}
+          onEdit={() => onEdit(dialogue)}
+          onDelete={() => onDelete(dialogue.id)}
+        />
+        {showCameraInfo && (
+          <p className="script-block__meta mb-0 mt-1 px-1">
+            <i className="fas fa-camera me-1" aria-hidden />
+            Orbit: {dialogue.camera_orbit} · Target: {dialogue.camera_target}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`episode-manage__dialogueCard ${className}`}>
@@ -76,27 +94,17 @@ const DialogueCard: React.FC<DialogueCardProps> = ({
             <span className="dialogue-card__order" aria-label={`Order ${dialogue.order}`}>
               #{dialogue.order}
             </span>
-            {characterStyle === 'dot' ? (
+            <span
+              className="dialogue-card__character dialogue-card__character--dot subtext-btn-sm"
+              aria-label={`Character: ${characterName}`}
+            >
               <span
-                className="dialogue-card__character dialogue-card__character--dot subtext-btn-sm"
-                aria-label={`Character: ${characterName}`}
-              >
-                <span
-                  className="dialogue-card__character-dot"
-                  style={{ backgroundColor: characterColor }}
-                  aria-hidden
-                />
-                {characterName}
-              </span>
-            ) : (
-              <span
-                className="dialogue-card__character subtext-btn-sm"
-                style={{ color: characterColor }}
-                aria-label={`Character: ${characterName}`}
-              >
-                {characterName}
-              </span>
-            )}
+                className="dialogue-card__character-dot"
+                style={{ backgroundColor: characterColor }}
+                aria-hidden
+              />
+              {characterName}
+            </span>
           </div>
           {showActions && (
             <div className="episode-manage__cardActions">
@@ -121,28 +129,25 @@ const DialogueCard: React.FC<DialogueCardProps> = ({
             </div>
           )}
         </div>
-        
-        <p className="subtext-btn-sm mb-2" style={{ 
-          lineHeight: '1.4',
-          whiteSpace: 'pre-wrap'
-        }}>
-          "{stripHtmlTags(dialogue.text)}"
+
+        <p
+          className="subtext-btn-sm mb-2"
+          style={{ lineHeight: '1.4', whiteSpace: 'pre-wrap' }}
+        >
+          &ldquo;{stripHtmlTags(dialogue.text)}&rdquo;
         </p>
-        
+
         {showCameraInfo && (
           <div className="mt-2">
             <small className="text-muted subtext-btn-sm">
               <i className="fas fa-camera me-1">&nbsp;</i>
-               Orbit: {dialogue.camera_orbit} | Target: {dialogue.camera_target}
+              Orbit: {dialogue.camera_orbit} | Target: {dialogue.camera_target}
             </small>
           </div>
         )}
-        
-        
       </div>
     </div>
   );
 };
 
 export default DialogueCard;
-

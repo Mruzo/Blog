@@ -39,7 +39,7 @@ interface ApiContextType {
   updateStory: (id: number, storyData: Partial<Story>) => Promise<Story>;
   deleteStory: (id: number) => Promise<void>;
   
-  loadSeasons: (storyId: number) => Promise<void>;
+  loadSeasons: (storyId: number) => Promise<Season[]>;
   createSeason: (storyId: number, seasonData: SeasonCreateData) => Promise<Season>;
   updateSeason: (id: number, seasonData: Partial<SeasonCreateData>) => Promise<Season>;
   deleteSeason: (id: number) => Promise<void>;
@@ -49,7 +49,7 @@ interface ApiContextType {
   updateCharacter: (id: number, characterData: Partial<Character>) => Promise<Character>;
   deleteCharacter: (id: number) => Promise<void>;
   
-  loadEpisodes: (seasonId: number) => Promise<void>;
+  loadEpisodes: (seasonId: number) => Promise<Episode[]>;
   createEpisode: (seasonId: number, episodeData: Partial<Episode>) => Promise<Episode>;
   updateEpisode: (id: number, episodeData: Partial<Episode>) => Promise<Episode>;
   deleteEpisode: (id: number) => Promise<void>;
@@ -189,6 +189,7 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
   const loadSeasons = useCallback(async (storyId: number) => {
     const seasons = await handleApiCall(() => apiService.getSeasons(storyId));
     setSeasons(seasons);
+    return seasons;
   }, [handleApiCall]);
 
   const createSeason = async (storyId: number, seasonData: SeasonCreateData) => {
@@ -241,6 +242,7 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
   const loadEpisodes = useCallback(async (seasonId: number) => {
     const episodes = await handleApiCall(() => apiService.getEpisodes(seasonId));
     setEpisodes(episodes);
+    return episodes;
   }, [handleApiCall]);
 
   const createEpisode = useCallback(async (seasonId: number, episodeData: Partial<Episode>) => {

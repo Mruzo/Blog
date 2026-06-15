@@ -76,6 +76,23 @@ class StoryCreationAPITestCase(APITestCase):
         self.assertEqual(story.title, 'Test Story')
         self.assertEqual(story.user, self.user)
 
+    def test_create_private_story_draft(self):
+        """Private/draft stories must not 500 on create (wizard default)."""
+        url = reverse('icvybz-api:story-list-create')
+        response = self.client.post(
+            url,
+            {
+                'title': 'Draft Story',
+                'description': 'A private draft',
+                'is_public': False,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        story = Comic.objects.get(title='Draft Story')
+        self.assertFalse(story.is_public)
+        self.assertEqual(story.moderation_status, 'pending')
+
     def test_create_story_unauthorized(self):
         """Test creating a story without authentication"""
         self.client.force_authenticate(user=None)  # Remove authentication
@@ -103,6 +120,27 @@ class StoryCreationAPITestCase(APITestCase):
         season = Season.objects.first()
         self.assertEqual(season.title, 'Season 1')
         self.assertEqual(season.comic, story)
+
+    def test_create_season_wizard_default_title(self):
+        """Wizard uses 'Season 1' when season title is empty (not 'Season 1 of …')."""
+        story = Comic.objects.create(
+            title='My Long Story Title Here',
+            description='A test story',
+            user=self.user,
+        )
+        url = reverse('icvybz-api:season-list-create', kwargs={'story_id': story.id})
+        response = self.client.post(
+            url,
+            {
+                'title': 'Season 1',
+                'season_number': 1,
+                'description': '',
+                'release_date': '2024-06-14',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['title'], 'Season 1')
 
     def test_create_character_success(self):
         """Test creating a character successfully"""

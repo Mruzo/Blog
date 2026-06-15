@@ -63,13 +63,16 @@ class ComicListCreateView(generics.ListCreateAPIView):
     
     def perform_create(self, serializer):
         # moderation_status is server-authoritative:
-        # - default is 'pending' (model default)
-        # - if a creator tries to publish immediately, keep it pending for review
+        # - drafts (is_public=False) stay pending until published
+        # - public stories need review unless creator is staff
         is_public = bool(serializer.validated_data.get('is_public', False))
-        moderation_status = 'approved' if getattr(self.request.user, 'is_staff', False) else 'pending'
+        if is_public and getattr(self.request.user, 'is_staff', False):
+            moderation_status = 'approved'
+        else:
+            moderation_status = 'pending'
         serializer.save(
             user=self.request.user,
-            moderation_status=moderation_status if is_public else serializer.instance.moderation_status,
+            moderation_status=moderation_status,
         )
         # Clear cache when new comic is created
         cache_key = f"user_comics_{self.request.user.id}"

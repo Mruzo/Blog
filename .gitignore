@@ -173,6 +173,9 @@ vybzapp/frontend/test-backup-*/
 vybzapp/frontend/test-consolidated-*.js
 vybzapp/frontend/debug-loading-issues.js
 vybzapp/frontend/detect-loading-issues.js
+vybzapp/frontend/debug-scroll-position.js
+vybzapp/frontend/remove-redundant-tests.js
+vybzapp/frontend/run-consolidated-tests.js
 vybzapp/frontend/cleanup-old-tests.js
 
 # Node modules and build artifacts
@@ -182,6 +185,22 @@ yarn-debug.log*
 yarn-error.log*
 .pnp/
 .pnp.js
+
+# Frontend env (never commit; frontend/.gitignore covers .local variants)
+vybzapp/frontend/.env
+vybzapp/frontend/.env.production
+**/cookies.txt
+
+# Collected static under vybzapp (root live-static/ also ignored)
+vybzapp/live-static/
+
+# Local backup copies of config
+.gitignore.local_backup
+requirements.txt.backup
+**/requirements.txt.backup
+
+# Cursor IDE (local agent/terminals state)
+.cursor/
 
 # React build cache
 frontend/.cache/

@@ -178,20 +178,16 @@ describe('MyStudio Component', () => {
     await waitFor(() => {
       // Check for public/private badges
       expect(screen.getByText('Public')).toBeInTheDocument();
-      expect(screen.getByText('Private')).toBeInTheDocument();
+      expect(screen.getByText('Draft')).toBeInTheDocument();
     });
   });
 
-  test('displays story management and edit links', async () => {
+  test('displays story management links', async () => {
     renderWithRouter(<MyStudio />);
     
     await waitFor(() => {
-      // Check for manage and edit links
-      const manageLinks = screen.getAllByText('Manage');
-      const editLinks = screen.getAllByText('Edit');
-      
-      expect(manageLinks).toHaveLength(2); // One for each story
-      expect(editLinks).toHaveLength(2); // One for each story
+      const manageLinks = screen.getAllByRole('link', { name: /manage story/i });
+      expect(manageLinks).toHaveLength(2);
     });
   });
 

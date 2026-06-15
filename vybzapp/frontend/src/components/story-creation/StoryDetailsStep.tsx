@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { StoryCreationData } from '../StoryCreationWizard';
 import FormFieldWithLimit from '../FormFieldWithLimit';
 
@@ -9,6 +9,7 @@ interface StoryDetailsStepProps {
   onPrevious: () => void;
   isFirstStep: boolean;
   isLastStep: boolean;
+  registerFooterNext?: (fn: (() => Promise<void>) | null) => void;
 }
 
 const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
@@ -17,7 +18,8 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
   onNext,
   onPrevious,
   isFirstStep,
-  isLastStep
+  isLastStep,
+  registerFooterNext,
 }) => {
   const [formData, setFormData] = useState(data.story);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,50 +43,38 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
     }
   };
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.title.trim()) {
       newErrors.title = 'Story title is required';
     }
-    
+
     if (!formData.description.trim()) {
       newErrors.description = 'Story description is required';
     }
-    
-    // is_public is optional, no validation needed
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData.title, formData.description]);
 
+  const validateAndAdvance = useCallback(async () => {
+    if (!validateForm()) {
+      return;
+    }
+    onNext();
+  }, [validateForm, onNext]);
 
-  const genres = [
-    'Action',
-    'Adventure',
-    'Comedy',
-    'Drama',
-    'Fantasy',
-    'Horror',
-    'Mystery',
-    'Romance',
-    'Sci-Fi',
-    'Thriller',
-    'Other'
-  ];
-
-  const audiences = [
-    'Children (5-12)',
-    'Teens (13-17)',
-    'Young Adults (18-25)',
-    'Adults (26-40)',
-    'Mature (40+)',
-    'All Ages'
-  ];
+  useLayoutEffect(() => {
+    if (!registerFooterNext) {
+      return;
+    }
+    registerFooterNext(validateAndAdvance);
+    return () => registerFooterNext(null);
+  }, [registerFooterNext, validateAndAdvance]);
 
   return (
-    <div>
- 
+    <div data-testid="story-details-step">
       <div className="row">
         <div className="col-md-6">
           <div className="mb-3">
@@ -102,7 +92,7 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
                 placeholder="Story title"
               />
             </FormFieldWithLimit>
-            {errors.title && <div className="invalid-feedback">{errors.title}</div>}
+            {errors.title && <div className="invalid-feedback d-block">{errors.title}</div>}
           </div>
 
           
@@ -124,7 +114,7 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
                 placeholder="Story plot, theme, and key elements"
               />
             </FormFieldWithLimit>
-            {errors.description && <div className="invalid-feedback">{errors.description}</div>}
+            {errors.description && <div className="invalid-feedback d-block">{errors.description}</div>}
           </div>
         </div>
       </div>
@@ -148,20 +138,13 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
               <label className="form-check-label subtext-btn-sm" htmlFor="is_public">
                 Make this story public
               </label>
+              <div className="form-text subtext-btn-sm text-muted">
+                You can change visibility again on the publish step.
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* <div className="row">
-        <div className="col-12">
-          <div className="alert alert-info">
-            <i className="fas fa-info-circle me-2"></i>
-            <strong>Tip:</strong> A compelling title and description will help attract readers to your story. 
-            Make sure to clearly define your target audience and genre to help with story categorization.
-          </div>
-        </div>
-      </div> */}
     </div>
   );
 };

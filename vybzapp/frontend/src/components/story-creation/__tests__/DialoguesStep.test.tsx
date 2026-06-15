@@ -4,6 +4,28 @@ import '@testing-library/jest-dom';
 import DialoguesStep from '../DialoguesStep';
 import { ApiProvider } from '../../../contexts/ApiContext';
 
+jest.mock('../../SimpleRichTextEditor', () => ({
+  __esModule: true,
+  default: function MockSimpleRichTextEditor({
+    value,
+    onChange,
+    id,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    id?: string;
+  }) {
+    return (
+      <textarea
+        id={id}
+        aria-label="Dialogue text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  },
+}));
+
 // Mock the API context
 const mockApiContext = {
   createDialogue: jest.fn(),
@@ -109,120 +131,144 @@ const mockStoryData = {
   },
 };
 
-const mockProps = {
-  data: mockStoryData,
-  onDataUpdate: jest.fn(),
-  onNext: jest.fn(),
-  onPrevious: jest.fn(),
-  isFirstStep: false,
-  isLastStep: false,
+const mockOnNext = jest.fn();
+const mockOnDataUpdate = jest.fn();
+
+const expectedCameraPayload = {
+  camera_orbit: '0deg 75deg 3m',
+  camera_target: '0m 1.6m 0m',
+  field_of_view: 45,
+  zoom_speed: 1,
+  rotation: '0deg 0deg 0deg',
 };
+
+function fillDialogueText(text: string) {
+  const editor = document.getElementById('dialogue-text') as HTMLTextAreaElement;
+  fireEvent.change(editor, { target: { value: text } });
+}
+
+function selectCharacter(value: string) {
+  const select = document.getElementById('character') as HTMLSelectElement;
+  fireEvent.change(select, { target: { value } });
+}
+
+function setOrder(value: string) {
+  const input = document.getElementById('order') as HTMLInputElement;
+  fireEvent.change(input, { target: { value } });
+}
+
+function renderDialoguesStep(
+  overrides?: Partial<React.ComponentProps<typeof DialoguesStep>>
+) {
+  let footerNext: (() => Promise<void>) | null = null;
+  const registerFooterNext = (fn: (() => Promise<void>) | null) => {
+    footerNext = fn;
+  };
+  const utils = render(
+    <ApiProvider>
+      <DialoguesStep
+        data={mockStoryData}
+        onDataUpdate={mockOnDataUpdate}
+        onNext={mockOnNext}
+        onPrevious={jest.fn()}
+        isFirstStep={false}
+        isLastStep={false}
+        registerFooterNext={registerFooterNext}
+        {...overrides}
+      />
+    </ApiProvider>
+  );
+  return { ...utils, getFooterNext: () => footerNext };
+}
 
 describe('DialoguesStep Progressive Saving', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockApiContext.createDialogue.mockResolvedValue({ 
-      id: 1, 
-      character: 'Test Character',
+    mockApiContext.createDialogue.mockResolvedValue({
+      id: 1,
+      character: 1,
       text: 'Test dialogue',
       order: 1,
-      camera_angle: { x: 0, y: 0, z: 0 }
+      ...expectedCameraPayload,
+    });
+    mockApiContext.loadEpisodes.mockResolvedValue([]);
+    mockApiContext.createEpisode.mockResolvedValue({
+      id: 99,
+      title: 'Episode 1',
+      episode_number: 1,
+      description: 'First episode',
     });
   });
 
   test('should save dialogues to database when Next is clicked', async () => {
-    render(
-      <ApiProvider>
-        <DialoguesStep {...mockProps} />
-      </ApiProvider>
-    );
+    const { getFooterNext } = renderDialoguesStep();
 
     // Add a dialogue
-    fireEvent.change(screen.getByLabelText(/character/i), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText(/dialogue text/i), { target: { value: 'Test dialogue text' } });
-    fireEvent.change(screen.getByLabelText(/order/i), { target: { value: '1' } });
+    selectCharacter('1');
+    fillDialogueText('Test dialogue text');
+    setOrder('1');
     
-    fireEvent.click(screen.getByText(/add dialogue/i));
+    fireEvent.click(screen.getByText(/add line/i));
 
     // Wait for dialogue to be added
     await waitFor(() => {
-      expect(screen.getByText('Test Character')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /script \(1\)/i })).toBeInTheDocument();
     });
 
-    // Mock the Next button click
-    const { onNext } = mockProps;
-    onNext();
+    await getFooterNext()?.();
 
-    // Wait for API call to complete
     await waitFor(() => {
       expect(mockApiContext.createDialogue).toHaveBeenCalledWith(1, {
-        character: 'Test Character',
+        character: 1,
         text: 'Test dialogue text',
         order: 1,
-        camera_angle: { x: 0, y: 0, z: 0 },
+        scene_title: '',
+        scene_description: '',
+        ...expectedCameraPayload,
       });
     });
 
-    // Verify onDataUpdate was called with updated dialogues
-    expect(mockProps.onDataUpdate).toHaveBeenCalledWith({
+    expect(mockOnDataUpdate).toHaveBeenCalledWith({
       dialogues: [{
         id: 1,
-        characterId: 1,
-        character: 'Test Character',
-        text: 'Test dialogue text',
+        character: 1,
+        text: 'Test dialogue',
         order: 1,
-        camera_angle: { x: 0, y: 0, z: 0 },
+        ...expectedCameraPayload,
       }],
     });
 
-    // Verify onNext was called to proceed to next step
-    expect(mockProps.onNext).toHaveBeenCalled();
+    expect(mockOnNext).toHaveBeenCalled();
   });
 
   test('should handle API errors gracefully', async () => {
     mockApiContext.createDialogue.mockRejectedValue(new Error('API Error'));
 
-    render(
-      <ApiProvider>
-        <DialoguesStep {...mockProps} />
-      </ApiProvider>
-    );
+    const { getFooterNext } = renderDialoguesStep();
 
-    // Add a dialogue
-    fireEvent.change(screen.getByLabelText(/character/i), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText(/dialogue text/i), { target: { value: 'Test dialogue text' } });
-    fireEvent.change(screen.getByLabelText(/order/i), { target: { value: '1' } });
+    selectCharacter('1');
+    fillDialogueText('Test dialogue text');
+    setOrder('1');
     
-    fireEvent.click(screen.getByText(/add dialogue/i));
+    fireEvent.click(screen.getByText(/add line/i));
 
-    // Wait for dialogue to be added
     await waitFor(() => {
-      expect(screen.getByText('Test Character')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /script \(1\)/i })).toBeInTheDocument();
     });
 
-    // Mock the Next button click
-    const { onNext } = mockProps;
-    onNext();
+    await getFooterNext()?.();
 
-    // Wait for error to be displayed
     await waitFor(() => {
       expect(screen.getByText(/failed to save dialogues/i)).toBeInTheDocument();
     });
 
-    // Verify onNext was not called due to error
-    expect(mockProps.onNext).not.toHaveBeenCalled();
+    expect(mockOnNext).not.toHaveBeenCalled();
   });
 
   test('should not save if no dialogues are added', async () => {
-    render(
-      <ApiProvider>
-        <DialoguesStep {...mockProps} />
-      </ApiProvider>
-    );
+    const { getFooterNext } = renderDialoguesStep();
 
-    // Try to proceed without adding dialogues
-    const { onNext } = mockProps;
-    onNext();
+    await getFooterNext()?.();
 
     // Wait for error message
     await waitFor(() => {
@@ -233,77 +279,55 @@ describe('DialoguesStep Progressive Saving', () => {
     expect(mockApiContext.createDialogue).not.toHaveBeenCalled();
   });
 
-  test('should show error if episode ID is missing', async () => {
-    const propsWithoutEpisodeId = {
-      ...mockProps,
+  test('should show error if season ID is missing when saving', async () => {
+    const { getFooterNext } = renderDialoguesStep({
       data: {
         ...mockStoryData,
+        season: { ...mockStoryData.season, id: undefined },
         episode: { ...mockStoryData.episode, id: undefined },
       },
-    };
-
-    render(
-      <ApiProvider>
-        <DialoguesStep {...propsWithoutEpisodeId} />
-      </ApiProvider>
-    );
-
-    // Add a dialogue
-    fireEvent.change(screen.getByLabelText(/character/i), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText(/dialogue text/i), { target: { value: 'Test dialogue text' } });
-    fireEvent.change(screen.getByLabelText(/order/i), { target: { value: '1' } });
-    
-    fireEvent.click(screen.getByText(/add dialogue/i));
-
-    // Wait for dialogue to be added
-    await waitFor(() => {
-      expect(screen.getByText('Test Character')).toBeInTheDocument();
     });
 
-    // Mock the Next button click
-    const { onNext } = mockProps;
-    onNext();
+    selectCharacter('1');
+    fillDialogueText('Test dialogue text');
+    setOrder('1');
 
-    // Wait for error to be displayed
+    fireEvent.click(screen.getByText(/add line/i));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /script \(1\)/i })).toBeInTheDocument();
+    });
+
+    await getFooterNext()?.();
+
     await waitFor(() => {
       expect(screen.getByText(/episode not found/i)).toBeInTheDocument();
     });
 
-    // Verify API call was not made
+    expect(mockApiContext.createEpisode).not.toHaveBeenCalled();
     expect(mockApiContext.createDialogue).not.toHaveBeenCalled();
   });
 
   test('should validate required fields when adding dialogue', async () => {
-    render(
-      <ApiProvider>
-        <DialoguesStep {...mockProps} />
-      </ApiProvider>
-    );
+    renderDialoguesStep();
 
-    // Try to add dialogue without selecting character
-    fireEvent.change(screen.getByLabelText(/dialogue text/i), { target: { value: 'Test dialogue text' } });
-    fireEvent.change(screen.getByLabelText(/order/i), { target: { value: '1' } });
-    
-    fireEvent.click(screen.getByText(/add dialogue/i));
+    selectCharacter('1');
+    setOrder('1');
 
-    // Wait for validation error
+    fireEvent.click(screen.getByText(/add line/i));
+
     await waitFor(() => {
-      expect(screen.getByText(/please select a character/i)).toBeInTheDocument();
+      expect(screen.getByText(/dialogue text is required/i)).toBeInTheDocument();
     });
 
-    // Verify dialogue was not added
-    expect(screen.queryByText('Test dialogue text')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /script \(1\)/i })).not.toBeInTheDocument();
   });
 
   test('should update character selection when character is selected', async () => {
-    render(
-      <ApiProvider>
-        <DialoguesStep {...mockProps} />
-      </ApiProvider>
-    );
+    renderDialoguesStep();
 
     // Select a character
-    fireEvent.change(screen.getByLabelText(/character/i), { target: { value: '1' } });
+    selectCharacter('1');
 
     // Verify the character name is updated in the form
     expect(screen.getByDisplayValue('Test Character')).toBeInTheDocument();
@@ -311,60 +335,101 @@ describe('DialoguesStep Progressive Saving', () => {
 
   test('should handle multiple dialogues', async () => {
     mockApiContext.createDialogue
-      .mockResolvedValueOnce({ id: 1, character: 'Test Character', text: 'First dialogue', order: 1, camera_angle: { x: 0, y: 0, z: 0 } })
-      .mockResolvedValueOnce({ id: 2, character: 'Another Character', text: 'Second dialogue', order: 2, camera_angle: { x: 0, y: 0, z: 0 } });
+      .mockResolvedValueOnce({ id: 1, character: 1, text: 'First dialogue', order: 1, ...expectedCameraPayload })
+      .mockResolvedValueOnce({ id: 2, character: 2, text: 'Second dialogue', order: 2, ...expectedCameraPayload });
 
-    render(
-      <ApiProvider>
-        <DialoguesStep {...mockProps} />
-      </ApiProvider>
-    );
+    const { getFooterNext } = renderDialoguesStep();
 
     // Add first dialogue
-    fireEvent.change(screen.getByLabelText(/character/i), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText(/dialogue text/i), { target: { value: 'First dialogue' } });
-    fireEvent.change(screen.getByLabelText(/order/i), { target: { value: '1' } });
-    fireEvent.click(screen.getByText(/add dialogue/i));
+    selectCharacter('1');
+    fillDialogueText('First dialogue');
+    setOrder('1');
+    fireEvent.click(screen.getByText(/add line/i));
 
     // Wait for first dialogue to be added
     await waitFor(() => {
-      expect(screen.getByText('Test Character')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /script \(1\)/i })).toBeInTheDocument();
     });
 
     // Add second dialogue
-    fireEvent.change(screen.getByLabelText(/character/i), { target: { value: '2' } });
-    fireEvent.change(screen.getByLabelText(/dialogue text/i), { target: { value: 'Second dialogue' } });
-    fireEvent.change(screen.getByLabelText(/order/i), { target: { value: '2' } });
-    fireEvent.click(screen.getByText(/add dialogue/i));
+    selectCharacter('2');
+    fillDialogueText('Second dialogue');
+    setOrder('2');
+    fireEvent.click(screen.getByText(/add line/i));
 
     // Wait for second dialogue to be added
     await waitFor(() => {
-      expect(screen.getByText('Another Character')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /script \(2\)/i })).toBeInTheDocument();
     });
 
-    // Mock the Next button click
-    const { onNext } = mockProps;
-    onNext();
+    await getFooterNext()?.();
 
-    // Wait for API calls to complete
     await waitFor(() => {
       expect(mockApiContext.createDialogue).toHaveBeenCalledTimes(2);
     });
 
-    // Verify both dialogues were saved
     expect(mockApiContext.createDialogue).toHaveBeenCalledWith(1, {
-      character: 'Test Character',
+      character: 1,
       text: 'First dialogue',
       order: 1,
-      camera_angle: { x: 0, y: 0, z: 0 },
+      scene_title: '',
+      scene_description: '',
+      ...expectedCameraPayload,
     });
 
     expect(mockApiContext.createDialogue).toHaveBeenCalledWith(1, {
-      character: 'Another Character',
+      character: 2,
       text: 'Second dialogue',
       order: 2,
-      camera_angle: { x: 0, y: 0, z: 0 },
+      scene_title: '',
+      scene_description: '',
+      ...expectedCameraPayload,
     });
+  });
+
+  test('creates episode when missing before saving dialogues', async () => {
+    const { getFooterNext } = renderDialoguesStep({
+      data: {
+        ...mockStoryData,
+        episode: {
+          title: 'My Episode',
+          episode_number: 1,
+          description: 'Episode desc',
+          summary: '',
+          is_published: false,
+        },
+      },
+    });
+
+    selectCharacter('1');
+    fillDialogueText('Test dialogue text');
+    setOrder('1');
+    fireEvent.click(screen.getByText(/add line/i));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /script \(1\)/i })).toBeInTheDocument();
+    });
+
+    await getFooterNext()?.();
+
+    await waitFor(() => {
+      expect(mockApiContext.createEpisode).toHaveBeenCalledWith(1, {
+        title: 'My Episode',
+        episode_number: 1,
+        description: 'Episode desc',
+        summary: '',
+        is_published: false,
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockApiContext.createDialogue).toHaveBeenCalledWith(99, expect.objectContaining({
+        character: 1,
+        text: 'Test dialogue text',
+        order: 1,
+      }));
+    });
+    expect(mockOnNext).toHaveBeenCalled();
   });
 });
 

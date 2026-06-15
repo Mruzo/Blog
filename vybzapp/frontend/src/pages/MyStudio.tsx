@@ -9,6 +9,39 @@ import { useApi } from '../contexts/ApiContext';
 import { apiService } from '../services/api';
 import { collaborationService, User } from '../services/collaborationService';
 
+function formatStoryDate(createdAt: string, updatedAt: string): string {
+  const createdDate = new Date(createdAt);
+  const updatedDate = new Date(updatedAt);
+  const isUpdated = updatedDate > createdDate;
+  return isUpdated
+    ? `Updated ${updatedDate.toLocaleDateString()}`
+    : `Created ${createdDate.toLocaleDateString()}`;
+}
+
+function moderationBadgeClass(status: string | undefined): string {
+  switch (status) {
+    case 'approved':
+      return 'my-studio__storyBadge--approved';
+    case 'rejected':
+      return 'my-studio__storyBadge--rejected';
+    case 'pending':
+    default:
+      return 'my-studio__storyBadge--pending';
+  }
+}
+
+function moderationLabel(status: string | undefined): string {
+  switch (status) {
+    case 'approved':
+      return 'Approved';
+    case 'rejected':
+      return 'Rejected';
+    case 'pending':
+      return 'Pending review';
+    default:
+      return 'Pending review';
+  }
+}
 
 const MyStudio: React.FC = () => {
   const { stories, myStudio, loadStories, loadMyStudio, isLoading, logout: logoutFromContext, currentUser } = useApi();
@@ -875,80 +908,71 @@ const MyStudio: React.FC = () => {
                     )}
 
                     <div className="my-studio__storyBody">
-                        <div className="d-flex justify-content-between align-items-center border-bottom">
-                          <h5 className="subtext-btn-xs mb-0">{story.title || 'Untitled Story'}</h5>
-                          <div className="text-muted subtext-btn-sm">
-                            {(() => {
-                              const createdDate = new Date(story.created_at);
-                              const updatedDate = new Date(story.updated_at);
-                              const isUpdated = updatedDate > createdDate;
-                              return isUpdated 
-                                ? `Updated: ${updatedDate.toLocaleDateString()}`
-                                : `Created: ${createdDate.toLocaleDateString()}`;
-                            })()}
-                          </div>
+                      <header className="my-studio__storyHead">
+                        <h3 className="my-studio__storyTitle">{story.title || 'Untitled Story'}</h3>
+                        <time className="my-studio__storyDate" dateTime={story.updated_at}>
+                          {formatStoryDate(story.created_at, story.updated_at)}
+                        </time>
+                      </header>
+
+                      {story.description?.trim() && (
+                        <p className="my-studio__storyDesc">{story.description}</p>
+                      )}
+
+                      <dl className="my-studio__storyStats">
+                        <div className="my-studio__storyStat">
+                          <dt>Seasons</dt>
+                          <dd>
+                            {isLoadingCounts ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
+                            ) : (
+                              storyCounts[story.id]?.seasons ?? 0
+                            )}
+                          </dd>
                         </div>
-                      
-                      <p className="subtext-btn-sm text-muted mb-1 border-bottom">
-                        {story.description}
-                      </p>
-                      
-                      {/* Story Collaborators - TODO: Add collaborators to API */}
-                      {/* <div className="mb-3">
-                        <div className="subtext-btn-sm fw-bold mb-2">Collaborators:</div>
-                        <div className="d-flex flex-wrap gap-1">
-                          {story.collaborators?.map((collaborator) => (
-                            <span key={collaborator.id} className={`badge bg-${getRoleColor(collaborator.role)}`}>
-                              <i className={`${getRoleIcon(collaborator.role)} me-1`}></i>
-                              {collaborator.first_name}
-                            </span>
-                          ))}
+                        <div className="my-studio__storyStat">
+                          <dt>Episodes</dt>
+                          <dd>
+                            {isLoadingCounts ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
+                            ) : (
+                              storyCounts[story.id]?.episodes ?? 0
+                            )}
+                          </dd>
                         </div>
-                      </div> */}
-                      
-                       <div className="text-muted subtext-btn-sm d-flex justify-content-between align-items-center mb-0 border-bottom pb-2">
-                         <div>
-                           <span className="me-2">
-                             
-                           Seasons: {isLoadingCounts ? (
-                             <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                           ) : (
-                             storyCounts[story.id]?.seasons || 0
-                             )}
-                           </span>
-                           <span>
-                             &nbsp;|
-                             Episodes: {isLoadingCounts ? (
-                             <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                           ) : (
-                             storyCounts[story.id]?.episodes || 0
-                           )}
-                           </span>
-                         </div>
-                         <div className="d-flex gap-2">
-                           <span className={`badge ${story.is_public ? 'bg-success' : 'bg-secondary'}`}>
-                             {story.is_public ? 'Public' : 'Private'}
-                           </span>
-                           <span className="badge bg-success">
-                             approved
-                           </span>
-                         </div>
-                       </div>
+                        <div className="my-studio__storyStat">
+                          <dt>Views</dt>
+                          <dd>{story.total_views ?? 0}</dd>
+                        </div>
+                      </dl>
+
+                      <div className="my-studio__storyStatus" aria-label="Story status">
+                        <span
+                          className={`my-studio__storyBadge ${
+                            story.is_public
+                              ? 'my-studio__storyBadge--public'
+                              : 'my-studio__storyBadge--draft'
+                          }`}
+                        >
+                          {story.is_public ? 'Public' : 'Draft'}
+                        </span>
+                        <span
+                          className={`my-studio__storyBadge ${moderationBadgeClass(story.moderation_status)}`}
+                        >
+                          {moderationLabel(story.moderation_status)}
+                        </span>
+                      </div>
                     </div>
-                    
-                    <div className="my-studio__storyFooter">
-                      <p className="stories-landing__meta mb-0" aria-label="Story views">
-                        <i className="fas fa-eye me-1" aria-hidden />
-                        <span className="stories-landing__metaNum">{story.total_views || 0}</span> views
-                      </p>
+
+                    <footer className="my-studio__storyFooter">
                       <ScrollAwareLink
                         to={`/immersivecomics/story/${story.id}/manage/`}
-                        className="stories-landing__btnPrimary text-decoration-none d-inline-flex align-items-center"
+                        className="stories-landing__btnPrimary text-decoration-none my-studio__storyManageBtn"
                       >
                         <i className="fas fa-sliders-h me-2" aria-hidden />
-                        Manage
+                        Manage story
                       </ScrollAwareLink>
-                    </div>
+                    </footer>
                 </article>
               ))}
               </div>

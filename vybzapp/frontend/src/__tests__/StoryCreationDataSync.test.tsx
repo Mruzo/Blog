@@ -1,11 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { ApiProvider } from '../contexts/ApiContext';
 import StoryCreationWizard from '../components/StoryCreationWizard';
 import StoryDetailsStep from '../components/story-creation/StoryDetailsStep';
 
-// Mock the API context
 const mockApiContext = {
   stories: [],
   seasons: [],
@@ -55,34 +53,48 @@ const mockApiContext = {
   setCurrentStory: jest.fn(),
   setCurrentSeason: jest.fn(),
   setCurrentEpisode: jest.fn(),
+  currentUser: { id: 1, username: 'testuser', email: 'test@example.com' },
+  login: jest.fn(),
+  logout: jest.fn(),
+  register: jest.fn(),
 };
 
-// Mock the API service
-jest.mock('../services/api', () => ({
-  createCompleteStory: jest.fn().mockResolvedValue({
-    story: { id: 1, title: 'Test Story', description: 'Test Description', is_public: false, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', user: 1, moderation_status: 'approved' },
-    season: { id: 1, title: 'Test Season', season_number: 1, description: 'Test Season Description', release_date: '2024-01-01', comic: 1, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
-    characters: [],
-    episode: { id: 1, title: 'Test Episode', episode_number: 1, description: 'Test Episode Description', summary: 'Test Summary', is_published: false, season: 1, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
-    dialogues: [],
-    model_url: null
-  })
+jest.mock('../contexts/ApiContext', () => ({
+  useApi: () => mockApiContext,
 }));
 
-// Helper to render with context
+const mockCreateCompleteStory = jest.fn();
+
+jest.mock('../services/api', () => ({
+  __esModule: true,
+  apiService: {
+    createCompleteStory: (...args: unknown[]) => mockCreateCompleteStory(...args),
+  },
+  default: {
+    createCompleteStory: (...args: unknown[]) => mockCreateCompleteStory(...args),
+  },
+}));
+
 const renderWithContext = (component: React.ReactElement) => {
-  return render(
-    <BrowserRouter>
-      <ApiProvider value={mockApiContext}>
-        {component}
-      </ApiProvider>
-    </BrowserRouter>
-  );
+  return render(<BrowserRouter>{component}</BrowserRouter>);
 };
 
 describe('Story Creation Data Synchronization', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.setItem('authToken', 'test-token');
+    mockCreateCompleteStory.mockResolvedValue({
+      story: { id: 1, title: 'Test Story', description: 'Test Description', is_public: false, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', user: 1, moderation_status: 'approved' },
+      season: { id: 1, title: 'Test Season', season_number: 1, description: 'Test Season Description', release_date: '2024-01-01', comic: 1, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+      characters: [],
+      episode: { id: 1, title: 'Test Episode', episode_number: 1, description: 'Test Episode Description', summary: 'Test Summary', is_published: false, season: 1, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+      dialogues: [],
+      model_url: null,
+    });
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('authToken');
   });
 
   describe('StoryDetailsStep Data Sync', () => {
@@ -211,14 +223,14 @@ describe('Story Creation Data Synchronization', () => {
     it('should save draft successfully when story title is provided', async () => {
       renderWithContext(<StoryCreationWizard />);
 
-      // Find the title input field
-      const titleInput = screen.getByLabelText(/title/i);
-      
-      // Type in the title
+      await waitFor(() => {
+        expect(screen.getByTestId('story-details-step')).toBeInTheDocument();
+      });
+
+      const titleInput = screen.getByPlaceholderText('Story title');
       fireEvent.change(titleInput, { target: { value: 'My Test Story' } });
 
-      // Find the description textarea
-      const descriptionTextarea = screen.getByLabelText(/description/i);
+      const descriptionTextarea = screen.getByPlaceholderText(/story plot/i);
       
       // Type in the description
       fireEvent.change(descriptionTextarea, { target: { value: 'My test story description' } });
@@ -243,6 +255,43 @@ describe('Story Creation Data Synchronization', () => {
       // Wait for error message
       await waitFor(() => {
         expect(screen.getByText(/please enter a story title before saving as draft/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should block Next on step 1 when title and description are empty', async () => {
+      renderWithContext(<StoryCreationWizard />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('story-details-step')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/story title is required/i)).toBeInTheDocument();
+        expect(screen.getByText(/story description is required/i)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/step 1 of 8/i)).toBeInTheDocument();
+    });
+
+    it('should advance from step 1 when title and description are filled', async () => {
+      renderWithContext(<StoryCreationWizard />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('story-details-step')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByPlaceholderText('Story title'), { target: { value: 'My Test Story' } });
+      fireEvent.change(screen.getByPlaceholderText(/story plot/i), {
+        target: { value: 'A compelling test description' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/step 2 of 8/i)).toBeInTheDocument();
+        expect(screen.getByTestId('characters-step')).toBeInTheDocument();
       });
     });
   });

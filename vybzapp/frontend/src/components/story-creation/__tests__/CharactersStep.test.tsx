@@ -8,6 +8,7 @@ const mockApiContext = {
   createStory: jest.fn(),
   createSeason: jest.fn(),
   createCharacter: jest.fn(),
+  loadSeasons: jest.fn(),
   stories: [],
   seasons: [],
   characters: [],
@@ -149,11 +150,12 @@ describe('CharactersStep', () => {
       personality: 'Brave',
       love_interest: '',
     });
+    mockApiContext.loadSeasons.mockResolvedValue([]);
   });
 
   const fillAndAddCharacter = () => {
-    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: 'Hero' } });
-    fireEvent.change(screen.getByLabelText(/character bio/i), { target: { value: 'Bio here' } });
+    fireEvent.change(screen.getByLabelText(/^name/i), { target: { value: 'Hero' } });
+    fireEvent.change(screen.getByLabelText(/^bio/i), { target: { value: 'Bio here' } });
     fireEvent.change(screen.getByLabelText(/^personality/i), { target: { value: 'Brave' } });
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
   };
@@ -196,6 +198,76 @@ describe('CharactersStep', () => {
         love_interest: '',
       });
     });
+    expect(mockOnNext).toHaveBeenCalled();
+  });
+
+  test('uses Season 1 default title when season title is empty', async () => {
+    const { getFooterNext } = renderCharactersStep({
+      data: {
+        ...mockStoryData,
+        story: { ...mockStoryData.story, title: 'A Very Long Story Title That Would Break Old Validation' },
+        season: {
+          ...mockStoryData.season,
+          title: '',
+          description: '',
+          release_date: '',
+        },
+      },
+    });
+
+    fillAndAddCharacter();
+    await waitFor(() => {
+      expect(screen.getByText('Hero')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      await getFooterNext()!();
+    });
+
+    await waitFor(() => {
+      expect(mockApiContext.createSeason).toHaveBeenCalledWith(101, {
+        title: 'Season 1',
+        season_number: 1,
+        description: '',
+        release_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      });
+    });
+  });
+
+  test('reuses existing season when story already has one', async () => {
+    mockApiContext.loadSeasons.mockResolvedValue([
+      {
+        id: 55,
+        title: 'Existing Season',
+        season_number: 1,
+        description: 'Already saved',
+        release_date: '2024-01-01',
+      },
+    ]);
+
+    const { getFooterNext } = renderCharactersStep({
+      data: {
+        ...mockStoryData,
+        story: { ...mockStoryData.story, id: 99 },
+        season: { ...mockStoryData.season, title: '' },
+        characters: [
+          {
+            id: 7,
+            name: 'Existing',
+            bio: 'Bio',
+            personality: 'Shy',
+            love_interest: '',
+          },
+        ],
+      },
+    });
+
+    await act(async () => {
+      await getFooterNext()!();
+    });
+
+    expect(mockApiContext.loadSeasons).toHaveBeenCalledWith(99);
+    expect(mockApiContext.createSeason).not.toHaveBeenCalled();
     expect(mockOnNext).toHaveBeenCalled();
   });
 
@@ -244,12 +316,13 @@ describe('CharactersStep', () => {
   test('preserves POV coordinates when creating character', async () => {
     const { getFooterNext } = renderCharactersStep();
 
-    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: 'Hero' } });
-    fireEvent.change(screen.getByLabelText(/character bio/i), { target: { value: 'Bio here' } });
+    fireEvent.change(screen.getByLabelText(/^name/i), { target: { value: 'Hero' } });
+    fireEvent.change(screen.getByLabelText(/^bio/i), { target: { value: 'Bio here' } });
     fireEvent.change(screen.getByLabelText(/^personality/i), { target: { value: 'Brave' } });
-    fireEvent.change(screen.getByLabelText(/^X:/i), { target: { value: '2.5' } });
-    fireEvent.change(screen.getByLabelText(/^Y:/i), { target: { value: '1.8' } });
-    fireEvent.change(screen.getByLabelText(/^Z:/i), { target: { value: '-1.2' } });
+    fireEvent.click(screen.getByText(/3d head position/i));
+    fireEvent.change(screen.getByLabelText(/^x$/i), { target: { value: '2.5' } });
+    fireEvent.change(screen.getByLabelText(/^y$/i), { target: { value: '1.8' } });
+    fireEvent.change(screen.getByLabelText(/^z$/i), { target: { value: '-1.2' } });
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
 
     await waitFor(() => {
