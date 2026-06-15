@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useScrollPosition } from '../hooks/useScrollPosition';
 import FloatingActionMenu from './FloatingActionMenu';
 import CookieNotification from './CookieNotification';
+import { headerLogoUrl, footerLogoUrl, poweredByLogoUrl } from '../utils/brandImages';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -85,7 +86,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
         <div className="container-fluid px-2 px-md-3 app-site-header__inner">
           <Link className="navbar-brand p-0 app-site-header__brand" to="/">
             <img
-              src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/jv_header%201.2.svg` : "/jv_header.svg"}
+              src={headerLogoUrl}
               alt="VYBZ Logo - Updated"
               height="40"
             />
@@ -217,7 +218,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               {/* Logo */}
               <div className="mb-4">
                 <a href="/">
-                  <img src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/logo%2080x80.svg` : "/logo-80x80.svg"} alt="VYBZ Logo" width="100" height="100" />
+                  <img src={footerLogoUrl} alt="VYBZ Logo" width="100" height="100" />
                 </a>
                 <div className="footer-copyright subtext-btn-sm">
                   <p className="mt-2">&copy; {new Date().getFullYear()} Justvybz Inc.</p>
@@ -228,7 +229,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               <div className="powered-by">
                 <p className="mb-2 subtext-btn-sm">Powered by</p>
                 <a href="https://www.misteruzo.com" target="_blank" rel="noopener noreferrer">
-                  <img src={process.env.REACT_APP_STATIC_URL ? `${process.env.REACT_APP_STATIC_URL}snmov/img/powered-by-logo.png` : "/powered-by-logo.png"} alt="powered by Logo" width="50" />
+                  <img src={poweredByLogoUrl} alt="powered by Logo" width="50" />
                 </a>
               </div>
             </div>

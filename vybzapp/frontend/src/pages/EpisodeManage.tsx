@@ -704,11 +704,11 @@ const EpisodeManage: React.FC = () => {
 
       {showEpisodeForm && (
         <div
-          className="my-studio__modal modal show d-block"
+          className="my-studio__modal my-studio__modal--scrollForm modal show d-block"
           tabIndex={-1}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
         >
-          <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-dialog modal-dialog-scrollable">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="subtext-btn mb-0">
@@ -832,7 +832,7 @@ const EpisodeManage: React.FC = () => {
 
       {showDialogueForm && selectedEpisode && (
         <div
-          className="my-studio__modal modal show d-block"
+          className="my-studio__modal my-studio__modal--scrollForm modal show d-block"
           tabIndex={-1}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
         >
@@ -950,54 +950,56 @@ const EpisodeManage: React.FC = () => {
                   </div>
               
                   
-                  {/* Camera Controls */}
-                  <div className="mb-3">
-                    <label className="form-label subtext-btn-sm">Camera Controls</label>
-                    <div className="row">
-                      <div className="col-md-6">
-                        <label htmlFor="dialogueCameraOrbit" className="form-label subtext-btn-sm">Camera Orbit</label>
-                        <input
-                          type="text"
-                          className="form-control form-control-sm"
-                          id="dialogueCameraOrbit"
-                          name="camera_orbit"
-                          value={dialogueFormData.camera_orbit}
-                          onChange={handleDialogueInputChange}
-                          placeholder="0deg 75deg 3m"
-                        />
-                        <small className="text-muted">Format: azimuth deg polar deg distance</small>
+                  {/* Camera Controls — collapsed by default to save space on small screens */}
+                  <details
+                    className="episode-manage__cameraDetails mb-3"
+                    open={!!editingDialogue}
+                  >
+                    <summary className="form-label subtext-btn-sm mb-0">Camera controls</summary>
+                    <div className="mt-2">
+                      <div className="row g-2">
+                        <div className="col-md-6">
+                          <label htmlFor="dialogueCameraOrbit" className="form-label subtext-btn-sm">Camera Orbit</label>
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            id="dialogueCameraOrbit"
+                            name="camera_orbit"
+                            value={dialogueFormData.camera_orbit}
+                            onChange={handleDialogueInputChange}
+                            placeholder="0deg 75deg 3m"
+                          />
+                          <small className="text-muted">Format: azimuth deg polar deg distance</small>
+                        </div>
+                        <div className="col-md-6">
+                          <label htmlFor="dialogueCameraTarget" className="form-label subtext-btn-sm">Camera Target</label>
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            id="dialogueCameraTarget"
+                            name="camera_target"
+                            value={dialogueFormData.camera_target}
+                            onChange={handleDialogueInputChange}
+                            placeholder="0m 1.6m 0m"
+                          />
+                          <small className="text-muted">Format: x y z coordinates</small>
+                        </div>
                       </div>
-                      <div className="col-md-6">
-                        <label htmlFor="dialogueCameraTarget" className="form-label subtext-btn-sm">Camera Target</label>
+                      <div className="mt-2">
+                        <label htmlFor="dialogueRotation" className="form-label subtext-btn-sm">Rotation</label>
                         <input
                           type="text"
                           className="form-control form-control-sm"
-                          id="dialogueCameraTarget"
-                          name="camera_target"
-                          value={dialogueFormData.camera_target}
+                          id="dialogueRotation"
+                          name="rotation"
+                          value={dialogueFormData.rotation}
                           onChange={handleDialogueInputChange}
-                          placeholder="0m 1.6m 0m"
+                          placeholder="0deg 0deg 0deg"
                         />
-                        <small className="text-muted">Format: x y z coordinates</small>
+                        <small className="text-muted">Format: x y z rotation in degrees</small>
                       </div>
                     </div>
-                  </div>
-                  
-
-                  
-                  <div className="mb-3">
-                    <label htmlFor="dialogueRotation" className="form-label subtext-btn-sm">Rotation</label>
-                    <input
-                      type="text"
-                      className="form-control form-control-sm"
-                      id="dialogueRotation"
-                      name="rotation"
-                      value={dialogueFormData.rotation}
-                      onChange={handleDialogueInputChange}
-                      placeholder="0deg 0deg 0deg"
-                    />
-                    <small className="text-muted">Format: x y z rotation in degrees</small>
-                  </div>
+                  </details>
                 </div>
                 <div className="modal-footer gap-2 d-flex flex-wrap justify-content-end">
                   <button type="button" className="product-landing__ctaGhost" onClick={resetDialogueForm}>

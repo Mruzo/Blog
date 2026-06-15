@@ -7,7 +7,7 @@ from snmov.models import Product, Comment, ReachOut, SiteImage, Testimonials, Pr
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import send_mail, BadHeaderError
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, HttpRequest, HttpResponseNotFound
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, HttpRequest, HttpResponseNotFound, FileResponse
 from django.views.generic.edit import DeleteView
 from django.views.generic import TemplateView, FormView, ListView
 from django.template.loader import render_to_string
@@ -27,6 +27,7 @@ from django.dispatch import receiver
 from snm.settings.base import DEFAULT_FROM_EMAIL, SUPPORT_EMAIL
 from django.contrib.sites.models import Site
 from django.contrib.sites.shortcuts import get_current_site
+import mimetypes
 import os
 
 
@@ -35,6 +36,32 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
         return f"{user.pk}{timestamp}{user.is_active}"
 
 email_verification_token = EmailVerificationTokenGenerator()
+
+
+FRONTEND_PUBLIC_ASSETS = frozenset({
+    'jv_header.svg',
+    'jv_header 1.2.svg',
+    'logo-80x80.svg',
+    'logo 80x80.svg',
+    'logo.svg',
+    'logo192.png',
+    'logo512.png',
+    'powered-by-logo.png',
+    'favicon.ico',
+    'manifest.json',
+    'robots.txt',
+})
+
+
+def serve_frontend_public_asset(request, filename):
+    """Serve CRA public/ files from frontend/build/ (not collected by collectstatic)."""
+    if filename not in FRONTEND_PUBLIC_ASSETS:
+        return HttpResponseNotFound()
+    filepath = os.path.join(settings.BASE_DIR, 'frontend', 'build', filename)
+    if not os.path.isfile(filepath):
+        return HttpResponseNotFound()
+    content_type, _ = mimetypes.guess_type(filepath)
+    return FileResponse(open(filepath, 'rb'), content_type=content_type or 'application/octet-stream')
 
 
 

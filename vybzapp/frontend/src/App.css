@@ -1994,6 +1994,61 @@ a.product-landing__ctaGhost:active {
 
 .my-studio__modal .modal-header {
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  flex-shrink: 0;
+}
+
+/* Long form modals: scrollable body + sticky footer on mobile (form wraps body + footer) */
+.my-studio__modal--scrollForm {
+  --scroll-modal-vpad: 0.5rem;
+}
+
+.my-studio__modal--scrollForm .modal-dialog {
+  max-height: calc(100dvh - var(--scroll-modal-vpad) * 2);
+  margin: var(--scroll-modal-vpad) auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.my-studio__modal--scrollForm .modal-content {
+  max-height: calc(100dvh - var(--scroll-modal-vpad) * 2);
+  display: flex;
+  flex-direction: column;
+}
+
+.my-studio__modal--scrollForm .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.my-studio__modal--scrollForm .modal-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.my-studio__modal--scrollForm .modal-footer {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+.my-studio__modal .modal-footer .stories-landing__btnPrimary,
+.my-studio__modal .modal-footer .product-landing__ctaGhost {
+  padding: 0.42rem 0.95rem;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+@media (min-width: 576px) {
+  .my-studio__modal--scrollForm {
+    --scroll-modal-vpad: 1.75rem;
+  }
 }
 
 /* Story manage (/immersivecomics/story/:id/manage/) */
@@ -2363,6 +2418,37 @@ a.product-landing__ctaGhost:active {
 .episode-manage__panelScroll {
   max-height: min(520px, 58vh);
   overflow-y: auto;
+}
+
+.episode-manage__cameraDetails {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 10px;
+  padding: 0.5rem 0.65rem;
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.episode-manage__cameraDetails > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.episode-manage__cameraDetails > summary::-webkit-details-marker {
+  display: none;
+}
+
+.episode-manage__cameraDetails > summary::before {
+  content: '▸';
+  font-size: 0.75rem;
+  color: #64748b;
+  transition: transform 0.15s ease;
+}
+
+.episode-manage__cameraDetails[open] > summary::before {
+  transform: rotate(90deg);
 }
 
 .episode-manage__epCard {
