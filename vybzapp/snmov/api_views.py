@@ -1746,14 +1746,15 @@ def contact_form(request):
                 reach_out.pk,
             )
 
-        try:
-            from snmov.utils.email_notifications import send_feedback_confirmation
-            send_feedback_confirmation(reach_out)
-        except Exception:
-            logger.exception(
-                'Failed to send feedback confirmation email to %s',
-                reach_out.email,
-            )
+        if not ticket_number:
+            try:
+                from snmov.utils.email_notifications import send_feedback_confirmation
+                send_feedback_confirmation(reach_out)
+            except Exception:
+                logger.exception(
+                    'Failed to send feedback confirmation email to %s',
+                    reach_out.email,
+                )
         
         response_data = {
             'success': True,

@@ -83,7 +83,7 @@ class ContactFormIntegrationTest(APITestCase):
         self.assertEqual(ticket.source, 'feedback_modal')
         
         mock_ticket_email.assert_called_once()
-        mock_feedback_email.assert_called_once()
+        mock_feedback_email.assert_not_called()
     
     @patch('feedback.email_notifications.send_ticket_confirmation_email')
     def test_contact_form_category_inference(self, mock_email):
