@@ -347,7 +347,7 @@ class EpisodeListCreateView(generics.ListCreateAPIView):
                 queryset = Episode.objects.filter(
                     season_id=season_id,
                     is_published=True,
-                ).select_related('season', 'season__comic', 'season__comic__user')
+                ).select_related('season', 'season__comic', 'season__comic__user').order_by('episode_number')
                 cache.set(cache_key, queryset, 60 * 5)
                 return queryset
             return Episode.objects.none()
@@ -371,7 +371,7 @@ class EpisodeListCreateView(generics.ListCreateAPIView):
                     return cached_queryset
                 queryset = Episode.objects.filter(season_id=season_id).select_related(
                     'season', 'season__comic', 'season__comic__user'
-                )
+                ).order_by('episode_number')
                 cache.set(cache_key, queryset, 60 * 5)
                 return queryset
 
@@ -385,7 +385,7 @@ class EpisodeListCreateView(generics.ListCreateAPIView):
             queryset = Episode.objects.filter(
                 season_id=season_id,
                 is_published=True
-            ).select_related('season', 'season__comic', 'season__comic__user')
+            ).select_related('season', 'season__comic', 'season__comic__user').order_by('episode_number')
             cache.set(cache_key, queryset, 60 * 5)
             return queryset
 
@@ -397,7 +397,7 @@ class EpisodeListCreateView(generics.ListCreateAPIView):
         if cached_queryset:
             return cached_queryset
 
-        queryset = Episode.objects.filter(season_id=season_id, season__comic__user=self.request.user).select_related('season', 'season__comic', 'season__comic__user')
+        queryset = Episode.objects.filter(season_id=season_id, season__comic__user=self.request.user).select_related('season', 'season__comic', 'season__comic__user').order_by('episode_number')
         cache.set(cache_key, queryset, 60 * 5)
         return queryset
     

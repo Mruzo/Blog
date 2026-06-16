@@ -104,6 +104,7 @@ class Episode(models.Model):
 
     class Meta:
         app_label = 'icvybz'
+        ordering = ['episode_number']
 
 
 class Intersection(models.Model):

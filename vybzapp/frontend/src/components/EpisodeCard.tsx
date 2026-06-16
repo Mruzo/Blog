@@ -30,6 +30,7 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
 
   const description = stripHtmlTags(episode.description);
   const hasCover = episode.cover_image && typeof episode.cover_image === 'string';
+  const epLabel = `S${episode.season_number || 1}E${episode.episode_number}`;
 
   return (
     <div
@@ -50,25 +51,23 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
             {hasCover ? (
               <img
                 src={episode.cover_image as string}
-                alt={`${episode.title} cover`}
+                alt=""
                 className="episode-manage__epCardImg"
                 loading="lazy"
               />
             ) : (
               <div className="episode-manage__epCardPlaceholder" aria-hidden>
-                <i className="fas fa-image" />
+                <i className="fas fa-film" />
               </div>
             )}
+            <span className="episode-manage__epCardEpBadge" aria-label={`Episode ${epLabel}`}>
+              {epLabel}
+            </span>
           </div>
         </div>
 
         <div className="episode-manage__epCardBody">
-          <div className="episode-manage__epCardHead">
-            <span className="stories-landing__chip episode-manage__epCardEpNum">
-              S{episode.season_number || 1}E{episode.episode_number}
-            </span>
-            <h6 className="episode-manage__epCardTitle">{episode.title}</h6>
-          </div>
+          <h6 className="episode-manage__epCardTitle">{episode.title}</h6>
 
           <div className="stories-landing__chips episode-manage__epCardMeta" aria-label="Episode status">
             <span
@@ -94,7 +93,6 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
 
           <div className="episode-manage__epCardFoot">
             <time className="episode-manage__epCardDate" dateTime={episode.created_at}>
-              <i className="fas fa-calendar me-1 d-none d-md-inline" aria-hidden />
               {new Date(episode.created_at).toLocaleDateString()}
             </time>
             {showActions && (

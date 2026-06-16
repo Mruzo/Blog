@@ -204,8 +204,10 @@ const EpisodeManage: React.FC = () => {
     reloadAllDialogues();
   }, [reloadAllDialogues]);
   
-  // Filter episodes for this season
-  const seasonEpisodes = episodes.filter(ep => ep.season === parseInt(seasonId || '0'));
+  // Filter episodes for this season, chronological by episode number
+  const seasonEpisodes = episodes
+    .filter(ep => ep.season === parseInt(seasonId || '0'))
+    .sort((a, b) => a.episode_number - b.episode_number);
   
   // Filter dialogues for selected episode
   const episodeDialogues = selectedEpisode 
