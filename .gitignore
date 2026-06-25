@@ -89,15 +89,6 @@ snmov/migrations/_old_backup_phase2/
 *.backup
 .gitignore.local_backup
 
-# Temporary/development documentation (planning docs created during implementation)
-# Note: Keep final documentation, but ignore intermediate planning docs
-docs/FEEDBACK_IMPLEMENTATION_PLAN.md
-docs/FEEDBACK_IMPLEMENTATION_SUMMARY.md
-docs/WIREFRAME_TICKET_FLOW.md
-docs/STORE_FEEDBACK_INTEGRATION.md
-docs/FEEDBACK_SYSTEM_READY.md
-docs/FEEDBACK_TICKETING_SYSTEM_PLAN.md
-
 # Test files and coverage
 .pytest_cache/
 .coverage
@@ -122,9 +113,27 @@ logs/
 # Temporary files
 *.tmp
 *.temp
-check_*.py
-run_*.py
 *_test.py.bak
+
+# Local one-off diagnostic scripts (keep reusable scripts in scripts/ or app management commands)
+/check_*.py
+/debug_*.py
+/inspect_*.py
+/run_*.py
+/tmp_*.py
+/*.local.sh
+/vybzapp/check_*.py
+/vybzapp/debug_*.py
+/vybzapp/inspect_*.py
+/vybzapp/run_*.py
+/vybzapp/tmp_*.py
+/scripts/local/
+/**/*.local.py
+*.local.md
+docs/archive/
+docs/private/
+docs/**/*.private.md
+docs/processes/AUTH_USER_MODEL_MIGRATION.md
 
 # Mistaken exports / tooling drops (add similar patterns here as needed)
 MagicMock
@@ -206,7 +215,4 @@ requirements.txt.backup
 frontend/.cache/
 frontend/.next/
 frontend/.parcel-cache/
-
-# Local ops runbooks (migration steps; not required in repo)
-docs/processes/AUTH_USER_MODEL_MIGRATION.md
 

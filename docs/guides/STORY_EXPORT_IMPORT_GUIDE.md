@@ -214,114 +214,17 @@ Response:
 
 ## Best Practices
 
-### Export Best Practices
-
-1. **Regular Backups**: Export your stories regularly as backups
-2. **File Inclusion**: Include files only when necessary (creates larger exports)
-3. **Analytics**: Include analytics only for data migration purposes
-4. **Naming**: Use descriptive filenames with story titles and dates
-
-### Import Best Practices
-
-1. **Dry Run**: Always use `--dry-run` first to preview what will be imported
-2. **User Assignment**: Specify the target user for imported stories
-3. **File Handling**: Skip files for faster imports when file data isn't needed
-4. **Validation**: Check imported stories for completeness
-
-### Data Integrity
-
-1. **Character Mapping**: Characters are matched by name, so ensure consistent naming
-2. **POV Creation**: POVs are automatically created for characters during import
-3. **Order Preservation**: Dialogue and episode order is maintained
-4. **Relationship Integrity**: All relationships between objects are preserved
+- Export only the stories you need.
+- Include files only when the receiving app needs a fully portable copy.
+- Keep export files private; they can contain story content and media.
+- Preview imports before relying on the imported copy.
+- Verify story order, characters, and dialogue after import.
 
 ## Troubleshooting
 
-### Common Issues
-
-**Import Fails with "Character not found"**:
-- Ensure character names match exactly between export and import
-- Check that characters exist in the target app
-
-**Large File Imports**:
-- Use `--skip-files` option for faster imports
-- Consider file size limits in your Django settings
-
-**Permission Errors**:
-- Ensure the target user has permission to create stories
-- Check file upload permissions in Django settings
-
-**JSON Parse Errors**:
-- Validate JSON file format before import
-- Check for file corruption during transfer
-
-### Error Messages
-
-- `Story not found`: The specified story ID doesn't exist or isn't accessible
-- `Invalid JSON data`: The import file is not valid JSON
-- `Character not found`: A character referenced in dialogues doesn't exist
-- `Permission denied`: User doesn't have permission to perform the operation
-
-## Security Considerations
-
-1. **Authentication**: All operations require user authentication
-2. **User Isolation**: Users can only export/import their own stories
-3. **File Validation**: File uploads are validated for type and size
-4. **CSRF Protection**: Web interface is protected against CSRF attacks
-
-## Migration Scenarios
-
-### App-to-App Migration
-1. Export stories from source app
-2. Transfer JSON files to target app
-3. Import stories into target app
-4. Verify data integrity
-
-### Backup and Restore
-1. Regular exports as backup files
-2. Store backups in secure location
-3. Test restore process periodically
-
-### Development to Production
-1. Export from development environment
-2. Import into production environment
-3. Update file paths and URLs as needed
-
-## Technical Details
-
-### Database Models Involved
-
-- `Comic` (Story)
-- `Season`
-- `Episode`
-- `Character`
-- `POV` (Point of View)
-- `Dialogue`
-- `Scene`
-- `Intersection`
-
-### File Storage
-
-- Files are stored in Django's media directory
-- File paths are preserved during export/import
-- Base64 encoding is used for file data inclusion
-
-### Performance Considerations
-
-- Large exports with files can be slow
-- Import performance depends on data size
-- Use `--skip-files` for faster operations
-- Consider database indexing for large datasets
-
-## Support
-
-For issues or questions about the export/import system:
-
-1. Check this documentation first
-2. Review error messages carefully
-3. Test with small datasets first
-4. Use dry-run mode for troubleshooting
-5. Check Django logs for detailed error information
+- If an import fails, confirm the file is valid JSON and was created by this app.
+- If media is missing, retry with file inclusion enabled or re-upload media manually.
+- If imported dialogue or characters look wrong, review the original story setup before importing again.
 
 
 
