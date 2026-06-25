@@ -12,8 +12,6 @@ interface SeasonFormData {
   season_number: number;
   release_date: string;
   is_public: boolean;
-  model_gltf?: File;
-  model_usdz?: File;
 }
 
 const SeasonEdit: React.FC = () => {
@@ -26,9 +24,7 @@ const SeasonEdit: React.FC = () => {
     description: '',
     season_number: 1,
     release_date: new Date().toISOString().split('T')[0],
-    is_public: false,
-    model_gltf: undefined,
-    model_usdz: undefined
+    is_public: false
   });
   
   const [message, setMessage] = useState<string>('');
@@ -48,9 +44,7 @@ const SeasonEdit: React.FC = () => {
         description: season.description,
         season_number: season.season_number,
         release_date: season.release_date,
-        is_public: season.is_public || false,
-        model_gltf: undefined, // Don't pre-populate file inputs
-        model_usdz: undefined
+        is_public: season.is_public || false
       });
       setLoading(false);
     } else if (seasons.length > 0) {
@@ -67,16 +61,6 @@ const SeasonEdit: React.FC = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : (name === 'season_number' ? parseInt(value) || 1 : value)
     }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, files } = e.target;
-    if (files && files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: files[0]
-      }));
-    }
   };
 
   const validateForm = (): boolean => {
@@ -108,39 +92,6 @@ const SeasonEdit: React.FC = () => {
       return false;
     }
     
-    // Validate file types and sizes
-    if (formData.model_gltf) {
-      const file = formData.model_gltf;
-      if (!file.name.toLowerCase().endsWith('.glb')) {
-        setMessage('Model must be a .glb file');
-        setMessageType('warning');
-        setShowMessage(true);
-        return false;
-      }
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        setMessage('GLB model file size cannot exceed 50MB');
-        setMessageType('warning');
-        setShowMessage(true);
-        return false;
-      }
-    }
-    
-    if (formData.model_usdz) {
-      const file = formData.model_usdz;
-      if (!file.name.toLowerCase().endsWith('.usdz')) {
-        setMessage('USDZ model must be a .usdz file');
-        setMessageType('warning');
-        setShowMessage(true);
-        return false;
-      }
-      if (file.size > 25 * 1024 * 1024) { // 25MB limit
-        setMessage('USDZ model file size cannot exceed 25MB');
-        setMessageType('warning');
-        setShowMessage(true);
-        return false;
-      }
-    }
-    
     return true;
   };
 
@@ -166,9 +117,7 @@ const SeasonEdit: React.FC = () => {
         description: formData.description.trim(),
         season_number: formData.season_number,
         release_date: formData.release_date,
-        is_public: formData.is_public,
-        model_gltf: formData.model_gltf,
-        model_usdz: formData.model_usdz
+        is_public: formData.is_public
       };
       
       const updatedSeason = await updateSeason(parseInt(seasonId), seasonData);
@@ -194,14 +143,6 @@ const SeasonEdit: React.FC = () => {
 
   const handleCloseMessage = () => {
     setShowMessage(false);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   if (loading) {
@@ -332,51 +273,13 @@ const SeasonEdit: React.FC = () => {
               />
             </div>
 
-            {/* 3D Model Upload Section */}
-            <div className="mb-4">
+            <div className="mb-4 rounded border bg-light p-3">
               <h5 className="subtext-btn-sm mb-2">
-                <i className="fas fa-cube me-2"></i> 3D Model
+                <i className="fas fa-cube me-2" aria-hidden></i>3D Model
               </h5>
-              
-              <div className="mb-3">
-                <div className="row align-items-center">
-                  <div className="col-auto">
-                    <label htmlFor="model_gltf" className="form-label subtext-btn-sm mb-0">
-                      GLB Model
-                    </label>
-                  </div>
-                  <div className="col">
-                    <input
-                      type="file"
-                      className="form-control form-control-sm"
-                      id="model_gltf"
-                      name="model_gltf"
-                      accept=".glb"
-                      onChange={handleFileChange}
-                    />
-                  </div>
-                </div>
-                <div className="form-text subtext-btn-sm">
-                  <i className="fas fa-info-circle me-1"></i>
-                  &nbsp;Maximum 50MB.
-                </div>
-                {formData.model_gltf && (
-                  <div className="mt-2">
-                    <small className="text-success">
-                      <i className="fas fa-check-circle me-1"></i>
-                      Selected: {formData.model_gltf.name} ({formatFileSize(formData.model_gltf.size)})
-                    </small>
-                  </div>
-                )}
-                {season.model_gltf && !formData.model_gltf && (
-                  <div className="mt-2">
-                    <small className="text-info">
-                      <i className="fas fa-info-circle me-1"></i>
-                      Current: {season.model_gltf.split('/').pop()}
-                    </small>
-                  </div>
-                )}
-              </div>
+              <p className="subtext-btn-sm mb-0 text-muted">
+                This season uses the shared JustVybz 3D model.
+              </p>
             </div>
 
             {/* Public/Private Toggle */}

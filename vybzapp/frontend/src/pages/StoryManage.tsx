@@ -67,9 +67,13 @@ const StoryManage: React.FC = () => {
   // Function to get 3D model file type from season
   const getModelFileType = (season: Season): string => {
     if (season.model_gltf) {
-      return 'GLTF';
+      return 'GLB';
+    } else if (season.resolved_model_gltf) {
+      return 'Shared GLB';
     } else if (season.model_usdz) {
       return 'USDZ';
+    } else if (season.resolved_model_usdz) {
+      return 'Shared USDZ';
     }
     return 'None';
   };

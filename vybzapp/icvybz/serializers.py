@@ -5,6 +5,22 @@ from django.db.models import Count, Exists, OuterRef, Q, Sum
 
 User = get_user_model()
 
+
+DEFAULT_MODEL_STORY_TITLE = 'Corners of Fate'
+
+
+def _file_url(file_field, request=None):
+    if not file_field:
+        return None
+    try:
+        url = file_field.url
+    except ValueError:
+        return None
+    if request and url and not url.startswith(('http://', 'https://')):
+        return request.build_absolute_uri(url)
+    return url
+
+
 class ComicSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source='user.username', read_only=True)
     total_views = serializers.IntegerField(read_only=True)
@@ -31,14 +47,64 @@ class ComicSerializer(serializers.ModelSerializer):
 
 class SeasonSerializer(serializers.ModelSerializer):
     total_views = serializers.IntegerField(read_only=True)
+    resolved_model_gltf = serializers.SerializerMethodField()
+    resolved_model_usdz = serializers.SerializerMethodField()
     
     class Meta:
         model = Season
         fields = [
             'id', 'title', 'season_number', 'description', 'release_date', 'is_public',
-            'model_gltf', 'model_usdz', 'comic', 'created_at', 'updated_at', 'total_views'
+            'model_gltf', 'model_usdz', 'resolved_model_gltf', 'resolved_model_usdz',
+            'comic', 'created_at', 'updated_at', 'total_views'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'total_views']
+        read_only_fields = [
+            'id', 'created_at', 'updated_at', 'resolved_model_gltf',
+            'resolved_model_usdz', 'total_views'
+        ]
+
+    def _default_model_season(self, model_field):
+        cache_key = f'_default_model_season_{model_field}'
+        if not hasattr(self, cache_key):
+            queryset = (
+                Season.objects.filter(
+                    comic__title__iexact=DEFAULT_MODEL_STORY_TITLE,
+                    **{f'{model_field}__isnull': False},
+                )
+                .exclude(**{model_field: ''})
+                .order_by(
+                    '-comic__user__is_superuser',
+                    '-comic__user__is_staff',
+                    'comic__created_at',
+                    'season_number',
+                    'id',
+                )
+            )
+            setattr(self, cache_key, queryset.first())
+        return getattr(self, cache_key)
+
+    def _resolved_model_url(self, obj, model_field):
+        request = self.context.get('request')
+        season_file = getattr(obj, model_field, None)
+        if season_file:
+            return _file_url(season_file, request)
+
+        default_season = self._default_model_season(model_field)
+        if not default_season:
+            return None
+        return _file_url(getattr(default_season, model_field, None), request)
+
+    def get_resolved_model_gltf(self, obj):
+        return self._resolved_model_url(obj, 'model_gltf')
+
+    def get_resolved_model_usdz(self, obj):
+        return self._resolved_model_url(obj, 'model_usdz')
+
+    def _validate_custom_model_upload_enabled(self):
+        request = self.context.get('request')
+        if request and not getattr(request.user, 'is_superuser', False):
+            raise serializers.ValidationError(
+                "Custom model uploads are not available yet. Seasons use the shared default model."
+            )
     
     def validate_title(self, value):
         """Validate title length (model max_length=100; wizard allows up to 50)."""
@@ -55,6 +121,8 @@ class SeasonSerializer(serializers.ModelSerializer):
     def validate_model_gltf(self, value):
         """Validate GLB file type and size"""
         if value:
+            self._validate_custom_model_upload_enabled()
+
             # Validate file type - only GLB files allowed
             if not value.name.lower().endswith('.glb'):
                 raise serializers.ValidationError("Only GLB files are allowed. Please upload a .glb file.")
@@ -63,6 +131,19 @@ class SeasonSerializer(serializers.ModelSerializer):
             if value.size > 50 * 1024 * 1024:
                 raise serializers.ValidationError("File size cannot exceed 50MB. Please optimize your model.")
         
+        return value
+
+    def validate_model_usdz(self, value):
+        """Validate USDZ file type and size"""
+        if value:
+            self._validate_custom_model_upload_enabled()
+
+            if not value.name.lower().endswith('.usdz'):
+                raise serializers.ValidationError("Only USDZ files are allowed. Please upload a .usdz file.")
+
+            if value.size > 25 * 1024 * 1024:
+                raise serializers.ValidationError("File size cannot exceed 25MB. Please optimize your model.")
+
         return value
 
 class EpisodeSerializer(serializers.ModelSerializer):

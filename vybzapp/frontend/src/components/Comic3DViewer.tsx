@@ -835,7 +835,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   // Get 3D model from season (Django pattern) - memoize to prevent unnecessary recalculations
   const getModelFromSeason = useCallback((episode: Episode): string | null => {
     const season = seasons.find(s => s.id === episode.season);
-    return season?.model_gltf || null;
+    return season?.resolved_model_gltf || season?.model_gltf || null;
   }, [seasons]);
 
   // Load dialogue data from hidden container (Django pattern)

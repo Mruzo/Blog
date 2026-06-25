@@ -74,6 +74,12 @@ const Stories: React.FC = () => {
   const [commentDrafts, setCommentDrafts] = useState<Map<number, string>>(new Map());
   const [commentErrors, setCommentErrors] = useState<Map<number, string>>(new Map());
   const [submittingCommentSeasonIds, setSubmittingCommentSeasonIds] = useState<Set<number>>(new Set());
+  const [editingComment, setEditingComment] = useState<EpisodeComment | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [editingCommentError, setEditingCommentError] = useState('');
+  const [isSavingComment, setIsSavingComment] = useState(false);
+  const [commentPendingDelete, setCommentPendingDelete] = useState<EpisodeComment | null>(null);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
   // Track expanded descriptions for each story
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<number>>(new Set());
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<number>>(new Set());
@@ -738,6 +744,82 @@ const Stories: React.FC = () => {
     }
   }, [commentDrafts, currentUser, getCommentTargetEpisode]);
 
+  const openCommentEdit = useCallback((comment: EpisodeComment) => {
+    setEditingComment(comment);
+    setEditingCommentText(comment.comment_cont);
+    setEditingCommentError('');
+  }, []);
+
+  const closeCommentEdit = useCallback(() => {
+    if (isSavingComment) return;
+    setEditingComment(null);
+    setEditingCommentText('');
+    setEditingCommentError('');
+  }, [isSavingComment]);
+
+  const handleCommentUpdate = useCallback(async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingComment) return;
+
+    const text = editingCommentText.trim();
+    setEditingCommentError('');
+
+    if (!text) {
+      setEditingCommentError('Comment cannot be empty.');
+      return;
+    }
+
+    setIsSavingComment(true);
+    try {
+      const updated = await apiService.updateEpisodeComment(editingComment.id, text);
+      setSeasonComments((prev) => {
+        const next = new Map(prev);
+        const comments = next.get(updated.season) || [];
+        next.set(
+          updated.season,
+          comments.map((comment) => (comment.id === updated.id ? updated : comment))
+        );
+        return next;
+      });
+      setEditingComment(null);
+      setEditingCommentText('');
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.comment_cont?.[0] ||
+        err?.response?.data?.detail ||
+        'Could not update your comment. Please try again.';
+      setEditingCommentError(message);
+    } finally {
+      setIsSavingComment(false);
+    }
+  }, [editingComment, editingCommentText]);
+
+  const handleCommentDelete = useCallback(async () => {
+    if (!commentPendingDelete) return;
+    const comment = commentPendingDelete;
+
+    setIsDeletingComment(true);
+    try {
+      await apiService.deleteEpisodeComment(comment.id);
+      setSeasonComments((prev) => {
+        const next = new Map(prev);
+        const comments = next.get(comment.season) || [];
+        next.set(comment.season, comments.filter((item) => item.id !== comment.id));
+        return next;
+      });
+      setExpandedCommentIds((prev) => {
+        const next = new Set(prev);
+        next.delete(comment.id);
+        return next;
+      });
+      setCommentPendingDelete(null);
+    } catch {
+      setCommentErrors((prev) => new Map(prev).set(comment.season, 'Could not delete your comment. Please try again.'));
+    } finally {
+      setIsDeletingComment(false);
+    }
+  }, [commentPendingDelete]);
+
   if (isLoading || isLoadingStoryData) {
     return <LoadingSpinner />;
   }
@@ -1044,6 +1126,8 @@ const Stories: React.FC = () => {
                                       comments.map((comment) => {
                                         const isExpanded = expandedCommentIds.has(comment.id);
                                         const canExpand = comment.comment_cont.length > 140;
+                                        const canManageComment =
+                                          currentUser && Number(comment.user_name) === Number(currentUser.id);
 
                                         return (
                                           <article key={comment.id} className="stories-landing__comment">
@@ -1060,24 +1144,48 @@ const Stories: React.FC = () => {
                                             >
                                               <span>E{comment.episode_number}:</span> {comment.comment_cont}
                                             </p>
-                                            {canExpand && (
-                                              <button
-                                                type="button"
-                                                className="stories-landing__descMore stories-landing__commentMore"
-                                                onClick={() => {
-                                                  setExpandedCommentIds((prev) => {
-                                                    const next = new Set(prev);
-                                                    if (next.has(comment.id)) {
-                                                      next.delete(comment.id);
-                                                    } else {
-                                                      next.add(comment.id);
-                                                    }
-                                                    return next;
-                                                  });
-                                                }}
-                                              >
-                                                {isExpanded ? 'Show less' : 'Show more'}
-                                              </button>
+                                            {(canExpand || canManageComment) && (
+                                              <div className="stories-landing__commentControls">
+                                                <div>
+                                                  {canExpand && (
+                                                    <button
+                                                      type="button"
+                                                      className="stories-landing__descMore stories-landing__commentMore"
+                                                      onClick={() => {
+                                                        setExpandedCommentIds((prev) => {
+                                                          const next = new Set(prev);
+                                                          if (next.has(comment.id)) {
+                                                            next.delete(comment.id);
+                                                          } else {
+                                                            next.add(comment.id);
+                                                          }
+                                                          return next;
+                                                        });
+                                                      }}
+                                                    >
+                                                      {isExpanded ? 'Show less' : 'Show more'}
+                                                    </button>
+                                                  )}
+                                                </div>
+                                                {canManageComment && (
+                                                  <div className="stories-landing__commentActions">
+                                                    <button
+                                                      type="button"
+                                                      className="stories-landing__commentAction"
+                                                      onClick={() => openCommentEdit(comment)}
+                                                    >
+                                                      Edit
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      className="stories-landing__commentAction stories-landing__commentAction--danger"
+                                                      onClick={() => setCommentPendingDelete(comment)}
+                                                    >
+                                                      Delete
+                                                    </button>
+                                                  </div>
+                                                )}
+                                              </div>
                                             )}
                                           </article>
                                         );
@@ -1196,6 +1304,118 @@ const Stories: React.FC = () => {
             </div>
           </div>
         </section>
+      )}
+
+      {editingComment && (
+        <div
+          className="my-studio__modal my-studio__modal--scrollForm modal show d-block"
+          tabIndex={-1}
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <div className="modal-dialog modal-dialog-scrollable">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="subtext-btn mb-0">Edit comment</h5>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-light border"
+                  onClick={closeCommentEdit}
+                  aria-label="Close"
+                  disabled={isSavingComment}
+                >
+                  <i className="fas fa-times" aria-hidden />
+                </button>
+              </div>
+              <form onSubmit={handleCommentUpdate}>
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <label htmlFor="commentEditText" className="form-label subtext-btn-sm">
+                      Comment
+                    </label>
+                    <textarea
+                      id="commentEditText"
+                      className="form-control form-control-sm"
+                      rows={4}
+                      maxLength={500}
+                      value={editingCommentText}
+                      onChange={(event) => setEditingCommentText(event.target.value)}
+                      required
+                    />
+                    <div className="stories-landing__commentFormFoot mt-2">
+                      <span>{editingCommentText.length}/500</span>
+                    </div>
+                    {editingCommentError && (
+                      <p className="stories-landing__commentError mt-2" role="alert">
+                        {editingCommentError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="modal-footer gap-2 d-flex flex-wrap justify-content-end">
+                  <button
+                    type="button"
+                    className="product-landing__ctaGhost"
+                    onClick={closeCommentEdit}
+                    disabled={isSavingComment}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="stories-landing__btnPrimary" disabled={isSavingComment}>
+                    {isSavingComment ? 'Updating...' : 'Update comment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {commentPendingDelete && (
+        <div
+          className="my-studio__modal modal show d-block"
+          tabIndex={-1}
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="subtext-btn mb-0">Delete comment?</h5>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-light border"
+                  onClick={() => setCommentPendingDelete(null)}
+                  aria-label="Close"
+                  disabled={isDeletingComment}
+                >
+                  <i className="fas fa-times" aria-hidden />
+                </button>
+              </div>
+              <div className="modal-body">
+                <p className="product-landing__body mb-0">
+                  This will remove your comment from the episode.
+                </p>
+              </div>
+              <div className="modal-footer gap-2 d-flex flex-wrap justify-content-end">
+                <button
+                  type="button"
+                  className="product-landing__ctaGhost"
+                  onClick={() => setCommentPendingDelete(null)}
+                  disabled={isDeletingComment}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="stories-landing__btnPrimary"
+                  onClick={handleCommentDelete}
+                  disabled={isDeletingComment}
+                >
+                  {isDeletingComment ? 'Deleting...' : 'Delete comment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

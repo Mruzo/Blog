@@ -285,6 +285,8 @@ export interface Season {
   comic: number;
   model_gltf?: string;
   model_usdz?: string;
+  resolved_model_gltf?: string | null;
+  resolved_model_usdz?: string | null;
   created_at: string;
   updated_at: string;
   total_views?: number; // Total view count across all episodes in this season (calculated by backend)
@@ -804,6 +806,15 @@ class ApiService {
   async createEpisodeComment(episodeId: number, comment_cont: string): Promise<EpisodeComment> {
     const response = await api.post(`/episodes/${episodeId}/comments/`, { comment_cont });
     return response.data;
+  }
+
+  async updateEpisodeComment(commentId: number, comment_cont: string): Promise<EpisodeComment> {
+    const response = await api.patch(`/comments/${commentId}/`, { comment_cont });
+    return response.data;
+  }
+
+  async deleteEpisodeComment(commentId: number): Promise<void> {
+    await api.delete(`/comments/${commentId}/`);
   }
 
   // File Upload

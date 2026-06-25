@@ -537,3 +537,58 @@ class EpisodeCommentAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(ComicComment.objects.count(), 0)
+
+    def test_user_can_update_own_comment(self):
+        comment = ComicComment.objects.create(
+            episode=self.episode1,
+            user_name=self.user,
+            comment_cont='Original comment',
+            approved_comment=True,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        url = reverse('icvybz-api:episode-comment-detail', kwargs={'pk': comment.id})
+        response = self.client.patch(url, {'comment_cont': 'Updated comment'}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        comment.refresh_from_db()
+        self.assertEqual(comment.comment_cont, 'Updated comment')
+        self.assertTrue(comment.approved_comment)
+
+    def test_user_can_delete_own_comment(self):
+        comment = ComicComment.objects.create(
+            episode=self.episode1,
+            user_name=self.user,
+            comment_cont='Delete me',
+            approved_comment=True,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        url = reverse('icvybz-api:episode-comment-detail', kwargs={'pk': comment.id})
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ComicComment.objects.filter(id=comment.id).exists())
+
+    def test_user_cannot_update_or_delete_someone_elses_comment(self):
+        other_user = User.objects.create_user(
+            username='other-commenter',
+            email='other@example.com',
+            password='testpass123',
+        )
+        comment = ComicComment.objects.create(
+            episode=self.episode1,
+            user_name=other_user,
+            comment_cont='Not yours',
+            approved_comment=True,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        url = reverse('icvybz-api:episode-comment-detail', kwargs={'pk': comment.id})
+        update_response = self.client.patch(url, {'comment_cont': 'Hijacked'}, format='json')
+        delete_response = self.client.delete(url)
+
+        self.assertEqual(update_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(delete_response.status_code, status.HTTP_404_NOT_FOUND)
+        comment.refresh_from_db()
+        self.assertEqual(comment.comment_cont, 'Not yours')

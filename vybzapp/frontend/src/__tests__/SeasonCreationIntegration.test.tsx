@@ -109,8 +109,7 @@ describe('Season Creation Integration', () => {
           <input name="season_number" type="number" placeholder="Season Number" />
           <input name="release_date" type="date" />
           <textarea name="description" placeholder="Description" />
-          <input name="model_gltf" type="file" accept=".glb,.gltf" />
-          <input name="model_usdz" type="file" accept=".usdz" />
+          <p>This season will use the shared JustVybz 3D model.</p>
           <button type="submit">Create Season</button>
         </form>
       </div>
@@ -124,69 +123,7 @@ describe('Season Creation Integration', () => {
     expect(screen.getByPlaceholderText('Season Title')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Season Number')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Description')).toBeInTheDocument();
-    expect(screen.getByLabelText(/GLTF/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/USDZ/)).toBeInTheDocument();
-  });
-
-  it('handles file upload for 3D models', () => {
-    const SeasonCreateMock = () => {
-      const [files, setFiles] = React.useState<{gltf?: File, usdz?: File}>({});
-      
-      const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, files: fileList } = e.target;
-        if (fileList && fileList[0]) {
-          setFiles(prev => ({ ...prev, [name]: fileList[0] }));
-        }
-      };
-
-      return (
-        <div data-testid="season-create-page">
-          <form data-testid="season-form">
-            <input 
-              name="model_gltf" 
-              type="file" 
-              accept=".glb,.gltf" 
-              onChange={handleFileChange}
-              data-testid="gltf-input"
-            />
-            <input 
-              name="model_usdz" 
-              type="file" 
-              accept=".usdz" 
-              onChange={handleFileChange}
-              data-testid="usdz-input"
-            />
-            {files.model_gltf && (
-              <div data-testid="gltf-file-info">
-                Selected: {files.model_gltf.name}
-              </div>
-            )}
-            {files.model_usdz && (
-              <div data-testid="usdz-file-info">
-                Selected: {files.model_usdz.name}
-              </div>
-            )}
-          </form>
-        </div>
-      );
-    };
-
-    renderWithProviders(<SeasonCreateMock />);
-    
-    const gltfInput = screen.getByTestId('gltf-input');
-    const usdzInput = screen.getByTestId('usdz-input');
-    
-    // Create test files
-    const gltfFile = new File(['test'], 'test.glb', { type: 'model/gltf-binary' });
-    const usdzFile = new File(['test'], 'test.usdz', { type: 'model/vnd.usdz' });
-    
-    // Upload GLTF file
-    fireEvent.change(gltfInput, { target: { files: [gltfFile] } });
-    expect(screen.getByTestId('gltf-file-info')).toHaveTextContent('Selected: test.glb');
-    
-    // Upload USDZ file
-    fireEvent.change(usdzInput, { target: { files: [usdzFile] } });
-    expect(screen.getByTestId('usdz-file-info')).toHaveTextContent('Selected: test.usdz');
+    expect(screen.getByText(/shared JustVybz 3D model/i)).toBeInTheDocument();
   });
 
   it('validates form submission with required fields', async () => {

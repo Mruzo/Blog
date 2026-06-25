@@ -17,7 +17,7 @@ export const guides: GuideConfig[] = [
     route: '/immersivecomics/',
     showOnFirstVisit: true,
     showOnce: true,
-    summary: 'Browse published comic stories here. Use the floating "+" button to create your own story, or the menu for feedback and help.',
+    summary: 'Browse published comic stories here. Create yours, provide feedback, or ask for help.',
   },
   {
     id: 'story-create-draft',

@@ -630,6 +630,23 @@ class EpisodeCommentCreateView(generics.CreateAPIView):
             approved_comment=True,
         )
 
+
+class EpisodeCommentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ComicCommentSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        return ComicComment.objects.filter(
+            user_name=self.request.user,
+        ).select_related('user_name', 'episode', 'episode__season', 'episode__season__comic')
+
+    def perform_update(self, serializer):
+        comment = self.get_object()
+        if not _is_public_episode(comment.episode):
+            raise PermissionDenied('Comments are only editable on published public episodes.')
+        serializer.save(approved_comment=True)
+
 # Studio API Views
 class StudioListCreateView(generics.ListCreateAPIView):
     serializer_class = StudioSerializer

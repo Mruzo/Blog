@@ -82,8 +82,7 @@ describe('SeasonCreationWizard', () => {
     expect(screen.getByLabelText(/Season Number/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Release Date/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Description/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/GLTF\/GLB Model/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/USDZ Model/)).toBeInTheDocument();
+    expect(screen.getByText(/shared JustVybz 3D model/i)).toBeInTheDocument();
   });
 
   it('has default values for form fields', () => {
@@ -125,114 +124,6 @@ describe('SeasonCreationWizard', () => {
     });
   });
 
-  it('validates file types for GLTF model', async () => {
-    renderWithProviders(<SeasonCreationWizard />);
-    
-    const titleInput = screen.getByLabelText(/Season Title/);
-    fireEvent.change(titleInput, { target: { value: 'Test Season' } });
-    
-    const descriptionInput = screen.getByLabelText(/Description/);
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    
-    const gltfInput = screen.getByLabelText(/GLTF\/GLB Model/);
-    const file = new File(['test'], 'test.txt', { type: 'text/plain' });
-    fireEvent.change(gltfInput, { target: { files: [file] } });
-    
-    const submitButton = screen.getByText('Create Season');
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('GLTF model must be a .glb or .gltf file')).toBeInTheDocument();
-    });
-  });
-
-  it('validates file types for USDZ model', async () => {
-    renderWithProviders(<SeasonCreationWizard />);
-    
-    const titleInput = screen.getByLabelText(/Season Title/);
-    fireEvent.change(titleInput, { target: { value: 'Test Season' } });
-    
-    const descriptionInput = screen.getByLabelText(/Description/);
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    
-    const usdzInput = screen.getByLabelText(/USDZ Model/);
-    const file = new File(['test'], 'test.txt', { type: 'text/plain' });
-    fireEvent.change(usdzInput, { target: { files: [file] } });
-    
-    const submitButton = screen.getByText('Create Season');
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('USDZ model must be a .usdz file')).toBeInTheDocument();
-    });
-  });
-
-  it('validates file size for GLTF model', async () => {
-    renderWithProviders(<SeasonCreationWizard />);
-    
-    const titleInput = screen.getByLabelText(/Season Title/);
-    fireEvent.change(titleInput, { target: { value: 'Test Season' } });
-    
-    const descriptionInput = screen.getByLabelText(/Description/);
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    
-    const gltfInput = screen.getByLabelText(/GLTF\/GLB Model/);
-    // Create a file larger than 50MB
-    const largeFile = new File(['x'.repeat(51 * 1024 * 1024)], 'test.glb', { type: 'model/gltf-binary' });
-    Object.defineProperty(largeFile, 'size', { value: 51 * 1024 * 1024 });
-    fireEvent.change(gltfInput, { target: { files: [largeFile] } });
-    
-    const submitButton = screen.getByText('Create Season');
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('GLTF model file size cannot exceed 50MB')).toBeInTheDocument();
-    });
-  });
-
-  it('validates file size for USDZ model', async () => {
-    renderWithProviders(<SeasonCreationWizard />);
-    
-    const titleInput = screen.getByLabelText(/Season Title/);
-    fireEvent.change(titleInput, { target: { value: 'Test Season' } });
-    
-    const descriptionInput = screen.getByLabelText(/Description/);
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    
-    const usdzInput = screen.getByLabelText(/USDZ Model/);
-    // Create a file larger than 25MB
-    const largeFile = new File(['x'.repeat(26 * 1024 * 1024)], 'test.usdz', { type: 'model/vnd.usdz' });
-    Object.defineProperty(largeFile, 'size', { value: 26 * 1024 * 1024 });
-    fireEvent.change(usdzInput, { target: { files: [largeFile] } });
-    
-    const submitButton = screen.getByText('Create Season');
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('USDZ model file size cannot exceed 25MB')).toBeInTheDocument();
-    });
-  });
-
-  it('shows file information when files are selected', () => {
-    renderWithProviders(<SeasonCreationWizard />);
-    
-    const gltfInput = screen.getByLabelText(/GLTF\/GLB Model/);
-    const gltfFile = new File(['test'], 'test.glb', { type: 'model/gltf-binary' });
-    Object.defineProperty(gltfFile, 'size', { value: 1024 });
-    fireEvent.change(gltfInput, { target: { files: [gltfFile] } });
-    
-    expect(screen.getByText(/Selected: test.glb/)).toBeInTheDocument();
-    expect(screen.getByText(/1 KB/)).toBeInTheDocument();
-    
-    const usdzInput = screen.getByLabelText(/USDZ Model/);
-    const usdzFile = new File(['test'], 'test.usdz', { type: 'model/vnd.usdz' });
-    Object.defineProperty(usdzFile, 'size', { value: 2048 });
-    fireEvent.change(usdzInput, { target: { files: [usdzFile] } });
-    
-    expect(screen.getByText(/Selected: test.usdz/)).toBeInTheDocument();
-    expect(screen.getByText(/2 KB/)).toBeInTheDocument();
-  });
-
   it('submits form with valid data', async () => {
     const mockCreatedSeason = {
       id: 1,
@@ -263,61 +154,12 @@ describe('SeasonCreationWizard', () => {
         title: 'Test Season',
         description: 'Test Description',
         season_number: 1,
-        release_date: expect.any(String),
-        model_gltf: undefined,
-        model_usdz: undefined
+        release_date: expect.any(String)
       });
     });
     
     await waitFor(() => {
       expect(screen.getByText('Season created successfully!')).toBeInTheDocument();
-    });
-  });
-
-  it('submits form with 3D model files', async () => {
-    const mockCreatedSeason = {
-      id: 1,
-      title: 'Test Season',
-      season_number: 1,
-      description: 'Test Description',
-      release_date: '2024-01-01',
-      comic: 123,
-      model_gltf: 'http://example.com/model.glb',
-      model_usdz: 'http://example.com/model.usdz',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    };
-    
-    mockCreateSeason.mockResolvedValue(mockCreatedSeason);
-    
-    renderWithProviders(<SeasonCreationWizard />);
-    
-    const titleInput = screen.getByLabelText(/Season Title/);
-    fireEvent.change(titleInput, { target: { value: 'Test Season' } });
-    
-    const descriptionInput = screen.getByLabelText(/Description/);
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    
-    const gltfInput = screen.getByLabelText(/GLTF\/GLB Model/);
-    const gltfFile = new File(['test'], 'test.glb', { type: 'model/gltf-binary' });
-    fireEvent.change(gltfInput, { target: { files: [gltfFile] } });
-    
-    const usdzInput = screen.getByLabelText(/USDZ Model/);
-    const usdzFile = new File(['test'], 'test.usdz', { type: 'model/vnd.usdz' });
-    fireEvent.change(usdzInput, { target: { files: [usdzFile] } });
-    
-    const submitButton = screen.getByText('Create Season');
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(mockCreateSeason).toHaveBeenCalledWith(123, {
-        title: 'Test Season',
-        description: 'Test Description',
-        season_number: 1,
-        release_date: expect.any(String),
-        model_gltf: gltfFile,
-        model_usdz: usdzFile
-      });
     });
   });
 

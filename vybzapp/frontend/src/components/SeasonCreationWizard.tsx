@@ -5,15 +5,13 @@ import SmallButton from './SmallButton';
 import BackButton from './BackButton';
 import MessagePopup from './MessagePopup';
 import { useApi } from '../contexts/ApiContext';
-import { Season, SeasonCreateData } from '../services/api';
+import { SeasonCreateData } from '../services/api';
 
 interface SeasonFormData {
   title: string;
   description: string;
   season_number: number;
   release_date: string;
-  model_gltf?: File;
-  model_usdz?: File;
 }
 
 const SeasonCreationWizard: React.FC = () => {
@@ -25,9 +23,7 @@ const SeasonCreationWizard: React.FC = () => {
     title: '',
     description: '',
     season_number: 1,
-    release_date: new Date().toISOString().split('T')[0],
-    model_gltf: undefined,
-    model_usdz: undefined
+    release_date: new Date().toISOString().split('T')[0]
   });
   
   const [message, setMessage] = useState<string>('');
@@ -41,16 +37,6 @@ const SeasonCreationWizard: React.FC = () => {
       ...prev,
       [name]: name === 'season_number' ? parseInt(value) || 1 : value
     }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, files } = e.target;
-    if (files && files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: files[0]
-      }));
-    }
   };
 
   const validateForm = (): boolean => {
@@ -82,39 +68,6 @@ const SeasonCreationWizard: React.FC = () => {
       return false;
     }
     
-    // Validate file types and sizes
-    if (formData.model_gltf) {
-      const file = formData.model_gltf;
-      if (!file.name.toLowerCase().endsWith('.glb') && !file.name.toLowerCase().endsWith('.gltf')) {
-        setMessage('GLTF model must be a .glb or .gltf file');
-        setMessageType('warning');
-        setShowMessage(true);
-        return false;
-      }
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        setMessage('GLTF model file size cannot exceed 50MB');
-        setMessageType('warning');
-        setShowMessage(true);
-        return false;
-      }
-    }
-    
-    if (formData.model_usdz) {
-      const file = formData.model_usdz;
-      if (!file.name.toLowerCase().endsWith('.usdz')) {
-        setMessage('USDZ model must be a .usdz file');
-        setMessageType('warning');
-        setShowMessage(true);
-        return false;
-      }
-      if (file.size > 25 * 1024 * 1024) { // 25MB limit
-        setMessage('USDZ model file size cannot exceed 25MB');
-        setMessageType('warning');
-        setShowMessage(true);
-        return false;
-      }
-    }
-    
     return true;
   };
 
@@ -139,9 +92,7 @@ const SeasonCreationWizard: React.FC = () => {
         title: formData.title.trim(),
         description: formData.description.trim(),
         season_number: formData.season_number,
-        release_date: formData.release_date,
-        model_gltf: formData.model_gltf,
-        model_usdz: formData.model_usdz
+        release_date: formData.release_date
       };
       
       console.log('Creating season with data:', seasonData);
@@ -174,14 +125,6 @@ const SeasonCreationWizard: React.FC = () => {
 
   const handleCloseMessage = () => {
     setShowMessage(false);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -266,69 +209,13 @@ const SeasonCreationWizard: React.FC = () => {
               />
             </div>
 
-            {/* 3D Model Upload Section */}
-            <div className="mb-4">
-              <h5 className="subtext-btn-sm mb-3">
-                <i className="fas fa-cube me-2"></i>3D Models (Optional)
+            <div className="mb-4 rounded border bg-light p-3">
+              <h5 className="subtext-btn-sm mb-2">
+                <i className="fas fa-cube me-2" aria-hidden></i>3D Model
               </h5>
-              
-              <div className="row">
-                <div className="col-md-6">
-                  <div className="mb-3">
-                    <label htmlFor="model_gltf" className="form-label subtext-btn-sm">
-                      GLTF/GLB Model
-                    </label>
-                    <input
-                      type="file"
-                      className="form-control form-control-sm"
-                      id="model_gltf"
-                      name="model_gltf"
-                      accept=".glb,.gltf"
-                      onChange={handleFileChange}
-                    />
-                    <div className="form-text subtext-btn-sm">
-                      <i className="fas fa-info-circle me-1"></i>
-                      Maximum 50MB. Supports .glb and .gltf formats.
-                    </div>
-                    {formData.model_gltf && (
-                      <div className="mt-2">
-                        <small className="text-success">
-                          <i className="fas fa-check-circle me-1"></i>
-                          Selected: {formData.model_gltf.name} ({formatFileSize(formData.model_gltf.size)})
-                        </small>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="col-md-6">
-                  <div className="mb-3">
-                    <label htmlFor="model_usdz" className="form-label subtext-btn-sm">
-                      USDZ Model
-                    </label>
-                    <input
-                      type="file"
-                      className="form-control form-control-sm"
-                      id="model_usdz"
-                      name="model_usdz"
-                      accept=".usdz"
-                      onChange={handleFileChange}
-                    />
-                    <div className="form-text subtext-btn-sm">
-                      <i className="fas fa-info-circle me-1"></i>
-                      Maximum 25MB. Supports .usdz format for AR/VR.
-                    </div>
-                    {formData.model_usdz && (
-                      <div className="mt-2">
-                        <small className="text-success">
-                          <i className="fas fa-check-circle me-1"></i>
-                          Selected: {formData.model_usdz.name} ({formatFileSize(formData.model_usdz.size)})
-                        </small>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <p className="subtext-btn-sm mb-0 text-muted">
+                This season will use the shared JustVybz 3D model.
+              </p>
             </div>
 
             <div className="d-flex justify-content-end gap-2">
