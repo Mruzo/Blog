@@ -813,8 +813,13 @@ const Stories: React.FC = () => {
         return next;
       });
       setCommentPendingDelete(null);
-    } catch {
-      setCommentErrors((prev) => new Map(prev).set(comment.season, 'Could not delete your comment. Please try again.'));
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.detail ||
+        (err?.response?.status === 401
+          ? 'Please sign in again before deleting your comment.'
+          : 'Could not delete your comment. Please try again.');
+      setCommentErrors((prev) => new Map(prev).set(comment.season, message));
     } finally {
       setIsDeletingComment(false);
     }

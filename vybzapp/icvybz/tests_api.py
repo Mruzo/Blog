@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 import json
@@ -566,6 +566,23 @@ class EpisodeCommentAPITestCase(APITestCase):
 
         url = reverse('icvybz-api:episode-comment-detail', kwargs={'pk': comment.id})
         response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ComicComment.objects.filter(id=comment.id).exists())
+
+    def test_user_can_delete_own_comment_with_token_auth_without_csrf(self):
+        comment = ComicComment.objects.create(
+            episode=self.episode1,
+            user_name=self.user,
+            comment_cont='Delete me with token',
+            approved_comment=True,
+        )
+        token, _ = Token.objects.get_or_create(user=self.user)
+        client = APIClient(enforce_csrf_checks=True)
+        client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+
+        url = reverse('icvybz-api:episode-comment-detail', kwargs={'pk': comment.id})
+        response = client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(ComicComment.objects.filter(id=comment.id).exists())

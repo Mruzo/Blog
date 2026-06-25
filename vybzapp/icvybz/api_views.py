@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.serializers import AuthTokenSerializer
+from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -608,8 +609,10 @@ class SeasonCommentListView(generics.ListAPIView):
         )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class EpisodeCommentCreateView(generics.CreateAPIView):
     serializer_class = ComicCommentSerializer
+    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get_serializer_context(self):
@@ -631,8 +634,10 @@ class EpisodeCommentCreateView(generics.CreateAPIView):
         )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class EpisodeCommentDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ComicCommentSerializer
+    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'patch', 'delete', 'head', 'options']
 
