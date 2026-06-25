@@ -123,25 +123,25 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
             {isAuthenticated ? (
               <Link
                 to="/immersivecomics/my-studio/"
-                className="btn btn-light btn-sm mx-1 mx-sm-2 px-2"
+                className="btn btn-light btn-sm mx-1 mx-sm-2 px-2 app-site-header__actionBtn"
                 id="profile-btn"
                 onClick={switchToProfileNavbar}
               >
                 <i className="fas fa-user" />
-                <span className="d-none d-sm-inline ms-1">
-                  &nbsp;{user?.first_name || user?.username || 'Profile'}
+                <span className="d-none d-sm-inline">
+                  {user?.first_name || user?.username || 'Profile'}
                 </span>
               </Link>
             ) : (
-              <Link to="/login/" className="btn btn-light btn-sm mx-1 mx-sm-2 px-2" id="login-btn">
+              <Link to="/login/" className="btn btn-light btn-sm mx-1 mx-sm-2 px-2 app-site-header__actionBtn" id="login-btn">
                 <i className="fas fa-sign-in-alt" />
-                <span className="d-none d-sm-inline ms-1"> Login</span>
+                <span className="d-none d-sm-inline">Login</span>
               </Link>
             )}
-            <Link to="/product/cart/" className="btn btn-light btn-sm px-2 ms-1 ms-sm-2 position-relative">
+            <Link to="/product/cart/" className="btn btn-light btn-sm px-2 ms-1 ms-sm-2 position-relative app-site-header__cartLink">
               <i className="fas fa-shopping-cart" />
               <span
-                className={`position-absolute top-0 start-100 translate-middle badge rounded-pill ${cartCount > 0 ? 'bg-success' : 'bg-danger'}`}
+                className={`position-absolute badge rounded-pill app-site-header__cartBadge ${cartCount > 0 ? 'bg-success' : 'bg-danger'}`}
               >
                 {cartCount}
               </span>

@@ -9,7 +9,7 @@ from rest_framework.authtoken.models import Token
 import json
 import uuid
 
-from .models import Comic, Season, Character, Episode, Dialogue, POV
+from .models import Comic, Season, Character, Episode, Dialogue, POV, ComicComment
 
 
 class StoryCreationAPITestCase(APITestCase):
@@ -436,3 +436,104 @@ class StoryCreationAPITestCase(APITestCase):
         self.assertEqual(story.characters.count(), 1)
         self.assertEqual(season.episodes.count(), 1)
         self.assertEqual(episode.dialogues.count(), 1)
+
+
+class EpisodeCommentAPITestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='commenter',
+            email='commenter@example.com',
+            password='testpass123',
+        )
+        self.owner = User.objects.create_user(
+            username='creator',
+            email='creator@example.com',
+            password='testpass123',
+        )
+        self.story = Comic.objects.create(
+            title='Public Story',
+            description='A public story',
+            user=self.owner,
+            is_public=True,
+            moderation_status='approved',
+        )
+        self.season = Season.objects.create(
+            title='Season 1',
+            season_number=1,
+            description='Public season',
+            comic=self.story,
+            release_date='2024-01-01',
+            is_public=True,
+        )
+        self.episode1 = Episode.objects.create(
+            title='Episode One',
+            episode_number=1,
+            season=self.season,
+            is_published=True,
+        )
+        self.episode2 = Episode.objects.create(
+            title='Episode Two',
+            episode_number=2,
+            season=self.season,
+            is_published=True,
+        )
+
+    def test_list_season_comments_in_episode_order(self):
+        ComicComment.objects.create(
+            episode=self.episode2,
+            user_name=self.user,
+            comment_cont='Second episode comment',
+            approved_comment=True,
+        )
+        ComicComment.objects.create(
+            episode=self.episode1,
+            user_name=self.user,
+            comment_cont='First episode comment',
+            approved_comment=True,
+        )
+        ComicComment.objects.create(
+            episode=self.episode1,
+            user_name=self.user,
+            comment_cont='Hidden comment',
+            approved_comment=False,
+        )
+
+        url = reverse('icvybz-api:season-comment-list', kwargs={'season_id': self.season.id})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual([item['episode_number'] for item in response.data], [1, 2])
+        self.assertEqual(response.data[0]['comment_cont'], 'First episode comment')
+        self.assertEqual(response.data[1]['comment_cont'], 'Second episode comment')
+
+    def test_authenticated_user_can_create_episode_comment(self):
+        self.client.force_authenticate(user=self.user)
+        url = reverse('icvybz-api:episode-comment-create', kwargs={'episode_id': self.episode1.id})
+        response = self.client.post(url, {'comment_cont': 'Great opening!'}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(ComicComment.objects.count(), 1)
+        comment = ComicComment.objects.first()
+        self.assertEqual(comment.user_name, self.user)
+        self.assertEqual(comment.episode, self.episode1)
+        self.assertTrue(comment.approved_comment)
+        self.assertEqual(response.data['episode_number'], 1)
+
+    def test_anonymous_user_cannot_create_episode_comment(self):
+        url = reverse('icvybz-api:episode-comment-create', kwargs={'episode_id': self.episode1.id})
+        response = self.client.post(url, {'comment_cont': 'Anonymous comment'}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(ComicComment.objects.count(), 0)
+
+    def test_cannot_comment_on_unpublished_episode(self):
+        self.episode1.is_published = False
+        self.episode1.save(update_fields=['is_published'])
+        self.client.force_authenticate(user=self.user)
+
+        url = reverse('icvybz-api:episode-comment-create', kwargs={'episode_id': self.episode1.id})
+        response = self.client.post(url, {'comment_cont': 'Should be blocked'}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(ComicComment.objects.count(), 0)

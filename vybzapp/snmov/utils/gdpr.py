@@ -16,6 +16,7 @@ def export_user_data(user):
     )
     from icvybz.models import (
         Comic, StoryCollaborator, Studio, StudioCollaborator, AudioTrack,
+        ComicComment,
     )
 
     data = {
@@ -159,6 +160,26 @@ def export_user_data(user):
         for collab in collaborations
     ]
 
+    episode_comments = ComicComment.objects.filter(user_name=user).select_related(
+        'episode', 'episode__season', 'episode__season__comic'
+    )
+    data['episode_comments'] = [
+        {
+            'id': comment.id,
+            'content': comment.comment_cont,
+            'episode_id': comment.episode_id,
+            'episode_number': comment.episode.episode_number,
+            'episode_title': comment.episode.title,
+            'season_id': comment.episode.season_id,
+            'season_number': comment.episode.season.season_number,
+            'story_id': comment.episode.season.comic_id,
+            'story_title': comment.episode.season.comic.title,
+            'comment_date': comment.comment_date.isoformat() if comment.comment_date else None,
+            'approved_comment': comment.approved_comment,
+        }
+        for comment in episode_comments
+    ]
+
     studio_collabs = StudioCollaborator.objects.filter(user=user)
     data['studio_memberships'] = [
         {
@@ -196,6 +217,7 @@ def _delete_user_content(user, summary):
     from icvybz.models import (
         Comic, Character, Studio, AudioTrack, Intersection,
         CollaborationInvite, StoryCollaborator, StudioCollaborator,
+        ComicComment,
     )
 
     stories = Comic.objects.filter(user=user)
@@ -235,6 +257,10 @@ def _delete_user_content(user, summary):
     for collab in studio_collabs:
         collab.is_active = False
         collab.save(update_fields=['is_active'])
+
+    comments = ComicComment.objects.filter(user_name=user)
+    summary['episode_comments_deleted'] = comments.count()
+    comments.delete()
 
 
 def _delete_support_and_comms(user, summary):
@@ -284,6 +310,11 @@ def delete_user_data(user, anonymize=False):
 
     with transaction.atomic():
         if anonymize:
+            from icvybz.models import ComicComment
+            comments = ComicComment.objects.filter(user_name=user)
+            summary['episode_comments_deleted'] = comments.count()
+            comments.delete()
+
             user.username = f'deleted_user_{user.id}'
             user.email = f'deleted_{user.id}@deleted.local'
             user.first_name = ''

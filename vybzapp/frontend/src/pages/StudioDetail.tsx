@@ -27,12 +27,22 @@ interface Comic {
   comic_image: string | File | null;
   is_public: boolean;
   moderation_status: 'pending' | 'approved' | 'rejected';
+  total_views?: number;
   created_at: string;
   updated_at: string;
   user: number;
+  studio?: number | null;
   user_username?: string;
   characters?: Character[];
 }
+
+type StudioStoryData = {
+  seasons: any[];
+  episodes: any[];
+  dialogues: any[];
+  collaborators: any[];
+  comments: any[];
+};
 
 const StudioDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,7 +50,7 @@ const StudioDetail: React.FC = () => {
 
   const [studio, setStudio] = useState<Studio | null>(null);
   const [stories, setStories] = useState<Comic[]>([]);
-  const [storyData, setStoryData] = useState<Map<number, {seasons: any[], episodes: any[], dialogues: any[], collaborators: any[]}>>(new Map());
+  const [storyData, setStoryData] = useState<Map<number, StudioStoryData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [isLoadingStoryData, setIsLoadingStoryData] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +160,9 @@ const StudioDetail: React.FC = () => {
               created_at: story.created_at,
               updated_at: story.updated_at,
               user: story.user,
+              studio: story.studio,
               user_username: story.user_username || 'Unknown',
+              total_views: story.total_views || 0,
               characters: characters || []
             };
           })
@@ -174,7 +186,7 @@ const StudioDetail: React.FC = () => {
       }
 
       setIsLoadingStoryData(true);
-      const newStoryData = new Map<number, {seasons: any[], episodes: any[], dialogues: any[], collaborators: any[]}>();
+      const newStoryData = new Map<number, StudioStoryData>();
       
       const results = await Promise.allSettled(
         stories.map(async (story) => {
@@ -199,7 +211,8 @@ const StudioDetail: React.FC = () => {
                   seasons: [],
                   episodes: [],
                   dialogues: [],
-                  collaborators: []
+                  collaborators: [],
+                  comments: []
                 }
               };
             }
@@ -275,13 +288,26 @@ const StudioDetail: React.FC = () => {
               collaboratorsData = [];
             }
             
+            let allComments: any[] = [];
+            try {
+              const commentPromises = seasonsData.map(season => apiService.getSeasonComments(season.id));
+              const commentResults = await Promise.all(commentPromises);
+              allComments = commentResults.flat();
+            } catch (commentError: any) {
+              if (commentError?.response?.status !== 403 && commentError?.response?.status !== 401) {
+                console.error(`[StudioDetail] Failed to load comments for story ${story.id}:`, commentError);
+              }
+              allComments = [];
+            }
+
             return {
               storyId: story.id,
               data: {
                 seasons: seasonsData,
                 episodes: allEpisodes,
                 dialogues: allDialogues,
-                collaborators: collaboratorsData
+                collaborators: collaboratorsData,
+                comments: allComments
               }
             };
           } catch (error: any) {
@@ -295,7 +321,8 @@ const StudioDetail: React.FC = () => {
                 seasons: [],
                 episodes: [],
                 dialogues: [],
-                collaborators: []
+                collaborators: [],
+                comments: []
               }
             };
           }
@@ -312,7 +339,8 @@ const StudioDetail: React.FC = () => {
               seasons: [],
               episodes: [],
               dialogues: [],
-              collaborators: []
+              collaborators: [],
+              comments: []
             });
           }
         }
@@ -419,6 +447,12 @@ const StudioDetail: React.FC = () => {
                   ) : null}
                   <span>
                     <strong>Stories</strong> {stories.length}
+                  </span>
+                  <span>
+                    <strong>Views</strong> {(studio.total_episode_views ?? 0).toLocaleString()}
+                  </span>
+                  <span>
+                    <strong>Comments</strong> {(studio.total_comments ?? 0).toLocaleString()}
                   </span>
                 </div>
 
@@ -578,6 +612,29 @@ const StudioDetail: React.FC = () => {
                       <p className="studio-detail__storyDesc">{comic.description}</p>
                     ) : null}
                   </div>
+
+                  {storyData.has(comic.id) && (
+                    <div className="stories-landing__engagementStrip" aria-label="Story engagement stats">
+                      <p className="stories-landing__meta mb-0" aria-label="Total story views">
+                        <span className="stories-landing__metaStrong">
+                          {(
+                            comic.total_views ??
+                            storyData.get(comic.id)!.episodes.reduce(
+                              (total: number, episode: any) => total + (episode.view_count || 0),
+                              0
+                            )
+                          ).toLocaleString()}
+                        </span>{' '}
+                        views
+                      </p>
+                      <p className="stories-landing__meta mb-0" aria-label="Total story comments">
+                        <span className="stories-landing__metaStrong">
+                          {(storyData.get(comic.id)?.comments.length || 0).toLocaleString()}
+                        </span>{' '}
+                        {(storyData.get(comic.id)?.comments.length || 0) === 1 ? 'comment' : 'comments'}
+                      </p>
+                    </div>
+                  )}
 
                   {storyData.has(comic.id) && (
                     <div className="stories-landing__viewerWrap">

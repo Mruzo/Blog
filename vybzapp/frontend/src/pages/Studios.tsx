@@ -232,6 +232,13 @@ const Studios: React.FC = () => {
                       {(studio.total_episode_views ?? 0).toLocaleString()}
                     </span>{' '}
                     views
+                    <span className="studios-landing__metaSep" aria-hidden>
+                      ·
+                    </span>
+                    <span className="studios-landing__metaNum">
+                      {(studio.total_comments ?? 0).toLocaleString()}
+                    </span>{' '}
+                    {(studio.total_comments ?? 0) === 1 ? 'comment' : 'comments'}
                   </p>
 
                   <div className="studios-landing__actions">

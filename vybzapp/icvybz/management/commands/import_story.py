@@ -6,7 +6,7 @@ from django.core.files.storage import default_storage
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
-from icvybz.models import Comic, Season, Episode, Character, Dialogue, POV, Scene, Intersection
+from icvybz.models import Comic, Season, Episode, Character, Dialogue, POV, Scene, Intersection, Studio
 from datetime import datetime
 
 
@@ -72,6 +72,7 @@ class Command(BaseCommand):
     def show_import_preview(self, import_data):
         """Show what would be imported without actually importing"""
         story_data = import_data.get('story', {})
+        studio = Studio.objects.filter(owner=user).order_by('created_at', 'id').first()
         seasons = import_data.get('seasons', [])
         characters = import_data.get('characters', [])
         intersections = import_data.get('intersections', [])
@@ -103,7 +104,8 @@ class Command(BaseCommand):
             title=story_data.get('title', 'Imported Story'),
             description=story_data.get('description', ''),
             is_public=story_data.get('is_public', False),
-            moderation_status=story_data.get('moderation_status', 'pending')
+            moderation_status=story_data.get('moderation_status', 'pending'),
+            studio=studio,
         )
         
         # Import comic image if available

@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import Comic, Season, Episode, Dialogue, Character, Studio, AudioTrack, CollaborationInvite, StoryCollaborator, StudioCollaborator, StudioCollaborationRequest
+from .models import Comic, Season, Episode, Dialogue, Character, Studio, AudioTrack, CollaborationInvite, StoryCollaborator, StudioCollaborator, StudioCollaborationRequest, ComicComment
 from django.contrib.auth import get_user_model
+from django.db.models import Count, Exists, OuterRef, Q, Sum
 
 User = get_user_model()
 
@@ -12,9 +13,9 @@ class ComicSerializer(serializers.ModelSerializer):
         model = Comic
         fields = [
             'id', 'title', 'description', 'comic_image', 'is_public', 'moderation_status',
-            'created_at', 'updated_at', 'user', 'user_username', 'total_views'
+            'created_at', 'updated_at', 'user', 'studio', 'user_username', 'total_views'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'user', 'total_views', 'moderation_status']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'user', 'studio', 'total_views', 'moderation_status']
     
     def validate_title(self, value):
         """Validate title length"""
@@ -118,6 +119,33 @@ class DialogueSerializer(serializers.ModelSerializer):
             }
         return None
 
+
+class ComicCommentSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user_name.username', read_only=True)
+    episode_number = serializers.IntegerField(source='episode.episode_number', read_only=True)
+    episode_title = serializers.CharField(source='episode.title', read_only=True)
+    season = serializers.IntegerField(source='episode.season_id', read_only=True)
+
+    class Meta:
+        model = ComicComment
+        fields = [
+            'id', 'comment_cont', 'user_name', 'username', 'episode',
+            'episode_number', 'episode_title', 'season', 'comment_date',
+            'approved_comment'
+        ]
+        read_only_fields = [
+            'id', 'user_name', 'username', 'episode', 'episode_number',
+            'episode_title', 'season', 'comment_date', 'approved_comment'
+        ]
+
+    def validate_comment_cont(self, value):
+        text = (value or '').strip()
+        if not text:
+            raise serializers.ValidationError("Comment cannot be empty.")
+        if len(text) > 500:
+            raise serializers.ValidationError("Comment cannot exceed 500 characters.")
+        return text
+
 class CharacterSerializer(serializers.ModelSerializer):
     pov_data = serializers.SerializerMethodField()
     
@@ -195,6 +223,9 @@ class StudioReadSerializer(serializers.ModelSerializer):
 
     owner = PublicUserSerializer(read_only=True)
     collaborators = serializers.SerializerMethodField()
+    stories_count = serializers.SerializerMethodField()
+    total_episode_views = serializers.SerializerMethodField()
+    total_comments = serializers.SerializerMethodField()
 
     class Meta:
         model = Studio
@@ -206,6 +237,9 @@ class StudioReadSerializer(serializers.ModelSerializer):
             'avatar_url',
             'owner',
             'collaborators',
+            'stories_count',
+            'total_episode_views',
+            'total_comments',
             'created_at',
             'updated_at',
         ]
@@ -217,9 +251,28 @@ class StudioReadSerializer(serializers.ModelSerializer):
             'avatar_url',
             'owner',
             'collaborators',
+            'stories_count',
+            'total_episode_views',
+            'total_comments',
             'created_at',
             'updated_at',
         ]
+
+    def _public_story_queryset(self, obj):
+        public_content = Season.objects.filter(
+            comic_id=OuterRef('pk'),
+            is_public=True,
+            episodes__is_published=True,
+        )
+        return (
+            Comic.objects.filter(
+                studio=obj,
+                is_public=True,
+                moderation_status='approved',
+            )
+            .annotate(_has_public_content=Exists(public_content))
+            .filter(_has_public_content=True)
+        )
 
     def get_collaborators(self, obj):
         rows = obj.collaborators.filter(is_active=True).select_related('user')
@@ -232,6 +285,33 @@ class StudioReadSerializer(serializers.ModelSerializer):
             }
             for c in rows
         ]
+
+    def get_stories_count(self, obj):
+        return self._public_story_queryset(obj).count()
+
+    def get_total_episode_views(self, obj):
+        result = self._public_story_queryset(obj).aggregate(
+            total=Sum(
+                'seasons__episodes__view_count',
+                filter=Q(seasons__is_public=True, seasons__episodes__is_published=True),
+                default=0,
+            )
+        )
+        return result['total'] or 0
+
+    def get_total_comments(self, obj):
+        result = self._public_story_queryset(obj).aggregate(
+            total=Count(
+                'seasons__episodes__comments',
+                filter=(
+                    Q(seasons__is_public=True)
+                    & Q(seasons__episodes__is_published=True)
+                    & Q(seasons__episodes__comments__approved_comment=True)
+                ),
+                distinct=True,
+            )
+        )
+        return result['total'] or 0
 
 
 class CollaborationInviteSerializer(serializers.ModelSerializer):

@@ -4,7 +4,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Comic3DViewer from '../components/Comic3DViewer';
 import MetaTags from '../components/MetaTags';
 import { useApi } from '../contexts/ApiContext';
-import apiService from '../services/api';
+import apiService, { EpisodeComment } from '../services/api';
 import { collaborationService } from '../services/collaborationService';
 import { filterPublicStoriesForStudio } from '../utils/studioScope';
 import './Stories.css';
@@ -57,7 +57,7 @@ const sortEpisodesChronologically = (episodes: any[], seasons: any[]) => {
 };
 
 const Stories: React.FC = () => {
-  const { stories, loadPublicStories, isLoading, error } = useApi();
+  const { stories, loadPublicStories, isLoading, error, currentUser } = useApi();
   const [searchParams] = useSearchParams();
   const studioId = searchParams.get('studio');
   const [studio, setStudio] = useState<any>(null);
@@ -69,8 +69,14 @@ const Stories: React.FC = () => {
   const loadingRef = useRef<Map<number, boolean>>(new Map());
   // Track selected episode for each story (for sharing)
   const [selectedEpisodes, setSelectedEpisodes] = useState<Map<number, any>>(new Map());
+  const [seasonComments, setSeasonComments] = useState<Map<number, EpisodeComment[]>>(new Map());
+  const [loadedCommentSeasonIds, setLoadedCommentSeasonIds] = useState<Set<number>>(new Set());
+  const [commentDrafts, setCommentDrafts] = useState<Map<number, string>>(new Map());
+  const [commentErrors, setCommentErrors] = useState<Map<number, string>>(new Map());
+  const [submittingCommentSeasonIds, setSubmittingCommentSeasonIds] = useState<Set<number>>(new Set());
   // Track expanded descriptions for each story
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<number>>(new Set());
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Set<number>>(new Set());
   
   // Request deduplication cache - stores in-flight and completed requests
   const requestCache = useRef<Map<string, Promise<any>>>(new Map());
@@ -398,11 +404,16 @@ const Stories: React.FC = () => {
       return;
     }
 
+    const publicCatalogueStories = stories.filter((story: any) => (
+      story?.is_public === true && story?.moderation_status === 'approved'
+    ));
+
     if (studio && studio.owner) {
-      setFilteredStories(filterPublicStoriesForStudio(stories, studio));
+      setFilteredStories(filterPublicStoriesForStudio(publicCatalogueStories, studio));
     } else {
-      // No studio filter - show all stories
-      setFilteredStories(stories);
+      // No studio filter - show public/approved catalogue stories only.
+      // ApiContext also stores authenticated My Studio stories, so never trust it raw here.
+      setFilteredStories(publicCatalogueStories);
     }
   }, [stories, studio]);
 
@@ -621,6 +632,112 @@ const Stories: React.FC = () => {
     loadStoryData();
   }, [stories, filteredStories, studio, loadedStoryIds, cachedRequest]);
 
+  useEffect(() => {
+    const seasonIdsToLoad: number[] = [];
+    storyData.forEach((data) => {
+      (data.seasons || []).forEach((season: any) => {
+        if (season?.id && !loadedCommentSeasonIds.has(season.id)) {
+          seasonIdsToLoad.push(season.id);
+        }
+      });
+    });
+
+    if (seasonIdsToLoad.length === 0) {
+      return;
+    }
+
+    setLoadedCommentSeasonIds((prev) => {
+      const next = new Set(prev);
+      seasonIdsToLoad.forEach((seasonId) => next.add(seasonId));
+      return next;
+    });
+
+    seasonIdsToLoad.forEach(async (seasonId) => {
+      try {
+        const comments = await cachedRequest(
+          `season-comments-${seasonId}`,
+          () => apiService.getSeasonComments(seasonId)
+        );
+        setSeasonComments((prev) => {
+          const next = new Map(prev);
+          next.set(seasonId, comments);
+          return next;
+        });
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`[Stories] Failed to load comments for season ${seasonId}:`, err);
+        }
+      }
+    });
+  }, [storyData, loadedCommentSeasonIds, cachedRequest]);
+
+  const getCommentTargetEpisode = useCallback((storyId: number, seasonId: number) => {
+    const selectedEpisode = selectedEpisodes.get(storyId);
+    if (selectedEpisode?.season === seasonId) {
+      return selectedEpisode;
+    }
+
+    const data = storyData.get(storyId);
+    return (data?.episodes || []).find((episode: any) => episode.season === seasonId) || null;
+  }, [selectedEpisodes, storyData]);
+
+  const handleCommentSubmit = useCallback(async (storyId: number, seasonId: number) => {
+    const targetEpisode = getCommentTargetEpisode(storyId, seasonId);
+    const draft = (commentDrafts.get(seasonId) || '').trim();
+
+    setCommentErrors((prev) => {
+      const next = new Map(prev);
+      next.delete(seasonId);
+      return next;
+    });
+
+    if (!currentUser) {
+      setCommentErrors((prev) => new Map(prev).set(seasonId, 'Please log in to comment.'));
+      return;
+    }
+
+    if (!targetEpisode) {
+      setCommentErrors((prev) => new Map(prev).set(seasonId, 'Select an episode before commenting.'));
+      return;
+    }
+
+    if (!draft) {
+      setCommentErrors((prev) => new Map(prev).set(seasonId, 'Comment cannot be empty.'));
+      return;
+    }
+
+    setSubmittingCommentSeasonIds((prev) => new Set(prev).add(seasonId));
+    try {
+      const created = await apiService.createEpisodeComment(targetEpisode.id, draft);
+      setSeasonComments((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(seasonId) || [];
+        next.set(seasonId, [...existing, created].sort((a, b) => {
+          if (a.episode_number !== b.episode_number) return a.episode_number - b.episode_number;
+          return new Date(a.comment_date).getTime() - new Date(b.comment_date).getTime();
+        }));
+        return next;
+      });
+      setCommentDrafts((prev) => {
+        const next = new Map(prev);
+        next.set(seasonId, '');
+        return next;
+      });
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.comment_cont?.[0] ||
+        err?.response?.data?.detail ||
+        'Could not post your comment. Please try again.';
+      setCommentErrors((prev) => new Map(prev).set(seasonId, message));
+    } finally {
+      setSubmittingCommentSeasonIds((prev) => {
+        const next = new Set(prev);
+        next.delete(seasonId);
+        return next;
+      });
+    }
+  }, [commentDrafts, currentUser, getCommentTargetEpisode]);
+
   if (isLoading || isLoadingStoryData) {
     return <LoadingSpinner />;
   }
@@ -827,12 +944,159 @@ const Stories: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="stories-landing__cardFooter">
-                  <p className="stories-landing__meta" aria-label="Total story views">
-                    <span className="stories-landing__metaNum">{(comic.total_views || 0).toLocaleString()}</span>{' '}
-                    views
-                  </p>
+                  {storyData.has(comic.id) &&
+                    (() => {
+                      const data = storyData.get(comic.id);
+                      const seasons = data?.seasons || [];
+                      if (seasons.length === 0) return null;
+                      const totalCommentCount = seasons.reduce((total: number, season: any) => {
+                        return total + (seasonComments.get(season.id)?.length || 0);
+                      }, 0);
 
+                      return (
+                        <>
+                          <div className="stories-landing__engagementStrip" aria-label="Story engagement">
+                            <p className="stories-landing__meta mb-0" aria-label="Total story views">
+                              <span className="stories-landing__metaNum">
+                                {(comic.total_views || 0).toLocaleString()}
+                              </span>{' '}
+                              views
+                            </p>
+                            <p className="stories-landing__meta mb-0" aria-label="Total story comments">
+                              <span className="stories-landing__metaNum">
+                                {totalCommentCount.toLocaleString()}
+                              </span>{' '}
+                              {totalCommentCount === 1 ? 'comment' : 'comments'}
+                            </p>
+                          </div>
+
+                          <div className="stories-landing__comments">
+                            {seasons.map((season: any) => {
+                              const comments = seasonComments.get(season.id) || [];
+                              const targetEpisode = getCommentTargetEpisode(comic.id, season.id);
+                              const draft = commentDrafts.get(season.id) || '';
+                              const errorMessage = commentErrors.get(season.id);
+                              const isSubmitting = submittingCommentSeasonIds.has(season.id);
+
+                              return (
+                                <section key={season.id} className="stories-landing__commentsSeason">
+                                  <div className="stories-landing__commentsHead">
+                                    <div>
+                                      <h3 className="stories-landing__commentsTitle">
+                                        comments
+                                      </h3>
+                                      
+                                    </div>
+                                  </div>
+
+                                  {currentUser ? (
+                                    <form
+                                      className="stories-landing__commentForm"
+                                      onSubmit={(event) => {
+                                        event.preventDefault();
+                                        handleCommentSubmit(comic.id, season.id);
+                                      }}
+                                    >
+                                      <textarea
+                                        className="stories-landing__commentInput"
+                                        value={draft}
+                                        maxLength={500}
+                                        rows={2}
+                                        placeholder={
+                                          targetEpisode
+                                            ? `Leave a comment for E${targetEpisode.episode_number}...`
+                                            : 'Select an episode to comment'
+                                        }
+                                        onChange={(event) => {
+                                          const value = event.target.value;
+                                          setCommentDrafts((prev) => {
+                                            const next = new Map(prev);
+                                            next.set(season.id, value);
+                                            return next;
+                                          });
+                                        }}
+                                        disabled={!targetEpisode || isSubmitting}
+                                      />
+                                      <div className="stories-landing__commentFormFoot">
+                                        <span>{draft.length}/500</span>
+                                        <button
+                                          type="submit"
+                                          className="stories-landing__btnPrimary"
+                                          disabled={!targetEpisode || isSubmitting}
+                                        >
+                                          {isSubmitting ? 'Posting...' : 'Post'}
+                                        </button>
+                                      </div>
+                                      {errorMessage && (
+                                        <p className="stories-landing__commentError" role="alert">
+                                          {errorMessage}
+                                        </p>
+                                      )}
+                                    </form>
+                                  ) : (
+                                    <p className="stories-landing__loginPrompt">
+                                      <Link to="/login/">Log in</Link> to leave a comment on this episode.
+                                    </p>
+                                  )}
+
+                                  <div className="stories-landing__commentList">
+                                    {comments.length > 0 ? (
+                                      comments.map((comment) => {
+                                        const isExpanded = expandedCommentIds.has(comment.id);
+                                        const canExpand = comment.comment_cont.length > 140;
+
+                                        return (
+                                          <article key={comment.id} className="stories-landing__comment">
+                                            <div className="stories-landing__commentTop">
+                                              <p className="stories-landing__commentMeta">
+                                                @{comment.username || 'community'} ·{' '}
+                                                {new Date(comment.comment_date).toLocaleDateString()}
+                                              </p>
+                                            </div>
+                                            <p
+                                              className={`stories-landing__commentText ${
+                                                isExpanded ? 'expanded' : 'collapsed'
+                                              }`}
+                                            >
+                                              <span>E{comment.episode_number}:</span> {comment.comment_cont}
+                                            </p>
+                                            {canExpand && (
+                                              <button
+                                                type="button"
+                                                className="stories-landing__descMore stories-landing__commentMore"
+                                                onClick={() => {
+                                                  setExpandedCommentIds((prev) => {
+                                                    const next = new Set(prev);
+                                                    if (next.has(comment.id)) {
+                                                      next.delete(comment.id);
+                                                    } else {
+                                                      next.add(comment.id);
+                                                    }
+                                                    return next;
+                                                  });
+                                                }}
+                                              >
+                                                {isExpanded ? 'Show less' : 'Show more'}
+                                              </button>
+                                            )}
+                                          </article>
+                                        );
+                                      })
+                                    ) : (
+                                      <p className="stories-landing__commentEmpty">
+                                        No comments for this season yet.
+                                      </p>
+                                    )}
+                                  </div>
+                                </section>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })()}
+
+                  <div className="stories-landing__cardFooter">
                   {storyData.has(comic.id) && (
                     <div className="stories-landing__subsection">
                       <div className="stories-landing__subsectionLabel">

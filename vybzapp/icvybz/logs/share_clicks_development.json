@@ -332,5 +332,17 @@
     "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-S938B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Mobile Safari/537.36",
     "referrer": "http://localhost:3000/immersivecomics/",
     "host": "localhost:8000"
+  },
+  {
+    "timestamp": "2026-06-25T08:20:59.934403",
+    "environment": "development",
+    "platform": "x_twitter",
+    "content_type": "episode",
+    "episode_id": 36,
+    "story_id": null,
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Linux; Android 11; SAMSUNG SM-G973U) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/14.2 Chrome/146.0.0.0 Mobile Safari/537.36",
+    "referrer": "http://localhost:3000/immersivecomics/",
+    "host": "localhost:8000"
   }
 ]

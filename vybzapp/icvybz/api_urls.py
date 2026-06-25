@@ -45,6 +45,8 @@ urlpatterns = [
     path('seasons/<int:season_id>/episodes/', api_views.EpisodeListCreateView.as_view(), name='episode-list-create'),
     path('episodes/<int:pk>/', api_views.EpisodeDetailView.as_view(), name='episode-detail'),
     path('episodes/<int:episode_id>/increment-view/', api_views.increment_episode_view, name='episode-increment-view'),
+    path('seasons/<int:season_id>/comments/', api_views.SeasonCommentListView.as_view(), name='season-comment-list'),
+    path('episodes/<int:episode_id>/comments/', api_views.EpisodeCommentCreateView.as_view(), name='episode-comment-create'),
     
     # Dialogue URLs
     path('episodes/<int:episode_id>/dialogues/', api_views.DialogueListCreateView.as_view(), name='dialogue-list-create'),

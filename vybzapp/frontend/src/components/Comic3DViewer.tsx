@@ -1393,8 +1393,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       fontWeight: 'bold'
                     }}
                   >
-                    <i className="fas fa-play me-2"></i>
-                    &nbsp;Start
+                    <i className="fas fa-play"></i>
+                    <span>Start</span>
                   </button>
                 </div>
               )}
@@ -1689,7 +1689,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       backgroundColor: !isEditMode ? '#111e7f' : 'transparent'
                     }}
                   >
-                    <i className="fas fa-eye me-1"></i>&nbsp;Preview Mode
+                    <i className="fas fa-eye"></i>
+                    <span>Preview Mode</span>
                   </button>
                   <button
                     type="button"
@@ -1706,7 +1707,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       backgroundColor: isEditMode ? '#f9a602' : 'transparent'
                     }}
                   >
-                    <i className="fas fa-edit me-1"></i>&nbsp;Edit Mode
+                    <i className="fas fa-edit"></i>
+                    <span>Edit Mode</span>
                   </button>
                 </div>
               </div>
@@ -1772,8 +1774,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       padding: '0.5rem 1rem'
                     }}
                   >
-                    <i className="fas fa-save me-1"></i>
-                    &nbsp;{isSaving ? 'Saving...' : 'Save'}
+                    <i className="fas fa-save"></i>
+                    <span>{isSaving ? 'Saving...' : 'Save'}</span>
                   </button>
                 </div>
                 <div className="col-6">
@@ -1787,7 +1789,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                       padding: '0.5rem 1rem'
                     }}
                   >
-                    <i className="fas fa-undo me-1"></i>&nbsp;Reset
+                    <i className="fas fa-undo"></i>
+                    <span>Reset</span>
                   </button>
                 </div>
               </div>

@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from django.contrib.auth import get_user_model
@@ -28,17 +29,32 @@ from django.urls import reverse
 from django.conf import settings
 import time
 import logging
-from .models import Comic, Season, Episode, Dialogue, Character, POV, Studio, AudioTrack, StudioCollaborator, StudioCollaborationRequest, StoryCollaborator
+from .models import Comic, Season, Episode, Dialogue, Character, POV, Studio, AudioTrack, StudioCollaborator, StudioCollaborationRequest, StoryCollaborator, ComicComment
 from .serializers import (
     ComicSerializer, SeasonSerializer, EpisodeSerializer,
     DialogueSerializer, CharacterSerializer, StudioSerializer, StudioReadSerializer,
-    AudioTrackSerializer,
+    AudioTrackSerializer, ComicCommentSerializer,
     StudioCollaboratorSerializer, InviteStudioUserSerializer, InviteStudioEmailSerializer,
     StudioCollaborationRequestSerializer, CreateStudioCollaborationRequestSerializer
 )
 
 # Set up logging for performance monitoring
 logger = logging.getLogger(__name__)
+
+
+def _get_default_studio_for_user(user):
+    if not getattr(user, 'is_authenticated', False):
+        return None
+    studio = Studio.objects.filter(owner=user).order_by('created_at', 'id').first()
+    if studio:
+        return studio
+    return Studio.objects.create(
+        owner=user,
+        name=f"{user.first_name or user.username}'s Studio",
+        description='My personal storytelling studio',
+        is_public=False,
+    )
+
 
 # Story/Comic API Views
 class ComicListCreateView(generics.ListCreateAPIView):
@@ -52,7 +68,7 @@ class ComicListCreateView(generics.ListCreateAPIView):
         
         # Always apply annotation for total_views (don't cache annotated querysets)
         # Cache is cleared when stories/episodes are modified, so this is acceptable
-        queryset = Comic.objects.filter(user=self.request.user).select_related('user').annotate(
+        queryset = Comic.objects.filter(user=self.request.user).select_related('user', 'studio').annotate(
             total_views=Sum('seasons__episodes__view_count', default=0)
         )
         
@@ -72,6 +88,7 @@ class ComicListCreateView(generics.ListCreateAPIView):
             moderation_status = 'pending'
         serializer.save(
             user=self.request.user,
+            studio=_get_default_studio_for_user(self.request.user),
             moderation_status=moderation_status,
         )
         # Clear cache when new comic is created
@@ -103,7 +120,7 @@ class ComicDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Comic.objects.filter(
             Q(user=self.request.user) | 
             Q(collaborators__user=self.request.user, collaborators__is_active=True)
-        ).select_related('user').annotate(
+        ).select_related('user', 'studio').annotate(
             total_views=Sum('seasons__episodes__view_count', default=0)
         ).distinct()
     
@@ -154,8 +171,14 @@ class PublicStoriesView(generics.ListAPIView):
                 Comic.objects.filter(is_public=True, moderation_status='approved')
                 .annotate(_has_public_content=Exists(eligible_story_ids))
                 .filter(_has_public_content=True)
-                .select_related('user')
-                .annotate(total_views=Sum('seasons__episodes__view_count', default=0))
+                .select_related('user', 'studio')
+                .annotate(
+                    total_views=Sum(
+                        'seasons__episodes__view_count',
+                        filter=Q(seasons__is_public=True, seasons__episodes__is_published=True),
+                        default=0,
+                    )
+                )
                 .order_by('-created_at')
             )
         except Exception as e:
@@ -544,6 +567,69 @@ class DialogueDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Dialogue.objects.filter(episode__season__comic__user=self.request.user).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user').prefetch_related('character__povs')
 
+
+def _is_public_episode(episode):
+    return (
+        episode
+        and episode.is_published
+        and episode.season
+        and episode.season.is_public
+        and episode.season.comic
+        and episode.season.comic.is_public
+        and episode.season.comic.moderation_status == 'approved'
+    )
+
+
+class SeasonCommentListView(generics.ListAPIView):
+    serializer_class = ComicCommentSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        season_id = self.kwargs.get('season_id')
+        season = Season.objects.filter(id=season_id).select_related('comic').first()
+        if not (
+            season
+            and season.is_public
+            and season.comic
+            and season.comic.is_public
+            and season.comic.moderation_status == 'approved'
+        ):
+            return ComicComment.objects.none()
+
+        return (
+            ComicComment.objects.filter(
+                episode__season_id=season_id,
+                episode__is_published=True,
+                approved_comment=True,
+            )
+            .select_related('user_name', 'episode', 'episode__season')
+            .order_by('episode__episode_number', 'comment_date')
+        )
+
+
+class EpisodeCommentCreateView(generics.CreateAPIView):
+    serializer_class = ComicCommentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['episode_id'] = self.kwargs.get('episode_id')
+        return context
+
+    def perform_create(self, serializer):
+        episode_id = self.kwargs.get('episode_id')
+        episode = Episode.objects.select_related('season__comic').filter(id=episode_id).first()
+        if not episode:
+            raise NotFound('Episode not found.')
+        if not _is_public_episode(episode):
+            raise PermissionDenied('Comments are only available on published public episodes.')
+        serializer.save(
+            episode=episode,
+            user_name=self.request.user,
+            approved_comment=True,
+        )
+
 # Studio API Views
 class StudioListCreateView(generics.ListCreateAPIView):
     serializer_class = StudioSerializer
@@ -643,7 +729,8 @@ def create_complete_story(request):
             title=title,
             description=description,
             is_public=story_data.get('is_public', False),
-            user=request.user
+            user=request.user,
+            studio=_get_default_studio_for_user(request.user),
         )
         print(f"Story created with ID: {story.id}")
         
@@ -880,14 +967,7 @@ def my_studio_api(request):
     Get or create user's studio
     """
     try:
-        studio, created = Studio.objects.get_or_create(
-            owner=request.user,
-            defaults={
-                'name': f"{request.user.first_name or request.user.username}'s Studio",
-                'description': 'My personal storytelling studio',
-                'is_public': False
-            }
-        )
+        studio = _get_default_studio_for_user(request.user)
         
         return Response(StudioSerializer(studio).data)
     except Exception as e:

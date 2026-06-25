@@ -163,13 +163,15 @@
   font-family: 'quicksand', sans-serif;
   font-weight: 600;
   border-radius: 8px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
 }
 
-.comic-3d-viewer .btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.comic-3d-viewer .btn > i {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 .comic-3d-viewer .btn:disabled {
@@ -370,9 +372,11 @@
 
 /* Focus states for accessibility */
 .comic-3d-viewer .btn:focus,
+.comic-3d-viewer .btn:focus-visible,
+.comic-3d-viewer .btn:active,
 .comic-3d-viewer .form-range:focus {
-  outline: 2px solid #f9a602;
-  outline-offset: 2px;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Episode selection container - horizontally scrollable, single line */

@@ -46,10 +46,11 @@ function moderationLabel(status: string | undefined): string {
 const MyStudio: React.FC = () => {
   const { stories, myStudio, loadStories, loadMyStudio, isLoading, logout: logoutFromContext, currentUser } = useApi();
   const navigate = useNavigate();
+  type StoryCounts = { seasons: number; episodes: number; comments: number };
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
-  const [storyCounts, setStoryCounts] = useState<{[key: number]: {seasons: number, episodes: number}}>({});
+  const [storyCounts, setStoryCounts] = useState<{[key: number]: StoryCounts}>({});
   const [isLoadingCounts, setIsLoadingCounts] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -67,7 +68,7 @@ const MyStudio: React.FC = () => {
     if (stories.length === 0) return;
     
     setIsLoadingCounts(true);
-    const counts: {[key: number]: {seasons: number, episodes: number}} = {};
+    const counts: {[key: number]: StoryCounts} = {};
     
     try {
       // Only load counts for visible stories (pagination)
@@ -109,6 +110,21 @@ const MyStudio: React.FC = () => {
       episodeResults.forEach(({ seasonId, episodes: seasonEpisodes }) => {
         episodesBySeason[seasonId] = seasonEpisodes;
       });
+
+      // Load approved/public episode comments grouped by season.
+      const commentResults = await Promise.all(
+        seasonResults.flatMap(({ seasons: storySeasons }) =>
+          storySeasons.map(async (season) => {
+            const seasonComments = await apiService.getSeasonComments(season.id);
+            return { seasonId: season.id, comments: seasonComments };
+          })
+        )
+      );
+
+      const commentsBySeason: {[key: number]: any[]} = {};
+      commentResults.forEach(({ seasonId, comments: seasonComments }) => {
+        commentsBySeason[seasonId] = seasonComments;
+      });
       
       // Calculate counts for visible stories only
       visibleStories.forEach(story => {
@@ -116,10 +132,14 @@ const MyStudio: React.FC = () => {
         const totalEpisodes = storySeasons.reduce((total, season) => {
           return total + (episodesBySeason[season.id]?.length || 0);
         }, 0);
+        const totalComments = storySeasons.reduce((total, season) => {
+          return total + (commentsBySeason[season.id]?.length || 0);
+        }, 0);
         
         counts[story.id] = {
           seasons: storySeasons.length,
-          episodes: totalEpisodes
+          episodes: totalEpisodes,
+          comments: totalComments,
         };
       });
       
@@ -131,7 +151,7 @@ const MyStudio: React.FC = () => {
       const endIndex = startIndex + storiesPerPage;
       const visibleStories = stories.slice(startIndex, endIndex);
       visibleStories.forEach(story => {
-        counts[story.id] = { seasons: 0, episodes: 0 };
+        counts[story.id] = { seasons: 0, episodes: 0, comments: 0 };
       });
       setStoryCounts(prev => ({ ...prev, ...counts }));
     } finally {
@@ -943,6 +963,16 @@ const MyStudio: React.FC = () => {
                         <div className="my-studio__storyStat">
                           <dt>Views</dt>
                           <dd>{story.total_views ?? 0}</dd>
+                        </div>
+                        <div className="my-studio__storyStat">
+                          <dt>Comments</dt>
+                          <dd>
+                            {isLoadingCounts ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
+                            ) : (
+                              storyCounts[story.id]?.comments ?? 0
+                            )}
+                          </dd>
                         </div>
                       </dl>
 

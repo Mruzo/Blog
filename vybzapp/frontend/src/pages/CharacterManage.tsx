@@ -192,7 +192,7 @@ const CharacterManage: React.FC = () => {
   }
 
   return (
-    <div className="product-landing">
+    <div className="product-landing character-manage">
       <MessagePopup
         message={message}
         type={messageType}
@@ -202,7 +202,7 @@ const CharacterManage: React.FC = () => {
       />
 
       <section className="product-landing__section product-landing__hero">
-        <div className="product-landing__container" style={{ maxWidth: '1200px' }}>
+        <div className="product-landing__container character-manage__container">
           <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div style={{ minWidth: 0, flex: '1 1 auto' }}>
               <p className="product-landing__eyebrow">Story</p>
@@ -223,7 +223,7 @@ const CharacterManage: React.FC = () => {
       </section>
 
       <section className="product-landing__section">
-        <div className="product-landing__container px-2 px-md-3 pb-4" style={{ maxWidth: '1200px' }}>
+        <div className="product-landing__container character-manage__container pb-4">
       {showForm && (
         <div className="my-studio__panel mb-4">
           <div className="my-studio__panelHead">
@@ -397,16 +397,16 @@ const CharacterManage: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="row g-3">
+            <div className="my-studio__storyGrid">
               {storyCharacters.map((character) => (
-                <div key={character.id} className="col-md-6 col-lg-4">
-                  <CharacterCard
-                    character={character}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    showActions={true}
-                  />
-                </div>
+                <CharacterCard
+                  key={character.id}
+                  className="characters-step__card"
+                  character={character}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  showActions={true}
+                />
               ))}
             </div>
           )}

@@ -138,7 +138,7 @@ const PrivacySettings: React.FC = () => {
           <h2 className="h5">Download your data</h2>
           <p className="text-muted">
             Request a copy of the personal information we hold about your account, including stories,
-            orders, and support history (GDPR Right of Access / CCPA Right to Know).
+            episode comments, orders, and support history (GDPR Right of Access / CCPA Right to Know).
           </p>
           <button
             type="button"
@@ -155,7 +155,7 @@ const PrivacySettings: React.FC = () => {
         <div className="card-body p-4 font-quicksand">
           <h2 className="h5 text-danger">Delete your account</h2>
           <p className="text-muted">
-            Permanently delete your account and creative content. Order records may be retained in
+            Permanently delete your account, creative content, and episode comments. Order records may be retained in
             anonymized form for tax and legal compliance, but will no longer be linked to you.
           </p>
           <p className="small text-muted mb-3">

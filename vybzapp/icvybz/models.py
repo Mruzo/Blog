@@ -8,6 +8,14 @@ import uuid
 
 class Comic(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comics')
+    studio = models.ForeignKey(
+        'Studio',
+        on_delete=models.SET_NULL,
+        related_name='stories',
+        null=True,
+        blank=True,
+        help_text="Studio this story was created under."
+    )
     title = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
     comic_image = models.ImageField(upload_to='comic_images/', null=True, blank=True)
@@ -375,7 +383,7 @@ class Dialogue(models.Model):
         super().save(*args, **kwargs)
 
 class ComicComment(models.Model):
-    comment_cont = models.TextField(max_length=200, verbose_name='Comment')
+    comment_cont = models.TextField(max_length=500, verbose_name='Comment')
     user_name = models.ForeignKey(settings.AUTH_USER_MODEL, default=1, null=True, on_delete=models.SET_NULL)
     episode = models.ForeignKey('Episode', on_delete=models.CASCADE, related_name='comments')
     comment_date = models.DateTimeField(default=timezone.now)
@@ -447,7 +455,7 @@ class Studio(models.Model):
 
     @property
     def stories_count(self):
-        return self.stories.filter(is_active=True).count()
+        return self.stories.filter(is_public=True, moderation_status='approved').count()
 
 
 class StudioCollaborator(models.Model):

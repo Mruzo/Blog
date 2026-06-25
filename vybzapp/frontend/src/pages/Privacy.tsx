@@ -36,6 +36,7 @@ const Privacy: React.FC = () => {
               <li>✓ <strong>Content Information:</strong> Stories, seasons, episodes, characters, dialogues, 3D models, images, audio, and other creative content you upload</li>
               <li>✓ <strong>Collaboration Data:</strong> Information about your collaborations, studio memberships, and creative partnerships</li>
               <li>✓ <strong>Usage Analytics:</strong> How you interact with stories, view counts, engagement metrics, and platform usage patterns</li>
+              <li>✓ <strong>Comments and Public Interactions:</strong> Comments you post on published stories, seasons, or episodes, including the related episode and timestamp</li>
               <li>✓ <strong>Technical Information:</strong> IP address, browser type, device information, and cookies</li>
               <li>✓ <strong>Communication Data:</strong> Support inquiries, feedback, and correspondence</li>
               <li>✓ <strong>E-Commerce Information (if applicable):</strong> Shipping address, billing address, payment details, and purchase history</li>
@@ -62,6 +63,7 @@ const Privacy: React.FC = () => {
             <p>We share your information with:</p>
             <ul className="list-unstyled">
               <li>✓ <strong>Other Users:</strong> When you publish stories publicly, your username and story content are visible to other users</li>
+              <li>✓ <strong>Public Comments:</strong> Comments you post on public story pages may be visible to other users and public visitors with an episode prefix such as E1 or E2</li>
               <li>✓ <strong>Collaborators:</strong> When you collaborate on stories, relevant information is shared with your collaborators</li>
               <li>✓ <strong>Service Providers:</strong> Who help us operate our Platform (hosting, analytics, etc.)</li>
               <li>✓ <strong>Payment Processors (if applicable):</strong> To process payments securely</li>
@@ -77,6 +79,12 @@ const Privacy: React.FC = () => {
               If you choose to publish content publicly, we may review it to help keep the Platform safe. Public content
               may be placed in a pending review state before it appears in public browsing. We may also restrict, reject,
               or remove content that violates our Terms or community standards.
+            </p>
+            <p>
+              If you post comments on published stories, seasons, or episodes, we collect the comment content, your
+              account identifier, the related episode, and timestamps. Comments may be visible to other users or public
+              visitors. Please avoid sharing personal, sensitive, or confidential information in comments. We may review,
+              hide, or remove comments to prevent abuse or enforce our Terms.
             </p>
             <p className="mb-0">
               If you contact support, we may create a support ticket using the information you provide (such as your name,

@@ -14,7 +14,7 @@ import hashlib
 from datetime import datetime
 import re
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Exists, OuterRef, Q, Sum
 from django.urls import reverse
 from .models import Character, Intersection
 from django.utils import timezone
@@ -829,13 +829,9 @@ class UserDashboardView(LoginRequiredMixin, ListView):
         context['pending_comics'] = Comic.objects.filter(user=user, moderation_status='pending').count()
         
         # Get or create user's studio
-        try:
-            studio = Studio.objects.get(owner=user)
-            context['studio'] = studio
-            context['studio_collaborators'] = studio.collaborators.filter(is_active=True).count()
-        except Studio.DoesNotExist:
-            context['studio'] = None
-            context['studio_collaborators'] = 0
+        studio = Studio.objects.filter(owner=user).order_by('created_at', 'id').first()
+        context['studio'] = studio
+        context['studio_collaborators'] = studio.collaborators.filter(is_active=True).count() if studio else 0
         
         # Get user's audio tracks
         context['audio_tracks'] = AudioTrack.objects.filter(created_by=user).count()
@@ -855,6 +851,7 @@ class StoryCreateView(LoginRequiredMixin, CreateView):
     
     def form_valid(self, form):
         form.instance.user = self.request.user
+        form.instance.studio = Studio.objects.filter(owner=self.request.user).order_by('created_at', 'id').first()
         form.instance.is_public = False  # Start as private
         form.instance.moderation_status = 'pending'
         return super().form_valid(form)
@@ -1184,7 +1181,9 @@ class MyStudioView(LoginRequiredMixin, DetailView):
     
     def get_object(self, queryset=None):
         """Get or create studio for current user"""
-        studio, created = Studio.objects.get_or_create(owner=self.request.user)
+        studio = Studio.objects.filter(owner=self.request.user).order_by('created_at', 'id').first()
+        if not studio:
+            studio = Studio.objects.create(owner=self.request.user)
         return studio
     
     def get(self, request, *args, **kwargs):
@@ -1208,14 +1207,14 @@ class MyStudioView(LoginRequiredMixin, DetailView):
     
     def get_object(self):
         # Get or create user's studio
-        studio, created = Studio.objects.get_or_create(
-            owner=self.request.user,
-            defaults={
-                'name': f"{self.request.user.first_name or self.request.user.username}'s Studio",
-                'description': 'My collaborative storytelling workspace',
-                'is_public': True
-            }
-        )
+        studio = Studio.objects.filter(owner=self.request.user).order_by('created_at', 'id').first()
+        if not studio:
+            studio = Studio.objects.create(
+                owner=self.request.user,
+                name=f"{self.request.user.first_name or self.request.user.username}'s Studio",
+                description='My collaborative storytelling workspace',
+                is_public=True,
+            )
         return studio
     
     def get_context_data(self, **kwargs):
@@ -1380,23 +1379,70 @@ def studio_list_api(request):
         to_attr='prefetched_active_collaborators'
     )
     
-    # Match PublicStoriesView: only public comics that are approved (same set as /immersivecomics/ + studio filter).
-    owner_public_approved_comics = Q(
-        owner__comics__is_public=True,
-        owner__comics__moderation_status='approved',
-    )
-    # Get studios with optimized queries - use annotation to count stories per owner (avoids N+1)
-    # Access comics through owner relationship: owner__comics (related_name='comics' on Comic.user)
-    # Use different annotation names to avoid conflict with model properties
-    studios = Studio.objects.filter(is_public=True).select_related('owner').prefetch_related(active_collaborators_prefetch).annotate(
+    studios = list(Studio.objects.filter(is_public=True).select_related('owner').prefetch_related(active_collaborators_prefetch).annotate(
         annotated_collaborators_count=Count('collaborators', filter=Q(collaborators__is_active=True)),
-        annotated_stories_count=Count('owner__comics', filter=owner_public_approved_comics, distinct=True),
-        annotated_total_episode_views=Sum(
-            'owner__comics__seasons__episodes__view_count',
-            filter=owner_public_approved_comics,
-            default=0,
-        ),
-    ).order_by('-created_at')
+    ).order_by('-created_at'))
+
+    studio_ids = [studio.id for studio in studios]
+    story_stats_by_studio = {}
+    comment_stats_by_studio = {}
+    if studio_ids:
+        public_content = Season.objects.filter(
+            comic_id=OuterRef('pk'),
+            is_public=True,
+            episodes__is_published=True,
+        )
+        story_stats = (
+            Comic.objects.filter(
+                studio_id__in=studio_ids,
+                is_public=True,
+                moderation_status='approved',
+            )
+            .annotate(_has_public_content=Exists(public_content))
+            .filter(_has_public_content=True)
+            .values('studio_id')
+            .annotate(
+                stories_count=Count('id', distinct=True),
+                total_episode_views=Sum(
+                    'seasons__episodes__view_count',
+                    filter=Q(seasons__is_public=True, seasons__episodes__is_published=True),
+                    default=0,
+                ),
+            )
+        )
+        story_stats_by_studio = {
+            row['studio_id']: {
+                'stories_count': row['stories_count'] or 0,
+                'total_episode_views': row['total_episode_views'] or 0,
+            }
+            for row in story_stats
+        }
+
+        comment_stats = (
+            Comic.objects.filter(
+                studio_id__in=studio_ids,
+                is_public=True,
+                moderation_status='approved',
+            )
+            .annotate(_has_public_content=Exists(public_content))
+            .filter(_has_public_content=True)
+            .values('studio_id')
+            .annotate(
+                total_comments=Count(
+                    'seasons__episodes__comments',
+                    filter=(
+                        Q(seasons__is_public=True)
+                        & Q(seasons__episodes__is_published=True)
+                        & Q(seasons__episodes__comments__approved_comment=True)
+                    ),
+                    distinct=True,
+                )
+            )
+        )
+        comment_stats_by_studio = {
+            row['studio_id']: row['total_comments'] or 0
+            for row in comment_stats
+        }
     
     studios_data = []
     for studio in studios:
@@ -1428,10 +1474,11 @@ def studio_list_api(request):
                         'is_active': True,
                     })
         
-        # Use annotated counts (no additional query needed)
-        stories_count = getattr(studio, 'annotated_stories_count', 0) or 0
         collaborators_count = getattr(studio, 'annotated_collaborators_count', len(collaborators_data)) or 0
-        total_episode_views = getattr(studio, 'annotated_total_episode_views', 0) or 0
+        studio_stats = story_stats_by_studio.get(studio.id, {})
+        stories_count = studio_stats.get('stories_count', 0)
+        total_episode_views = studio_stats.get('total_episode_views', 0)
+        total_comments = comment_stats_by_studio.get(studio.id, 0)
         
         studios_data.append({
             'id': studio.id,
@@ -1448,6 +1495,7 @@ def studio_list_api(request):
             'stories_count': stories_count,
             'collaborators_count': collaborators_count,
             'total_episode_views': total_episode_views,
+            'total_comments': total_comments,
             'created_at': studio.created_at.isoformat() if studio.created_at else '',
             'updated_at': studio.updated_at.isoformat() if studio.updated_at else '',
             'is_public': studio.is_public,
@@ -1464,10 +1512,8 @@ def my_studio_api(request):
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Authentication required'}, status=401)
     
-    try:
-        studio = Studio.objects.get(owner=request.user)
-    except Studio.DoesNotExist:
-        # Create studio if it doesn't exist
+    studio = Studio.objects.filter(owner=request.user).order_by('created_at', 'id').first()
+    if not studio:
         studio = Studio.objects.create(
             owner=request.user,
             name=f"{request.user.first_name or request.user.username}'s Studio",

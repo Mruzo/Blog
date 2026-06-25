@@ -269,6 +269,7 @@ export interface Story {
   created_at: string;
   updated_at: string;
   user: number;
+  studio?: number | null;
   user_username?: string; // Username of the story owner
   moderation_status: 'pending' | 'approved' | 'rejected';
   total_views?: number; // Total view count across all episodes
@@ -361,6 +362,19 @@ export interface Dialogue {
   updated_at: string;
 }
 
+export interface EpisodeComment {
+  id: number;
+  comment_cont: string;
+  user_name: number | null;
+  username?: string | null;
+  episode: number;
+  episode_number: number;
+  episode_title: string;
+  season: number;
+  comment_date: string;
+  approved_comment: boolean;
+}
+
 export interface AudioTrack {
   id: number;
   name: string;
@@ -401,6 +415,7 @@ export interface Studio {
   stories_count?: number;
   collaborators_count?: number;
   total_episode_views?: number;
+  total_comments?: number;
   created_at: string;
   updated_at: string;
   avatar_url?: string;
@@ -778,6 +793,17 @@ class ApiService {
 
   async deleteDialogue(id: number): Promise<void> {
     await api.delete(`/dialogues/${id}/`);
+  }
+
+  // Episode Comments
+  async getSeasonComments(seasonId: number): Promise<EpisodeComment[]> {
+    const response = await api.get(`/seasons/${seasonId}/comments/`);
+    return response.data.results || response.data;
+  }
+
+  async createEpisodeComment(episodeId: number, comment_cont: string): Promise<EpisodeComment> {
+    const response = await api.post(`/episodes/${episodeId}/comments/`, { comment_cont });
+    return response.data;
   }
 
   // File Upload
