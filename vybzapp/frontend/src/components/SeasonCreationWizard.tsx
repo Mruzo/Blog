@@ -131,7 +131,7 @@ const SeasonCreationWizard: React.FC = () => {
     <div className="container mt-4" style={{ maxWidth: '800px' }}>
       <PageHeader
         title="Create New Season"
-        description="Add a new season to your story with 3D models"
+        description="Add a new season to your story"
         actions={
           <BackButton to={`/immersivecomics/story/${storyId}/manage/`} />
         }

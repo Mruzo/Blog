@@ -73,13 +73,14 @@ const SeasonSetupStep: React.FC<SeasonSetupStepProps> = ({
 
   return (
     <div>
-      <div className="row">
-        <div className="col-12">
-          <h4 className="subtext-btn mb-2">Season Setup</h4>
-          {/* <p className="subtext-btn-sm text-muted mb-4">
-            Create the first season for your story. You can add more seasons later.
-          </p> */}
-        </div>
+      <div className="mb-3 rounded border bg-light p-3">
+        <h5 className="subtext-btn-sm mb-2">
+          <i className="fas fa-cube me-2" aria-hidden />
+          3D Scene
+        </h5>
+        <p className="subtext-btn-sm mb-0 text-muted">
+          This season uses the shared JustVybz 3D model. Focus on your story, cast, script, and camera framing.
+        </p>
       </div>
 
       <div className="row">

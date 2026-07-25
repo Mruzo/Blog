@@ -291,6 +291,12 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
+# In-scene ads: only on platform standard GLB scenes (see icvybz.ad_services.season_supports_platform_ads)
+AD_ENABLED_MODEL_BASENAMES = [
+    'cof_animation_clean.v3.2',
+]
+AD_PLACEMENT_CACHE_SECONDS = 120
+
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),

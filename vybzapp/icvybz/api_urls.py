@@ -69,9 +69,21 @@ urlpatterns = [
     # Audio Track URLs
     path('audio/', api_views.AudioTrackListCreateView.as_view(), name='audio-list-create'),
     path('audio/<int:pk>/', api_views.AudioTrackDetailView.as_view(), name='audio-detail'),
+
+    # 3D Ad Machine URLs
+    path('advertiser-profile/', api_views.advertiser_profile_api, name='advertiser-profile'),
+    path('ad-campaigns/', api_views.AdCampaignListCreateView.as_view(), name='ad-campaign-list-create'),
+    path('ad-creatives/', api_views.AdCreativeListCreateView.as_view(), name='ad-creative-list-create'),
+    path('seasons/<int:season_id>/ad-placements/', api_views.SeasonAdPlacementListCreateView.as_view(), name='season-ad-placement-list-create'),
+    path('ad-placements/<int:pk>/', api_views.AdPlacementDetailView.as_view(), name='ad-placement-detail'),
+    path('ad-events/', api_views.ad_event_api, name='ad-event-create'),
+    path('ad-reports/', api_views.ad_report_api, name='ad-report'),
+    path('ad-reports/invoice/', api_views.ad_invoice_api, name='ad-invoice'),
+    path('ad-staff/snapshot/', api_views.ad_staff_snapshot_api, name='ad-staff-snapshot'),
     
     # Complete Story Creation
     path('create-complete-story/', api_views.create_complete_story, name='create-complete-story'),
+    path('models/default/', api_views.default_model_api, name='default-model'),
     
     # Collaboration URLs
     path('users/search/', collaboration_views.search_users, name='user-search'),

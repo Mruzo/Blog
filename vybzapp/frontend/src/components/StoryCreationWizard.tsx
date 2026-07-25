@@ -14,7 +14,6 @@ import SeasonSetupStep from './story-creation/SeasonSetupStep';
 import CharactersStep from './story-creation/CharactersStep';
 import EpisodeSetupStep from './story-creation/EpisodeSetupStep';
 import DialoguesStep from './story-creation/DialoguesStep';
-import ModelUploadStep from './story-creation/ModelUploadStep';
 import PreviewStep from './story-creation/PreviewStep';
 import PublishStep from './story-creation/PublishStep';
 
@@ -43,6 +42,7 @@ export interface StoryCreationData {
     bio: string;
     personality: string;
     love_interest: string;
+    scene_slot?: string | null;
     pov_head_x?: number;
     pov_head_y?: number;
     pov_head_z?: number;
@@ -74,12 +74,13 @@ export interface StoryCreationData {
     rotation: string;
   }>;
   
-  // 3D Model data
+  // Shared platform 3D model (preview URL only; no user upload)
   model: {
     file: File | null;
     file_url: string;
     format: 'gltf' | 'glb' | 'usdz';
     previewUrl: string | null;
+    usesSharedModel: boolean;
   };
   
   // Camera settings
@@ -112,7 +113,7 @@ const steps = [
     id: 'season',
     title: 'Season',
     shortTitle: 'Season',
-    description: 'Group your episodes into a season with a title and release date.',
+    description: 'Group your episodes into a season. Episodes use the shared JustVybz 3D scene.',
     component: SeasonSetupStep,
   },
   {
@@ -126,39 +127,34 @@ const steps = [
     id: 'dialogues',
     title: 'Dialogues',
     shortTitle: 'Script',
-    description: 'Write script lines in standard screenplay format for the comic viewer.',
+    description: 'Write script lines and camera framing for the shared 3D scene.',
     component: DialoguesStep,
-  },
-  {
-    id: 'model',
-    title: 'Scene',
-    shortTitle: 'Scene',
-    description: 'Upload a 3D environment model for your story world.',
-    component: ModelUploadStep,
   },
   {
     id: 'preview',
     title: 'Preview & edit',
     shortTitle: 'Preview',
-    description: 'Review how your story looks in the 3D comic viewer.',
+    description: 'Review how your story looks in the shared 3D comic viewer.',
     component: PreviewStep,
   },
   {
     id: 'publish',
     title: 'Publish',
     shortTitle: 'Publish',
-    description: 'Choose when to share your story with readers.',
+    description: 'Review your story, then publish it for readers or save it as a private draft.',
     component: PublishStep,
   },
 ];
 
-const STEPS_WITH_FOOTER_NEXT = new Set(['story', 'characters', 'episode', 'dialogues']);
+const STEPS_WITH_FOOTER_NEXT = new Set(['story', 'characters', 'episode', 'dialogues', 'preview']);
+
+// Note: preview is included so Next can flush per-dialogue camera settings to the API.
 
 const StoryCreationWizard: React.FC = () => {
   const navigate = useNavigate();
   const { storyId } = useParams<{ storyId?: string }>();
   const { loadStories, currentUser } = useApi();
-  const { createStory, createSeason, createCharacter, createEpisode, createDialogue, isLoading, error } = useApi();
+  const { createStory, createSeason, createCharacter, createEpisode, createDialogue, updateDialogue, updateStory, isLoading, error } = useApi();
   const feedbackContext = useContext(FeedbackContext);
   const [currentStep, setCurrentStep] = useState(0);
   const [message, setMessage] = useState<string>('');
@@ -195,6 +191,7 @@ const StoryCreationWizard: React.FC = () => {
       file_url: '',
       format: 'glb',
       previewUrl: null,
+      usesSharedModel: true,
     },
     cameraPosition: '0deg 75deg 3m',
     cameraTarget: '0m 1.6m 0m',
@@ -290,26 +287,65 @@ const StoryCreationWizard: React.FC = () => {
     setData(prev => ({ ...prev, ...stepData }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (options?: { asDraft?: boolean }) => {
+    const asDraft = options?.asDraft !== false;
     try {
       setIsSaving(true);
       
       // Validate that we have at least a story title
       if (!data.story.title.trim()) {
-        setMessage('Please enter a story title before saving as draft.');
+        setMessage('Please enter a story title before saving.');
         setMessageType('warning');
         setShowMessage(true);
         setIsSaving(false);
         return;
       }
+
+      // If dialogues already exist from progressive save, push local camera framing first
+      for (const dialogue of data.dialogues) {
+        if (typeof dialogue.id !== 'number') {
+          continue;
+        }
+        try {
+          await updateDialogue(dialogue.id, {
+            camera_orbit: dialogue.camera_orbit,
+            camera_target: dialogue.camera_target,
+            field_of_view: dialogue.field_of_view,
+            zoom_speed: dialogue.zoom_speed,
+          });
+        } catch (error) {
+          console.error('Failed to persist dialogue camera on draft save:', dialogue.id, error);
+        }
+      }
       
-      // Create story as draft (not published)
       const storyData = {
         ...data.story,
         title: data.story.title.trim(), // Ensure no leading/trailing spaces
         description: data.story.description.trim() || 'No description provided',
-        is_public: false // Always save as draft
+        // Draft = private; Publish = public. Visibility can be changed later in story edit.
+        is_public: !asDraft,
       };
+
+      if (typeof data.story.id === 'number') {
+        await updateStory(data.story.id, {
+          title: storyData.title,
+          description: storyData.description,
+          is_public: storyData.is_public,
+        });
+        setData(prev => ({
+          ...prev,
+          story: { ...prev.story, is_public: storyData.is_public },
+        }));
+        setMessage(
+          asDraft
+            ? 'Draft saved successfully! You can continue editing later.'
+            : 'Story published successfully! It is now visible to others.'
+        );
+        setMessageType('success');
+        setShowMessage(true);
+        await loadStories();
+        return;
+      }
       
       // Ensure season has a valid release_date and title
       const seasonData = {
@@ -330,17 +366,20 @@ const StoryCreationWizard: React.FC = () => {
         characters: data.characters,
         episode: episodeData,
         dialogues: data.dialogues,
-        model: data.model.file || undefined
       });
 
-      setMessage('Draft saved successfully! You can continue editing later.');
+      setMessage(
+        asDraft
+          ? 'Draft saved successfully! You can continue editing later.'
+          : 'Story published successfully! It is now visible to others.'
+      );
       setMessageType('success');
       setShowMessage(true);
       
       // Update the data with the saved IDs
       setData(prev => ({ 
         ...prev,
-        story: { ...prev.story, id: result.story.id },
+        story: { ...prev.story, id: result.story.id, is_public: storyData.is_public },
         season: { ...prev.season, id: result.season.id },
         episode: { ...prev.episode, id: result.episode.id }
       }));
@@ -351,14 +390,14 @@ const StoryCreationWizard: React.FC = () => {
       // Don't navigate - stay on the same page
       // The user can continue editing or navigate manually
     } catch (error: any) {
-      console.error('Save draft error:', error);
+      console.error('Save error:', error);
       console.error('Error details:', {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
         statusText: error.response?.statusText
       });
-      setMessage(error.message || 'Failed to save draft. Please try again.');
+      setMessage(error.message || 'Failed to save. Please try again.');
       setMessageType('danger');
       setShowMessage(true);
     } finally {
@@ -398,6 +437,9 @@ const StoryCreationWizard: React.FC = () => {
     onPrevious: handlePrevious,
     isFirstStep: currentStep === 0,
     isLastStep: currentStep === steps.length - 1,
+    onSaveDraft: () => handleSave({ asDraft: true }),
+    onPublish: () => handleSave({ asDraft: false }),
+    isSaving,
   };
 
   return (
@@ -422,7 +464,7 @@ const StoryCreationWizard: React.FC = () => {
             </div>
             <div className="story-wizard__heroActions">
               <BackButton to="/immersivecomics/my-studio/" />
-              <SmallButton variant="outline-primary" onClick={() => handleSave()} disabled={isSaving}>
+              <SmallButton variant="outline-primary" onClick={() => handleSave({ asDraft: true })} disabled={isSaving}>
                 <i className="fas fa-save me-1" aria-hidden />
                 {isSaving ? 'Saving…' : 'Save draft'}
               </SmallButton>
@@ -504,12 +546,26 @@ const StoryCreationWizard: React.FC = () => {
                 Previous
               </SmallButton>
 
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 flex-wrap justify-content-end">
                 {currentStep === steps.length - 1 ? (
-                  <SmallButton variant="success" onClick={handleSave} disabled={isLoading}>
-                    <i className="fas fa-rocket me-1" aria-hidden />
-                    Publish story
-                  </SmallButton>
+                  <>
+                    <SmallButton
+                      variant="outline-primary"
+                      onClick={() => handleSave({ asDraft: true })}
+                      disabled={isLoading || isSaving}
+                    >
+                      <i className="fas fa-save me-1" aria-hidden />
+                      {isSaving ? 'Saving…' : 'Save draft'}
+                    </SmallButton>
+                    <SmallButton
+                      variant="success"
+                      onClick={() => handleSave({ asDraft: false })}
+                      disabled={isLoading || isSaving}
+                    >
+                      <i className="fas fa-rocket me-1" aria-hidden />
+                      {isSaving ? 'Publishing…' : 'Publish story'}
+                    </SmallButton>
+                  </>
                 ) : (
                   <SmallButton variant="primary" onClick={() => void handleFooterNext()}>
                     Next

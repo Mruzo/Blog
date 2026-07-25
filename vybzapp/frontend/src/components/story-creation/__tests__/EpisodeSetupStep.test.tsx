@@ -91,6 +91,7 @@ const mockStoryData = {
     file_url: '',
     format: 'glb' as const,
     previewUrl: null,
+    usesSharedModel: true,
   },
   cameraPosition: '0deg 75deg 3m',
   cameraTarget: '0m 1.6m 0m',

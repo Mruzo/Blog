@@ -77,7 +77,7 @@ describe('SeasonCreationWizard', () => {
     renderWithProviders(<SeasonCreationWizard />);
     
     expect(screen.getByText('Create New Season')).toBeInTheDocument();
-    expect(screen.getByText('Add a new season to your story with 3D models')).toBeInTheDocument();
+    expect(screen.getByText('Add a new season to your story')).toBeInTheDocument();
     expect(screen.getByLabelText(/Season Title/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Season Number/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Release Date/)).toBeInTheDocument();

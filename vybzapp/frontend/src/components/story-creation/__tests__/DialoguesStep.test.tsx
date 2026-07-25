@@ -122,6 +122,7 @@ const mockStoryData = {
     file_url: '',
     format: 'glb' as const,
     previewUrl: null,
+    usesSharedModel: true,
   },
   cameraPosition: '0deg 75deg 3m',
   cameraTarget: '0m 1.6m 0m',
@@ -430,6 +431,59 @@ describe('DialoguesStep Progressive Saving', () => {
       }));
     });
     expect(mockOnNext).toHaveBeenCalled();
+  });
+
+  test('persists edited camera fields from the script step inputs', async () => {
+    const { getFooterNext } = renderDialoguesStep();
+
+    selectCharacter('1');
+    fillDialogueText('Framed line');
+    setOrder('1');
+
+    const cameraDetails = screen.getByText(/camera settings \(optional\)/i).closest('details');
+    expect(cameraDetails).not.toBeNull();
+    if (cameraDetails) {
+      cameraDetails.open = true;
+    }
+
+    fireEvent.change(screen.getByLabelText(/^orbit$/i), {
+      target: { value: '30deg 65deg 2m' },
+    });
+    fireEvent.change(screen.getByLabelText(/^target$/i), {
+      target: { value: '1m 1.7m 0m' },
+    });
+    fireEvent.change(screen.getByLabelText(/field of view/i), {
+      target: { value: '52' },
+    });
+    fireEvent.change(screen.getByLabelText(/zoom speed/i), {
+      target: { value: '1.4' },
+    });
+    fireEvent.change(screen.getByLabelText(/^rotation$/i), {
+      target: { value: '5deg 0deg 0deg' },
+    });
+
+    fireEvent.click(screen.getByText(/add line/i));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /script \(1\)/i })).toBeInTheDocument();
+    });
+
+    await getFooterNext()?.();
+
+    await waitFor(() => {
+      expect(mockApiContext.createDialogue).toHaveBeenCalledWith(1, {
+        character: 1,
+        text: 'Framed line',
+        order: 1,
+        scene_title: '',
+        scene_description: '',
+        camera_orbit: '30deg 65deg 2m',
+        camera_target: '1m 1.7m 0m',
+        field_of_view: 52,
+        zoom_speed: 1.4,
+        rotation: '5deg 0deg 0deg',
+      });
+    });
   });
 });
 

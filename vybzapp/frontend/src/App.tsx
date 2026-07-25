@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Stories from './pages/Stories';
@@ -25,6 +25,7 @@ import EpisodeManage from './pages/EpisodeManage';
 import SeasonCreate from './pages/SeasonCreate';
 import SeasonEdit from './pages/SeasonEdit';
 import StoryImport from './pages/StoryImport';
+import AdvertiserDashboard from './pages/AdvertiserDashboard';
 import StoryCollaborators from './components/StoryCollaborators';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
@@ -47,6 +48,25 @@ import InteractiveGuide from './components/InteractiveGuide';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
+const StaffOnlyAdsRoute: React.FC = () => {
+  const { currentUser } = useApi();
+  const token = localStorage.getItem('authToken');
+
+  if (token && !currentUser) {
+    return null;
+  }
+
+  if (!token && !currentUser) {
+    return <Navigate to="/login/?next=/immersivecomics/ads/" replace />;
+  }
+
+  if (currentUser?.is_staff || currentUser?.is_superuser) {
+    return <AdvertiserDashboard />;
+  }
+
+  return <NotFound />;
+};
+
 // Inner component that has access to ApiContext
 function AppContent() {
   const { currentUser } = useApi();
@@ -56,7 +76,9 @@ function AppContent() {
       <GuideProvider>
         <Layout user={currentUser ? {
           first_name: currentUser.first_name,
-          username: currentUser.username
+          username: currentUser.username,
+          is_staff: currentUser.is_staff,
+          is_superuser: currentUser.is_superuser
         } : null}>
           <Routes>
           {/* Homepage */}
@@ -105,6 +127,7 @@ function AppContent() {
           <Route path="/immersivecomics/story/:storyId/season/create/" element={<SeasonCreate />} />
           <Route path="/immersivecomics/season/:seasonId/edit/" element={<SeasonEdit />} />
           <Route path="/immersivecomics/season/:seasonId/episodes/" element={<EpisodeManage />} />
+          <Route path="/immersivecomics/ads/*" element={<StaffOnlyAdsRoute />} />
           
           {/* Studio URLs */}
           <Route path="/immersivecomics/studios/" element={<Studios />} />

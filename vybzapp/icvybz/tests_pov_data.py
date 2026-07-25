@@ -55,42 +55,32 @@ class POVDataTestCase(APITestCase):
         }
 
     def test_create_character_with_pov_data(self):
-        """Test creating a character with POV head position data (POV is created on update, not creation)"""
+        """Test creating a character with scene_slot applies preset POV on create."""
+        from .scene_slots import SCENE_SLOT_WEST, SCENE_SLOT_PRESETS
+
         url = reverse('icvybz-api:character-list-create', kwargs={'story_id': self.story.id})
-        response = self.client.post(url, self.character_data_with_pov, format='json')
-        
+        payload = {
+            **self.character_data,
+            'scene_slot': SCENE_SLOT_WEST,
+        }
+        response = self.client.post(url, payload, format='json')
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         character_id = response.data['id']
-        
-        # Verify character was created
+
         character = Character.objects.get(id=character_id)
         self.assertEqual(character.name, 'Test Character')
-        
-        # Note: POV is not automatically created on character creation
-        # It's only created when updating a character with POV data
-        # So we verify POV data is NOT in the response initially
-        self.assertIn('pov_data', response.data)
-        self.assertIsNone(response.data['pov_data'], "POV should not be created on character creation")
-        
-        # Now update the character to create POV
-        update_url = reverse('icvybz-api:character-detail', kwargs={'pk': character_id})
-        update_response = self.client.put(update_url, self.character_data_with_pov, format='json')
-        
-        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
-        
-        # Verify POV was created with correct head positions after update
+        self.assertEqual(character.scene_slot, SCENE_SLOT_WEST)
+
         pov = POV.objects.get(character=character)
-        self.assertEqual(pov.head_x, 2.5)
-        self.assertEqual(pov.head_y, 1.8)
-        self.assertEqual(pov.head_z, -1.2)
-        self.assertEqual(pov.default_camera_target, '2.5m 1.8m -1.2m')
-        
-        # Verify POV data is returned in update response
-        self.assertIn('pov_data', update_response.data)
-        self.assertIsNotNone(update_response.data['pov_data'])
-        self.assertEqual(update_response.data['pov_data']['head_x'], 2.5)
-        self.assertEqual(update_response.data['pov_data']['head_y'], 1.8)
-        self.assertEqual(update_response.data['pov_data']['head_z'], -1.2)
+        preset = SCENE_SLOT_PRESETS[SCENE_SLOT_WEST]
+        self.assertEqual(pov.head_x, preset['head_x'])
+        self.assertEqual(pov.head_y, preset['head_y'])
+        self.assertEqual(pov.head_z, preset['head_z'])
+
+        self.assertIn('pov_data', response.data)
+        self.assertIsNotNone(response.data['pov_data'])
+        self.assertEqual(response.data['pov_data']['head_x'], preset['head_x'])
 
     def test_create_character_without_pov_data_uses_defaults(self):
         """Test creating a character without POV data uses default values"""

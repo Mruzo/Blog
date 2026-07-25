@@ -155,7 +155,7 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
         template_name: Template name (for reference, not used with reportlab)
         context: Context dict with order/invoice/credit_note data
         filename: Output filename (without extension)
-        pdf_type: 'invoice' or 'credit_note'
+        pdf_type: 'invoice', 'ad_invoice', or 'credit_note'
 
     Returns:
         str: Path to generated PDF file
@@ -163,7 +163,7 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
     if not REPORTLAB_AVAILABLE:
         raise ImportError("reportlab is required for PDF generation. Install with: pip install reportlab")
 
-    if pdf_type == 'invoice':
+    if pdf_type in ('invoice', 'ad_invoice'):
         pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
     else:
         pdf_dir = os.path.join(settings.MEDIA_ROOT, 'credit-notes')
@@ -302,16 +302,20 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
         except Exception as e:
             logger.warning('Invoice header SVG not drawn: %s', e)
 
-    if pdf_type == 'invoice':
+    if pdf_type in ('invoice', 'ad_invoice'):
         title = "INVOICE"
-        invoice = context.get('invoice')
-        order = context.get('order')
-        if invoice and hasattr(invoice, 'invoice_number'):
-            doc_number = invoice.invoice_number
-        elif order and hasattr(order, 'id'):
-            doc_number = str(order.id)
+        if pdf_type == 'ad_invoice':
+            ad_invoice = context.get('ad_invoice') or {}
+            doc_number = ad_invoice.get('invoice_number', '')
         else:
-            doc_number = ''
+            invoice = context.get('invoice')
+            order = context.get('order')
+            if invoice and hasattr(invoice, 'invoice_number'):
+                doc_number = invoice.invoice_number
+            elif order and hasattr(order, 'id'):
+                doc_number = str(order.id)
+            else:
+                doc_number = ''
     else:
         title = "CREDIT NOTE"
         credit_note = context.get('credit_note')
@@ -331,7 +335,17 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
         [_p('<b>Date:</b>', table_label_style), _p(_esc(datetime.now().strftime('%B %d, %Y')), table_value_style)],
     ]
 
-    if pdf_type == 'invoice':
+    if pdf_type == 'ad_invoice':
+        ad_invoice = context.get('ad_invoice') or {}
+        campaign = context.get('campaign')
+        doc_info_data.append(
+            [_p('<b>Billing Period:</b>', table_label_style), _p(_esc(ad_invoice.get('period_label', '')), table_value_style)]
+        )
+        if campaign is not None:
+            doc_info_data.append(
+                [_p('<b>Campaign:</b>', table_label_style), _p(_esc(getattr(campaign, 'name', '')), table_value_style)]
+            )
+    elif pdf_type == 'invoice':
         order = context.get('order')
         if order:
             od = order.order_date.strftime('%B %d, %Y') if hasattr(order.order_date, 'strftime') else str(order.order_date)
@@ -366,7 +380,15 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
     elements.append(doc_info_table)
     elements.append(Spacer(1, 0.3 * inch))
 
-    if pdf_type == 'invoice':
+    if pdf_type == 'ad_invoice':
+        advertiser = context.get('advertiser')
+        if advertiser is not None:
+            customer_name = getattr(advertiser, 'business_name', '') or 'Advertiser'
+            customer_email = getattr(advertiser, 'contact_email', '') or ''
+        else:
+            customer_name = "Advertiser"
+            customer_email = ""
+    elif pdf_type == 'invoice':
         order = context.get('order')
         if order and hasattr(order, 'customer'):
             customer = order.customer
@@ -547,6 +569,38 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
                 _p(f'<b>${grand_total:.2f}</b>', items_cell_bold_right),
             ]
         )
+    elif pdf_type == 'ad_invoice':
+        line_items = context.get('line_items') or []
+        items_data = [
+            [
+                _p('Description', items_hdr_left),
+                _p('Qty', items_hdr_center),
+                _p('Unit Price', items_hdr_right),
+                _p('Amount', items_hdr_right),
+            ]
+        ]
+        grand_total = 0.0
+        for item in line_items:
+            quantity = int(item.get('quantity', 1) or 1)
+            unit_price = float(item.get('unit_price', 0) or 0)
+            amount = float(item.get('amount', quantity * unit_price) or 0)
+            grand_total += amount
+            items_data.append(
+                [
+                    _p(_esc(item.get('description', 'Advertising services')), items_cell_left),
+                    _p(_esc(str(quantity)), items_cell_center),
+                    _p(_esc(f'${unit_price:.2f}'), items_cell_right),
+                    _p(_esc(f'${amount:.2f}'), items_cell_right),
+                ]
+            )
+        items_data.append(
+            [
+                _p('', items_cell_left),
+                _p('', items_cell_center),
+                _p('<b>Total:</b>', items_cell_bold_right),
+                _p(f'<b>${grand_total:.2f}</b>', items_cell_bold_right),
+            ]
+        )
     else:
         return_request = context.get('return_request')
         credit_note = context.get('credit_note')
@@ -607,9 +661,12 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
             ]
         )
 
-    col_w = [2.35 * inch, 0.48 * inch, 0.78 * inch, 0.68 * inch, 0.82 * inch, 0.89 * inch]
-    scale = content_width / sum(col_w)
-    col_w = [c * scale for c in col_w]
+    if pdf_type == 'ad_invoice':
+        col_w = [3.35 * inch, 0.55 * inch, 1.05 * inch, content_width - 3.35 * inch - 0.55 * inch - 1.05 * inch]
+    else:
+        col_w = [2.35 * inch, 0.48 * inch, 0.78 * inch, 0.68 * inch, 0.82 * inch, 0.89 * inch]
+        scale = content_width / sum(col_w)
+        col_w = [c * scale for c in col_w]
 
     items_table = Table(items_data, colWidths=col_w, repeatRows=1)
     items_table.setStyle(
@@ -639,11 +696,15 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
             "This credit note represents a refund for returned items. "
             "The refund will be processed to your original payment method."
         )
+    elif pdf_type == 'ad_invoice':
+        ad_invoice = context.get('ad_invoice') or {}
+        notes = ad_invoice.get('notes') or "Thank you for advertising with us."
     else:
         notes = "Thank you for your order!"
 
     elements.append(_p('<b>Notes:</b>', normal_style))
-    elements.append(_p(_esc(notes), normal_style))
+    notes_html = _esc(notes).replace('\n', '<br/>')
+    elements.append(_p(notes_html, normal_style))
 
     doc.build(elements)
 

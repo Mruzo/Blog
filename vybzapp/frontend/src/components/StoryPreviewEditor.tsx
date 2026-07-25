@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { StoryCreationData } from './StoryCreationWizard';
-import SmallButton from './SmallButton';
+import { coordsForSceneSlot } from '../utils/sceneSlots';
 import './Comic3DViewer.css';
 
 interface StoryPreviewEditorProps {
@@ -12,18 +12,15 @@ interface StoryPreviewEditorProps {
 }
 
 interface Dialogue {
-  id: number;
+  id?: number;
   character: number; // Character ID (who is speaking)
   text: string;
   order: number;
   camera_orbit: string;
   camera_target: string;
-  field_of_view: string;
-  zoom_speed: string;
+  field_of_view: number;
+  zoom_speed: number;
   rotation: string;
-  head_x: number;
-  head_y: number;
-  head_z: number;
 }
 
 interface CameraData {
@@ -41,6 +38,102 @@ interface CameraData {
   zoomSpeed: number;
 }
 
+const DEFAULT_ORBIT = '0deg 75deg 3m';
+const DEFAULT_TARGET = '0m 1.6m 0m';
+
+const parseCameraData = (
+  orbitStr: string,
+  targetStr: string,
+  fieldOfView = 45,
+  zoomSpeed = 1
+): CameraData => {
+  const orbitMatch = orbitStr.match(/([-\d.]+)deg\s+([-\d.]+)deg\s+([-\d.]+)m/);
+  const targetMatch = targetStr.match(/([-\d.]+)m\s+([-\d.]+)m\s+([-\d.]+)m/);
+
+  return {
+    orbit: {
+      azimuth: orbitMatch ? parseFloat(orbitMatch[1]) : 0,
+      polar: orbitMatch ? parseFloat(orbitMatch[2]) : 75,
+      radius: orbitMatch ? parseFloat(orbitMatch[3]) : 3,
+    },
+    target: {
+      x: targetMatch ? parseFloat(targetMatch[1]) : 0,
+      y: targetMatch ? parseFloat(targetMatch[2]) : 1.6,
+      z: targetMatch ? parseFloat(targetMatch[3]) : 0,
+    },
+    fieldOfView,
+    zoomSpeed,
+  };
+};
+
+const cameraDataToDialogueFields = (camera: CameraData) => ({
+  camera_orbit: `${camera.orbit.azimuth}deg ${camera.orbit.polar}deg ${camera.orbit.radius}m`,
+  camera_target: `${camera.target.x}m ${camera.target.y}m ${camera.target.z}m`,
+  field_of_view: camera.fieldOfView,
+  zoom_speed: camera.zoomSpeed,
+});
+
+const cloneCameraData = (camera: CameraData): CameraData => ({
+  orbit: { ...camera.orbit },
+  target: { ...camera.target },
+  fieldOfView: camera.fieldOfView,
+  zoomSpeed: camera.zoomSpeed,
+});
+
+type StoryCharacter = StoryCreationData['characters'][number];
+
+type Vec3 = { x: number; y: number; z: number };
+
+type CharacterHotspot = {
+  key: string | number;
+  slot: string;
+  name: string;
+  head: Vec3;
+  position: string;
+};
+
+const getCharacterHeadPosition = (character: StoryCharacter): Vec3 | null => {
+  const preset = coordsForSceneSlot(character.scene_slot);
+  if (preset) {
+    return {
+      x: preset.head_x,
+      y: preset.head_y,
+      z: preset.head_z,
+    };
+  }
+
+  if (
+    Number.isFinite(character.pov_head_x) &&
+    Number.isFinite(character.pov_head_y) &&
+    Number.isFinite(character.pov_head_z)
+  ) {
+    return {
+      x: character.pov_head_x as number,
+      y: character.pov_head_y as number,
+      z: character.pov_head_z as number,
+    };
+  }
+
+  return null;
+};
+
+/** model-viewer spherical orbit → world-space camera position */
+const cameraWorldFromOrbit = (
+  orbit: { theta: number; phi: number; radius: number },
+  target: Vec3
+): Vec3 => ({
+  x: target.x + orbit.radius * Math.sin(orbit.phi) * Math.sin(orbit.theta),
+  y: target.y + orbit.radius * Math.cos(orbit.phi),
+  z: target.z + orbit.radius * Math.sin(orbit.phi) * Math.cos(orbit.theta),
+});
+
+const distanceSquared = (a: Vec3, b: Vec3) => {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const dz = a.z - b.z;
+  return dx * dx + dy * dy + dz * dz;
+};
+
 const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   data,
   onDataUpdate,
@@ -54,6 +147,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   const [showEditingOverlay, setShowEditingOverlay] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   const [cameraData, setCameraData] = useState<CameraData>({
     orbit: { azimuth: 0, polar: 75, radius: 3 },
@@ -66,54 +160,148 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const modelViewerRef = useRef<any>(null);
 
-  // Convert dialogues from story data
-  const dialogues: Dialogue[] = data.dialogues.map((dialogue, index) => ({
-    id: index + 1,
-    character: dialogue.character || 0,
-    text: dialogue.text,
-    order: dialogue.order,
-    camera_orbit: data.cameraPosition || '0deg 75deg 3m',
-    camera_target: data.cameraTarget || '0m 1.6m 0m',
-    field_of_view: '45deg',
-    zoom_speed: '1.0',
-    rotation: '0deg',
-    head_x: 0,
-    head_y: 0,
-    head_z: 0
-  }));
+  // Per-dialogue cameras from wizard state (not a single global camera)
+  const dialogues: Dialogue[] = useMemo(
+    () =>
+      [...data.dialogues]
+        .sort((a, b) => a.order - b.order)
+        .map((dialogue) => ({
+          id: typeof dialogue.id === 'number' ? dialogue.id : undefined,
+          character: dialogue.character || 0,
+          text: dialogue.text,
+          order: dialogue.order,
+          camera_orbit: dialogue.camera_orbit || DEFAULT_ORBIT,
+          camera_target: dialogue.camera_target || DEFAULT_TARGET,
+          field_of_view:
+            typeof dialogue.field_of_view === 'number' ? dialogue.field_of_view : 45,
+          zoom_speed: typeof dialogue.zoom_speed === 'number' ? dialogue.zoom_speed : 1,
+          rotation: dialogue.rotation || '0deg 0deg 0deg',
+        })),
+    [data.dialogues]
+  );
 
   const currentDialogue = dialogues[currentDialogueIndex];
   const totalDialogues = dialogues.length;
+  const characterHotspots = useMemo<CharacterHotspot[]>(
+    () =>
+      data.characters.flatMap((character, index) => {
+        const head = getCharacterHeadPosition(character);
+        if (!head) {
+          return [];
+        }
 
-  // Parse camera data from string format
-  const parseCameraData = (orbitStr: string, targetStr: string): CameraData => {
-    const orbitMatch = orbitStr.match(/([-\d.]+)deg\s+([-\d.]+)deg\s+([-\d.]+)m/);
-    const targetMatch = targetStr.match(/([-\d.]+)m\s+([-\d.]+)m\s+([-\d.]+)m/);
-    
-    return {
-      orbit: {
-        azimuth: orbitMatch ? parseFloat(orbitMatch[1]) : 0,
-        polar: orbitMatch ? parseFloat(orbitMatch[2]) : 75,
-        radius: orbitMatch ? parseFloat(orbitMatch[3]) : 3
-      },
-      target: {
-        x: targetMatch ? parseFloat(targetMatch[1]) : 0,
-        y: targetMatch ? parseFloat(targetMatch[2]) : 1.6,
-        z: targetMatch ? parseFloat(targetMatch[3]) : 0
-      },
-      fieldOfView: 45,
-      zoomSpeed: 1.0
-    };
-  };
+        return [{
+          key: character.id ?? `${character.name}-${index}`,
+          slot: `hotspot-preview-character-${character.id ?? index}`,
+          name: character.name,
+          head,
+          position: `${head.x}m ${head.y}m ${head.z}m`,
+        }];
+      }),
+    [data.characters]
+  );
 
-  // Initialize camera data from current dialogue
-  useEffect(() => {
-    if (currentDialogue) {
-      const parsedCamera = parseCameraData(currentDialogue.camera_orbit, currentDialogue.camera_target);
-      setCameraData(parsedCamera);
-      setCurrentValues(parsedCamera);
+  const syncCharacterHotspots = useCallback(() => {
+    const modelViewer = modelViewerRef.current;
+    if (!modelViewer) {
+      return;
     }
-  }, [currentDialogueIndex, dialogues, currentDialogue]);
+
+    modelViewer.querySelectorAll('.character-hotspot').forEach((node: Element) => {
+      node.remove();
+    });
+
+    characterHotspots.forEach((hotspot) => {
+      const el = document.createElement('div');
+      el.setAttribute('slot', hotspot.slot);
+      el.className = 'hotspot character-hotspot story-preview-editor__characterHotspot';
+      el.setAttribute('data-position', hotspot.position);
+      // Same default as Comic3DViewer — facing/back-face visibility
+      el.setAttribute('data-normal', '0m 1m 0m');
+      el.setAttribute('data-visibility-attribute', 'visible');
+      el.setAttribute('data-character', hotspot.name);
+      el.setAttribute('aria-label', hotspot.name);
+
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.textContent = hotspot.name;
+      el.appendChild(dot);
+      modelViewer.appendChild(el);
+    });
+  }, [characterHotspots]);
+
+  const updateHotspotOcclusion = useCallback(() => {
+    const modelViewer = modelViewerRef.current;
+    if (!modelViewer?.queryHotspot || !modelViewer.positionAndNormalFromPoint) {
+      return;
+    }
+
+    const orbit = modelViewer.getCameraOrbit?.();
+    const target = modelViewer.getCameraTarget?.();
+    if (!orbit || !target) {
+      return;
+    }
+
+    const camera = cameraWorldFromOrbit(orbit, target);
+    // Ignore tiny self-hits on the character mesh near the label
+    const epsilonMeters = 0.35;
+    const epsilonSq = epsilonMeters * epsilonMeters;
+
+    characterHotspots.forEach((hotspot) => {
+      const el = modelViewer.querySelector(
+        `.character-hotspot[slot="${hotspot.slot}"]`
+      ) as HTMLElement | null;
+      if (!el) {
+        return;
+      }
+
+      const hotspotData = modelViewer.queryHotspot(hotspot.slot);
+      if (!hotspotData?.canvasPosition || hotspotData.facingCamera === false) {
+        el.classList.add('is-occluded');
+        return;
+      }
+
+      const { x, y } = hotspotData.canvasPosition;
+      const hit = modelViewer.positionAndNormalFromPoint(x, y);
+      if (!hit?.position) {
+        el.classList.remove('is-occluded');
+        return;
+      }
+
+      const hitPos = hit.position as Vec3;
+      const distHitSq = distanceSquared(camera, hitPos);
+      const distLabelSq = distanceSquared(camera, hotspot.head);
+      const occluded = distHitSq + epsilonSq < distLabelSq;
+      el.classList.toggle('is-occluded', occluded);
+    });
+  }, [characterHotspots]);
+
+  const applyCameraToViewer = useCallback((camera: CameraData) => {
+    const modelViewer = modelViewerRef.current;
+    if (!modelViewer) {
+      return;
+    }
+    const fields = cameraDataToDialogueFields(camera);
+    modelViewer.cameraOrbit = fields.camera_orbit;
+    modelViewer.cameraTarget = fields.camera_target;
+    modelViewer.fieldOfView = `${fields.field_of_view}deg`;
+  }, []);
+
+  // Load this dialogue's saved camera when navigating lines
+  useEffect(() => {
+    if (!currentDialogue) {
+      return;
+    }
+    const parsedCamera = parseCameraData(
+      currentDialogue.camera_orbit,
+      currentDialogue.camera_target,
+      currentDialogue.field_of_view,
+      currentDialogue.zoom_speed
+    );
+    setCameraData(cloneCameraData(parsedCamera));
+    setCurrentValues(cloneCameraData(parsedCamera));
+    applyCameraToViewer(parsedCamera);
+  }, [currentDialogueIndex, currentDialogue, applyCameraToViewer]);
 
   // Update progress
   useEffect(() => {
@@ -182,45 +370,65 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   };
 
   const handleCameraDataChange = (newCameraData: CameraData) => {
-    setCameraData(newCameraData);
-    
-    // Update the current dialogue's camera data
-    if (currentDialogue) {
-      const updatedDialogues = [...data.dialogues];
-      updatedDialogues[currentDialogueIndex] = {
-        ...updatedDialogues[currentDialogueIndex],
-        // Update camera data in the dialogue
-      };
-      
-      onDataUpdate({
-        dialogues: updatedDialogues,
-        cameraPosition: `${newCameraData.orbit.azimuth}deg ${newCameraData.orbit.polar}deg ${newCameraData.orbit.radius}m`,
-        cameraTarget: `${newCameraData.target.x}m ${newCameraData.target.y}m ${newCameraData.target.z}m`
-      });
-    }
+    // Live preview only — committed on Save for this dialogue
+    setCameraData(cloneCameraData(newCameraData));
+    applyCameraToViewer(newCameraData);
   };
 
-  const handleSave = (cameraData: CameraData) => {
-    setCurrentValues(cameraData);
-    
-    // Save camera data to current dialogue
-    if (currentDialogue) {
-      const updatedDialogues = [...data.dialogues];
-      updatedDialogues[currentDialogueIndex] = {
-        ...updatedDialogues[currentDialogueIndex],
-        // Save camera data
-      };
-      
-      onDataUpdate({
-        dialogues: updatedDialogues,
-        cameraPosition: `${cameraData.orbit.azimuth}deg ${cameraData.orbit.polar}deg ${cameraData.orbit.radius}m`,
-        cameraTarget: `${cameraData.target.x}m ${cameraData.target.y}m ${cameraData.target.z}m`
-      });
+  const patchCameraData = (patch: {
+    orbit?: Partial<CameraData['orbit']>;
+    target?: Partial<CameraData['target']>;
+    fieldOfView?: number;
+    zoomSpeed?: number;
+  }) => {
+    handleCameraDataChange({
+      orbit: { ...cameraData.orbit, ...patch.orbit },
+      target: { ...cameraData.target, ...patch.target },
+      fieldOfView: patch.fieldOfView ?? cameraData.fieldOfView,
+      zoomSpeed: patch.zoomSpeed ?? cameraData.zoomSpeed,
+    });
+  };
+
+  const handleSave = () => {
+    if (!currentDialogue) {
+      return;
     }
+
+    // Wizard dial Save is local only — instant, no API. Cameras sync to the
+    // server when leaving Preview (Next) or saving a draft.
+    const fields = cameraDataToDialogueFields(cameraData);
+    const updatedDialogues = data.dialogues.map((dialogue) => {
+      const sameById =
+        typeof currentDialogue.id === 'number' && dialogue.id === currentDialogue.id;
+      const sameByOrder =
+        currentDialogue.id == null && dialogue.order === currentDialogue.order;
+      if (sameById || sameByOrder) {
+        return {
+          ...dialogue,
+          ...fields,
+        };
+      }
+      return dialogue;
+    });
+
+    onDataUpdate({
+      dialogues: updatedDialogues,
+      cameraPosition: fields.camera_orbit,
+      cameraTarget: fields.camera_target,
+    });
+
+    setCurrentValues(cloneCameraData(cameraData));
+    applyCameraToViewer(cameraData);
+    setSaveMessage({ type: 'success', text: 'Camera saved for this dialogue.' });
+    window.setTimeout(() => setSaveMessage(null), 2500);
   };
 
   const handleReset = () => {
-    setCameraData(currentValues);
+    const restored = cloneCameraData(currentValues);
+    setCameraData(restored);
+    applyCameraToViewer(restored);
+    setSaveMessage({ type: 'success', text: 'Reset to last saved values for this dialogue.' });
+    window.setTimeout(() => setSaveMessage(null), 2500);
   };
 
   // Cleanup on unmount
@@ -231,6 +439,50 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
       }
     };
   }, []);
+
+  // Create 3D-anchored labels (same model-viewer hotspot path as Comic3DViewer)
+  // and hide them when scene geometry is closer than the label point.
+  useEffect(() => {
+    const modelViewer = modelViewerRef.current;
+    if (!modelViewer || !data.model.previewUrl) {
+      return;
+    }
+
+    let rafId = 0;
+    let timer = 0;
+    const scheduleOcclusionUpdate = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        updateHotspotOcclusion();
+      });
+    };
+
+    const handleReady = () => {
+      syncCharacterHotspots();
+      scheduleOcclusionUpdate();
+    };
+
+    modelViewer.addEventListener('load', handleReady);
+    modelViewer.addEventListener('camera-change', scheduleOcclusionUpdate);
+
+    if (modelViewer.loaded) {
+      handleReady();
+    } else {
+      timer = window.setTimeout(handleReady, 250);
+    }
+
+    return () => {
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+      cancelAnimationFrame(rafId);
+      modelViewer.removeEventListener('load', handleReady);
+      modelViewer.removeEventListener('camera-change', scheduleOcclusionUpdate);
+      modelViewer.querySelectorAll('.character-hotspot').forEach((node: Element) => {
+        node.remove();
+      });
+    };
+  }, [data.model.previewUrl, syncCharacterHotspots, updateHotspotOcclusion]);
 
   return (
     <div className={`comic-3d-viewer story-preview-editor ${className}`}>
@@ -304,8 +556,10 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
               <div className="d-flex align-items-center justify-content-center h-100 bg-light">
                 <div className="text-center">
                   <i className="fas fa-cube fa-3x text-muted mb-3"></i>
-                  <h5 className="text-muted">No 3D Model Available</h5>
-                  <p className="text-muted">Please upload a 3D model to preview your story.</p>
+                  <h5 className="text-muted">Shared 3D scene unavailable</h5>
+                  <p className="text-muted mb-0">
+                    The shared JustVybz model could not be loaded for preview. You can still continue.
+                  </p>
                 </div>
               </div>
             )}
@@ -446,8 +700,14 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
               <div className="row g-2" style={{ padding: '1rem 1.5rem 0.5rem 1.5rem' }}>
                 <div className="col-6">
                   <button 
+                    type="button"
                     className="btn btn-success btn-sm w-100"
-                    onClick={() => handleSave(cameraData)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSave();
+                    }}
+                    disabled={!currentDialogue}
                     style={{ 
                       fontSize: '0.9rem',
                       fontWeight: '600',
@@ -460,8 +720,13 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                 </div>
                 <div className="col-6">
                   <button 
+                    type="button"
                     className="btn btn-secondary btn-sm w-100"
-                    onClick={handleReset}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleReset();
+                    }}
                     style={{ 
                       fontSize: '0.9rem',
                       fontWeight: '600',
@@ -501,9 +766,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                         step="1"
                         value={cameraData.orbit.azimuth}
                         onChange={(e) => {
-                          const newCameraData = { ...cameraData };
-                          newCameraData.orbit.azimuth = parseFloat(e.target.value);
-                          handleCameraDataChange(newCameraData);
+                          patchCameraData({ orbit: { azimuth: parseFloat(e.target.value) } });
                         }}
                       />
                       <span className="value-badge">{cameraData.orbit.azimuth.toFixed(1)}°</span>
@@ -526,9 +789,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                         step="1"
                         value={cameraData.orbit.polar}
                         onChange={(e) => {
-                          const newCameraData = { ...cameraData };
-                          newCameraData.orbit.polar = parseFloat(e.target.value);
-                          handleCameraDataChange(newCameraData);
+                          patchCameraData({ orbit: { polar: parseFloat(e.target.value) } });
                         }}
                       />
                       <span className="value-badge">{cameraData.orbit.polar.toFixed(1)}°</span>
@@ -536,7 +797,20 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                   </div>
                   
                   <div className="form-group mb-3">
-                    <label htmlFor="orbitRadius" className="form-label">Radius</label>
+                    <label htmlFor="orbitRadius" className="form-label">
+                      <span
+                        className="material-symbols-outlined"
+                        style={{
+                          fontSize: '1.5rem',
+                          fontVariationSettings: "'FILL' 0, 'GRAD' 0",
+                          verticalAlign: 'middle',
+                          marginRight: '0.5rem',
+                        }}
+                      >
+                        clock_loader_90
+                      </span>
+                      Radius
+                    </label>
                     <div className="slider-row">
                       <input
                         type="range"
@@ -548,17 +822,15 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                         step="0.1"
                         value={cameraData.orbit.radius}
                         onChange={(e) => {
-                          const newCameraData = { ...cameraData };
-                          newCameraData.orbit.radius = parseFloat(e.target.value);
-                          handleCameraDataChange(newCameraData);
+                          patchCameraData({ orbit: { radius: parseFloat(e.target.value) } });
                         }}
                       />
                       <span className="value-badge">{cameraData.orbit.radius.toFixed(1)}m</span>
                     </div>
                   </div>
                   
-                  {/* Field of View */}
-                  <div className="form-group mb-3">
+                  {/* Field of View - Hidden for now (matches Comic3DViewer) */}
+                  {/* <div className="form-group mb-3">
                     <label htmlFor="fieldOfView" className="form-label">Field of View</label>
                     <div className="slider-row">
                       <input
@@ -571,14 +843,12 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                         step="1"
                         value={cameraData.fieldOfView}
                         onChange={(e) => {
-                          const newCameraData = { ...cameraData };
-                          newCameraData.fieldOfView = parseFloat(e.target.value);
-                          handleCameraDataChange(newCameraData);
+                          patchCameraData({ fieldOfView: parseFloat(e.target.value) });
                         }}
                       />
                       <span className="value-badge">{cameraData.fieldOfView.toFixed(1)}°</span>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
                 
                 {/* Camera Target (Right Column) */}
@@ -588,7 +858,15 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                   </div>
                   
                   <div className="form-group mb-3">
-                    <label htmlFor="targetX" className="form-label">X</label>
+                    <label htmlFor="targetX" className="form-label d-flex align-items-center gap-2">
+                      <span
+                        className="material-symbols-outlined"
+                        style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}
+                      >
+                        arrow_range
+                      </span>
+                      <span>X</span>
+                    </label>
                     <div className="slider-row">
                       <input
                         type="range"
@@ -600,9 +878,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                         step="0.1"
                         value={cameraData.target.x}
                         onChange={(e) => {
-                          const newCameraData = { ...cameraData };
-                          newCameraData.target.x = parseFloat(e.target.value);
-                          handleCameraDataChange(newCameraData);
+                          patchCameraData({ target: { x: parseFloat(e.target.value) } });
                         }}
                       />
                       <span className="value-badge">{cameraData.target.x.toFixed(1)}m</span>
@@ -625,9 +901,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                         step="0.1"
                         value={cameraData.target.y}
                         onChange={(e) => {
-                          const newCameraData = { ...cameraData };
-                          newCameraData.target.y = parseFloat(e.target.value);
-                          handleCameraDataChange(newCameraData);
+                          patchCameraData({ target: { y: parseFloat(e.target.value) } });
                         }}
                       />
                       <span className="value-badge">{cameraData.target.y.toFixed(1)}m</span>
@@ -635,7 +909,15 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                   </div>
                   
                   <div className="form-group mb-3">
-                    <label htmlFor="targetZ" className="form-label">Z</label>
+                    <label htmlFor="targetZ" className="form-label d-flex align-items-center gap-2">
+                      <span
+                        className="material-symbols-outlined"
+                        style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}
+                      >
+                        arrow_range
+                      </span>
+                      <span>Z</span>
+                    </label>
                     <div className="slider-row">
                       <input
                         type="range"
@@ -647,17 +929,15 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                         step="0.1"
                         value={cameraData.target.z}
                         onChange={(e) => {
-                          const newCameraData = { ...cameraData };
-                          newCameraData.target.z = parseFloat(e.target.value);
-                          handleCameraDataChange(newCameraData);
+                          patchCameraData({ target: { z: parseFloat(e.target.value) } });
                         }}
                       />
                       <span className="value-badge">{cameraData.target.z.toFixed(1)}m</span>
                     </div>
                   </div>
                   
-                  {/* Zoom Speed */}
-                  <div className="form-group mb-3">
+                  {/* Zoom Speed - Hidden for now (matches Comic3DViewer) */}
+                  {/* <div className="form-group mb-3">
                     <label htmlFor="zoomSpeed" className="form-label">Zoom Speed</label>
                     <div className="slider-row">
                       <input
@@ -670,24 +950,34 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                         step="0.1"
                         value={cameraData.zoomSpeed}
                         onChange={(e) => {
-                          const newCameraData = { ...cameraData };
-                          newCameraData.zoomSpeed = parseFloat(e.target.value);
-                          handleCameraDataChange(newCameraData);
+                          patchCameraData({ zoomSpeed: parseFloat(e.target.value) });
                         }}
                       />
                       <span className="value-badge">{cameraData.zoomSpeed.toFixed(1)}x</span>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
                 
                 {/* Current Values (Full Width) */}
                 <div className="col-12 mt-2" style={{ gridColumn: '1 / -1', padding: '0 1rem' }}>
                   <div className="current-values-box">
-                    <h6 className="text-primary mb-2">Current Values (Last Saved)</h6>
+                    <h6 className="text-primary mb-2">
+                      Last saved for dialogue {currentDialogueIndex + 1}
+                      {totalDialogues > 0 ? ` / ${totalDialogues}` : ''}
+                    </h6>
                     <div><strong>Camera Orbit:</strong> <span>{currentValues.orbit.azimuth.toFixed(1)}deg {currentValues.orbit.polar.toFixed(1)}deg {currentValues.orbit.radius.toFixed(1)}m</span></div>
                     <div><strong>Camera Target:</strong> <span>{currentValues.target.x.toFixed(1)}m {currentValues.target.y.toFixed(1)}m {currentValues.target.z.toFixed(1)}m</span></div>
-                    <div><strong>Field of View:</strong> <span>{currentValues.fieldOfView.toFixed(1)}°</span></div>
-                    <div><strong>Zoom Speed:</strong> <span>{currentValues.zoomSpeed.toFixed(1)}</span></div>
+                    {/* Field of View and Zoom Speed hidden for now */}
+                    {/* <div><strong>Field of View:</strong> <span>{currentValues.fieldOfView.toFixed(1)}°</span></div>
+                    <div><strong>Zoom Speed:</strong> <span>{currentValues.zoomSpeed.toFixed(1)}</span></div> */}
+                    {saveMessage && (
+                      <div
+                        className={`mt-2 small ${saveMessage.type === 'success' ? 'text-success' : 'text-danger'}`}
+                        role="status"
+                      >
+                        {saveMessage.text}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

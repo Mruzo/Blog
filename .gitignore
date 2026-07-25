@@ -102,6 +102,12 @@ htmlcov/
 logs/
 *.log.*
 
+# Runtime analytics dumps written by icvybz views/tests (do not commit)
+# Note: previously tracked copies must be removed from the index with
+# `git rm --cached` for this to take effect on already-committed files.
+vybzapp/icvybz/logs/
+**/icvybz/logs/*.json
+
 # IDE and editor files
 .vscode/
 .idea/

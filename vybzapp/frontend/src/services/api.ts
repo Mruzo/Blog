@@ -118,12 +118,20 @@ api.interceptors.request.use(
       rel.includes('/auth/login/') ||
       rel.includes('/auth/register/') ||
       rel.includes('/auth/password-reset');
+    const isPublicAdEndpoint =
+      (method === 'GET' && (urlForMatch.includes('/ad-placements/') || rel.includes('/ad-placements/'))) ||
+      (method === 'POST' && (urlForMatch.includes('/ad-events/') || rel.includes('/ad-events/')));
+    const isDefaultModelEndpoint =
+      method === 'GET' &&
+      (urlForMatch.includes('/models/default/') || rel.includes('/models/default/'));
     const isPublicEndpoint =
       isPublicStoriesEndpoint ||
       isPublicStudiosListEndpoint ||
       isPublicStudioDetailGet ||
       isContactEndpoint ||
-      isAuthEndpoint;
+      isAuthEndpoint ||
+      isPublicAdEndpoint ||
+      isDefaultModelEndpoint;
 
     if (isPublicEndpoint) {
       stripAuthorizationHeader(config);
@@ -310,6 +318,7 @@ export interface Character {
   love_interest: string;
   user: number;
   story: number;
+  scene_slot?: string | null;
   pov_data?: {
     id: number;
     head_x: number;
@@ -421,6 +430,210 @@ export interface Studio {
   created_at: string;
   updated_at: string;
   avatar_url?: string;
+}
+
+export interface AdvertiserProfile {
+  id: number;
+  user: number;
+  business_name: string;
+  contact_name: string;
+  contact_email: string;
+  website_url: string;
+  notes: string;
+  status: 'pending' | 'approved' | 'rejected' | 'paused';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdCampaign {
+  id: number;
+  advertiser: number;
+  advertiser_name?: string;
+  name: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_active: boolean;
+  budget_label: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdCreative {
+  id: number;
+  advertiser: number;
+  advertiser_name?: string;
+  campaign?: number | null;
+  title: string;
+  image?: string | File;
+  image_url?: string | null;
+  destination_url: string;
+  alt_text: string;
+  status: 'pending' | 'approved' | 'rejected' | 'paused';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdPlacement {
+  id: number;
+  season: number;
+  episode?: number | null;
+  campaign: number;
+  creative: number;
+  creative_title: string;
+  creative_image_url: string;
+  destination_url: string;
+  alt_text: string;
+  advertiser_name: string;
+  event_token?: string | null;
+  name: string;
+  slot_name: string;
+  position_x: number;
+  position_y: number;
+  position_z: number;
+  normal_x: number;
+  normal_y: number;
+  normal_z: number;
+  width: number;
+  height: number;
+  rotation: string;
+  priority: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdEventPayload {
+  placement: number;
+  episode: number;
+  event_type: 'impression' | 'click';
+  session_key: string;
+  event_token?: string | null;
+}
+
+export interface AdReport {
+  active_split: {
+    creator_percentage: string;
+    platform_percentage: string;
+    effective_date?: string;
+    is_active: boolean;
+  };
+  metric_labels?: {
+    billboard_loads: string;
+    clicks: string;
+  };
+  is_staff?: boolean;
+  selected_advertiser_id?: number | null;
+  advertiser: {
+    profile: AdvertiserProfile | null;
+    totals?: {
+      billboard_loads: number;
+      clicks: number;
+      suspicious_events: number;
+      ctr: number;
+    };
+    campaigns: Array<{
+      id: number;
+      name: string;
+      budget_label?: string;
+      billboard_loads: number;
+      impressions: number;
+      clicks: number;
+      suspicious_events: number;
+      ctr: number;
+    }>;
+    go_live_placements?: Array<{
+      id: number;
+      campaign_name: string;
+      creative_title: string;
+      status: string;
+      is_live: boolean;
+      go_live: {
+        advertiser_approved: boolean;
+        creative_approved: boolean;
+        campaign_active: boolean;
+        placement_active: boolean;
+        ad_enabled_season: boolean;
+      };
+    }>;
+  };
+  creator: {
+    totals: {
+      billboard_loads: number;
+      impressions: number;
+      clicks: number;
+      suspicious_events: number;
+      fraud_breakdown?: Array<{ reason: string; count: number }>;
+    };
+    stories: Array<{
+      id: number;
+      title: string;
+      billboard_loads: number;
+      impressions: number;
+      clicks: number;
+      suspicious_events: number;
+      ctr: number;
+    }>;
+  };
+}
+
+export interface AdStaffSnapshot {
+  totals: {
+    placements: number;
+    live: number;
+    advertisers: number;
+  };
+  placements: Array<{
+    id: number;
+    advertiser_id: number;
+    advertiser_name: string;
+    campaign_id: number;
+    campaign_name: string;
+    creative_id: number;
+    creative_title: string;
+    creative_status: string;
+    advertiser_status: string;
+    season_id: number;
+    season_label: string;
+    episode_scope: string;
+    slot_name: string;
+    status: string;
+    is_live: boolean;
+    go_live: {
+      advertiser_approved: boolean;
+      creative_approved: boolean;
+      campaign_active: boolean;
+      placement_active: boolean;
+      ad_enabled_season: boolean;
+    };
+    billboard_loads: number;
+    clicks: number;
+    priority: number;
+  }>;
+  advertisers: Array<{
+    id: number;
+    business_name: string;
+    contact_name: string;
+    contact_email: string;
+    status: string;
+    campaign_count: number;
+  }>;
+}
+
+export interface AdInvoiceResult {
+  invoice_number: string;
+  pdf_url: string;
+  pdf_path: string;
+  metrics: {
+    billboard_loads: number;
+    clicks: number;
+    ctr: number;
+  };
+  period: {
+    year: number;
+    month: number;
+    start_date: string;
+    end_date: string;
+  };
 }
 
 // API Service Class
@@ -753,13 +966,14 @@ class ApiService {
     await api.delete(`/episodes/${id}/`);
   }
 
-  async incrementEpisodeView(episodeId: number): Promise<{
+  async incrementEpisodeView(episodeId: number, data?: { ad_session_key?: string }): Promise<{
     success: boolean;
     view_count: number;
     story_id?: number;
     story_total_views?: number;
+    ad_billboard_loads_note?: string;
   }> {
-    const response = await api.post(`/episodes/${episodeId}/increment-view/`);
+    const response = await api.post(`/episodes/${episodeId}/increment-view/`, data || {});
     return response.data;
   }
 
@@ -815,6 +1029,94 @@ class ApiService {
 
   async deleteEpisodeComment(commentId: number): Promise<void> {
     await api.delete(`/comments/${commentId}/`);
+  }
+
+  // 3D Ad Machine
+  async getAdvertiserProfile(): Promise<AdvertiserProfile | null> {
+    const response = await api.get('/advertiser-profile/');
+    return response.data.profile === null ? null : response.data;
+  }
+
+  async saveAdvertiserProfile(profileData: Partial<AdvertiserProfile>): Promise<AdvertiserProfile> {
+    const existing = await this.getAdvertiserProfile();
+    const response = existing
+      ? await api.patch('/advertiser-profile/', profileData)
+      : await api.post('/advertiser-profile/', profileData);
+    return response.data;
+  }
+
+  async getAdCampaigns(advertiserId?: number): Promise<AdCampaign[]> {
+    const params = advertiserId ? { advertiser_id: advertiserId } : undefined;
+    const response = await api.get('/ad-campaigns/', { params });
+    return response.data.results || response.data;
+  }
+
+  async createAdCampaign(campaignData: Partial<AdCampaign> & { advertiser_id?: number }): Promise<AdCampaign> {
+    const response = await api.post('/ad-campaigns/', campaignData);
+    return response.data;
+  }
+
+  async getAdCreatives(advertiserId?: number): Promise<AdCreative[]> {
+    const params = advertiserId ? { advertiser_id: advertiserId } : undefined;
+    const response = await api.get('/ad-creatives/', { params });
+    return response.data.results || response.data;
+  }
+
+  async createAdCreative(creativeData: Partial<AdCreative> & { advertiser_id?: number }): Promise<AdCreative> {
+    const formData = new FormData();
+    if (creativeData.advertiser_id) formData.append('advertiser_id', creativeData.advertiser_id.toString());
+    if (creativeData.campaign) formData.append('campaign', creativeData.campaign.toString());
+    if (creativeData.title) formData.append('title', creativeData.title);
+    if (creativeData.destination_url) formData.append('destination_url', creativeData.destination_url);
+    if (creativeData.alt_text) formData.append('alt_text', creativeData.alt_text);
+    if (creativeData.image instanceof File) formData.append('image', creativeData.image);
+
+    const response = await api.post('/ad-creatives/', formData);
+    return response.data;
+  }
+
+  async getAdPlacements(seasonId: number, episodeId?: number): Promise<AdPlacement[]> {
+    const params = episodeId ? { episode: episodeId } : undefined;
+    const response = await api.get(`/seasons/${seasonId}/ad-placements/`, { params });
+    return response.data.results || response.data;
+  }
+
+  async createAdPlacement(seasonId: number, placementData: Partial<AdPlacement>): Promise<AdPlacement> {
+    const response = await api.post(`/seasons/${seasonId}/ad-placements/`, placementData);
+    return response.data;
+  }
+
+  async updateAdPlacement(id: number, placementData: Partial<AdPlacement>): Promise<AdPlacement> {
+    const response = await api.patch(`/ad-placements/${id}/`, placementData);
+    return response.data;
+  }
+
+  async trackAdEvent(eventData: AdEventPayload): Promise<{ success: boolean; created: boolean; event_id: number; is_suspicious?: boolean; fraud_reason?: string }> {
+    const response = await api.post('/ad-events/', eventData);
+    return response.data;
+  }
+
+  async getAdReport(advertiserId?: number): Promise<AdReport> {
+    const params = advertiserId ? { advertiser_id: advertiserId } : undefined;
+    const response = await api.get('/ad-reports/', { params });
+    return response.data;
+  }
+
+  async getAdStaffSnapshot(): Promise<AdStaffSnapshot> {
+    const response = await api.get('/ad-staff/snapshot/');
+    return response.data;
+  }
+
+  async generateAdInvoice(payload: {
+    advertiser_id: number;
+    campaign_id: number;
+    year: number;
+    month: number;
+    amount: number;
+    notes?: string;
+  }): Promise<AdInvoiceResult> {
+    const response = await api.post('/ad-reports/invoice/', payload);
+    return response.data;
   }
 
   // File Upload
@@ -965,13 +1267,21 @@ class ApiService {
   }
 
   // Story Creation Workflow
+  async getDefaultModel(): Promise<{
+    model_gltf: string | null;
+    model_usdz: string | null;
+    source_story_title?: string;
+  }> {
+    const response = await api.get('/models/default/');
+    return response.data;
+  }
+
   async createCompleteStory(storyData: {
     story: Partial<Story>;
     season: Partial<Season>;
     characters: Partial<Character>[];
     episode: Partial<Episode>;
     dialogues: Partial<Dialogue>[];
-    model?: File;
   }): Promise<{
     story: Story;
     season: Season;
@@ -983,14 +1293,12 @@ class ApiService {
     console.log('ApiService: createCompleteStory called with:', storyData);
     
     try {
-      // Send as JSON data instead of FormData
       const response = await api.post('/create-complete-story/', {
         story: storyData.story,
         season: storyData.season,
         characters: storyData.characters,
         episode: storyData.episode,
         dialogues: storyData.dialogues,
-        // Note: model file upload would need separate handling if needed
       });
       
       console.log('ApiService: createCompleteStory response:', response.data);

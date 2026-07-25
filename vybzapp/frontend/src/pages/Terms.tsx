@@ -77,7 +77,20 @@ const Terms: React.FC = () => {
               <li>✓ Disputes between collaborators are the responsibility of the parties involved</li>
             </ul>
 
-            <h2 className="h5 mt-4 font-quicksand">6. E-Commerce Terms (If Applicable)</h2>
+            <h2 className="h5 mt-4 font-quicksand">6. In-Scene Advertising</h2>
+            <p>
+              Stories using our platform standard 3D scene may display sponsored content on designated in-scene billboards
+              operated by Justvybz. Creators using that scene grant us the right to show approved third-party ads in those
+              slots and to measure billboard loads and clicks. Creators may receive a share of ad revenue according to the
+              active revenue split published on the Platform. We do not guarantee earnings.
+            </p>
+            <p>
+              Advertisers must provide accurate business information and lawful creatives. We may approve, pause, or remove
+              campaigns and creatives at our discretion. Advertiser destination links leave the Platform and are the
+              advertiser&apos;s responsibility.
+            </p>
+
+            <h2 className="h5 mt-4 font-quicksand">7. E-Commerce Terms (If Applicable)</h2>
             <p>If you purchase products through our Platform:</p>
             <ul className="list-unstyled">
               <li>✓ All prices are in Canadian Dollars (CAD)</li>
@@ -87,14 +100,14 @@ const Terms: React.FC = () => {
               <li>✓ Returns are accepted within 30 days of delivery (items must be unused)</li>
             </ul>
 
-            <h2 className="h5 mt-4 font-quicksand">7. Intellectual Property</h2>
+            <h2 className="h5 mt-4 font-quicksand">8. Intellectual Property</h2>
             <p>
               You retain all rights to content you create. Our Platform's design, functionality, and proprietary features are 
               protected by copyright and other intellectual property laws. You may not copy, modify, or distribute our Platform's 
               code or design without permission.
             </p>
 
-            <h2 className="h5 mt-4 font-quicksand">8. Prohibited Activities</h2>
+            <h2 className="h5 mt-4 font-quicksand">9. Prohibited Activities</h2>
             <p>You agree not to:</p>
             <ul className="list-unstyled">
               <li>✓ Use the Platform for any illegal purpose</li>
@@ -104,31 +117,32 @@ const Terms: React.FC = () => {
               <li>✓ Impersonate others, provide false information, or misrepresent your identity</li>
               <li>✓ Violate intellectual property rights of others</li>
               <li>✓ Harass, abuse, or harm other creators or users</li>
+              <li>✓ Manipulate or inflate in-scene ad billboard loads or clicks (bots, automated scripts, incentivized clicks)</li>
             </ul>
 
-            <h2 className="h5 mt-4 font-quicksand">9. Content Moderation</h2>
+            <h2 className="h5 mt-4 font-quicksand">10. Content Moderation</h2>
             <p>
               We reserve the right to review, moderate, and remove content that violates these Terms or our community guidelines. 
               We may suspend or terminate accounts that repeatedly violate our policies.
             </p>
 
-            <h2 className="h5 mt-4 font-quicksand">10. Limitation of Liability</h2>
+            <h2 className="h5 mt-4 font-quicksand">11. Limitation of Liability</h2>
             <p>
               To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, 
               or punitive damages arising from your use of our Platform, including but not limited to loss of creative content, 
               collaboration disputes, or technical issues.
             </p>
 
-            <h2 className="h5 mt-4 font-quicksand">11. Changes to Terms</h2>
+            <h2 className="h5 mt-4 font-quicksand">12. Changes to Terms</h2>
             <p>
               We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting to the 
               Platform. Your continued use of the Platform after changes constitutes acceptance of the modified Terms.
             </p>
 
-            <h2 className="h5 mt-4 font-quicksand">12. Governing Law</h2>
+            <h2 className="h5 mt-4 font-quicksand">13. Governing Law</h2>
             <p>These Terms are governed by the laws of Canada. Any disputes shall be resolved exclusively in the courts of Canada.</p>
 
-            <h2 className="h5 mt-4 font-quicksand">13. Contact Information</h2>
+            <h2 className="h5 mt-4 font-quicksand">14. Contact Information</h2>
             <p>For questions about these Terms or our storytelling platform:</p>
             <ul className="list-unstyled">
               <li>Email: <a href="mailto:Justvybz@justvybz.com">Justvybz@justvybz.com</a></li>

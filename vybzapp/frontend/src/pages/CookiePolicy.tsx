@@ -62,7 +62,8 @@ const CookiePolicy: React.FC = () => {
             <h2 className="h4 mt-5 mb-3 font-quicksand">Local Storage & Similar Technologies</h2>
             <p>
               In addition to cookies, our web app may use browser local storage to keep you signed in (for example, by
-              storing an authentication token) and to improve your experience. You can clear local storage through your
+              storing an authentication token) and sessionStorage for an ad session key that deduplicates in-scene
+              billboard load and click events in 3D stories. You can clear local storage through your
               browser settings.
             </p>
 

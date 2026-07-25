@@ -4,7 +4,13 @@ from django.utils import timezone
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
+
+
+def current_ad_date():
+    return timezone.now().date()
+
 
 class Comic(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comics')
@@ -155,11 +161,24 @@ class Character(models.Model):
     bio = models.TextField(blank=True)
     model_file = models.FileField(upload_to='characters/')  # File path for 3D model
     is_public = models.BooleanField(default=False, help_text="Make this character visible to other users")
+    scene_slot = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text='Shared-scene position slot (North_SS, South_SS, East_SS, West_SS). Null for legacy custom positions.',
+    )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="Timestamp when record was created. Nullable for imports from other Django apps.")
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True, help_text="Timestamp when record was last updated. Nullable for imports from other Django apps.")
 
     class Meta:
         app_label = 'icvybz'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['story', 'scene_slot'],
+                condition=models.Q(scene_slot__isnull=False) & ~models.Q(scene_slot=''),
+                name='unique_character_story_scene_slot',
+            ),
+        ]
     
     def __str__(self):
         return self.name
@@ -430,6 +449,234 @@ class TrafficSource(models.Model):
     
     def __str__(self):
         return f"{self.episode.title} - {self.source} - {self.timestamp}"
+
+
+class AdvertiserProfile(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('paused', 'Paused'),
+    ]
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='advertiser_profile')
+    business_name = models.CharField(max_length=160)
+    contact_name = models.CharField(max_length=160, blank=True)
+    contact_email = models.EmailField()
+    website_url = models.URLField(blank=True)
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['business_name']
+
+    def __str__(self):
+        return self.business_name
+
+
+class AdCampaign(models.Model):
+    advertiser = models.ForeignKey(AdvertiserProfile, on_delete=models.CASCADE, related_name='campaigns')
+    name = models.CharField(max_length=160)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    budget_label = models.CharField(max_length=120, blank=True, help_text="Optional budget or package reference for future billing.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.advertiser.business_name})"
+
+    def is_live(self):
+        today = current_ad_date()
+        if not self.is_active or self.advertiser.status != 'approved':
+            return False
+        if self.start_date and self.start_date > today:
+            return False
+        if self.end_date and self.end_date < today:
+            return False
+        return True
+
+
+class AdCreative(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('paused', 'Paused'),
+    ]
+
+    advertiser = models.ForeignKey(AdvertiserProfile, on_delete=models.CASCADE, related_name='creatives')
+    campaign = models.ForeignKey(AdCampaign, on_delete=models.CASCADE, related_name='creatives', null=True, blank=True)
+    title = models.CharField(max_length=160)
+    image = models.ImageField(upload_to='ads/creatives/')
+    destination_url = models.URLField()
+    alt_text = models.CharField(max_length=220, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+    def is_approved(self):
+        return self.status == 'approved' and self.advertiser.status == 'approved'
+
+
+class AdPlacement(models.Model):
+    season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='ad_placements')
+    episode = models.ForeignKey(
+        Episode,
+        on_delete=models.CASCADE,
+        related_name='ad_placements',
+        null=True,
+        blank=True,
+        help_text="Leave blank to show this ad on every episode in the season. "
+                  "Select an episode to show it on that episode only.",
+    )
+    campaign = models.ForeignKey(AdCampaign, on_delete=models.CASCADE, related_name='placements')
+    creative = models.ForeignKey(AdCreative, on_delete=models.CASCADE, related_name='placements')
+    name = models.CharField(max_length=160, blank=True)
+    slot_name = models.CharField(max_length=64, default='ed_bb', db_index=True)
+    position_x = models.FloatField(default=0.0)
+    position_y = models.FloatField(default=1.5)
+    position_z = models.FloatField(default=0.0)
+    normal_x = models.FloatField(default=0.0)
+    normal_y = models.FloatField(default=1.0)
+    normal_z = models.FloatField(default=0.0)
+    width = models.FloatField(default=1.2, validators=[MinValueValidator(0.1)])
+    height = models.FloatField(default=0.7, validators=[MinValueValidator(0.1)])
+    rotation = models.CharField(max_length=50, default='0deg 0deg 0deg')
+    priority = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-priority', 'id']
+        indexes = [
+            models.Index(fields=['season', 'episode', 'is_active']),
+            models.Index(fields=['campaign', 'is_active']),
+        ]
+
+    def __str__(self):
+        label = self.name or self.creative.title
+        return f"{label} on {self.season}"
+
+    @property
+    def is_season_wide(self):
+        """True when this placement applies to every episode in the season."""
+        return self.episode_id is None
+
+    def is_live(self):
+        return self.is_active and self.campaign.is_live() and self.creative.is_approved()
+
+
+class AdRevenueSplitConfig(models.Model):
+    creator_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=70,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    platform_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=30,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    effective_date = models.DateField(default=current_ad_date)
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-effective_date', '-created_at']
+
+    def __str__(self):
+        return f"{self.creator_percentage}% creator / {self.platform_percentage}% platform"
+
+    @classmethod
+    def active_config(cls):
+        return (
+            cls.objects.filter(is_active=True, effective_date__lte=current_ad_date())
+            .order_by('-effective_date', '-created_at')
+            .first()
+        )
+
+
+class AdEvent(models.Model):
+    EVENT_CHOICES = [
+        ('impression', 'Impression'),
+        ('click', 'Click'),
+    ]
+
+    placement = models.ForeignKey(AdPlacement, on_delete=models.CASCADE, related_name='events')
+    creative = models.ForeignKey(AdCreative, on_delete=models.CASCADE, related_name='events')
+    episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='ad_events')
+    story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='ad_events')
+    event_type = models.CharField(max_length=20, choices=EVENT_CHOICES)
+    session_key = models.CharField(max_length=80)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='ad_events', null=True, blank=True)
+    referrer = models.URLField(blank=True)
+    user_agent = models.TextField(blank=True)
+    ip_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    user_agent_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    is_suspicious = models.BooleanField(default=False)
+    fraud_reason = models.CharField(max_length=80, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['placement', 'episode', 'event_type', 'session_key'],
+                name='unique_ad_event_per_session',
+            )
+        ]
+        indexes = [
+            models.Index(fields=['placement', 'event_type', 'created_at']),
+            models.Index(fields=['story', 'event_type', 'created_at']),
+            models.Index(fields=['creative', 'event_type', 'created_at']),
+            models.Index(fields=['is_suspicious', 'fraud_reason', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type} for {self.creative} in {self.episode}"
+
+
+class AdRevenueShareSnapshot(models.Model):
+    event = models.OneToOneField(AdEvent, on_delete=models.CASCADE, related_name='revenue_snapshot')
+    campaign = models.ForeignKey(AdCampaign, on_delete=models.CASCADE, related_name='revenue_snapshots')
+    placement = models.ForeignKey(AdPlacement, on_delete=models.CASCADE, related_name='revenue_snapshots')
+    story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='ad_revenue_snapshots')
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='ad_revenue_snapshots', null=True, blank=True)
+    studio = models.ForeignKey('Studio', on_delete=models.SET_NULL, related_name='ad_revenue_snapshots', null=True, blank=True)
+    creator_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    platform_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    estimated_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Split for {self.event}"
 
 
 # Studio System Models

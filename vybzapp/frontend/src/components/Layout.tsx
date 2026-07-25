@@ -11,6 +11,8 @@ interface LayoutProps {
   user?: {
     first_name?: string;
     username?: string;
+    is_staff?: boolean;
+    is_superuser?: boolean;
   } | null;
 }
 
@@ -41,6 +43,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
       '/immersivecomics/episode/', // Full path for episode pages
       '/immersivecomics/characters/', // Full path for characters pages
       '/immersivecomics/collaborators/', // Full path for collaborators pages
+      '/immersivecomics/ads', // Full path for advertiser dashboard
+      '/immersivecomics/ads/', // Full path for advertiser dashboard
       '/product/my-orders', // Full path for my-orders
     ];
     
@@ -73,8 +77,10 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
     path.includes('/season/') ||
     path.includes('/episode/') ||
     path.includes('/characters/') ||
-    path.includes('/collaborators/');
+    path.includes('/collaborators/') ||
+    path.includes('/ads/');
   const myOrdersActive = path.includes('my-orders');
+  const canAccessAds = Boolean(user?.is_staff || user?.is_superuser);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -179,6 +185,15 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               <i className="fas fa-receipt" aria-hidden />
               <span>My Orders</span>
             </Link>
+            {canAccessAds && (
+              <Link
+                to="/immersivecomics/ads/"
+                className={`app-site-header__link${path.includes('/ads') ? ' active' : ''}`}
+              >
+                <i className="fas fa-bullhorn" aria-hidden />
+                <span>Ads</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>

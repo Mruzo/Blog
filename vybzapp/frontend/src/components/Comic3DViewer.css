@@ -1,6 +1,6 @@
 /* Comic 3D Viewer Styles */
 .comic-3d-viewer {
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
   max-width: 100%;
   min-width: 0;
 }
@@ -74,6 +74,49 @@
   aspect-ratio: 1 / 1.5; /* Height is double the width */
   margin: 0 auto;
   display: block;
+}
+
+/* Character labels: 3D-anchored model-viewer hotspots (track orbit/zoom).
+ * Shared look for StoryPreviewEditor + Comic3DViewer. */
+.story-preview-editor__characterHotspot,
+.comic-3d-viewer .character-hotspot {
+  display: block;
+  width: max-content;
+  max-width: none;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+  /* Hide when facing away; occlusion class also forces hide */
+  --min-hotspot-opacity: 0;
+}
+
+.story-preview-editor__characterHotspot .dot,
+.comic-3d-viewer .character-hotspot .dot {
+  display: block;
+  text-align: center;
+  padding: 0.15rem 0.35rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #111e7f;
+  box-shadow: none;
+  font-family: 'animeace', 'Comic', sans-serif;
+  font-size: small;
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 5px #fff,
+    1px 1px 0 #fff,
+    -1px -1px 0 #fff;
+}
+
+.story-preview-editor__characterHotspot.is-occluded,
+.story-preview-editor__characterHotspot:not([data-visible]) {
+  opacity: 0 !important;
+  visibility: hidden;
 }
 
 /* Speech Bubble - Match Django episode_preview.html styling */
@@ -160,7 +203,7 @@
 
 /* Navigation Controls */
 .comic-3d-viewer .btn {
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
   font-weight: 600;
   border-radius: 8px;
   display: inline-flex;
@@ -299,7 +342,7 @@
 .comic-3d-viewer .card-header {
   background: linear-gradient(90deg, #f8f9fa 60%, #f9a602 100%);
   border-bottom: 1px solid #e0e0e0;
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
   font-weight: 600;
   color: #222;
 }
@@ -577,7 +620,7 @@ input[type="range"].modern-slider:focus {
   display: inline-block;
   background: #f9a602;
   color: #222;
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
   font-weight: 600;
   border-radius: 8px;
   padding: 2px 8px;
@@ -591,7 +634,7 @@ input[type="range"].modern-slider:focus {
   background: #f8f9fa;
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
   font-size: 0.98em;
   color: #333;
   margin-top: 0.5rem;
@@ -616,7 +659,7 @@ input[type="range"].modern-slider:focus {
 }
 
 .modern-card-title {
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
   font-size: 1.2rem;
   font-weight: 700;
   color: #222;
@@ -631,7 +674,7 @@ input[type="range"].modern-slider:focus {
 }
 
 .section-header {
-  font-family: 'quicksand', sans-serif;
+  font-family: var(--font-primary);
   font-size: 1rem;
   font-weight: 600;
   color: #111e7f;

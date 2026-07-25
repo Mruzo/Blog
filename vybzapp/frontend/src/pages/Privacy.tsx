@@ -36,6 +36,7 @@ const Privacy: React.FC = () => {
               <li>✓ <strong>Content Information:</strong> Stories, seasons, episodes, characters, dialogues, 3D models, images, audio, and other creative content you upload</li>
               <li>✓ <strong>Collaboration Data:</strong> Information about your collaborations, studio memberships, and creative partnerships</li>
               <li>✓ <strong>Usage Analytics:</strong> How you interact with stories, view counts, engagement metrics, and platform usage patterns</li>
+              <li>✓ <strong>In-Scene Advertising:</strong> When you view 3D stories on our platform standard scene, we may show sponsored images on designated billboards and record billboard loads (when the ad is applied in the viewer) and clicks, using a session identifier, hashed IP, browser information, and episode context for reporting and fraud prevention</li>
               <li>✓ <strong>Comments and Public Interactions:</strong> Comments you post on published stories, seasons, or episodes, including the related episode and timestamp</li>
               <li>✓ <strong>Technical Information:</strong> IP address, browser type, device information, and cookies</li>
               <li>✓ <strong>Communication Data:</strong> Support inquiries, feedback, and correspondence</li>
@@ -53,6 +54,8 @@ const Privacy: React.FC = () => {
               <li>✓ Provide personalized story recommendations and improve your storytelling experience</li>
               <li>✓ Manage your account and provide customer support</li>
               <li>✓ Analyze platform usage to enhance our storytelling tools and features</li>
+              <li>✓ Serve and measure in-scene advertising on platform standard 3D scenes</li>
+              <li>✓ Calculate creator and advertiser reporting and revenue share</li>
               <li>✓ Send story updates, collaboration invitations, and platform notifications</li>
               <li>✓ Process and fulfill product orders (if applicable)</li>
               <li>✓ Detect and prevent fraud and abuse</li>
@@ -66,12 +69,21 @@ const Privacy: React.FC = () => {
               <li>✓ <strong>Public Comments:</strong> Comments you post on public story pages may be visible to other users and public visitors with an episode prefix such as E1 or E2</li>
               <li>✓ <strong>Collaborators:</strong> When you collaborate on stories, relevant information is shared with your collaborators</li>
               <li>✓ <strong>Service Providers:</strong> Who help us operate our Platform (hosting, analytics, etc.)</li>
+              <li>✓ <strong>Advertisers and Creators (aggregate only):</strong> Campaign and story performance metrics such as billboard loads and clicks — not your name or email tied to individual ad events</li>
               <li>✓ <strong>Payment Processors (if applicable):</strong> To process payments securely</li>
               <li>✓ <strong>Shipping Partners (if applicable):</strong> To deliver orders</li>
             </ul>
             <p>
               We do not sell your personal information to third parties. Your creative content remains yours, and we
               respect your privacy and creative rights.
+            </p>
+
+            <h2 className="h5 mt-4 font-quicksand">In-Scene Advertising</h2>
+            <p>
+              Published 3D stories that use our platform standard scene may include sponsored billboards inside the 3D
+              environment. We count a billboard load when the ad creative is applied to that surface in your browser.
+              These metrics are not the same as industry &quot;viewable impressions.&quot; Clicking an ad may open an
+              advertiser&apos;s website, which has its own privacy practices.
             </p>
 
             <h2 className="h5 mt-4 font-quicksand">Content Moderation</h2>

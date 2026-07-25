@@ -5,6 +5,7 @@ Reusable repository scripts live here.
 ## Maintained Scripts
 
 - `cleanup_production_root.sh`: dry-run-first cleanup for legacy duplicate folders on production servers.
+- `prepare_commit.sh`: root-aware git status/staging helper so changes outside `vybzapp/` are not missed.
 
 ## Local Scripts
 

@@ -42,7 +42,7 @@ export const guides: GuideConfig[] = [
     route: '/immersivecomics/story/create/',
     showOnFirstVisit: true,
     showOnce: true,
-    summary: 'Create your immersive 3D comic in steps: title & description, characters, season, episodes, dialogues, 3D model upload, then preview and publish.',
+    summary: 'Create your immersive 3D comic in steps: title & description, characters, season, episodes, dialogues, preview on the shared scene, then publish.',
   },
   {
     id: 'my-studio',
@@ -57,7 +57,7 @@ export const guides: GuideConfig[] = [
     route: '/immersivecomics/season/',
     pathContains: '/edit/',
     showOnFirstVisit: false,
-    summary: 'Name your **Season**, describe the **Story**, upload your **3D model**, and choose to **make it public**, or **keep it private**.',
+    summary: 'Name your **Season**, describe the **Story**, and choose to **make it public**, or **keep it private**. Seasons use the shared JustVybz 3D model.',
   },
   {
     id: 'episodes-page',

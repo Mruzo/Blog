@@ -609,3 +609,36 @@ class EpisodeCommentAPITestCase(APITestCase):
         self.assertEqual(delete_response.status_code, status.HTTP_404_NOT_FOUND)
         comment.refresh_from_db()
         self.assertEqual(comment.comment_cont, 'Not yours')
+
+
+class DefaultModelAPITestCase(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_superuser(
+            username='scene-owner',
+            email='scene-owner@example.com',
+            password='testpass123',
+        )
+        self.story = Comic.objects.create(
+            title='Corners of Fate',
+            description='Shared scene source',
+            user=self.owner,
+            is_public=True,
+            moderation_status='approved',
+        )
+        self.season = Season.objects.create(
+            title='Season 1',
+            season_number=1,
+            description='Shared season',
+            comic=self.story,
+            release_date='2024-01-01',
+            is_public=True,
+        )
+
+    def test_default_model_endpoint_returns_shared_scene_metadata(self):
+        url = reverse('icvybz-api:default-model')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['source_story_title'], 'Corners of Fate')
+        self.assertIn('model_gltf', response.data)
+        self.assertIn('model_usdz', response.data)

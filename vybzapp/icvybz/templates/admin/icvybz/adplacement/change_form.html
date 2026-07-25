@@ -1,0 +1,8 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+  window.VYBZ_AD_PLACEMENT_EPISODE_CHOICES_URL = "{% url 'admin:icvybz_adplacement_episode_choices' %}";
+</script>
+{% endblock %}

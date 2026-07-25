@@ -6,6 +6,12 @@ import MessagePopup from '../MessagePopup';
 import FormFieldWithLimit from '../FormFieldWithLimit';
 import { useApi } from '../../contexts/ApiContext';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
+import {
+  MAX_CHARACTERS_PER_STORY,
+  SCENE_SLOT_PRESETS,
+  coordsForSceneSlot,
+  type SceneSlotKey,
+} from '../../utils/sceneSlots';
 
 interface CharactersStepProps {
   data: StoryCreationData;
@@ -24,6 +30,7 @@ interface Character {
   bio: string;
   personality: string;
   love_interest: string;
+  scene_slot?: string | null;
   pov_head_x?: number;
   pov_head_y?: number;
   pov_head_z?: number;
@@ -37,9 +44,7 @@ const EMPTY_CHARACTER: Character = {
   bio: '',
   personality: '',
   love_interest: '',
-  pov_head_x: 0.0,
-  pov_head_y: 1.6,
-  pov_head_z: 0.0,
+  scene_slot: '',
 };
 
 const CharactersStep: React.FC<CharactersStepProps> = ({
@@ -71,18 +76,30 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
     'Other',
   ];
 
+  const takenSlots = characters
+    .map((character, index) => (index === editingIndex ? null : character.scene_slot))
+    .filter((slot): slot is string => Boolean(slot));
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-
-    if (name === 'pov_head_x' || name === 'pov_head_y' || name === 'pov_head_z') {
-      const numValue = value === '' ? 0 : parseFloat(value);
-      setCurrentCharacter((prev) => ({ ...prev, [name]: isNaN(numValue) ? 0 : numValue }));
-    } else {
-      setCurrentCharacter((prev) => ({ ...prev, [name]: value }));
-    }
+    setCurrentCharacter((prev) => ({ ...prev, [name]: value }));
 
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleSlotSelect = (slot: SceneSlotKey) => {
+    const coords = coordsForSceneSlot(slot);
+    setCurrentCharacter((prev) => ({
+      ...prev,
+      scene_slot: slot,
+      pov_head_x: coords?.head_x,
+      pov_head_y: coords?.head_y,
+      pov_head_z: coords?.head_z,
+    }));
+    if (errors.scene_slot) {
+      setErrors((prev) => ({ ...prev, scene_slot: '' }));
     }
   };
 
@@ -99,6 +116,12 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
 
     if (!character.personality) {
       newErrors.personality = 'Please select a personality';
+    }
+
+    if (!character.scene_slot) {
+      newErrors.scene_slot = 'Select a scene slot';
+    } else if (takenSlots.includes(character.scene_slot)) {
+      newErrors.scene_slot = `${character.scene_slot} is already used by another character`;
     }
 
     return newErrors;
@@ -124,6 +147,12 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
       setCharacters(updatedCharacters);
       onDataUpdate({ characters: updatedCharacters });
     } else {
+      if (characters.length >= MAX_CHARACTERS_PER_STORY) {
+        setErrors({
+          general: `Stories can have at most ${MAX_CHARACTERS_PER_STORY} characters.`,
+        });
+        return;
+      }
       const newCharacter = { ...currentCharacter };
       delete (newCharacter as { id?: number }).id;
       const updatedCharacters = [...characters, newCharacter];
@@ -207,25 +236,29 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
 
       const savedCharacters = [];
       for (const character of characters) {
+        const coords = coordsForSceneSlot(character.scene_slot);
         if (character.id == null) {
           const savedCharacter = await createCharacter(storyId, {
             name: character.name,
             bio: character.bio,
             personality: character.personality,
             love_interest: (character.love_interest || '').trim(),
+            scene_slot: character.scene_slot || null,
           });
           savedCharacters.push({
             ...savedCharacter,
-            pov_head_x: character.pov_head_x,
-            pov_head_y: character.pov_head_y,
-            pov_head_z: character.pov_head_z,
+            scene_slot: character.scene_slot,
+            pov_head_x: coords?.head_x ?? character.pov_head_x,
+            pov_head_y: coords?.head_y ?? character.pov_head_y,
+            pov_head_z: coords?.head_z ?? character.pov_head_z,
           });
         } else {
           savedCharacters.push({
             ...character,
-            pov_head_x: character.pov_head_x,
-            pov_head_y: character.pov_head_y,
-            pov_head_z: character.pov_head_z,
+            scene_slot: character.scene_slot,
+            pov_head_x: coords?.head_x ?? character.pov_head_x,
+            pov_head_y: coords?.head_y ?? character.pov_head_y,
+            pov_head_z: coords?.head_z ?? character.pov_head_z,
           });
         }
       }
@@ -258,6 +291,8 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
     return () => registerFooterNext(null);
   }, [registerFooterNext, persistCharactersAndAdvance]);
 
+  const canAddMore = characters.length < MAX_CHARACTERS_PER_STORY || editingIndex !== null;
+
   return (
     <div className="characters-step" data-testid="characters-step">
       <MessagePopup
@@ -279,116 +314,134 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
           {editingIndex !== null ? 'Edit character' : 'New character'}
         </h3>
 
-        <div className="row g-2">
-          <div className="col-md-6">
-            <div className="characters-step__field">
-              <label htmlFor="name" className="form-label subtext-btn-sm mb-1">
-                Name <span className="text-danger">*</span>
-              </label>
-              <FormFieldWithLimit value={currentCharacter.name} maxLength={50}>
-                <input
-                  type="text"
-                  className={`form-control form-control-sm ${errors.name ? 'is-invalid' : ''}`}
-                  id="name"
-                  name="name"
-                  value={currentCharacter.name}
-                  onChange={handleInputChange}
-                  placeholder="Character name"
-                />
-              </FormFieldWithLimit>
-              {errors.name && <div className="invalid-feedback d-block">{errors.name}</div>}
-            </div>
-          </div>
-
-          <div className="col-md-6">
-            <div className="characters-step__field">
-              <label htmlFor="personality" className="form-label subtext-btn-sm mb-1">
-                Personality <span className="text-danger">*</span>
-              </label>
-              <select
-                className={`form-select form-select-sm ${errors.personality ? 'is-invalid' : ''} font-quicksand`}
-                id="personality"
-                name="personality"
-                value={currentCharacter.personality}
-                onChange={handleInputChange}
-              >
-                <option value="">Select personality</option>
-                {personalities.map((personality) => (
-                  <option key={personality} value={personality}>
-                    {personality}
-                  </option>
-                ))}
-              </select>
-              {errors.personality && <div className="invalid-feedback d-block">{errors.personality}</div>}
-            </div>
-          </div>
-
-          <div className="col-12">
-            <div className="characters-step__field">
-              <label htmlFor="bio" className="form-label subtext-btn-sm mb-1">
-                Bio <span className="text-danger">*</span>
-              </label>
-              <FormFieldWithLimit value={currentCharacter.bio} maxLength={500}>
-                <textarea
-                  className={`form-control form-control-sm ${errors.bio ? 'is-invalid' : ''}`}
-                  id="bio"
-                  name="bio"
-                  rows={3}
-                  value={currentCharacter.bio}
-                  onChange={handleInputChange}
-                  placeholder="Personality, background, motivations…"
-                />
-              </FormFieldWithLimit>
-              {errors.bio && <div className="invalid-feedback d-block">{errors.bio}</div>}
-            </div>
-          </div>
-        </div>
-
-        <details className="characters-step__pov">
-          <summary>3D head position (optional)</summary>
-          <p className="characters-step__povHint">
-            Camera targets use these coordinates. Default height is 1.6m (Y).
+        {!canAddMore && editingIndex === null ? (
+          <p className="characters-step__povHint" role="status">
+            Cast is full ({MAX_CHARACTERS_PER_STORY}/{MAX_CHARACTERS_PER_STORY}). Edit or remove a
+            character to change slots.
           </p>
-          <div className="characters-step__coords">
-            {(['x', 'y', 'z'] as const).map((axis, i) => {
-              const field = `pov_head_${axis}` as 'pov_head_x' | 'pov_head_y' | 'pov_head_z';
-              const defaults = [0, 1.6, 0];
-              return (
-                <div key={axis} className="characters-step__coord">
-                  <label htmlFor={field}>{axis.toUpperCase()}</label>
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    id={field}
-                    name={field}
-                    value={currentCharacter[field] ?? defaults[i]}
-                    onChange={handleInputChange}
-                    step="0.1"
-                  />
+        ) : (
+          <>
+            <div className="row g-2">
+              <div className="col-md-6">
+                <div className="characters-step__field">
+                  <label htmlFor="name" className="form-label subtext-btn-sm mb-1">
+                    Name <span className="text-danger">*</span>
+                  </label>
+                  <FormFieldWithLimit value={currentCharacter.name} maxLength={50}>
+                    <input
+                      type="text"
+                      className={`form-control form-control-sm ${errors.name ? 'is-invalid' : ''}`}
+                      id="name"
+                      name="name"
+                      value={currentCharacter.name}
+                      onChange={handleInputChange}
+                      placeholder="Character name"
+                    />
+                  </FormFieldWithLimit>
+                  {errors.name && <div className="invalid-feedback d-block">{errors.name}</div>}
                 </div>
-              );
-            })}
-          </div>
-        </details>
+              </div>
 
-        <div className="characters-step__actions">
-          <SmallButton variant="primary" onClick={handleAddCharacter}>
-            <i className="fas fa-plus me-1" aria-hidden />
-            {editingIndex !== null ? 'Update' : 'Add character'}
-          </SmallButton>
-          {editingIndex !== null && (
-            <SmallButton variant="outline-secondary" onClick={resetForm}>
-              <i className="fas fa-times me-1" aria-hidden />
-              Cancel
-            </SmallButton>
-          )}
-        </div>
+              <div className="col-md-6">
+                <div className="characters-step__field">
+                  <label htmlFor="personality" className="form-label subtext-btn-sm mb-1">
+                    Personality <span className="text-danger">*</span>
+                  </label>
+                  <select
+                    className={`form-select form-select-sm ${errors.personality ? 'is-invalid' : ''} font-quicksand`}
+                    id="personality"
+                    name="personality"
+                    value={currentCharacter.personality}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select personality</option>
+                    {personalities.map((personality) => (
+                      <option key={personality} value={personality}>
+                        {personality}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.personality && <div className="invalid-feedback d-block">{errors.personality}</div>}
+                </div>
+              </div>
+
+              <div className="col-12">
+                <div className="characters-step__field">
+                  <label htmlFor="bio" className="form-label subtext-btn-sm mb-1">
+                    Bio <span className="text-danger">*</span>
+                  </label>
+                  <FormFieldWithLimit value={currentCharacter.bio} maxLength={500}>
+                    <textarea
+                      className={`form-control form-control-sm ${errors.bio ? 'is-invalid' : ''}`}
+                      id="bio"
+                      name="bio"
+                      rows={3}
+                      value={currentCharacter.bio}
+                      onChange={handleInputChange}
+                      placeholder="Personality, background, motivations…"
+                    />
+                  </FormFieldWithLimit>
+                  {errors.bio && <div className="invalid-feedback d-block">{errors.bio}</div>}
+                </div>
+              </div>
+            </div>
+
+            <div className="characters-step__field">
+              <span className="form-label subtext-btn-sm mb-1 d-block">
+                Scene slot <span className="text-danger">*</span>
+              </span>
+              <p className="characters-step__povHint">
+                Each character stands in one shared-scene position. One slot per cast member.
+              </p>
+              <div className="characters-step__slots" role="radiogroup" aria-label="Scene slot">
+                {SCENE_SLOT_PRESETS.map((preset) => {
+                  const taken = takenSlots.includes(preset.key);
+                  const selected = currentCharacter.scene_slot === preset.key;
+                  return (
+                    <button
+                      key={preset.key}
+                      type="button"
+                      className={`characters-step__slot${selected ? ' is-selected' : ''}`}
+                      onClick={() => handleSlotSelect(preset.key)}
+                      disabled={taken}
+                      aria-pressed={selected}
+                      title={
+                        taken
+                          ? `${preset.label} is already taken`
+                          : `${preset.label} (${preset.head_x}, ${preset.head_y}, ${preset.head_z})`
+                      }
+                    >
+                      <span className="characters-step__slotLabel">{preset.label}</span>
+                      <span className="characters-step__slotCoords">
+                        {preset.head_x}, {preset.head_y}, {preset.head_z}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.scene_slot && <div className="invalid-feedback d-block">{errors.scene_slot}</div>}
+            </div>
+
+            <div className="characters-step__actions">
+              <SmallButton variant="primary" onClick={handleAddCharacter}>
+                <i className="fas fa-plus me-1" aria-hidden />
+                {editingIndex !== null ? 'Update' : 'Add character'}
+              </SmallButton>
+              {editingIndex !== null && (
+                <SmallButton variant="outline-secondary" onClick={resetForm}>
+                  <i className="fas fa-times me-1" aria-hidden />
+                  Cancel
+                </SmallButton>
+              )}
+            </div>
+          </>
+        )}
       </section>
 
       {characters.length > 0 && (
         <section className="characters-step__section" aria-labelledby="characters-list-title">
           <h3 className="characters-step__sectionTitle" id="characters-list-title">
-            Added ({characters.length})
+            Added ({characters.length}/{MAX_CHARACTERS_PER_STORY})
           </h3>
           <div className="characters-step__grid">
             {characters.map((character, index) => (
@@ -397,7 +450,9 @@ const CharactersStep: React.FC<CharactersStepProps> = ({
                 className="characters-step__card"
                 character={{
                   id: index,
-                  name: character.name,
+                  name: character.scene_slot
+                    ? `${character.name} · ${character.scene_slot}`
+                    : character.name,
                   bio: character.bio,
                   personality: character.personality,
                   love_interest: character.love_interest,

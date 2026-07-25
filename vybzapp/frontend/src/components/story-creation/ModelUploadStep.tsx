@@ -3,6 +3,10 @@ import { StoryCreationData } from '../StoryCreationWizard';
 import SmallButton from '../SmallButton';
 import Model3DUpload from '../Model3DUpload';
 
+/**
+ * Reserved for a future permissioned custom-model upload flow.
+ * The story creation wizard currently uses the shared platform model instead.
+ */
 interface ModelUploadStepProps {
   data: StoryCreationData;
   onDataUpdate: (data: Partial<StoryCreationData>) => void;
@@ -44,7 +48,8 @@ const ModelUploadStep: React.FC<ModelUploadStepProps> = ({
       model: {
         ...data.model,
         file: uploadedFile,
-        previewUrl: url
+        previewUrl: url,
+        usesSharedModel: false,
       }
     });
   };

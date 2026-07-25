@@ -74,6 +74,7 @@ const mockStoryData = {
     bio: string;
     personality: string;
     love_interest: string;
+    scene_slot?: string | null;
     pov_head_x?: number;
     pov_head_y?: number;
     pov_head_z?: number;
@@ -91,6 +92,7 @@ const mockStoryData = {
     file_url: '',
     format: 'glb' as const,
     previewUrl: null,
+    usesSharedModel: true,
   },
   cameraPosition: '0deg 75deg 3m',
   cameraTarget: '0m 1.6m 0m',
@@ -153,10 +155,11 @@ describe('CharactersStep', () => {
     mockApiContext.loadSeasons.mockResolvedValue([]);
   });
 
-  const fillAndAddCharacter = () => {
+  const fillAndAddCharacter = (slotLabel = 'North_SS') => {
     fireEvent.change(screen.getByLabelText(/^name/i), { target: { value: 'Hero' } });
     fireEvent.change(screen.getByLabelText(/^bio/i), { target: { value: 'Bio here' } });
     fireEvent.change(screen.getByLabelText(/^personality/i), { target: { value: 'Brave' } });
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(slotLabel, 'i') }));
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
   };
 
@@ -165,7 +168,7 @@ describe('CharactersStep', () => {
 
     fillAndAddCharacter();
     await waitFor(() => {
-      expect(screen.getByText('Hero')).toBeInTheDocument();
+      expect(screen.getByText(/Hero/)).toBeInTheDocument();
     });
 
     const footerNext = getFooterNext();
@@ -196,6 +199,7 @@ describe('CharactersStep', () => {
         bio: 'Bio here',
         personality: 'Brave',
         love_interest: '',
+        scene_slot: 'North_SS',
       });
     });
     expect(mockOnNext).toHaveBeenCalled();
@@ -217,7 +221,7 @@ describe('CharactersStep', () => {
 
     fillAndAddCharacter();
     await waitFor(() => {
-      expect(screen.getByText('Hero')).toBeInTheDocument();
+      expect(screen.getByText(/Hero/)).toBeInTheDocument();
     });
 
     await act(async () => {
@@ -313,24 +317,26 @@ describe('CharactersStep', () => {
     expect(mockOnNext).not.toHaveBeenCalled();
   });
 
-  test('preserves POV coordinates when creating character', async () => {
+  test('sends scene_slot preset coords when creating character', async () => {
     const { getFooterNext } = renderCharactersStep();
 
-    fireEvent.change(screen.getByLabelText(/^name/i), { target: { value: 'Hero' } });
-    fireEvent.change(screen.getByLabelText(/^bio/i), { target: { value: 'Bio here' } });
-    fireEvent.change(screen.getByLabelText(/^personality/i), { target: { value: 'Brave' } });
-    fireEvent.click(screen.getByText(/3d head position/i));
-    fireEvent.change(screen.getByLabelText(/^x$/i), { target: { value: '2.5' } });
-    fireEvent.change(screen.getByLabelText(/^y$/i), { target: { value: '1.8' } });
-    fireEvent.change(screen.getByLabelText(/^z$/i), { target: { value: '-1.2' } });
-    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
-
+    fillAndAddCharacter('West_SS');
     await waitFor(() => {
-      expect(screen.getByText('Hero')).toBeInTheDocument();
+      expect(screen.getByText(/Hero/)).toBeInTheDocument();
     });
 
     await act(async () => {
       await getFooterNext()!();
+    });
+
+    await waitFor(() => {
+      expect(mockApiContext.createCharacter).toHaveBeenCalledWith(
+        101,
+        expect.objectContaining({
+          name: 'Hero',
+          scene_slot: 'West_SS',
+        })
+      );
     });
 
     await waitFor(() => {
@@ -339,9 +345,10 @@ describe('CharactersStep', () => {
           characters: expect.arrayContaining([
             expect.objectContaining({
               id: 301,
-              pov_head_x: 2.5,
-              pov_head_y: 1.8,
-              pov_head_z: -1.2,
+              scene_slot: 'West_SS',
+              pov_head_x: 2.03,
+              pov_head_y: 2.0,
+              pov_head_z: 4.5,
             }),
           ]),
         })

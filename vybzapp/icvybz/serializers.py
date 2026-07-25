@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Comic, Season, Episode, Dialogue, Character, Studio, AudioTrack, CollaborationInvite, StoryCollaborator, StudioCollaborator, StudioCollaborationRequest, ComicComment
+from django.core import signing
+from .models import (
+    Comic, Season, Episode, Dialogue, Character, Studio, AudioTrack,
+    CollaborationInvite, StoryCollaborator, StudioCollaborator,
+    StudioCollaborationRequest, ComicComment, AdvertiserProfile,
+    AdCampaign, AdCreative, AdPlacement, AdEvent, AdRevenueSplitConfig,
+)
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Exists, OuterRef, Q, Sum
 
@@ -7,6 +13,15 @@ User = get_user_model()
 
 
 DEFAULT_MODEL_STORY_TITLE = 'Corners of Fate'
+
+
+def _normalize_url(value):
+    value = (value or '').strip()
+    if not value:
+        return value
+    if '://' in value:
+        return value
+    return f'https://{value}'
 
 
 def _file_url(file_field, request=None):
@@ -19,6 +34,36 @@ def _file_url(file_field, request=None):
     if request and url and not url.startswith(('http://', 'https://')):
         return request.build_absolute_uri(url)
     return url
+
+
+def get_default_model_season(model_field='model_gltf'):
+    """Return the Season used as the shared platform 3D model source."""
+    return (
+        Season.objects.filter(
+            comic__title__iexact=DEFAULT_MODEL_STORY_TITLE,
+            **{f'{model_field}__isnull': False},
+        )
+        .exclude(**{model_field: ''})
+        .order_by(
+            '-comic__user__is_superuser',
+            '-comic__user__is_staff',
+            'comic__created_at',
+            'season_number',
+            'id',
+        )
+        .first()
+    )
+
+
+def get_default_model_urls(request=None):
+    """URLs for the shared JustVybz / Corners of Fate 3D model."""
+    gltf_season = get_default_model_season('model_gltf')
+    usdz_season = get_default_model_season('model_usdz')
+    return {
+        'model_gltf': _file_url(getattr(gltf_season, 'model_gltf', None), request) if gltf_season else None,
+        'model_usdz': _file_url(getattr(usdz_season, 'model_usdz', None), request) if usdz_season else None,
+        'source_story_title': DEFAULT_MODEL_STORY_TITLE,
+    }
 
 
 class ComicSerializer(serializers.ModelSerializer):
@@ -65,21 +110,7 @@ class SeasonSerializer(serializers.ModelSerializer):
     def _default_model_season(self, model_field):
         cache_key = f'_default_model_season_{model_field}'
         if not hasattr(self, cache_key):
-            queryset = (
-                Season.objects.filter(
-                    comic__title__iexact=DEFAULT_MODEL_STORY_TITLE,
-                    **{f'{model_field}__isnull': False},
-                )
-                .exclude(**{model_field: ''})
-                .order_by(
-                    '-comic__user__is_superuser',
-                    '-comic__user__is_staff',
-                    'comic__created_at',
-                    'season_number',
-                    'id',
-                )
-            )
-            setattr(self, cache_key, queryset.first())
+            setattr(self, cache_key, get_default_model_season(model_field))
         return getattr(self, cache_key)
 
     def _resolved_model_url(self, obj, model_field):
@@ -229,15 +260,15 @@ class ComicCommentSerializer(serializers.ModelSerializer):
 
 class CharacterSerializer(serializers.ModelSerializer):
     pov_data = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Character
         fields = [
             'id', 'name', 'bio', 'personality', 'love_interest', 'is_public',
-            'user', 'story', 'pov_data', 'created_at', 'updated_at'
+            'user', 'story', 'scene_slot', 'pov_data', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
-    
+
     def get_pov_data(self, obj):
         """Return POV data if POV exists - uses prefetched data if available"""
         # Django's prefetch_related automatically uses cached data when available
@@ -256,6 +287,57 @@ class CharacterSerializer(serializers.ModelSerializer):
         except Exception:
             pass
         return None
+
+    def validate_scene_slot(self, value):
+        from .scene_slots import SCENE_SLOT_KEYS
+
+        if value in (None, ''):
+            return None
+        if value not in SCENE_SLOT_KEYS:
+            raise serializers.ValidationError(
+                f'Invalid scene slot. Choose one of: {", ".join(SCENE_SLOT_KEYS)}.'
+            )
+        return value
+
+    def validate(self, attrs):
+        from .scene_slots import MAX_CHARACTERS_PER_STORY
+
+        attrs = super().validate(attrs)
+        is_create = self.instance is None
+        scene_slot = attrs.get('scene_slot', serializers.empty)
+        if scene_slot is serializers.empty:
+            resolved_slot = None if is_create else self.instance.scene_slot
+        else:
+            resolved_slot = scene_slot
+
+        story = attrs.get('story')
+        if story is None and self.instance is not None:
+            story = self.instance.story
+        story_id = getattr(story, 'id', story)
+        if story_id is None:
+            story_id = self.context.get('story_id')
+
+        if is_create and story_id:
+            existing_count = Character.objects.filter(story_id=story_id).count()
+            if existing_count >= MAX_CHARACTERS_PER_STORY:
+                raise serializers.ValidationError({
+                    'non_field_errors': [
+                        f'Stories can have at most {MAX_CHARACTERS_PER_STORY} characters.'
+                    ],
+                })
+            # scene_slot is required for new cast members in the UI; API allows omit for
+            # legacy imports. When provided it must be unique (checked below).
+
+        if resolved_slot and story_id:
+            conflict = Character.objects.filter(story_id=story_id, scene_slot=resolved_slot)
+            if self.instance is not None:
+                conflict = conflict.exclude(pk=self.instance.pk)
+            if conflict.exists():
+                raise serializers.ValidationError({
+                    'scene_slot': f'{resolved_slot} is already used by another character in this story.',
+                })
+
+        return attrs
 
 class StudioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -280,6 +362,138 @@ class AudioTrackSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'created_by'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'created_by']
+
+
+class AdvertiserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdvertiserProfile
+        fields = [
+            'id', 'user', 'business_name', 'contact_name', 'contact_email',
+            'website_url', 'notes', 'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'user', 'status', 'created_at', 'updated_at']
+
+    def validate_website_url(self, value):
+        return _normalize_url(value)
+
+
+class AdCampaignSerializer(serializers.ModelSerializer):
+    advertiser_name = serializers.CharField(source='advertiser.business_name', read_only=True)
+
+    class Meta:
+        model = AdCampaign
+        fields = [
+            'id', 'advertiser', 'advertiser_name', 'name', 'start_date', 'end_date',
+            'is_active', 'budget_label', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'advertiser', 'advertiser_name', 'created_at', 'updated_at']
+
+
+class AdCreativeSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    advertiser_name = serializers.CharField(source='advertiser.business_name', read_only=True)
+
+    class Meta:
+        model = AdCreative
+        fields = [
+            'id', 'advertiser', 'advertiser_name', 'campaign', 'title', 'image',
+            'image_url', 'destination_url', 'alt_text', 'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'advertiser', 'advertiser_name', 'image_url', 'status',
+            'created_at', 'updated_at'
+        ]
+
+    def get_image_url(self, obj):
+        return _file_url(obj.image, self.context.get('request'))
+
+    def validate_destination_url(self, value):
+        return _normalize_url(value)
+
+
+class AdPlacementSerializer(serializers.ModelSerializer):
+    creative_title = serializers.CharField(source='creative.title', read_only=True)
+    creative_image_url = serializers.SerializerMethodField()
+    destination_url = serializers.URLField(source='creative.destination_url', read_only=True)
+    alt_text = serializers.CharField(source='creative.alt_text', read_only=True)
+    advertiser_name = serializers.CharField(source='creative.advertiser.business_name', read_only=True)
+    event_token = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AdPlacement
+        fields = [
+            'id', 'season', 'episode', 'campaign', 'creative', 'creative_title',
+            'creative_image_url', 'destination_url', 'alt_text', 'advertiser_name',
+            'event_token',
+            'name', 'slot_name', 'position_x', 'position_y', 'position_z', 'normal_x', 'normal_y',
+            'normal_z', 'width', 'height', 'rotation', 'priority', 'is_active',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'season', 'creative_title', 'creative_image_url', 'destination_url', 'event_token',
+            'alt_text', 'advertiser_name', 'created_at', 'updated_at'
+        ]
+
+    def get_creative_image_url(self, obj):
+        return _file_url(obj.creative.image, self.context.get('request')) if obj.creative else None
+
+    def get_event_token(self, obj):
+        request = self.context.get('request')
+        episode_id = None
+        if request:
+            episode_id = request.query_params.get('episode')
+        episode_id = episode_id or obj.episode_id
+        if not episode_id:
+            return None
+        return signing.dumps(
+            {
+                'placement': obj.id,
+                'episode': int(episode_id),
+                'creative': obj.creative_id,
+            },
+            salt='icvybz.ad-event',
+        )
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        creative = attrs.get('creative') or getattr(self.instance, 'creative', None)
+        campaign = attrs.get('campaign') or getattr(self.instance, 'campaign', None)
+        season = attrs.get('season') or getattr(self.instance, 'season', None) or self.context.get('season')
+        episode = attrs.get('episode') if 'episode' in attrs else getattr(self.instance, 'episode', None)
+
+        if creative and campaign and creative.campaign_id and creative.campaign_id != campaign.id:
+            raise serializers.ValidationError("Creative does not belong to the selected campaign.")
+        if creative and campaign and creative.advertiser_id != campaign.advertiser_id:
+            raise serializers.ValidationError("Creative advertiser must match campaign advertiser.")
+        if season and episode and episode.season_id != season.id:
+            raise serializers.ValidationError("Episode must belong to the placement season.")
+        return attrs
+
+
+class AdEventSerializer(serializers.ModelSerializer):
+    event_token = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = AdEvent
+        fields = [
+            'id', 'placement', 'creative', 'episode', 'story', 'event_type',
+            'session_key', 'event_token', 'ip_hash', 'user_agent_hash',
+            'is_suspicious', 'fraud_reason', 'created_at'
+        ]
+        read_only_fields = [
+            'id', 'creative', 'story', 'ip_hash', 'user_agent_hash',
+            'is_suspicious', 'fraud_reason', 'created_at'
+        ]
+
+
+class AdRevenueSplitConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdRevenueSplitConfig
+        fields = [
+            'id', 'creator_percentage', 'platform_percentage', 'effective_date',
+            'is_active', 'notes', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
 
 
 # Collaboration Serializers

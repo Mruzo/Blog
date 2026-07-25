@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import StoryCreationWizard from '../components/StoryCreationWizard';
 import StoryDetailsStep from '../components/story-creation/StoryDetailsStep';
+import PublishStep from '../components/story-creation/PublishStep';
 
 const mockApiContext = {
   stories: [],
@@ -106,7 +107,7 @@ describe('Story Creation Data Synchronization', () => {
         episode: { title: '', episode_number: 1, description: '', summary: '' },
         characters: [],
         dialogues: [],
-        model: { file: null }
+        model: { file: null, file_url: '', format: 'glb' as const, previewUrl: null, usesSharedModel: true }
       };
 
       renderWithContext(
@@ -146,7 +147,7 @@ describe('Story Creation Data Synchronization', () => {
         episode: { title: '', episode_number: 1, description: '', summary: '' },
         characters: [],
         dialogues: [],
-        model: { file: null }
+        model: { file: null, file_url: '', format: 'glb' as const, previewUrl: null, usesSharedModel: true }
       };
 
       renderWithContext(
@@ -178,21 +179,20 @@ describe('Story Creation Data Synchronization', () => {
       });
     });
 
-    it('should update parent data when is_public checkbox changes', async () => {
-      const mockOnDataUpdate = jest.fn();
+    it('should not show the public visibility checkbox on basics', () => {
       const initialData = {
         story: { title: '', description: '', is_public: false },
         season: { title: '', season_number: 1, description: '', release_date: '' },
         episode: { title: '', episode_number: 1, description: '', summary: '' },
         characters: [],
         dialogues: [],
-        model: { file: null }
+        model: { file: null, file_url: '', format: 'glb' as const, previewUrl: null, usesSharedModel: true }
       };
 
       renderWithContext(
         <StoryDetailsStep
           data={initialData}
-          onDataUpdate={mockOnDataUpdate}
+          onDataUpdate={jest.fn()}
           onNext={jest.fn()}
           onPrevious={jest.fn()}
           isFirstStep={true}
@@ -200,22 +200,42 @@ describe('Story Creation Data Synchronization', () => {
         />
       );
 
-      // Find the is_public checkbox
-      const publicCheckbox = screen.getByLabelText(/make this story public/i);
-      
-      // Check the checkbox
-      fireEvent.click(publicCheckbox);
+      expect(screen.queryByLabelText(/make this story public/i)).toBeNull();
+    });
+  });
 
-      // Wait for the onDataUpdate to be called
-      await waitFor(() => {
-        expect(mockOnDataUpdate).toHaveBeenCalledWith({
-          story: {
-            title: '',
-            description: '',
-            is_public: true
-          }
-        });
-      });
+  describe('PublishStep review', () => {
+    it('should show a story review without duplicate action buttons', () => {
+      const initialData = {
+        story: { title: 'Ready Story', description: 'A short blurb', is_public: false },
+        season: { title: 'Season 1', season_number: 1, description: '', release_date: '2024-01-01' },
+        episode: { title: 'Episode 1', episode_number: 1, description: 'Ep desc', summary: '', is_published: false },
+        characters: [{ name: 'Ava', bio: '', personality: '', love_interest: '' }],
+        dialogues: [{ character: 1, text: 'Hi', order: 1, scene_title: '', scene_description: '', shot_type: '', camera_orbit: '', camera_target: '', field_of_view: 45, zoom_speed: 1, rotation: '' }],
+        model: { file: null, file_url: '', format: 'glb' as const, previewUrl: null, usesSharedModel: true },
+        cameraPosition: '',
+        cameraTarget: '',
+        publish: { is_published: false, publish_date: '' },
+      };
+
+      renderWithContext(
+        <PublishStep
+          data={initialData}
+          onDataUpdate={jest.fn()}
+          onNext={jest.fn()}
+          onPrevious={jest.fn()}
+          isFirstStep={false}
+          isLastStep={true}
+        />
+      );
+
+      expect(screen.getByTestId('publish-step')).toBeInTheDocument();
+      expect(screen.getByText('Ready Story')).toBeInTheDocument();
+      expect(screen.getByText('Ava')).toBeInTheDocument();
+      expect(screen.getByText('1 line')).toBeInTheDocument();
+      expect(screen.queryByLabelText(/make this story public/i)).toBeNull();
+      expect(screen.queryByRole('button', { name: /publish story/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /save as draft/i })).toBeNull();
     });
   });
 
@@ -254,7 +274,7 @@ describe('Story Creation Data Synchronization', () => {
 
       // Wait for error message
       await waitFor(() => {
-        expect(screen.getByText(/please enter a story title before saving as draft/i)).toBeInTheDocument();
+        expect(screen.getByText(/please enter a story title before saving/i)).toBeInTheDocument();
       });
     });
 
@@ -272,7 +292,7 @@ describe('Story Creation Data Synchronization', () => {
         expect(screen.getByText(/story description is required/i)).toBeInTheDocument();
       });
 
-      expect(screen.getByText(/step 1 of 8/i)).toBeInTheDocument();
+      expect(screen.getByText(/step 1 of 7/i)).toBeInTheDocument();
     });
 
     it('should advance from step 1 when title and description are filled', async () => {
@@ -290,7 +310,7 @@ describe('Story Creation Data Synchronization', () => {
       fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/step 2 of 8/i)).toBeInTheDocument();
+        expect(screen.getByText(/step 2 of 7/i)).toBeInTheDocument();
         expect(screen.getByTestId('characters-step')).toBeInTheDocument();
       });
     });

@@ -5179,6 +5179,116 @@ h2 {
   }
 }
 
+/* Story wizard — publish step (review only; actions live in footer) */
+.story-wizard__panel[data-step='publish'] .story-wizard__stepContent {
+  padding-top: 0.85rem;
+}
+
+.story-wizard-publish__hero {
+  margin-bottom: 1.35rem;
+}
+
+.story-wizard-publish__eyebrow {
+  font-family: var(--font-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.45);
+  margin: 0 0 0.4rem;
+}
+
+.story-wizard-publish__title {
+  font-family: var(--font-primary);
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  margin: 0 0 0.55rem;
+  line-height: 1.2;
+}
+
+.story-wizard-publish__description {
+  font-family: var(--font-primary);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: rgba(15, 23, 42, 0.68);
+  margin: 0;
+  max-width: 54ch;
+}
+
+.story-wizard-publish__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1.25rem;
+  margin: 0 0 1.35rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.story-wizard-publish__metaItem {
+  min-width: 0;
+}
+
+.story-wizard-publish__metaItem dt {
+  font-family: var(--font-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.45);
+  margin: 0 0 0.2rem;
+}
+
+.story-wizard-publish__metaItem dd {
+  font-family: var(--font-primary);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.story-wizard-publish__episode {
+  margin-bottom: 1.25rem;
+}
+
+.story-wizard-publish__episodeLabel {
+  font-family: var(--font-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.45);
+  margin: 0 0 0.35rem;
+}
+
+.story-wizard-publish__episodeText {
+  font-family: var(--font-primary);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(15, 23, 42, 0.68);
+  margin: 0;
+  max-width: 54ch;
+}
+
+.story-wizard-publish__note {
+  font-family: var(--font-primary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(15, 23, 42, 0.5);
+  margin: 0;
+  max-width: 52ch;
+}
+
+@media (min-width: 768px) {
+  .story-wizard-publish__meta {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 /* Story wizard — characters step (compact, no nested cards) */
 .story-wizard__panel[data-step='characters'] .story-wizard__stepHeader {
   padding-bottom: 0.35rem;
@@ -5254,6 +5364,59 @@ h2 {
   font-size: 0.72rem;
   color: rgba(15, 23, 42, 0.5);
   margin: 0.45rem 0 0.5rem;
+}
+
+.characters-step__slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (min-width: 576px) {
+  .characters-step__slots {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.characters-step__slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 0.35rem;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.characters-step__slot:hover:not(:disabled) {
+  border-color: rgba(15, 23, 42, 0.35);
+}
+
+.characters-step__slot.is-selected {
+  border-color: rgba(15, 23, 42, 0.55);
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.characters-step__slot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.characters-step__slotLabel {
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.characters-step__slotCoords {
+  font-family: var(--font-primary);
+  font-size: 0.68rem;
+  color: rgba(15, 23, 42, 0.5);
 }
 
 .characters-step__coords {
@@ -5661,4 +5824,134 @@ h2 {
   transform: none;
   font-size: 0.65rem;
   line-height: 1;
+}
+
+/* Staff ad dashboard */
+.ads-dashboard .product-landing__hero {
+  padding-bottom: 0.75rem;
+}
+
+.ads-kpiStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ads-kpi {
+  min-width: 4.5rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  text-align: center;
+}
+
+.ads-kpi__value {
+  font-family: var(--font-primary);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.ads-kpi__label {
+  font-size: 0.72rem;
+  color: rgba(15, 23, 42, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ads-toolbar {
+  z-index: 1020;
+  background: rgba(248, 250, 252, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 0.65rem 0 0.5rem;
+}
+
+.ads-toolbar__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ads-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ads-toolbar__select {
+  min-width: 11rem;
+  max-width: 16rem;
+}
+
+.ads-toolbar__meta {
+  padding: 0.35rem 0 0.15rem;
+}
+
+.ads-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ads-tabs__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  color: rgba(15, 23, 42, 0.72);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ads-tabs__btn.is-active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+}
+
+.ads-placements-table__row {
+  cursor: pointer;
+}
+
+.ads-placements-table__row:hover,
+.ads-placements-table__row:focus-visible {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.ads-placements-table__row.is-selected {
+  box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+.ads-emptyState {
+  border: 1px dashed rgba(15, 23, 42, 0.15);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.ads-invoice-form {
+  max-width: 36rem;
+}
+
+.ads-advanced summary {
+  cursor: pointer;
+}
+
+@media (max-width: 767.98px) {
+  .ads-toolbar__select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .ads-toolbar__actions {
+    width: 100%;
+  }
 }

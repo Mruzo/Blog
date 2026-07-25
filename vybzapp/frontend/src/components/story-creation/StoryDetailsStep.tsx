@@ -118,33 +118,6 @@ const StoryDetailsStep: React.FC<StoryDetailsStepProps> = ({
           </div>
         </div>
       </div>
-
-      <div className="row">
-        <div className="col-12">
-        <div className="mb-2">
-            <div className="form-check">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="is_public"
-                name="is_public"
-                checked={formData.is_public}
-                onChange={(e) => {
-                  const updatedFormData = { ...formData, is_public: e.target.checked };
-                  setFormData(updatedFormData);
-                  onDataUpdate({ story: updatedFormData });
-                }}
-              />
-              <label className="form-check-label subtext-btn-sm" htmlFor="is_public">
-                Make this story public
-              </label>
-              <div className="form-text subtext-btn-sm text-muted">
-                You can change visibility again on the publish step.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
