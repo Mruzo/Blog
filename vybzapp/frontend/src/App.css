@@ -5289,6 +5289,16 @@ h2 {
   }
 }
 
+/* Story wizard — preview step: on phones let the 3D preview go closer to the
+   panel edges so it matches Comic3DViewer, which renders in a flush p-0 panel.
+   The default 1.5rem side padding leaves too much margin around the card. */
+@media (max-width: 576px) {
+  .story-wizard__panel[data-step='preview'] .story-wizard__stepContent {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
 /* Story wizard — characters step (compact, no nested cards) */
 .story-wizard__panel[data-step='characters'] .story-wizard__stepHeader {
   padding-bottom: 0.35rem;

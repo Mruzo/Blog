@@ -2130,10 +2130,10 @@ def login_api(request):
     # Rate limiting for login attempts (prevent brute force)
     client_ip = get_client_ip(request)
     is_allowed, remaining, reset_time = rate_limit_check(
-        request, 
-        'login_attempt', 
-        max_requests=10,  # 10 login attempts per hour
-        window_seconds=3600
+        request,
+        'login_attempt',
+        max_requests=getattr(settings, 'LOGIN_RATE_LIMIT_MAX', 10),
+        window_seconds=getattr(settings, 'LOGIN_RATE_LIMIT_WINDOW_SECONDS', 600),
     )
     
     if not is_allowed:

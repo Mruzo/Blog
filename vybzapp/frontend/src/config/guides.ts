@@ -49,7 +49,7 @@ export const guides: GuideConfig[] = [
     name: 'My Studio',
     route: '/immersivecomics/my-studio/',
     showOnFirstVisit: false,
-    summary: 'This is your studio. **Give it a name**, **build stories**, **invite collaboratorate with other builders**',
+    summary: 'This is your studio. **Give it a name**, **build stories**, **invite and collaboratorate with other builders**',
   },
   {
     id: 'season-edit',

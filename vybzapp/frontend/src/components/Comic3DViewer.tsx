@@ -1264,59 +1264,20 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       logger.camera('Comic3DViewer: New camera target:', currentDialogue.camera_target);
       logger.camera('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
       logger.camera('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
-      
-      // First set the target (Django pattern)
+
+      // Same path as StoryPreviewEditor: set goals and let model-viewer interpolation
+      // ease between dialogue lines. Do not jumpCameraToGoal() here — that snaps instantly.
       modelViewerRef.current.cameraTarget = currentDialogue.camera_target;
-      logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
-      
-      // Set field of view (Django pattern)
-      modelViewerRef.current.fieldOfView = currentDialogue.field_of_view + "deg";
-      logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
-      
-      // Try setting camera orbit directly first (Django pattern)
+      modelViewerRef.current.fieldOfView = `${currentDialogue.field_of_view}deg`;
       modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
-      logger.camera('Comic3DViewer: Camera orbit after direct setting:', modelViewerRef.current.cameraOrbit);
-      jumpModelViewerCameraToGoal();
-      
-      // Use the animation system for smooth camera movement (Django pattern)
-      logger.camera('Comic3DViewer: About to animate with orbit value:', currentDialogue.camera_orbit);
-      logger.camera('Comic3DViewer: Type of orbit value:', typeof currentDialogue.camera_orbit);
-      
-      try {
-        const animation = modelViewerRef.current.animate({
-          cameraOrbit: currentDialogue.camera_orbit,
-          cameraTarget: currentDialogue.camera_target,
-        }, {
-          duration: 500, // 500ms animation like Django
-          easing: 'ease-in-out'
-        });
-        
-        logger.camera('Comic3DViewer: Animation started with orbit:', currentDialogue.camera_orbit);
-        logger.log('Comic3DViewer: Animation object:', animation);
-        
-        if (animation && typeof animation.finished !== 'undefined') {
-          void animation.finished.then(() => {
-            logger.camera('Comic3DViewer: Camera animation complete');
-            jumpModelViewerCameraToGoal();
-          });
-        } else if (animation && animation.onfinish) {
-          animation.onfinish = () => {
-            logger.camera('Comic3DViewer: Camera animation complete');
-            jumpModelViewerCameraToGoal();
-          };
-        }
-        
-        // Update dials to match the dialogue values (bidirectional sync)
-        updateDialsFromDialogue(currentDialogue);
-      } catch (error) {
-        logger.camera('Comic3DViewer: Error animating camera:', error);
-        // Still update dials even if animation fails
-        jumpModelViewerCameraToGoal();
-        updateDialsFromDialogue(currentDialogue);
-      }
+
+      logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
+      logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
+      logger.camera('Comic3DViewer: Camera orbit after setting:', modelViewerRef.current.cameraOrbit);
+
+      updateDialsFromDialogue(currentDialogue);
     } else {
-      logger.camera('Comic3DViewer: Cannot animate camera - modelViewerRef is null');
-      // Update dials even if no model viewer
+      logger.camera('Comic3DViewer: Cannot update camera - modelViewerRef is null');
       updateDialsFromDialogue(currentDialogue);
     }
   };
@@ -1363,59 +1324,20 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       logger.camera('Comic3DViewer: New camera target:', currentDialogue.camera_target);
       logger.camera('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
       logger.camera('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
-      
-      // First set the target (Django pattern)
+
+      // Same path as StoryPreviewEditor: set goals and let model-viewer interpolation
+      // ease between dialogue lines. Do not jumpCameraToGoal() here — that snaps instantly.
       modelViewerRef.current.cameraTarget = currentDialogue.camera_target;
-      logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
-      
-      // Set field of view (Django pattern)
-      modelViewerRef.current.fieldOfView = currentDialogue.field_of_view + "deg";
-      logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
-      
-      // Try setting camera orbit directly first (Django pattern)
+      modelViewerRef.current.fieldOfView = `${currentDialogue.field_of_view}deg`;
       modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
-      logger.camera('Comic3DViewer: Camera orbit after direct setting:', modelViewerRef.current.cameraOrbit);
-      jumpModelViewerCameraToGoal();
-      
-      // Use the animation system for smooth camera movement (Django pattern)
-      logger.camera('Comic3DViewer: About to animate with orbit value:', currentDialogue.camera_orbit);
-      logger.camera('Comic3DViewer: Type of orbit value:', typeof currentDialogue.camera_orbit);
-      
-      try {
-        const animation = modelViewerRef.current.animate({
-          cameraOrbit: currentDialogue.camera_orbit,
-          cameraTarget: currentDialogue.camera_target,
-        }, {
-          duration: 500, // 500ms animation like Django
-          easing: 'ease-in-out'
-        });
-        
-        logger.camera('Comic3DViewer: Animation started with orbit:', currentDialogue.camera_orbit);
-        logger.log('Comic3DViewer: Animation object:', animation);
-        
-        if (animation && typeof animation.finished !== 'undefined') {
-          void animation.finished.then(() => {
-            logger.camera('Comic3DViewer: Camera animation complete');
-            jumpModelViewerCameraToGoal();
-          });
-        } else if (animation && animation.onfinish) {
-          animation.onfinish = () => {
-            logger.camera('Comic3DViewer: Camera animation complete');
-            jumpModelViewerCameraToGoal();
-          };
-        }
-        
-        // Update dials to match the dialogue values (bidirectional sync)
-        updateDialsFromDialogue(currentDialogue);
-      } catch (error) {
-        logger.camera('Comic3DViewer: Error animating camera:', error);
-        // Still update dials even if animation fails
-        jumpModelViewerCameraToGoal();
-        updateDialsFromDialogue(currentDialogue);
-      }
+
+      logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
+      logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
+      logger.camera('Comic3DViewer: Camera orbit after setting:', modelViewerRef.current.cameraOrbit);
+
+      updateDialsFromDialogue(currentDialogue);
     } else {
-      logger.camera('Comic3DViewer: Cannot animate camera - modelViewerRef is null');
-      // Update dials even if no model viewer
+      logger.camera('Comic3DViewer: Cannot update camera - modelViewerRef is null');
       updateDialsFromDialogue(currentDialogue);
     }
   };
@@ -2524,7 +2446,9 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   </div>
                 )}
                 
-                {/* Animation Controls Section */}
+                {/* Animation Controls — hidden for now; model auto-plays GLB clips on load.
+                    Revisit later when clips are wired per dialogue/character. */}
+                {false && (
                 <div className="col-md-6 mt-3" style={{ gridColumn: '1 / -1' }}>
                   <div className="section-header" style={{
                     fontSize: '1rem',
@@ -2546,6 +2470,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     }}
                   />
                 </div>
+                )}
               </div>
             </div>
           </div>

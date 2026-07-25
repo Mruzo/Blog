@@ -906,13 +906,7 @@ const MyStudio: React.FC = () => {
                 <i className="fas fa-plus me-2" aria-hidden />
                 Create
               </ScrollAwareLink>
-              <ScrollAwareLink
-                to="/immersivecomics/import/"
-                className="product-landing__ctaGhost text-decoration-none d-inline-flex align-items-center"
-              >
-                <i className="fas fa-download me-2" aria-hidden />
-                Import
-              </ScrollAwareLink>
+              {/* Import kept as a direct URL (/immersivecomics/import/) for staff/ops; hidden from profile UI */}
             </div>
           </div>
 

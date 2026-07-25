@@ -262,6 +262,11 @@ if 'test' in sys.argv or 'pytest' in sys.modules:
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
+# Login brute-force protection (icvybz login_api). Window is intentionally
+# short so locked-out users are not stuck for an hour after typos.
+LOGIN_RATE_LIMIT_MAX = 10
+LOGIN_RATE_LIMIT_WINDOW_SECONDS = 600  # 10 minutes
+
 # Force HTTPS for password reset emails
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 

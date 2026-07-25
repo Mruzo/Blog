@@ -45,3 +45,14 @@ class LoginAPITestCase(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_login_with_username_is_case_insensitive(self):
+        mixed = self.user.username.swapcase()
+        self.assertNotEqual(mixed, self.user.username)
+        response = self.client.post(
+            self.url,
+            {'username': mixed, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('token', response.json())

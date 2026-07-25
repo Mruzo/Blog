@@ -16,8 +16,11 @@ User = get_user_model()
 
 def resolve_username_for_login(identifier):
     """
-    Accept username or email for login. Returns username for AuthTokenSerializer,
-    or None if an email was given but no account matches (caller should fail auth).
+    Accept username or email for login. Returns the exact stored username for
+    AuthTokenSerializer, or None if an email/username was given but no account matches
+    (caller should fail auth).
+
+    Usernames are resolved case-insensitively so ``uzouzo`` matches ``Uzouzo``.
     """
     identifier = (identifier or '').strip()
     if not identifier:
@@ -25,7 +28,8 @@ def resolve_username_for_login(identifier):
     if '@' in identifier:
         user = User.objects.filter(email__iexact=identifier).first()
         return user.username if user else None
-    return identifier
+    user = User.objects.filter(username__iexact=identifier).first()
+    return user.username if user else identifier
 
 
 def get_user_from_uidb64(uidb64):
