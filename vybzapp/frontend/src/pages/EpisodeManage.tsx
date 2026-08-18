@@ -8,6 +8,7 @@ import DialogueCard from '../components/DialogueCard';
 import MetaTags from '../components/MetaTags';
 import { useApi } from '../contexts/ApiContext';
 import { Episode as ApiEpisode, apiService, Season, Story } from '../services/api';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 interface Dialogue {
   id: number;
@@ -441,6 +442,9 @@ const EpisodeManage: React.FC = () => {
     setShowDialogueForm(false);
   };
 
+  const episodeFormDialogRef = useDialogA11y(showEpisodeForm, resetEpisodeForm);
+  const dialogueFormDialogRef = useDialogA11y(showDialogueForm, resetDialogueForm);
+
   const handleCloseMessage = () => {
     setShowMessage(false);
   };
@@ -709,11 +713,22 @@ const EpisodeManage: React.FC = () => {
           className="my-studio__modal my-studio__modal--scrollForm modal show d-block"
           tabIndex={-1}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) resetEpisodeForm();
+          }}
         >
           <div className="modal-dialog modal-dialog-scrollable">
-            <div className="modal-content">
+            <div
+              className="modal-content"
+              ref={episodeFormDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="episode-form-modal-title"
+              tabIndex={-1}
+            >
               <div className="modal-header">
-                <h5 className="subtext-btn mb-0">
+                <h5 id="episode-form-modal-title" className="subtext-btn mb-0">
                   {editingEpisode ? 'Edit Episode' : 'Add New Episode'}
                 </h5>
                 <button 
@@ -722,7 +737,7 @@ const EpisodeManage: React.FC = () => {
                   onClick={resetEpisodeForm}
                   aria-label="Close"
                 >
-                  <i className="fas fa-times"></i>
+                  <i className="fas fa-times" aria-hidden="true"></i>
                 </button>
               </div>
               <form onSubmit={handleEpisodeSubmit}>
@@ -837,11 +852,22 @@ const EpisodeManage: React.FC = () => {
           className="my-studio__modal my-studio__modal--scrollForm modal show d-block"
           tabIndex={-1}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) resetDialogueForm();
+          }}
         >
           <div className="modal-dialog modal-dialog-scrollable modal-lg">
-            <div className="modal-content">
+            <div
+              className="modal-content"
+              ref={dialogueFormDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dialogue-form-modal-title"
+              tabIndex={-1}
+            >
               <div className="modal-header">
-                <h5 className="subtext-btn mb-0">
+                <h5 id="dialogue-form-modal-title" className="subtext-btn mb-0">
                   {editingDialogue ? 'Edit Dialogue' : 'Add New Dialogue'}
                 </h5>
                 <button 
@@ -850,7 +876,7 @@ const EpisodeManage: React.FC = () => {
                   onClick={resetDialogueForm}
                   aria-label="Close"
                 >
-                  <i className="fas fa-times"></i>
+                  <i className="fas fa-times" aria-hidden="true"></i>
                 </button>
               </div>
               <form onSubmit={handleDialogueSubmit}>

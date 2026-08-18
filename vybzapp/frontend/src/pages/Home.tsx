@@ -47,14 +47,19 @@ const Home: React.FC = () => {
 
       <header className="home-page__hero">
         <div className="home-page__heroInner">
-          <p className="home-page__eyebrow">JustVybz Studios</p>
+          <p className="home-page__eyebrow">Build and Share</p>
           <h1 className="home-page__headline landtext mb-3 land-border">
-            <span className="d-block">INSPIRATION</span>
-            <span className="home-page__headlineMeet d-block">meets</span>
-            <span className="d-block">INNOVATION</span>
+            <span className="d-block">IMMERSIVE</span>
+            {/* <span className="home-page__headlineMeet d-block">meets</span> */}
+            <span className="d-block">3D COMICS</span>
           </h1>
           <p className="home-page__tagline">
-            Build and share immersive 3D comics. <br /> Check out our innovative desk mat designs.
+            {/* Build and share immersive 3D comics.
+            
+            <br /> */}
+            Create your own 3D story with our innovative tools.
+            <br />
+            Easily test your story concept before committing years to a script.
           </p>
         </div>
       </header>
@@ -65,7 +70,11 @@ const Home: React.FC = () => {
         </h2>
         <div className="home-page__aboutCard">
           <p>
-            {`Justvybz is your platform for creating and experiencing immersive comics. We provide tools that help you reimagine your traditional comic.`}
+            Justvybz is your studio for storytellers who see the world from the edges. We believe
+            the most powerful perspective is the one that stays still while everything else moves.
+            <br /> <br />
+            Our platform empowers storytellers to create immersive tales from the perspective of
+            road signs, without needing to draw.
           </p>
         </div>
       </section>
@@ -77,29 +86,29 @@ const Home: React.FC = () => {
         <div className="home-page__grid">
           <article className="home-page__featureCard">
             <div className="home-page__featureIcon" aria-hidden>
-              <i className="fas fa-cube" />
+              <i className="fas fa-pen" />
             </div>
-            <h3 className="home-page__featureTitle">Create immersive stories</h3>
+            <h3 className="home-page__featureTitle">Write</h3>
             <p className="home-page__featureBody">
-              Build engaging comics with interactive 3D scenes and dialogue-driven moments.
+            Create your characters, dialogue, and scenes.
             </p>
           </article>
           <article className="home-page__featureCard">
             <div className="home-page__featureIcon" aria-hidden>
-              <i className="fas fa-layer-group" />
+              <i className="fas fa-video" />
             </div>
-            <h3 className="home-page__featureTitle">Manage episodes</h3>
+            <h3 className="home-page__featureTitle">Direct</h3>
             <p className="home-page__featureBody">
-              Organize seasons and episodes with rich media and a clear creative workflow.
+            Build engaging scenes and dialogue-driven moments by controlling the camera angle and movement with simple sliders.
             </p>
           </article>
           <article className="home-page__featureCard">
             <div className="home-page__featureIcon" aria-hidden>
-              <i className="fas fa-share-alt" />
+              <i className="fas fa-users" />
             </div>
             <h3 className="home-page__featureTitle">Share &amp; collaborate</h3>
             <p className="home-page__featureBody">
-              Share your work and invite collaborators to build immersive worlds with you.
+              Share your work and invite collaborators to build immersive stories with you.
             </p>
           </article>
         </div>

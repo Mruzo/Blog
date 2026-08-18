@@ -116,6 +116,8 @@ describe('Checkout', () => {
     renderWithProviders(<Checkout />);
     expect(screen.getByLabelText(/Full Name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Address Line 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Returns: unused items within 30 days/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Terms/i })).toHaveAttribute('href', '/terms/');
   });
 
   it('navigates to shipping page on successful submit', async () => {

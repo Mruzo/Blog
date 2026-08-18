@@ -7,6 +7,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import get_user_model
+from snmov.throttling import PasswordResetRateThrottle, RegisterRateThrottle
 
 User = get_user_model()
 from django.core.cache import cache
@@ -100,6 +101,14 @@ def _get_default_studio_for_user(user):
         description='My personal storytelling studio',
         is_public=False,
     )
+
+
+def _studio_at_draft_story_limit(studio, creating_public=False):
+    """True when a new unpublished story would exceed the studio draft cap."""
+    if creating_public or studio is None:
+        return False
+    draft_count = Comic.objects.filter(studio=studio, is_public=False).count()
+    return draft_count >= Comic.MAX_DRAFTS_PER_STUDIO
 
 
 def _user_can_manage_story(user, story):
@@ -260,6 +269,16 @@ class ComicListCreateView(generics.ListCreateAPIView):
         query_count = len(connection.queries) - initial_queries
         logger.info(f"ComicListCreateView: {end_time - start_time:.3f}s, {query_count} queries")
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        studio = _get_default_studio_for_user(request.user)
+        is_public = bool(request.data.get('is_public', False))
+        if _studio_at_draft_story_limit(studio, creating_public=is_public):
+            return Response(
+                {'error': Comic.DRAFT_LIMIT_MESSAGE},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().create(request, *args, **kwargs)
     
     def perform_create(self, serializer):
         # moderation_status is server-authoritative:
@@ -1346,14 +1365,22 @@ def create_complete_story(request):
                 {'error': 'Story description cannot exceed 200 characters.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        studio = _get_default_studio_for_user(request.user)
+        is_public = bool(story_data.get('is_public', False))
+        if _studio_at_draft_story_limit(studio, creating_public=is_public):
+            return Response(
+                {'error': Comic.DRAFT_LIMIT_MESSAGE},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         print(f"Creating story with data: {story_data}")
         story = Comic.objects.create(
             title=title,
             description=description,
-            is_public=story_data.get('is_public', False),
+            is_public=is_public,
             user=request.user,
-            studio=_get_default_studio_for_user(request.user),
+            studio=studio,
         )
         print(f"Story created with ID: {story.id}")
         
@@ -2205,6 +2232,7 @@ def login_api(request):
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetRateThrottle])
 def password_reset_api(request):
     """
     API endpoint for password reset that sends email.
@@ -2381,6 +2409,7 @@ def get_current_user_api(request):
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([RegisterRateThrottle])
 def register_api(request):
     """
     Register a new user and create a token.

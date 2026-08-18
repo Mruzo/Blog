@@ -9,7 +9,7 @@ from rest_framework.authtoken.models import Token
 import json
 import uuid
 
-from .models import Comic, Season, Character, Episode, Dialogue, POV, ComicComment
+from .models import Comic, Season, Character, Episode, Dialogue, POV, ComicComment, Studio
 
 
 class StoryCreationAPITestCase(APITestCase):
@@ -264,6 +264,72 @@ class StoryCreationAPITestCase(APITestCase):
         self.assertEqual(character.user, self.user)
         self.assertEqual(episode.season, season)
         self.assertEqual(dialogue.episode, episode)
+
+    def _fill_studio_drafts(self, count=10):
+        self.client.get(reverse('icvybz-api:my-studio'))
+        studio = Studio.objects.get(owner=self.user)
+        for i in range(count):
+            Comic.objects.create(
+                title=f'Draft {i}',
+                description='A draft story',
+                user=self.user,
+                studio=studio,
+                is_public=False,
+            )
+        return studio
+
+    def test_create_story_blocks_eleventh_draft(self):
+        """Studios may keep at most 10 unpublished draft stories."""
+        self._fill_studio_drafts(10)
+        url = reverse('icvybz-api:story-list-create')
+        response = self.client.post(
+            url,
+            {
+                'title': 'Eleventh Draft',
+                'description': 'Should be blocked',
+                'is_public': False,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], Comic.DRAFT_LIMIT_MESSAGE)
+        self.assertEqual(Comic.objects.filter(user=self.user, is_public=False).count(), 10)
+
+    def test_create_complete_story_blocks_eleventh_draft(self):
+        """Wizard save is blocked at 10 drafts with the same studio message."""
+        self._fill_studio_drafts(10)
+        url = reverse('icvybz-api:create-complete-story')
+        data = {
+            'story': {
+                'title': 'Eleventh Draft',
+                'description': 'Should be blocked',
+                'is_public': False,
+            },
+            'season': self.season_data,
+            'characters': [self.character_data],
+            'episode': self.episode_data,
+            'dialogues': [self.dialogue_data],
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], Comic.DRAFT_LIMIT_MESSAGE)
+        self.assertEqual(Comic.objects.filter(user=self.user, is_public=False).count(), 10)
+
+    def test_create_complete_story_allows_public_when_at_draft_limit(self):
+        """Publishing a new story is allowed even when draft slots are full."""
+        self._fill_studio_drafts(10)
+        url = reverse('icvybz-api:create-complete-story')
+        data = {
+            'story': self.story_data,
+            'season': self.season_data,
+            'characters': [self.character_data],
+            'episode': self.episode_data,
+            'dialogues': [self.dialogue_data],
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Comic.objects.filter(user=self.user, is_public=False).count(), 10)
+        self.assertEqual(Comic.objects.filter(user=self.user, is_public=True).count(), 1)
 
     def test_create_complete_story_with_model_upload(self):
         """Test creating a complete story with 3D model upload"""

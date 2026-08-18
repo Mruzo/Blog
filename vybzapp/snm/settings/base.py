@@ -88,6 +88,12 @@ RESTOCKING_FEE_PERCENTAGE = 0  # Default restocking fee (0-100)
 ENABLE_PARTIAL_RETURNS = True  # Allow partial returns from same order
 STRIPE_REFUND_ENABLED = True  # Enable Stripe refund processing
 
+# Stripe chargeback / dispute ops
+DISPUTE_ALERT_EMAIL = ''  # Falls back to SUPPORT_EMAIL when blank
+DISPUTE_TREND_WINDOW_HOURS = 24
+DISPUTE_TREND_THRESHOLD = 3  # Open/created disputes in window → trending alert
+DISPUTE_TRENDING_COOLDOWN_SECONDS = 6 * 60 * 60  # Avoid alert spam
+
 # Tax Configuration
 TAX_RATE = 0.13  # Default tax rate (13% for HST in Ontario, Canada) - can be overridden per province
 TAX_ENABLED = True  # Enable tax calculation on invoices
@@ -340,13 +346,20 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     # Rate limiting for API endpoints (OWASP, NIST compliance)
+    # Scoped rates apply via snmov.throttling.* on sensitive views.
+    # Production overrides these downward in snm.settings.pro.
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/hour',  # Anonymous users: 100 requests per hour
-        'user': '1000/hour',  # Authenticated users: 1000 requests per hour
+        'anon': '100/hour',
+        'user': '1000/hour',
+        'password_reset': '10/hour',
+        'register': '20/hour',
+        'checkout': '40/hour',
+        'newsletter': '10/hour',
+        'contact': '10/hour',
     }
 }
 

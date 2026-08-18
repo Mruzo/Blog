@@ -7,6 +7,7 @@ import MessagePopup from './MessagePopup';
 import { useApi } from '../contexts/ApiContext';
 import { apiService } from '../services/api';
 import { FeedbackContext } from '../contexts/FeedbackContext';
+import { DRAFT_STORY_LIMIT_MESSAGE, isAtDraftStoryLimit } from '../utils/draftStoryLimit';
 
 // Step Components
 import StoryDetailsStep from './story-creation/StoryDetailsStep';
@@ -249,6 +250,33 @@ const StoryCreationWizard: React.FC = () => {
   }, [navigate, currentUser]);
 
   useEffect(() => {
+    if (!currentUser || data.story.id) {
+      return;
+    }
+
+    let cancelled = false;
+    const checkDraftLimit = async () => {
+      try {
+        const list = await apiService.getStories();
+        if (cancelled || !isAtDraftStoryLimit(list)) {
+          return;
+        }
+        navigate('/immersivecomics/my-studio/', {
+          replace: true,
+          state: { draftLimitReached: true },
+        });
+      } catch (err) {
+        console.error('Failed to check draft story limit:', err);
+      }
+    };
+
+    checkDraftLimit();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, data.story.id, navigate]);
+
+  useEffect(() => {
     const step = steps[currentStep];
     if (step) {
       const newUrl = `/immersivecomics/story/create/${step.id}/`;
@@ -397,8 +425,10 @@ const StoryCreationWizard: React.FC = () => {
         status: error.response?.status,
         statusText: error.response?.statusText
       });
-      setMessage(error.message || 'Failed to save. Please try again.');
-      setMessageType('danger');
+      const apiError =
+        error.response?.data?.error || error.message || 'Failed to save. Please try again.';
+      setMessage(apiError);
+      setMessageType(apiError === DRAFT_STORY_LIMIT_MESSAGE ? 'info' : 'danger');
       setShowMessage(true);
     } finally {
       setIsSaving(false);

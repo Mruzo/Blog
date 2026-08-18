@@ -1112,3 +1112,60 @@ class DataConsent(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.consent_type} - {'Consented' if self.consented else 'Not Consented'}"
+
+
+class PaymentDispute(models.Model):
+    """Stripe chargeback / payment dispute linked to a store order when possible."""
+
+    STATUS_CHOICES = [
+        ('warning_needs_response', 'Warning needs response'),
+        ('warning_under_review', 'Warning under review'),
+        ('warning_closed', 'Warning closed'),
+        ('needs_response', 'Needs response'),
+        ('under_review', 'Under review'),
+        ('charge_refunded', 'Charge refunded'),
+        ('won', 'Won'),
+        ('lost', 'Lost'),
+        ('other', 'Other'),
+    ]
+
+    stripe_dispute_id = models.CharField(max_length=255, unique=True, db_index=True)
+    stripe_charge_id = models.CharField(max_length=255, blank=True, default='', db_index=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, default='', db_index=True)
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payment_disputes',
+    )
+    amount_cents = models.PositiveIntegerField(default=0)
+    currency = models.CharField(max_length=10, default='cad')
+    reason = models.CharField(max_length=100, blank=True, default='')
+    status = models.CharField(max_length=40, choices=STATUS_CHOICES, default='needs_response')
+    evidence_due_by = models.DateTimeField(null=True, blank=True)
+    is_charge_refundable = models.BooleanField(null=True, blank=True)
+    raw_payload = models.JSONField(default=dict, blank=True)
+    response_draft = models.TextField(
+        blank=True,
+        default='',
+        help_text='Editable dispute response / evidence narrative for Stripe',
+    )
+    response_submitted_at = models.DateTimeField(null=True, blank=True)
+    last_alerted_at = models.DateTimeField(null=True, blank=True)
+    trending_alert_sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Payment Dispute'
+        verbose_name_plural = 'Payment Disputes'
+
+    def __str__(self):
+        order_bit = f' order={self.order_id}' if self.order_id else ''
+        return f'Dispute {self.stripe_dispute_id} ({self.status}){order_bit}'
+
+    @property
+    def amount_display(self):
+        return f"{(self.amount_cents or 0) / 100:.2f} {(self.currency or '').upper()}"

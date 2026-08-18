@@ -140,3 +140,47 @@ def process_partial_refund(credit_note, amount, payment_intent_id):
         str: Stripe refund ID
     """
     return process_stripe_refund(credit_note, amount, payment_intent_id)
+
+
+def process_order_stripe_refund(order, amount, reason='requested_by_customer', metadata=None):
+    """
+    Refund a paid order directly via Stripe (e.g. cancelled paid orders from admin).
+
+    Returns:
+        str | None: Stripe refund ID
+    """
+    if not getattr(settings, 'STRIPE_REFUND_ENABLED', True):
+        logger.warning('Stripe refunds disabled; skipping order %s refund', order.id)
+        return None
+
+    if not stripe.api_key:
+        raise ValueError('Stripe API key not configured')
+
+    payment_intent_id = getattr(order, 'stripe_payment_intent_id', None)
+    if not payment_intent_id:
+        raise ValueError(f'Order {order.id} has no stripe_payment_intent_id')
+
+    amount_cents = int(Decimal(amount) * 100)
+    if amount_cents <= 0:
+        raise ValueError('Refund amount must be positive')
+
+    meta = {
+        'order_id': str(order.id),
+        'source': 'admin_cancelled_order_refund',
+    }
+    if metadata:
+        meta.update(metadata)
+
+    try:
+        refund = stripe.Refund.create(
+            payment_intent=payment_intent_id,
+            amount=amount_cents,
+            reason=reason,
+            metadata=meta,
+        )
+        logger.info('Stripe refund %s created for order %s', refund.id, order.id)
+        return refund.id
+    except stripe.error.StripeError as e:
+        logger.error('Stripe refund failed for order %s: %s', order.id, e)
+        raise Exception(f'Stripe refund failed: {e}') from e
+

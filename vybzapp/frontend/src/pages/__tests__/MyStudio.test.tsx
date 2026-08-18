@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import MyStudio from '../MyStudio';
 import { ApiProvider } from '../../contexts/ApiContext';
@@ -120,8 +120,11 @@ const renderWithRouter = (component: React.ReactElement) => {
 };
 
 describe('MyStudio Component', () => {
+  const defaultStories = mockApiContext.stories;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockApiContext.stories = defaultStories;
     localStorage.setItem('authToken', 'test-token');
     mockApiContext.loadStories.mockResolvedValue(undefined);
     mockApiContext.loadMyStudio.mockResolvedValue(undefined);
@@ -198,6 +201,28 @@ describe('MyStudio Component', () => {
       expect(mockApiContext.loadStories).toHaveBeenCalledTimes(1);
       expect(mockApiContext.loadMyStudio).toHaveBeenCalledTimes(1);
     });
+  });
+
+  test('shows draft limit message when creating an 11th draft', async () => {
+    mockApiContext.stories = Array.from({ length: 10 }, (_, i) => ({
+      id: i + 1,
+      title: `Draft ${i + 1}`,
+      description: 'A draft',
+      is_public: false,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      user: 1,
+      moderation_status: 'pending',
+    }));
+
+    renderWithRouter(<MyStudio />);
+
+    const createButton = await screen.findByRole('button', { name: /create/i });
+    fireEvent.click(createButton);
+
+    expect(
+      screen.getByText("you're a perfect 10 in drafts. share some to create room for more.")
+    ).toBeInTheDocument();
   });
 
   test('handles empty stories array', async () => {

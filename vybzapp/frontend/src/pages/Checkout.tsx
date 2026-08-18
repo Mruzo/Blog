@@ -668,6 +668,12 @@ const Checkout: React.FC = () => {
                 </div>
               )}
 
+              <p className="store-page__checkoutPolicyNote">
+                Returns: unused items within 30 days of delivery. Start a return from My Orders after delivery;
+                refunds go to your original payment method (typically 5–10 business days). See{' '}
+                <Link to="/terms/">Terms</Link> for details.
+              </p>
+
               <div className="store-page__formSubmit">
                 <button
                   type="submit"

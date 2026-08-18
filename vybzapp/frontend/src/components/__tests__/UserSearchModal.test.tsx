@@ -103,7 +103,7 @@ describe('UserSearchModal Role Selection', () => {
     });
 
     // Click invite
-    const inviteButton = screen.getByText('Invite');
+    const inviteButton = screen.getByRole('button', { name: /Invite User One as voice_actor/i });
     fireEvent.click(inviteButton);
 
     expect(mockOnSelectUser).toHaveBeenCalledWith(mockUsers[0], 'voice_actor');
@@ -145,7 +145,7 @@ describe('UserSearchModal Role Selection', () => {
     const emailInput = screen.getByPlaceholderText('user@example.com');
     fireEvent.change(emailInput, { target: { value: 'new@example.com' } });
 
-    const sendButton = screen.getByText('Send Email Invitation');
+    const sendButton = screen.getByRole('button', { name: /Send Email Invitation/i });
     fireEvent.click(sendButton);
 
     expect(mockOnInviteByEmail).toHaveBeenCalledWith('new@example.com', 'sound_engineer');

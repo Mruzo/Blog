@@ -598,21 +598,25 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                 <div className="row justify-content-between align-items-center">
                   <div className="col-auto">
                     <button
+                      type="button"
                       className="btn btn-primary"
                       onClick={prevDialogue}
                       disabled={currentDialogueIndex === 0}
                       title={`Previous dialogue (${currentDialogueIndex}/${totalDialogues})`}
+                      aria-label="Previous dialogue"
                     >
-                      <i className="fas fa-chevron-left"></i>
+                      <i className="fas fa-chevron-left" aria-hidden="true"></i>
                     </button>
                   </div>
                   
                   <div className="col-auto d-flex align-items-center gap-2">
                     <button
+                      type="button"
                       className="btn btn-success"
                       onClick={isPlaying ? pausePlayback : startPlayback}
+                      aria-label={isPlaying ? 'Pause' : 'Play'}
                     >
-                      <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+                      <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`} aria-hidden="true"></i>
                     </button>
                     
                     <div className="btn-group" role="group">
@@ -635,12 +639,14 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                   
                   <div className="col-auto">
                     <button
+                      type="button"
                       className="btn btn-primary"
                       onClick={nextDialogue}
                       disabled={currentDialogueIndex >= totalDialogues - 1}
                       title={`Next dialogue (${currentDialogueIndex + 1}/${totalDialogues})`}
+                      aria-label="Next dialogue"
                     >
-                      <i className="fas fa-chevron-right"></i>
+                      <i className="fas fa-chevron-right" aria-hidden="true"></i>
                     </button>
                   </div>
                 </div>
@@ -675,7 +681,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                   onClick={() => handleModeToggle('edit')}
                   style={{
                     borderColor: '#f9a602',
-                    color: !isPreviewMode ? '#fff' : '#f9a602',
+                    color: '#111e7f',
                     backgroundColor: !isPreviewMode ? '#f9a602' : 'transparent'
                   }}
                 >

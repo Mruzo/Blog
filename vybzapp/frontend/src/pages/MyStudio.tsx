@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 // import SmallButton from '../components/SmallButton';
@@ -8,6 +8,8 @@ import UserSearchModal from '../components/UserSearchModal';
 import { useApi } from '../contexts/ApiContext';
 import { apiService } from '../services/api';
 import { collaborationService, User } from '../services/collaborationService';
+import { useDialogA11y } from '../hooks/useDialogA11y';
+import { DRAFT_STORY_LIMIT_MESSAGE, isAtDraftStoryLimit } from '../utils/draftStoryLimit';
 
 function formatStoryDate(createdAt: string, updatedAt: string): string {
   const createdDate = new Date(createdAt);
@@ -46,6 +48,7 @@ function moderationLabel(status: string | undefined): string {
 const MyStudio: React.FC = () => {
   const { stories, myStudio, loadStories, loadMyStudio, isLoading, logout: logoutFromContext, currentUser } = useApi();
   const navigate = useNavigate();
+  const location = useLocation();
   type StoryCounts = { seasons: number; episodes: number; comments: number };
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
@@ -62,6 +65,8 @@ const MyStudio: React.FC = () => {
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const closeRequestsModal = useCallback(() => setShowRequestsModal(false), []);
+  const requestsDialogRef = useDialogA11y(showRequestsModal, closeRequestsModal);
 
   // Load seasons and episodes counts for each story (optimized with pagination)
   const loadStoryCounts = useCallback(async (stories: any[]) => {
@@ -263,6 +268,26 @@ const MyStudio: React.FC = () => {
     // Don't redirect immediately - show loading spinner instead
     // This prevents redirect loops on page refresh
   }, [navigate, currentUser]);
+
+  useEffect(() => {
+    if (!(location.state as { draftLimitReached?: boolean } | null)?.draftLimitReached) {
+      return;
+    }
+    setMessage(DRAFT_STORY_LIMIT_MESSAGE);
+    setMessageType('info');
+    setShowMessage(true);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.pathname, location.state, navigate]);
+
+  const handleCreateStory = () => {
+    if (isAtDraftStoryLimit(stories)) {
+      setMessage(DRAFT_STORY_LIMIT_MESSAGE);
+      setMessageType('info');
+      setShowMessage(true);
+      return;
+    }
+    navigate('/immersivecomics/story/create/');
+  };
 
   // Calculate pagination
   const totalPages = Math.ceil((stories?.length || 0) / storiesPerPage);
@@ -619,7 +644,7 @@ const MyStudio: React.FC = () => {
         type={messageType}
         show={showMessage}
         onClose={handleCloseMessage}
-        duration={3000}
+        duration={message === DRAFT_STORY_LIMIT_MESSAGE ? 6000 : 3000}
       />
       
       <UserSearchModal
@@ -899,13 +924,14 @@ const MyStudio: React.FC = () => {
           <div className="my-studio__sectionHead">
             <h2 className="product-landing__h2 mb-0">My stories</h2>
             <div className="my-studio__sectionHeadActions">
-              <ScrollAwareLink
-                to="/immersivecomics/story/create/"
+              <button
+                type="button"
                 className="stories-landing__btnPrimary text-decoration-none d-inline-flex align-items-center"
+                onClick={handleCreateStory}
               >
                 <i className="fas fa-plus me-2" aria-hidden />
                 Create
-              </ScrollAwareLink>
+              </button>
               {/* Import kept as a direct URL (/immersivecomics/import/) for staff/ops; hidden from profile UI */}
             </div>
           </div>
@@ -1045,13 +1071,14 @@ const MyStudio: React.FC = () => {
               <p className="product-landing__body" style={{ marginTop: '0.5rem' }}>
                 Start creating your first collaborative story.
               </p>
-              <ScrollAwareLink
-                to="/immersivecomics/story/create/"
+              <button
+                type="button"
                 className="stories-landing__btnPrimary mt-3 d-inline-flex text-decoration-none align-items-center"
+                onClick={handleCreateStory}
               >
                 <i className="fas fa-plus me-2" aria-hidden />
                 Create your first story
-              </ScrollAwareLink>
+              </button>
             </div>
           )}
         </div>
@@ -1063,18 +1090,29 @@ const MyStudio: React.FC = () => {
           className="my-studio__modal modal show d-block"
           tabIndex={-1}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeRequestsModal();
+          }}
         >
           <div className="modal-dialog modal-dialog-scrollable">
-            <div className="modal-content">
+            <div
+              className="modal-content"
+              ref={requestsDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="collab-requests-modal-title"
+              tabIndex={-1}
+            >
               <div className="modal-header p-2">
-                <h5 className="modal-title font-gillsans subtext">Collaboration Requests</h5>
+                <h5 id="collab-requests-modal-title" className="modal-title font-gillsans subtext">Collaboration Requests</h5>
                 <button
                   type="button"
                   className="btn btn-sm btn-light border"
-                  onClick={() => setShowRequestsModal(false)}
+                  onClick={closeRequestsModal}
                   aria-label="Close"
                 >
-                  <i className="fas fa-times"></i>
+                  <i className="fas fa-times" aria-hidden="true"></i>
                 </button>
               </div>
               <div className="modal-body font-quicksand p-2">

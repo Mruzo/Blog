@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collaborationService, User } from '../services/collaborationService';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 interface UserSearchModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
   const [showEmailInvite, setShowEmailInvite] = useState(false);
   const [emailAddress, setEmailAddress] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('writer');
+  const dialogRef = useDialogA11y(isOpen, onClose);
 
   // Debounced search
   useEffect(() => {
@@ -74,26 +76,40 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+    <div
+      className="modal fade show d-block"
+      style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div 
         className="modal-dialog modal-lg" 
         style={{ 
-          marginTop: '120px', // Position below navbar (navbar ~60px + nav buttons ~50px = ~110px, add small margin)
+          marginTop: '120px',
           marginBottom: '20px',
           marginLeft: 'auto',
           marginRight: 'auto'
         }}
       >
-        <div className="modal-content">
+        <div
+          className="modal-content"
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="user-search-modal-title"
+          tabIndex={-1}
+        >
           <div className="modal-header">
-            <h5 className="modal-title font-gillsans subtext">Invite Collaborator</h5>
+            <h5 id="user-search-modal-title" className="modal-title font-gillsans subtext">Invite Collaborator</h5>
             <button
               type="button"
               className="btn btn-sm btn-light border"
               onClick={onClose}
               aria-label="Close"
             >
-              <i className="fas fa-times"></i>
+              <i className="fas fa-times" aria-hidden="true"></i>
             </button>
           </div>
           
@@ -155,19 +171,28 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                     <p className="mt-2 text-muted font-quicksand">Searching for users...</p>
                   </div>
                 ) : searchResults.length > 0 ? (
-                  <div className="list-group">
+                  <div className="list-group" role="listbox" aria-label="User search results">
                     {searchResults.map((user) => (
                       <div
                         key={user.id}
+                        role="option"
+                        tabIndex={0}
+                        aria-selected="false"
                         className="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2"
                         onClick={() => handleUserSelect(user)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleUserSelect(user);
+                          }
+                        }}
                         style={{ cursor: 'pointer' }}
                       >
                         <div className="d-flex align-items-center">
                           {user.avatar ? (
                             <img
                               src={user.avatar}
-                              alt={user.username}
+                              alt=""
                               className="rounded-circle me-3"
                               style={{ width: '40px', height: '40px' }}
                             />
@@ -175,6 +200,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                             <div
                               className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
                               style={{ width: '40px', height: '40px' }}
+                              aria-hidden="true"
                             >
                               {user.first_name.charAt(0).toUpperCase()}
                             </div>
@@ -185,7 +211,9 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                           </div>
                         </div>
                         <button
+                          type="button"
                           className="btn btn-sm btn-primary font-quicksand"
+                          aria-label={`Invite ${user.first_name} ${user.last_name} as ${selectedRole}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleUserSelect(user);

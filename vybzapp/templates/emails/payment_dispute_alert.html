@@ -1,0 +1,12 @@
+<p>A Stripe payment dispute was {{ verb }}.</p>
+<ul>
+  <li><strong>Dispute ID:</strong> {{ dispute.stripe_dispute_id }}</li>
+  <li><strong>Status:</strong> {{ dispute.status }}</li>
+  <li><strong>Reason:</strong> {{ dispute.reason|default:"n/a" }}</li>
+  <li><strong>Amount:</strong> {{ dispute.amount_display }}</li>
+  <li><strong>Evidence due:</strong> {{ dispute.evidence_due_by|default:"n/a" }}</li>
+  <li><strong>Order:</strong> {% if order %}#{{ order.id }} ({{ order.status }}){% else %}unmatched{% endif %}</li>
+  <li><strong>Payment intent:</strong> {{ dispute.stripe_payment_intent_id|default:"n/a" }}</li>
+</ul>
+<p>Review and edit the response draft in Django admin → Payment Disputes, then submit evidence in the Stripe Dashboard before the due date.</p>
+<pre style="white-space: pre-wrap; font-size: 12px; background: #f5f5f5; padding: 12px;">{{ evidence_preview }}</pre>

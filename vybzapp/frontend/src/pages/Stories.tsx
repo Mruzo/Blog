@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Comic3DViewer from '../components/Comic3DViewer';
 import MetaTags from '../components/MetaTags';
+import MessagePopup from '../components/MessagePopup';
 import { useApi } from '../contexts/ApiContext';
 import apiService, { EpisodeComment } from '../services/api';
 import { collaborationService } from '../services/collaborationService';
 import { filterPublicStoriesForStudio } from '../utils/studioScope';
+import { useDialogA11y } from '../hooks/useDialogA11y';
+import { DRAFT_STORY_LIMIT_MESSAGE, isAtDraftStoryLimit } from '../utils/draftStoryLimit';
 import './Stories.css';
 
 interface Character {
@@ -58,6 +61,7 @@ const sortEpisodesChronologically = (episodes: any[], seasons: any[]) => {
 
 const Stories: React.FC = () => {
   const { stories, loadPublicStories, isLoading, error, currentUser } = useApi();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const studioId = searchParams.get('studio');
   const [studio, setStudio] = useState<any>(null);
@@ -83,6 +87,7 @@ const Stories: React.FC = () => {
   // Track expanded descriptions for each story
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<number>>(new Set());
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<number>>(new Set());
+  const [showDraftLimit, setShowDraftLimit] = useState(false);
   
   // Request deduplication cache - stores in-flight and completed requests
   const requestCache = useRef<Map<string, Promise<any>>>(new Map());
@@ -757,6 +762,14 @@ const Stories: React.FC = () => {
     setEditingCommentError('');
   }, [isSavingComment]);
 
+  const closeCommentDelete = useCallback(() => {
+    if (isDeletingComment) return;
+    setCommentPendingDelete(null);
+  }, [isDeletingComment]);
+
+  const editCommentDialogRef = useDialogA11y(!!editingComment, closeCommentEdit);
+  const deleteCommentDialogRef = useDialogA11y(!!commentPendingDelete, closeCommentDelete);
+
   const handleCommentUpdate = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
     if (!editingComment) return;
@@ -825,6 +838,21 @@ const Stories: React.FC = () => {
     }
   }, [commentPendingDelete]);
 
+  const handleCreateStory = async () => {
+    if (currentUser) {
+      try {
+        const list = await apiService.getStories();
+        if (isAtDraftStoryLimit(list)) {
+          setShowDraftLimit(true);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to check draft story limit:', err);
+      }
+    }
+    navigate('/immersivecomics/story/create/');
+  };
+
   if (isLoading || isLoadingStoryData) {
     return <LoadingSpinner />;
   }
@@ -844,6 +872,13 @@ const Stories: React.FC = () => {
 
   return (
     <div className="product-landing stories-landing">
+      <MessagePopup
+        message={DRAFT_STORY_LIMIT_MESSAGE}
+        type="info"
+        show={showDraftLimit}
+        onClose={() => setShowDraftLimit(false)}
+        duration={6000}
+      />
       <MetaTags
         title={studio?.name ? `Stories — ${studio.name}` : 'Stories'}
         description={
@@ -861,7 +896,7 @@ const Stories: React.FC = () => {
           <p className="product-landing__lead">
             {studio
               ? 'Published stories from this studio. Open a card to preview in 3D and share episodes.'
-              : 'Immersive 3D comics you can preview, share, and explore.'}
+              : 'Immersive comics you can view and share.'}
           </p>
           {studio && (
             <div className="stories-landing__contextStrip">
@@ -892,10 +927,14 @@ const Stories: React.FC = () => {
               <p className="product-landing__body" style={{ marginTop: '0.5rem' }}>
                 Create and publish your first 3D comic story to have it appear here.
               </p>
-              <Link to="/immersivecomics/story/create/" className="stories-landing__btnPrimary mt-3 d-inline-flex">
+              <button
+                type="button"
+                className="stories-landing__btnPrimary mt-3 d-inline-flex"
+                onClick={handleCreateStory}
+              >
                 <i className="fas fa-plus me-2" aria-hidden />
                 Create your first story
-              </Link>
+              </button>
             </div>
           </div>
         </section>
@@ -1084,7 +1123,16 @@ const Stories: React.FC = () => {
                                         handleCommentSubmit(comic.id, season.id);
                                       }}
                                     >
+                                      <label
+                                        htmlFor={`comment-draft-${season.id}`}
+                                        className="visually-hidden"
+                                      >
+                                        {targetEpisode
+                                          ? `Comment on episode ${targetEpisode.episode_number}`
+                                          : 'Episode comment'}
+                                      </label>
                                       <textarea
+                                        id={`comment-draft-${season.id}`}
                                         className="stories-landing__commentInput"
                                         value={draft}
                                         maxLength={500}
@@ -1274,6 +1322,7 @@ const Stories: React.FC = () => {
                         onClick={() => handleShare('facebook', comic.id)}
                         className="stories-landing__shareBtn"
                         title="Share on Facebook"
+                        aria-label="Share on Facebook"
                       >
                         <i className="fab fa-facebook-f" aria-hidden />
                       </button>
@@ -1282,6 +1331,7 @@ const Stories: React.FC = () => {
                         onClick={() => handleShare('x_twitter', comic.id)}
                         className="stories-landing__shareBtn"
                         title="Share on X (Twitter)"
+                        aria-label="Share on X"
                       >
                         <i className="fab fa-x-twitter" aria-hidden />
                       </button>
@@ -1290,6 +1340,7 @@ const Stories: React.FC = () => {
                         onClick={() => handleShare('reddit', comic.id)}
                         className="stories-landing__shareBtn"
                         title="Share on Reddit"
+                        aria-label="Share on Reddit"
                       >
                         <i className="fab fa-reddit-alien" aria-hidden />
                       </button>
@@ -1298,6 +1349,7 @@ const Stories: React.FC = () => {
                         onClick={(e) => handleCopyLink(e, comic.id)}
                         className="stories-landing__shareBtn"
                         title="Copy link"
+                        aria-label="Copy link"
                       >
                         <i className="fas fa-link" aria-hidden />
                       </button>
@@ -1316,11 +1368,22 @@ const Stories: React.FC = () => {
           className="my-studio__modal my-studio__modal--scrollForm modal show d-block"
           tabIndex={-1}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeCommentEdit();
+          }}
         >
           <div className="modal-dialog modal-dialog-scrollable">
-            <div className="modal-content">
+            <div
+              className="modal-content"
+              ref={editCommentDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-comment-modal-title"
+              tabIndex={-1}
+            >
               <div className="modal-header">
-                <h5 className="subtext-btn mb-0">Edit comment</h5>
+                <h5 id="edit-comment-modal-title" className="subtext-btn mb-0">Edit comment</h5>
                 <button
                   type="button"
                   className="btn btn-sm btn-light border"
@@ -1380,15 +1443,26 @@ const Stories: React.FC = () => {
           className="my-studio__modal modal show d-block"
           tabIndex={-1}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeCommentDelete();
+          }}
         >
           <div className="modal-dialog">
-            <div className="modal-content">
+            <div
+              className="modal-content"
+              ref={deleteCommentDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-comment-modal-title"
+              tabIndex={-1}
+            >
               <div className="modal-header">
-                <h5 className="subtext-btn mb-0">Delete comment?</h5>
+                <h5 id="delete-comment-modal-title" className="subtext-btn mb-0">Delete comment?</h5>
                 <button
                   type="button"
                   className="btn btn-sm btn-light border"
-                  onClick={() => setCommentPendingDelete(null)}
+                  onClick={closeCommentDelete}
                   aria-label="Close"
                   disabled={isDeletingComment}
                 >
@@ -1404,7 +1478,7 @@ const Stories: React.FC = () => {
                 <button
                   type="button"
                   className="product-landing__ctaGhost"
-                  onClick={() => setCommentPendingDelete(null)}
+                  onClick={closeCommentDelete}
                   disabled={isDeletingComment}
                 >
                   Cancel

@@ -1,0 +1,135 @@
+/* Always-visible feedback + optional page guide (right-edge tabs). */
+
+.floating-help-rail {
+  --edge-tab-thickness: 1.35rem;
+  position: fixed;
+  z-index: 1030;
+  top: 36%;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: var(--edge-tab-thickness);
+  pointer-events: none;
+}
+
+.floating-help-rail > * {
+  pointer-events: auto;
+}
+
+.floating-help-rail--viewer {
+  top: 26%;
+}
+
+.floating-help-rail__feedbackHost {
+  display: block;
+  width: 100%;
+}
+
+.floating-help-rail__feedback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  border: none;
+  /* Pre-compensate for rotate(180deg): ends up rounded on the content (left) side */
+  border-radius: 0 0.3rem 0.3rem 0;
+  padding: 0.5rem 0;
+  background: #ffbc00;
+  color: #0f172a;
+  font-family: var(--font-primary);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1;
+  box-shadow: -2px 2px 8px rgba(15, 23, 42, 0.14);
+  cursor: pointer;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  transform-origin: center;
+}
+
+.floating-help-rail__feedbackIcon {
+  display: none !important;
+}
+
+.floating-help-rail__feedbackLabel {
+  padding: 0;
+  margin: 0;
+}
+
+.floating-help-rail__guide {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--edge-tab-thickness);
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 50% 0 0 50%;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #128194;
+  color: #fff;
+  box-shadow: -2px 2px 8px rgba(15, 23, 42, 0.14);
+  cursor: pointer;
+}
+
+.floating-help-rail__guideIcon {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.floating-help-rail__guide--glow {
+  animation: floatingHelpGuideGlow 2s ease-in-out infinite;
+}
+
+.floating-help-rail__guide--glow:hover {
+  animation: none;
+}
+
+@keyframes floatingHelpGuideGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(18, 129, 148, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(18, 129, 148, 0.22),
+      0 0 8px 2px rgba(18, 129, 148, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-help-rail__guide--glow {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(23, 162, 184, 0.55);
+  }
+}
+
+/* Desktop: slightly larger edge tabs, still clear of the create (+) control */
+@media (min-width: 769px) {
+  .floating-help-rail {
+    --edge-tab-thickness: 1.55rem;
+    top: 38%;
+  }
+
+  .floating-help-rail--viewer {
+    top: 30%;
+  }
+
+  .floating-help-rail__feedback {
+    font-size: 0.68rem;
+    padding: 0.65rem 0;
+  }
+
+  .floating-help-rail__guideIcon {
+    font-size: 0.85rem;
+  }
+}

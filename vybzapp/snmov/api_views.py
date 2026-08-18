@@ -5,6 +5,11 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from snmov.utils.security import rate_limit_check, log_security_event, validate_file_upload, sanitize_filename
+from snmov.throttling import (
+    CheckoutRateThrottle,
+    ContactFormRateThrottle,
+    NewsletterSubscribeRateThrottle,
+)
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
@@ -896,6 +901,7 @@ def check_auth(request):
 @api_view(['POST'])
 @authentication_classes(CART_CHECKOUT_AUTHENTICATION)
 @permission_classes([AllowAny])
+@throttle_classes([CheckoutRateThrottle])
 def checkout(request):
     """Process checkout and create order (authenticated or guest)."""
     import logging
@@ -1408,8 +1414,12 @@ def payment_success(request):
 @csrf_exempt
 def stripe_checkout_webhook(request):
     """
-    Stripe webhook: checkout.session.completed (authoritative when browser never hits success URL).
+    Stripe webhook:
+    - checkout.session.completed (fulfill when browser never hits success URL)
+    - charge.dispute.* (persist dispute, alert ops, build response draft)
+
     Configure STRIPE_WEBHOOK_SECRET and point Stripe Dashboard to POST /api/stripe/webhook/
+    Enable dispute events in the webhook endpoint settings.
     """
     if request.method != 'POST':
         return HttpResponse(status=405)
@@ -1429,7 +1439,18 @@ def stripe_checkout_webhook(request):
     except stripe.error.SignatureVerificationError:
         return HttpResponse(status=400)
 
-    if event['type'] != 'checkout.session.completed':
+    event_type = event['type']
+
+    if event_type.startswith('charge.dispute.'):
+        from snmov.utils.disputes import handle_stripe_dispute_event
+        try:
+            handle_stripe_dispute_event(event)
+        except Exception as e:
+            logger.exception('Dispute webhook handling failed: %s', e)
+            return HttpResponse(status=500)
+        return HttpResponse(status=200)
+
+    if event_type != 'checkout.session.completed':
         return HttpResponse(status=200)
 
     from snmov.utils.checkout_fulfillment import complete_order_from_stripe_checkout_session
@@ -1611,6 +1632,7 @@ def set_default_address(request, address_id):
 @api_view(['POST'])
 @authentication_classes([])  # Disable authentication (and CSRF) for this endpoint
 @permission_classes([AllowAny])
+@throttle_classes([ContactFormRateThrottle])
 def contact_form(request):
     """
     API endpoint for contact form submissions.
@@ -1659,7 +1681,7 @@ def contact_form(request):
         except (ValueError, TypeError):
             pass
     
-    # 3. Rate limiting - max 3 submissions per IP per hour
+    # 3. Rate limiting - max 3 submissions per IP per hour (in addition to DRF contact scope)
     rate_limit_key = f'contact_form_rate_limit_{client_ip}'
     submission_count = cache.get(rate_limit_key, 0)
     
@@ -1774,6 +1796,7 @@ def contact_form(request):
 @api_view(['POST'])
 @authentication_classes([])  # Disable authentication (and CSRF) for this endpoint
 @permission_classes([AllowAny])
+@throttle_classes([NewsletterSubscribeRateThrottle])
 def subscribe_newsletter(request):
     """
     API endpoint for newsletter subscription.

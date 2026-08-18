@@ -4,7 +4,7 @@ from .models import (
     Product, Comment, Preference, ReachOut, About, SiteImage, Testimonials, ProductNotification, 
     ARUsage, ModelUsage, ShippingAddress, Order, OrderItem, Profile, User, EmailPreference, 
     EmailLog, NewsletterSubscription, SecurityLog, DataConsent,
-    ReturnRequest, ReturnItem, CreditNote, Invoice, ReturnPolicy, Coupon
+    ReturnRequest, ReturnItem, CreditNote, Invoice, ReturnPolicy, Coupon, PaymentDispute
 )
 from tinymce.widgets import TinyMCE
 from django.db import models
@@ -136,30 +136,43 @@ class OrderAdmin(admin.ModelAdmin):
     actions = ['process_refund']
 
     def process_refund(self, request, queryset):
-        """Admin action to process refunds for cancelled orders"""
+        """Admin action: Stripe refund + email for cancelled paid orders."""
         from snmov.utils.email_notifications import send_order_refund_processed
+        from snmov.utils.stripe_refunds import process_order_stripe_refund
 
         processed = 0
+        skipped = 0
+        errors = 0
         for order in queryset:
             if order.status != 'CANCELLED':
+                skipped += 1
                 continue
 
-            # Calculate refund amount (order total)
             refund_amount = order.calculate_grand_total()
-
-            # In a real implementation, you would process the Stripe refund here
-            # For now, we'll just send the email notification
             try:
-                send_order_refund_processed(order, refund_amount, "Original payment method")
+                if order.stripe_payment_intent_id and getattr(order, 'payment_completed_at', None):
+                    process_order_stripe_refund(order, refund_amount)
+                elif not order.stripe_payment_intent_id:
+                    self.message_user(
+                        request,
+                        f'Order {order.id}: no Stripe payment intent; email only.',
+                        level='WARNING',
+                    )
+                send_order_refund_processed(order, refund_amount, 'Original payment method')
                 processed += 1
             except Exception as e:
+                errors += 1
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.error(f"Failed to send refund processed email for order {order.id}: {e}")
+                logger.error('Failed refund for order %s: %s', order.id, e)
+                self.message_user(request, f'Order {order.id} refund failed: {e}', level='ERROR')
 
-        self.message_user(request, f'Refund processed notifications sent for {processed} order(s).')
+        self.message_user(
+            request,
+            f'Refunds processed={processed}, skipped={skipped}, errors={errors}.',
+        )
 
-    process_refund.short_description = "Send refund processed notification (for cancelled orders)"
+    process_refund.short_description = "Process Stripe refund + notify (cancelled paid orders)"
 
 
 class CouponAdmin(admin.ModelAdmin):
@@ -613,3 +626,99 @@ admin.site.register(ReturnItem)
 admin.site.register(CreditNote, CreditNoteAdmin)
 admin.site.register(Invoice, InvoiceAdmin)
 admin.site.register(ReturnPolicy, ReturnPolicyAdmin)
+
+
+class PaymentDisputeAdmin(admin.ModelAdmin):
+    list_display = (
+        'stripe_dispute_id',
+        'status',
+        'reason',
+        'amount_display',
+        'order',
+        'evidence_due_by',
+        'last_alerted_at',
+        'created_at',
+    )
+    list_filter = ('status', 'reason', 'currency', 'created_at')
+    search_fields = (
+        'stripe_dispute_id',
+        'stripe_charge_id',
+        'stripe_payment_intent_id',
+        'order__id',
+        'order__guest_email',
+        'order__customer__email',
+    )
+    readonly_fields = (
+        'stripe_dispute_id',
+        'stripe_charge_id',
+        'stripe_payment_intent_id',
+        'order',
+        'amount_cents',
+        'currency',
+        'reason',
+        'status',
+        'evidence_due_by',
+        'is_charge_refundable',
+        'raw_payload',
+        'last_alerted_at',
+        'trending_alert_sent_at',
+        'created_at',
+        'updated_at',
+        'evidence_pack_preview',
+    )
+    fields = (
+        'stripe_dispute_id',
+        'status',
+        'reason',
+        'amount_cents',
+        'currency',
+        'order',
+        'stripe_payment_intent_id',
+        'stripe_charge_id',
+        'evidence_due_by',
+        'is_charge_refundable',
+        'response_draft',
+        'response_submitted_at',
+        'evidence_pack_preview',
+        'raw_payload',
+        'last_alerted_at',
+        'trending_alert_sent_at',
+        'created_at',
+        'updated_at',
+    )
+    actions = ['regenerate_response_draft', 'mark_response_submitted']
+
+    def amount_display(self, obj):
+        return obj.amount_display
+
+    amount_display.short_description = 'Amount'
+
+    def evidence_pack_preview(self, obj):
+        from django.utils.html import format_html
+        text = obj.response_draft or ''
+        return format_html('<pre style="white-space:pre-wrap;max-height:420px;overflow:auto;">{}</pre>', text)
+
+    evidence_pack_preview.short_description = 'Evidence / transaction pack'
+
+    def regenerate_response_draft(self, request, queryset):
+        from snmov.utils.disputes import build_dispute_response_template
+
+        updated = 0
+        for dispute in queryset:
+            dispute.response_draft = build_dispute_response_template(dispute)
+            dispute.save(update_fields=['response_draft', 'updated_at'])
+            updated += 1
+        self.message_user(request, f'Regenerated response drafts for {updated} dispute(s).')
+
+    regenerate_response_draft.short_description = 'Regenerate response template from order logs'
+
+    def mark_response_submitted(self, request, queryset):
+        from django.utils import timezone
+
+        updated = queryset.update(response_submitted_at=timezone.now())
+        self.message_user(request, f'Marked {updated} dispute(s) as response submitted.')
+
+    mark_response_submitted.short_description = 'Mark response submitted (ops tracking)'
+
+
+admin.site.register(PaymentDispute, PaymentDisputeAdmin)

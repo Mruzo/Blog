@@ -1,0 +1,14 @@
+A Stripe payment dispute was {{ verb }}.
+
+Dispute ID: {{ dispute.stripe_dispute_id }}
+Status: {{ dispute.status }}
+Reason: {{ dispute.reason|default:"n/a" }}
+Amount: {{ dispute.amount_display }}
+Evidence due: {{ dispute.evidence_due_by|default:"n/a" }}
+Order: {% if order %}#{{ order.id }} ({{ order.status }}){% else %}unmatched{% endif %}
+Payment intent: {{ dispute.stripe_payment_intent_id|default:"n/a" }}
+
+Review and edit the response draft in Django admin → Payment Disputes, then submit evidence in the Stripe Dashboard before the due date.
+
+--- Evidence draft preview ---
+{{ evidence_preview }}

@@ -13,6 +13,11 @@ def current_ad_date():
 
 
 class Comic(models.Model):
+    MAX_DRAFTS_PER_STUDIO = 10
+    DRAFT_LIMIT_MESSAGE = (
+        "you're a perfect 10 in drafts. share some to create room for more."
+    )
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comics')
     studio = models.ForeignKey(
         'Studio',

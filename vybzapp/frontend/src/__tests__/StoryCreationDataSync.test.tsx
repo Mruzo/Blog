@@ -70,9 +70,11 @@ jest.mock('../services/api', () => ({
   __esModule: true,
   apiService: {
     createCompleteStory: (...args: unknown[]) => mockCreateCompleteStory(...args),
+    getStories: jest.fn().mockResolvedValue([]),
   },
   default: {
     createCompleteStory: (...args: unknown[]) => mockCreateCompleteStory(...args),
+    getStories: jest.fn().mockResolvedValue([]),
   },
 }));
 

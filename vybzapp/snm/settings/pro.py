@@ -87,3 +87,20 @@ CANADAPOST_CUSTOMER_NUMBER = CANADAPOST_PRODUCTION_CUSTOMER_NUMBER
 
 # Production storefront (emails, Stripe redirects). Override in /etc/vybz/settings.ini [section] FRONTEND_URL if needed.
 FRONTEND_URL = config.get('section', 'FRONTEND_URL', fallback='https://www.justvybz.com')
+
+# Tighter API rate limits for production (spam / credential stuffing)
+REST_FRAMEWORK = {
+    **REST_FRAMEWORK,
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/hour',
+        'user': '600/hour',
+        'password_reset': '5/hour',
+        'register': '8/hour',
+        'checkout': '15/hour',
+        'newsletter': '5/hour',
+        'contact': '5/hour',
+    },
+}
+
+LOGIN_RATE_LIMIT_MAX = 8
+LOGIN_RATE_LIMIT_WINDOW_SECONDS = 600  # 10 minutes

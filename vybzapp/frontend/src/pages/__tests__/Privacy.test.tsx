@@ -46,6 +46,15 @@ describe('Privacy', () => {
     expect(screen.getByText(/Account Information:/)).toBeInTheDocument();
   });
 
+  test('names key third-party processors in information sharing', () => {
+    renderPrivacy();
+    expect(screen.getByText(/Stripe:/)).toBeInTheDocument();
+    expect(screen.getByText(/Canada Post:/)).toBeInTheDocument();
+    expect(screen.getByText(/Amazon Web Services \(AWS\):/)).toBeInTheDocument();
+    expect(screen.getByText(/Email delivery \(PapaMail\):/)).toBeInTheDocument();
+    expect(screen.getByText(/We do not sell your personal information/)).toBeInTheDocument();
+  });
+
   test('displays contact information with email link', () => {
     renderPrivacy();
     expect(screen.getByText('Contact Us')).toBeInTheDocument();

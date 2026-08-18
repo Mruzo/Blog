@@ -1860,6 +1860,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 <div className="row justify-content-between align-items-center">
                   <div className="col-auto">
                     <button
+                      type="button"
                       className="btn btn-primary"
                       onClick={goToPreviousDialogue}
                       disabled={
@@ -1868,17 +1869,20 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                         (playbackPhase === 'dialogue' && currentDialogueIndex === 0)
                       }
                       title={episodeDialogues.length > 0 ? `Previous dialogue (${currentDialogueIndex}/${episodeDialogues.length})` : 'Waiting for dialogues...'}
+                      aria-label="Previous dialogue"
                     >
-                      <i className="fas fa-chevron-left"></i>
+                      <i className="fas fa-chevron-left" aria-hidden="true"></i>
                     </button>
                   </div>
                   
                   <div className="col-auto d-flex align-items-center gap-2">
                     <button
+                      type="button"
                       className="btn btn-success"
                       onClick={togglePlay}
+                      aria-label={isPlaying ? 'Pause' : 'Play'}
                     >
-                      <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+                      <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`} aria-hidden="true"></i>
                     </button>
                     
                     <div className="btn-group" role="group">
@@ -1901,6 +1905,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   
                   <div className="col-auto">
                     <button
+                      type="button"
                       className="btn btn-primary"
                       onClick={goToNextDialogue}
                       disabled={episodeDialogues.length === 0}
@@ -1911,8 +1916,9 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                             ? (episodeDialogues.length > 0 ? 'Replay from first dialogue' : 'Episode complete')
                             : (episodeDialogues.length > 0 ? `Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})` : 'Waiting for dialogues...')
                       }
+                      aria-label="Next dialogue"
                     >
-                      <i className="fas fa-chevron-right"></i>
+                      <i className="fas fa-chevron-right" aria-hidden="true"></i>
                     </button>
                   </div>
                 </div>
@@ -2254,8 +2260,10 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   </div>
                   
                   <div className="form-group mb-3">
-                  <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}>arrow_range</span>
-                  <span> X</span>
+                    <label htmlFor="targetX" className="form-label d-flex align-items-center gap-2">
+                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }} aria-hidden="true">arrow_range</span>
+                      <span>X</span>
+                    </label>
                     <div className="slider-row">
                       <input
                         type="range"

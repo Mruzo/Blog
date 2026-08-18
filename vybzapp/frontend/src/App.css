@@ -3722,6 +3722,20 @@ button.store-page__linkBtn {
   margin-top: 1.25rem;
 }
 
+.store-page__checkoutPolicyNote {
+  margin: 1rem 0 0;
+  font-family: var(--font-primary);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #5c636a;
+}
+
+.store-page__checkoutPolicyNote a {
+  color: #111e7f;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .store-page__checkbox {
   display: flex;
   align-items: flex-start;
@@ -4100,6 +4114,7 @@ h2 {
   font-family: var(--font-primary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
+  line-height: 1.5;
 }
 
 .subtext-btn-xs {
@@ -4209,6 +4224,28 @@ h2 {
   clip: rect(0, 0, 0, 0) !important;
   white-space: nowrap !important;
   border: 0 !important;
+}
+
+.skip-to-main {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 10000;
+  padding: 0.5rem 0.85rem;
+  background: #111e7f;
+  color: #fff;
+  border-radius: 4px;
+  text-decoration: none;
+  font-family: var(--font-primary);
+  font-size: 0.875rem;
+  transform: translateY(-200%);
+  transition: transform 0.15s ease;
+}
+
+.skip-to-main:focus {
+  transform: translateY(0);
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 /* Alert styles */
@@ -4655,7 +4692,7 @@ h2 {
 }
 
 .text-muted {
-  color: #6c757d;
+  color: #5c636a;
 }
 
 /* Margin utilities */

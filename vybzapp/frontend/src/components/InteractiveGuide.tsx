@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGuide } from '../contexts/GuideContext';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 // Uses shared .guide-modal classes (see App.css) for uniform padding/margins. Use the same for new guide/documentation modals.
 
@@ -48,6 +49,7 @@ function renderSummary(text: string): React.ReactNode {
 const InteractiveGuide: React.FC = () => {
   const { currentGuide, isRunning, stopGuide } = useGuide();
   const [tooltipPosition, setTooltipPosition] = useState<{ bottom: number; left: number } | null>(null);
+  const dialogRef = useDialogA11y(isRunning && !!currentGuide && !!tooltipPosition, stopGuide);
 
   useEffect(() => {
     if (!isRunning || !currentGuide) {
@@ -93,10 +95,16 @@ const InteractiveGuide: React.FC = () => {
           pointerEvents: 'auto',
         }}
         onClick={stopGuide}
+        aria-hidden="true"
       />
 
       <div
+        ref={dialogRef}
         className="guide-modal font-quicksand"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="interactive-guide-title"
+        tabIndex={-1}
         style={{
           position: 'fixed',
           bottom: `${tooltipPosition.bottom}px`,
@@ -109,7 +117,7 @@ const InteractiveGuide: React.FC = () => {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="guide-modal__header">
+        <div id="interactive-guide-title" className="guide-modal__header">
           {currentGuide.name}
         </div>
 

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useScrollPosition } from '../hooks/useScrollPosition';
 import FloatingActionMenu from './FloatingActionMenu';
+import FloatingFeedbackButton from './FloatingFeedbackButton';
 import CookieNotification from './CookieNotification';
 import { headerLogoUrl, footerLogoUrl, poweredByLogoUrl } from '../utils/brandImages';
 
@@ -84,10 +85,14 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <a href="#main-content" className="skip-to-main">
+        Skip to main content
+      </a>
       {/* Top Navbar — logo, primary destinations (desktop inline / mobile bottom bar via #default-navbar), account */}
       <nav
         className="navbar navbar-expand-lg navbar-light border-bottom w-100 app-site-header"
         style={{ backgroundColor: '#ffbc00' }}
+        aria-label="Primary"
       >
         <div className="container-fluid px-2 px-md-3 app-site-header__inner">
           <Link className="navbar-brand p-0 app-site-header__brand" to="/">
@@ -132,22 +137,33 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                 className="btn btn-light btn-sm mx-1 mx-sm-2 px-2 app-site-header__actionBtn"
                 id="profile-btn"
                 onClick={switchToProfileNavbar}
+                aria-label={`My Studio${user?.first_name || user?.username ? `, ${user?.first_name || user?.username}` : ''}`}
               >
-                <i className="fas fa-user" />
+                <i className="fas fa-user" aria-hidden="true" />
                 <span className="d-none d-sm-inline">
                   {user?.first_name || user?.username || 'Profile'}
                 </span>
               </Link>
             ) : (
-              <Link to="/login/" className="btn btn-light btn-sm mx-1 mx-sm-2 px-2 app-site-header__actionBtn" id="login-btn">
-                <i className="fas fa-sign-in-alt" />
+              <Link
+                to="/login/"
+                className="btn btn-light btn-sm mx-1 mx-sm-2 px-2 app-site-header__actionBtn"
+                id="login-btn"
+                aria-label="Login"
+              >
+                <i className="fas fa-sign-in-alt" aria-hidden="true" />
                 <span className="d-none d-sm-inline">Login</span>
               </Link>
             )}
-            <Link to="/product/cart/" className="btn btn-light btn-sm px-2 ms-1 ms-sm-2 position-relative app-site-header__cartLink">
-              <i className="fas fa-shopping-cart" />
+            <Link
+              to="/product/cart/"
+              className="btn btn-light btn-sm px-2 ms-1 ms-sm-2 position-relative app-site-header__cartLink"
+              aria-label={`Cart, ${cartCount} ${cartCount === 1 ? 'item' : 'items'}`}
+            >
+              <i className="fas fa-shopping-cart" aria-hidden="true" />
               <span
                 className={`position-absolute badge rounded-pill app-site-header__cartBadge ${cartCount > 0 ? 'bg-success' : 'bg-danger'}`}
+                aria-hidden="true"
               >
                 {cartCount}
               </span>
@@ -199,11 +215,12 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-grow-1">
+      <main id="main-content" className="flex-grow-1" tabIndex={-1}>
         {children}
       </main>
 
-      {/* Floating Action Menu (combines feedback and create story buttons) */}
+      {/* Feedback + page guide (always visible); create-story FAB on Stories only */}
+      <FloatingFeedbackButton />
       <FloatingActionMenu />
 
       {/* Cookie Notification */}
