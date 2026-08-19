@@ -50,6 +50,16 @@ FRONTEND_PUBLIC_ASSETS = frozenset({
     'favicon.ico',
     'manifest.json',
     'robots.txt',
+    'critical.css',
+})
+
+FRONTEND_FONT_FILES = frozenset({
+    'Varela-Regular.ttf',
+    'Quicksand.ttf',
+    'gillsansmt.ttf',
+    'SofiaSans-VariableFont_wght.ttf',
+    'comic.ttf',
+    'kurale.ttf',
 })
 
 
@@ -62,6 +72,16 @@ def serve_frontend_public_asset(request, filename):
         return HttpResponseNotFound()
     content_type, _ = mimetypes.guess_type(filepath)
     return FileResponse(open(filepath, 'rb'), content_type=content_type or 'application/octet-stream')
+
+
+def serve_frontend_font(request, filename):
+    """Serve CRA public/fonts/ from frontend/build/fonts/."""
+    if filename not in FRONTEND_FONT_FILES:
+        return HttpResponseNotFound()
+    filepath = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'fonts', filename)
+    if not os.path.isfile(filepath):
+        return HttpResponseNotFound()
+    return FileResponse(open(filepath, 'rb'), content_type='font/ttf')
 
 
 
