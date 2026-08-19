@@ -145,13 +145,11 @@ def ensure_invoice_pdf_for_order(order):
     """Create Invoice row and PDF once paid (idempotent)."""
     from snmov.models import Invoice
     from snmov.utils.pdf_generation import generate_pdf
-    import os
-    from django.conf import settings as dj_settings
 
     invoice, _created = Invoice.objects.get_or_create(order=order)
     if invoice.pdf_path:
-        full = os.path.join(dj_settings.MEDIA_ROOT, invoice.pdf_path)
-        if os.path.exists(full):
+        from snm.media_files import media_exists
+        if media_exists(invoice.pdf_path):
             return invoice
     try:
         pdf_path = generate_pdf(

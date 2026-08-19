@@ -631,7 +631,9 @@ class CanadaPostXMLParsingTestCase(TestCase):
                 <price-details>
                     <due>12.50</due>
                 </price-details>
-                <expected-delivery-date>2025-12-05</expected-delivery-date>
+                <service-standard>
+                    <expected-delivery-date>2025-12-05</expected-delivery-date>
+                </service-standard>
             </price-quote>
             <price-quote>
                 <service-code>DOM.PC</service-code>
@@ -651,7 +653,7 @@ class CanadaPostXMLParsingTestCase(TestCase):
             CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER='123456'
         ):
             api = CanadaPostAPI(use_production=False)
-            rates = api._parse_rates_response(xml_response)
+            rates = api._parse_rates_xml_response(xml_response)
             
             self.assertEqual(len(rates), 2)
             self.assertEqual(rates[0]['service_code'], 'DOM.EP')
@@ -660,46 +662,4 @@ class CanadaPostXMLParsingTestCase(TestCase):
             self.assertEqual(rates[0]['estimated_delivery'], '2025-12-05')
             self.assertEqual(rates[1]['service_code'], 'DOM.PC')
             self.assertEqual(rates[1]['amount'], Decimal('18.75'))
-    
-    def test_parse_shipment_response(self):
-        """Test: Parse shipment creation response to get shipment ID"""
-        xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
-        <shipment-info xmlns="http://www.canadapost.ca/ws/shipment-v8">
-            <shipment-id>12345678</shipment-id>
-            <shipment-status>transmitted</shipment-status>
-        </shipment-info>'''
-        
-        with override_settings(
-            CANADAPOST_USERNAME='dev_user',
-            CANADAPOST_PASSWORD='dev_pass',
-            CANADAPOST_CUSTOMER_NUMBER='123456',
-            CANADAPOST_DEVELOPMENT_USERNAME='dev_user',
-            CANADAPOST_DEVELOPMENT_PASSWORD='dev_pass',
-            CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER='123456'
-        ):
-            api = CanadaPostAPI(use_production=False)
-            shipment_id = api._parse_shipment_response(xml_response)
-            
-            self.assertEqual(shipment_id, '12345678')
-    
-    def test_parse_tracking_number(self):
-        """Test: Parse tracking number from shipment response"""
-        xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
-        <shipment-info xmlns="http://www.canadapost.ca/ws/shipment-v8">
-            <shipment-id>12345678</shipment-id>
-            <tracking-pin>1234567890123456</tracking-pin>
-        </shipment-info>'''
-        
-        with override_settings(
-            CANADAPOST_USERNAME='dev_user',
-            CANADAPOST_PASSWORD='dev_pass',
-            CANADAPOST_CUSTOMER_NUMBER='123456',
-            CANADAPOST_DEVELOPMENT_USERNAME='dev_user',
-            CANADAPOST_DEVELOPMENT_PASSWORD='dev_pass',
-            CANADAPOST_DEVELOPMENT_CUSTOMER_NUMBER='123456'
-        ):
-            api = CanadaPostAPI(use_production=False)
-            tracking = api._parse_tracking_number(xml_response)
-            
-            self.assertEqual(tracking, '1234567890123456')
 

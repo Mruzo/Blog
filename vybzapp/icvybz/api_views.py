@@ -7,7 +7,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import get_user_model
-from snmov.throttling import PasswordResetRateThrottle, RegisterRateThrottle
+from snmov.throttling import PasswordResetRateThrottle, RegisterRateThrottle, StorefrontReadGetThrottleExemptMixin
 
 User = get_user_model()
 from django.core.cache import cache
@@ -358,6 +358,7 @@ class ComicDetailView(generics.RetrieveUpdateDestroyAPIView):
 class PublicStoriesView(generics.ListAPIView):
     serializer_class = ComicSerializer
     permission_classes = [AllowAny]  # No authentication required
+    throttle_classes = []
     
     def get_queryset(self):
         try:
@@ -889,7 +890,7 @@ class StudioListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
-class StudioDetailView(generics.RetrieveUpdateDestroyAPIView):
+class StudioDetailView(StorefrontReadGetThrottleExemptMixin, generics.RetrieveUpdateDestroyAPIView):
     """
     GET: any public studio, or the authenticated owner's studio (including private).
     PUT/PATCH/DELETE: studio owner only.
@@ -1313,8 +1314,9 @@ def ad_invoice_api(request):
         amount,
         notes=notes,
     )
-    media_url = settings.MEDIA_URL.rstrip('/') + '/' + pdf_path.lstrip('/')
-    pdf_url = request.build_absolute_uri(media_url)
+    from snm.media_files import media_url
+
+    pdf_url = media_url(pdf_path)
 
     return Response({
         'invoice_number': invoice_number,

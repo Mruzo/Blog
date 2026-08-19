@@ -9,6 +9,7 @@ from decimal import Decimal
 from django.conf import settings
 import xml.etree.ElementTree as ET
 from .province_codes import normalize_province_code
+from snm.media_files import media_url, save_media_bytes
 
 
 def filter_checkout_shipping_rates(rates):
@@ -665,17 +666,9 @@ def create_canadapost_label(order, service_code, use_production=None):
     label_pdf = result.get('label_pdf')
     shipment_id = result.get('shipment_id')
     if label_pdf and shipment_id:
-        rel_dir = 'shipping-labels'
-        dest_dir = os.path.join(settings.MEDIA_ROOT, rel_dir)
-        os.makedirs(dest_dir, exist_ok=True)
-        filename = f'{shipment_id}.pdf'
-        dest_path = os.path.join(dest_dir, filename)
-        with open(dest_path, 'wb') as f:
-            f.write(label_pdf)
-        base = settings.MEDIA_URL or '/media/'
-        if not base.endswith('/'):
-            base = f'{base}/'
-        label_url = f'{base}{rel_dir}/{filename}'
+        rel_path = f'shipping-labels/{shipment_id}.pdf'
+        save_media_bytes(rel_path, label_pdf)
+        label_url = media_url(rel_path)
     else:
         label_url = result.get('label_url', '')
 

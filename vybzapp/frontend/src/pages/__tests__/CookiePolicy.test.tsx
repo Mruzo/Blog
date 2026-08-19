@@ -1,6 +1,6 @@
 import React from 'react';
 import { screen } from '@testing-library/react';
-import { renderWithRouter } from '../../__tests__/testUtils';
+import { renderWithRouter } from '../../testing/testHelpers';
 import CookiePolicy from '../CookiePolicy';
 
 describe('CookiePolicy', () => {

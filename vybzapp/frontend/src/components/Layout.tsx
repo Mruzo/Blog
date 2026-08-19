@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useApi } from '../contexts/ApiContext';
 import { useScrollPosition } from '../hooks/useScrollPosition';
 import FloatingActionMenu from './FloatingActionMenu';
 import FloatingFeedbackButton from './FloatingFeedbackButton';
@@ -19,9 +20,12 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, user }) => {
   const location = useLocation();
-  const isAuthenticated = !!user; // Check if user exists
+  const { authInitialized } = useApi();
+  const hasAuthToken = typeof window !== 'undefined' && !!localStorage.getItem('authToken');
+  const authReady = authInitialized || !hasAuthToken;
+  const isAuthenticated = !!user;
   const [showProfileNavbar, setShowProfileNavbar] = useState(false);
-  const { cartCount } = useCart(); // Get cart count from context
+  const { cartCount, cartInitialized } = useCart();
   
   // Initialize scroll position management
   useScrollPosition();
@@ -131,41 +135,50 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
           </div>
 
           <div className="d-flex align-items-center font-quicksand app-site-header__actions">
-            {isAuthenticated ? (
-              <Link
-                to="/immersivecomics/my-studio/"
-                className="btn btn-light btn-sm mx-1 mx-sm-2 px-2 app-site-header__actionBtn"
-                id="profile-btn"
-                onClick={switchToProfileNavbar}
-                aria-label={`My Studio${user?.first_name || user?.username ? `, ${user?.first_name || user?.username}` : ''}`}
-              >
-                <i className="fas fa-user" aria-hidden="true" />
-                <span className="d-none d-sm-inline">
-                  {user?.first_name || user?.username || 'Profile'}
+            <div className="app-site-header__authSlot">
+              {!authReady ? (
+                <span
+                  className="btn btn-light btn-sm app-site-header__actionBtn app-site-header__actionBtn--pending"
+                  aria-hidden="true"
+                >
+                  <i className="fas fa-user" aria-hidden="true" />
                 </span>
-              </Link>
-            ) : (
-              <Link
-                to="/login/"
-                className="btn btn-light btn-sm mx-1 mx-sm-2 px-2 app-site-header__actionBtn"
-                id="login-btn"
-                aria-label="Login"
-              >
-                <i className="fas fa-sign-in-alt" aria-hidden="true" />
-                <span className="d-none d-sm-inline">Login</span>
-              </Link>
-            )}
+              ) : isAuthenticated ? (
+                <Link
+                  to="/immersivecomics/my-studio/"
+                  className="btn btn-light btn-sm app-site-header__actionBtn"
+                  id="profile-btn"
+                  onClick={switchToProfileNavbar}
+                  aria-label={`My Studio${user?.first_name || user?.username ? `, ${user?.first_name || user?.username}` : ''}`}
+                >
+                  <i className="fas fa-user" aria-hidden="true" />
+                  <span className="d-none d-sm-inline text-truncate">
+                    {user?.first_name || user?.username || 'Profile'}
+                  </span>
+                </Link>
+              ) : (
+                <Link
+                  to="/login/"
+                  className="btn btn-light btn-sm app-site-header__actionBtn"
+                  id="login-btn"
+                  aria-label="Login"
+                >
+                  <i className="fas fa-sign-in-alt" aria-hidden="true" />
+                  <span className="d-none d-sm-inline">Login</span>
+                </Link>
+              )}
+            </div>
             <Link
               to="/product/cart/"
-              className="btn btn-light btn-sm px-2 ms-1 ms-sm-2 position-relative app-site-header__cartLink"
-              aria-label={`Cart, ${cartCount} ${cartCount === 1 ? 'item' : 'items'}`}
+              className="btn btn-light btn-sm position-relative app-site-header__cartLink"
+              aria-label={`Cart, ${!cartInitialized ? 'loading' : `${cartCount} ${cartCount === 1 ? 'item' : 'items'}`}`}
             >
               <i className="fas fa-shopping-cart" aria-hidden="true" />
               <span
-                className={`position-absolute badge rounded-pill app-site-header__cartBadge ${cartCount > 0 ? 'bg-success' : 'bg-danger'}`}
+                className={`position-absolute badge rounded-pill app-site-header__cartBadge ${cartInitialized ? (cartCount > 0 ? 'bg-success' : 'bg-danger') : 'app-site-header__cartBadge--placeholder bg-danger'}`}
                 aria-hidden="true"
               >
-                {cartCount}
+                {cartInitialized ? cartCount : 0}
               </span>
             </Link>
           </div>
@@ -177,7 +190,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
         <div className="container-fluid px-0">
           <div
             id="profile-navbar"
-            className={`navbar-state-profile navbar-buttons-container app-site-header__navTray ${showProfileNavbar ? 'show' : 'hidden'}`}
+            className={`navbar-state-profile navbar-buttons-container app-site-header__navTray ${showProfileNavbar ? 'show' : 'hidden'}${canAccessAds ? ' navbar-buttons-container--four-up' : ''}`}
           >
             <Link
               to="/immersivecomics/"

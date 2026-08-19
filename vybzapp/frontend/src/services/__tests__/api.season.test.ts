@@ -146,7 +146,7 @@ describe('ApiService - Season Operations', () => {
       const formDataCall = mockedAxios.post.mock.calls[0][1] as FormData;
       expect(formDataCall.get('title')).toBe('');
       expect(formDataCall.get('description')).toBe('');
-      expect(formDataCall.get('season_number')).toBe('');
+      expect(formDataCall.get('season_number')).toBe('1');
       expect(formDataCall.get('release_date')).toBe('');
 
       expect(result).toEqual(mockResponse.data);

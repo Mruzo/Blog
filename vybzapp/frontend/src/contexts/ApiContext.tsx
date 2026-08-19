@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { apiService, Story, Season, SeasonCreateData, Character, Episode, Dialogue, Studio, AudioTrack } from '../services/api';
+import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 
 export interface User {
   id: number;
@@ -75,6 +76,7 @@ interface ApiContextType {
   // Auth
   loadCurrentUser: () => Promise<void>;
   clearUser: () => void;
+  authInitialized: boolean;
   login: (username: string, password: string) => Promise<{ token: string; user: User }>;
   register: (userData: { username: string; email: string; password: string; password2: string; first_name?: string; last_name?: string; accept_terms: boolean }) => Promise<{ token: string; user: User; message: string; email_verification_required: boolean }>;
   logout: () => Promise<void>;
@@ -116,6 +118,9 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
   const [myStudio, setMyStudio] = useState<Studio | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(
+    () => typeof window === 'undefined' || !localStorage.getItem('authToken')
+  );
   
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
@@ -131,7 +136,7 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
       console.log('ApiContext: API call successful, setting isLoading to false');
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'An error occurred';
+      const errorMessage = getApiErrorMessage(err, 'Something went wrong. Please try again.');
       setError(errorMessage);
       console.log('ApiContext: API call failed, setting isLoading to false');
       throw err;
@@ -468,15 +473,22 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
 
   // Load initial data (only run once on mount)
   useEffect(() => {
-    // Check if user is authenticated before making API calls
     const token = localStorage.getItem('authToken');
-    if (token) {
-      // Load current user first
-      loadCurrentUser().catch(err => {
+    if (!token) {
+      setAuthInitialized(true);
+      return;
+    }
+
+    loadCurrentUser()
+      .catch(err => {
         console.warn('[ApiContext] Failed to load current user:', err);
+      })
+      .finally(() => {
+        setAuthInitialized(true);
       });
-      
-      // Load data in parallel, but handle errors gracefully
+
+    // Defer non-auth data so first paint (home/studios) is not competing with large API payloads
+    const loadAuthenticatedData = () => {
       Promise.all([
         loadStories().catch(err => {
           // Log all errors for debugging, but handle auth errors gracefully
@@ -512,14 +524,14 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
           }
         })
       ]);
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(loadAuthenticatedData);
     } else {
-      // No token - log for debugging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[ApiContext] No auth token found, skipping initial data load');
-      }
+      window.setTimeout(loadAuthenticatedData, 0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array - only run once on mount
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for storage changes (logout in other tabs)
   useEffect(() => {
@@ -600,6 +612,7 @@ export const ApiProvider: React.FC<ApiProviderProps> = ({ children }) => {
     // Auth
     loadCurrentUser,
     clearUser,
+    authInitialized,
     login,
     register,
     logout,

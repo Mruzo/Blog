@@ -38,7 +38,7 @@ class UsernameUniquenessTestCase(APITestCase):
     
     def test_username_uniqueness_on_registration(self):
         """Test that registration rejects duplicate usernames"""
-        url = reverse('icvybz-api:register')
+        url = reverse('icvybz-api:auth-register')
         data = {
             'username': self.user.username,  # Try to use existing username
             'email': 'newemail@example.com',

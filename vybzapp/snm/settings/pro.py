@@ -30,7 +30,7 @@ CSP_DEFAULT_SRC = ("'self'",)
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "https://js.stripe.com", "https://checkout.stripe.com")
 CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com")
 CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
-CSP_IMG_SRC = ("'self'", "data:", "https:", "*.s3.amazonaws.com")
+CSP_IMG_SRC = ("'self'", "data:", "https:", "*.cloudfront.net", "*.s3.amazonaws.com")
 CSP_CONNECT_SRC = ("'self'", "https://api.stripe.com", "https://checkout.stripe.com")
 CSP_FRAME_SRC = ("'self'", "https://js.stripe.com", "https://checkout.stripe.com")
 
@@ -60,6 +60,7 @@ AWS_SECRET_ACCESS_KEY = config.get('section', 'VYBZ_SCRT_KEY')
 AWS_STORAGE_BUCKET_NAME = config.get('section', 'VYBZ_BUCKET_NAME')
 
 AWS_S3_FILE_OVERWRITE = False
+AWS_QUERYSTRING_AUTH = False  # CloudFront OAC serves objects; avoid presigned S3 URLs
 AWS_DEFAULT_ACL = None  # Set per storage backend (public-read for static, private for media)
 
 AWS_S3_OBJECT_PARAMETERS = {
@@ -68,9 +69,10 @@ AWS_S3_OBJECT_PARAMETERS = {
 
 DEFAULT_FILE_STORAGE = 'snm.storage_backends.MediaStorage'
 
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_S3_CUSTOM_DOMAIN = 'd3vnhbsvpdc5c7.cloudfront.net'
 AWS_LOCATION = 'static'
 STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+MEDIA_URL = 'https://%s/media/' % AWS_S3_CUSTOM_DOMAIN
 
 STATICFILES_STORAGE = 'snm.storage_backends.StaticStorage'  # Uses custom storage with public-read ACL
 

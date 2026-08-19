@@ -88,6 +88,7 @@ class _CheckoutTransactionError(Exception):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def featured_storefront_coupon(request):
     """
     Public: the single coupon marked for storefront carousel, only if still valid to redeem.
@@ -159,6 +160,7 @@ def preview_coupon(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def site_image_by_caption_token(request):
     """
     Public: resolve a SiteImage by an exact caption token (storefront marketing slots).
@@ -216,6 +218,7 @@ class ProductListView(generics.ListAPIView):
     queryset = Product.objects.filter(available=True).prefetch_related('images')
     serializer_class = ProductListSerializer
     permission_classes = [AllowAny]
+    throttle_classes = []
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -240,11 +243,13 @@ class ProductDetailView(generics.RetrieveAPIView):
     serializer_class = ProductSerializer
     lookup_field = 'slug'
     permission_classes = [AllowAny]
+    throttle_classes = []
 
 
 @api_view(['GET'])
 @authentication_classes(CART_CHECKOUT_AUTHENTICATION)
 @permission_classes([AllowAny])
+@throttle_classes([])
 def get_cart(request):
     """Get current cart contents"""
     import logging
@@ -2292,22 +2297,18 @@ def download_invoice(request, order_id):
             invoice.save()
         
         # Return PDF file
-        from django.http import FileResponse
-        import os
-        from django.conf import settings
-        
-        pdf_full_path = os.path.join(settings.MEDIA_ROOT, invoice.pdf_path)
-        if os.path.exists(pdf_full_path):
-            return FileResponse(
-                open(pdf_full_path, 'rb'),
-                content_type='application/pdf',
-                filename=f'invoice_{invoice.invoice_number}.pdf'
-            )
-        else:
-            return Response(
-                {'error': 'Invoice PDF not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        from snm.media_files import private_media_pdf_download
+
+        response = private_media_pdf_download(
+            invoice.pdf_path,
+            f'invoice_{invoice.invoice_number}.pdf',
+        )
+        if response:
+            return response
+        return Response(
+            {'error': 'Invoice PDF not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
             
     except Order.DoesNotExist:
         return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -2336,22 +2337,18 @@ def download_credit_note(request, credit_note_id):
             )
         
         # Return PDF file
-        from django.http import FileResponse
-        import os
-        from django.conf import settings
-        
-        pdf_full_path = os.path.join(settings.MEDIA_ROOT, credit_note.pdf_path)
-        if os.path.exists(pdf_full_path):
-            return FileResponse(
-                open(pdf_full_path, 'rb'),
-                content_type='application/pdf',
-                filename=f'credit_note_{credit_note.credit_note_number}.pdf'
-            )
-        else:
-            return Response(
-                {'error': 'Credit note PDF not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        from snm.media_files import private_media_pdf_download
+
+        response = private_media_pdf_download(
+            credit_note.pdf_path,
+            f'credit_note_{credit_note.credit_note_number}.pdf',
+        )
+        if response:
+            return response
+        return Response(
+            {'error': 'Credit note PDF not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
             
     except CreditNote.DoesNotExist:
         return Response({'error': 'Credit note not found'}, status=status.HTTP_404_NOT_FOUND)

@@ -1,29 +1,4 @@
-/* Bundled web fonts (url only — avoids iOS/macOS local() mismatch) */
-@font-face {
-  font-family: 'varela';
-  src: url('./fonts/Varela-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'quicksand';
-  src: url('./fonts/Quicksand.ttf') format('truetype');
-  font-weight: 300 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'gillsans';
-  src: url('./fonts/gillsansmt.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* AnimeAce font (referenced as 'Comic' in Django template) */
+/* Fonts loaded from /public/fonts via critical.css (index.html) — avoids duplicate @font-face reflow */
 @font-face {
   font-family: 'animeace';
   src: url('./fonts/comic.ttf') format('truetype');
@@ -136,7 +111,7 @@ body {
 
 .home-page__eyebrow {
   font-family: var(--font-primary);
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -4521,6 +4496,18 @@ h2 {
     justify-content: center !important;
     flex-wrap: wrap !important;
     overflow: visible !important;
+    gap: 0.35rem !important;
+  }
+
+  #profile-navbar.navbar-buttons-container--four-up.navbar-state-profile.show {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  #profile-navbar.navbar-buttons-container--four-up .app-site-header__link {
+    flex: 0 1 auto !important;
+    padding: 0.32rem 0.6rem !important;
+    font-size: 0.8125rem !important;
   }
 }
 
@@ -4598,6 +4585,15 @@ h2 {
   transition: all 0.3s ease-in-out;
 }
 
+.app-site-header .btn {
+  transition: none !important;
+}
+
+.app-site-header .btn:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 .btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -4620,10 +4616,12 @@ h2 {
   display: none !important;
   justify-content: center !important;
   align-items: center !important;
-  flex-wrap: nowrap !important;
+  flex-wrap: wrap !important;
   width: 100% !important;
   min-width: 0 !important;
-  overflow: hidden !important;
+  overflow: visible !important;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
 }
 
 #profile-navbar.navbar-state-profile.show {
@@ -4762,8 +4760,9 @@ h2 {
     border-bottom: none !important;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
     z-index: 1000 !important;
-    justify-content: space-between !important;
-    padding: 0.5rem 10px !important;
+    justify-content: space-evenly !important;
+    gap: 0.2rem !important;
+    padding: 0.4rem 6px !important;
     margin: 0 !important;
   }
   
@@ -4801,13 +4800,31 @@ h2 {
   #default-navbar .app-site-header__link,
   #profile-navbar .app-site-header__link {
     flex: 1 1 0% !important;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    font-size: 0.78rem !important;
-    margin: 0 2px !important;
-    white-space: normal !important;
+    flex-direction: column !important;
+    gap: 0.15rem !important;
+    padding: 0.35rem 2px !important;
+    font-size: 0.72rem !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
     text-align: center;
     min-width: 0 !important;
+    min-height: 3.1rem;
+    line-height: 1.1;
+  }
+
+  .navbar-buttons-container .app-site-header__link span,
+  #default-navbar .app-site-header__link span,
+  #profile-navbar .app-site-header__link span {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #profile-navbar.navbar-buttons-container--four-up .app-site-header__link {
+    font-size: 0.65rem !important;
+    padding: 0.3rem 1px !important;
+    min-height: 2.85rem;
   }
 
   .navbar-buttons-container .nav-btn i,
@@ -4820,8 +4837,13 @@ h2 {
   .navbar-buttons-container .app-site-header__link i,
   #default-navbar .app-site-header__link i,
   #profile-navbar .app-site-header__link i {
-    font-size: 0.72rem !important;
+    font-size: 1rem !important;
     flex-shrink: 0;
+    margin: 0 !important;
+  }
+
+  #profile-navbar.navbar-buttons-container--four-up .app-site-header__link i {
+    font-size: 0.9rem !important;
   }
 
   /* Step indicator (same breakpoint as layout nav) */
@@ -4884,7 +4906,7 @@ h2 {
   #profile-navbar .app-site-header__link {
     padding-left: 3px !important;
     padding-right: 3px !important;
-    font-size: 0.72rem !important;
+    font-size: 0.9rem !important;
     margin: 0 1px !important;
   }
 
@@ -4898,7 +4920,7 @@ h2 {
   .navbar-buttons-container .app-site-header__link i,
   #default-navbar .app-site-header__link i,
   #profile-navbar .app-site-header__link i {
-    font-size: 0.65rem !important;
+    font-size: 0.82rem !important;
   }
 }
 
@@ -4927,7 +4949,7 @@ h2 {
   #profile-navbar .app-site-header__link {
     padding-left: 2px !important;
     padding-right: 2px !important;
-    font-size: 0.68rem !important;
+    font-size: 0.85rem !important;
     margin: 0 1px !important;
   }
 
@@ -4941,7 +4963,7 @@ h2 {
   .navbar-buttons-container .app-site-header__link i,
   #default-navbar .app-site-header__link i,
   #profile-navbar .app-site-header__link i {
-    font-size: 0.62rem !important;
+    font-size: 0.78rem !important;
   }
 }
 

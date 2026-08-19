@@ -10,6 +10,8 @@ import logging
 
 from django.conf import settings
 
+from snm.media_files import save_media_bytes
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -164,17 +166,12 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
         raise ImportError("reportlab is required for PDF generation. Install with: pip install reportlab")
 
     if pdf_type in ('invoice', 'ad_invoice'):
-        pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
+        folder = 'invoices'
     else:
-        pdf_dir = os.path.join(settings.MEDIA_ROOT, 'credit-notes')
+        folder = 'credit-notes'
 
-    os.makedirs(pdf_dir, exist_ok=True)
-
-    pdf_path = os.path.join(pdf_dir, f'{filename}')
-    if pdf_path.startswith(settings.MEDIA_ROOT):
-        full_pdf_path = pdf_path
-    else:
-        full_pdf_path = os.path.join(settings.MEDIA_ROOT, pdf_path.lstrip('/'))
+    name = filename if filename.endswith('.pdf') else f'{filename}.pdf'
+    relative_path = f'{folder}/{name}'
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -708,12 +705,5 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
 
     doc.build(elements)
 
-    with open(full_pdf_path, 'wb') as f:
-        f.write(buffer.getvalue())
-
-    if full_pdf_path.startswith(settings.MEDIA_ROOT):
-        relative_path = os.path.relpath(full_pdf_path, settings.MEDIA_ROOT)
-    else:
-        relative_path = pdf_path.replace(settings.MEDIA_ROOT + '/', '').lstrip('/')
-
+    save_media_bytes(relative_path, buffer.getvalue())
     return relative_path

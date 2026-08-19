@@ -40,3 +40,15 @@ class NewsletterSubscribeRateThrottle(IpScopedRateThrottle):
 class ContactFormRateThrottle(IpScopedRateThrottle):
     """DRF layer on top of the existing cache-based contact limit."""
     scope = 'contact'
+
+
+class StorefrontReadGetThrottleExemptMixin:
+    """
+    Exempt safe read-only GET/HEAD/OPTIONS from default DRF throttling.
+    Mutating methods still use DEFAULT_THROTTLE_CLASSES and scoped throttles.
+    """
+
+    def get_throttles(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return []
+        return super().get_throttles()

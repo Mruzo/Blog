@@ -80,7 +80,7 @@ class OrderConfirmationEmailContentTestCase(TestCase):
         # Calculate expected values
         discounted_price = self.product.get_discounted_price()
         expected_subtotal = discounted_price * 2
-        expected_total = expected_subtotal + self.order.shipping_cost
+        expected_total = self.order.calculate_grand_total()
         
         # Check plain text content
         self.assertIn(str(self.order.id), email.body)
@@ -119,7 +119,7 @@ class OrderConfirmationEmailContentTestCase(TestCase):
         # Calculate expected values
         discounted_price = self.product.get_discounted_price()
         expected_subtotal = discounted_price * 2
-        expected_total = expected_subtotal + self.order.shipping_cost
+        expected_total = self.order.calculate_grand_total()
         
         # Check that amounts have 2 decimal places (not more, not less)
         self.assertIn(f'${expected_subtotal:.2f}', html_content)  # e.g., $53.98 not $53.98000000 or $54
@@ -236,7 +236,7 @@ class OrderCancellationEmailContentTestCase(TestCase):
         # Calculate expected values
         discounted_price = self.product.get_discounted_price()
         expected_subtotal = discounted_price * 2
-        expected_total = expected_subtotal + self.order.shipping_cost
+        expected_total = self.order.calculate_grand_total()
         
         # Check content
         self.assertIn(str(self.order.id), email.body)

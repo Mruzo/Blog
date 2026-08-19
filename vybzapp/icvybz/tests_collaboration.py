@@ -177,11 +177,17 @@ class CollaborationAPITestCase(APITestCase):
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
-        # Check that role was updated
+        # Check that role was updated on invite and admin role record exists
         invite.refresh_from_db()
-        collaborator.refresh_from_db()
         self.assertEqual(invite.role, 'admin')
-        self.assertEqual(collaborator.role, 'admin')
+        self.assertTrue(
+            StoryCollaborator.objects.filter(
+                story=self.story,
+                user=self.user2,
+                role='admin',
+                is_active=True,
+            ).exists()
+        )
 
     def test_remove_collaborator(self):
         """Test removing a collaborator"""

@@ -38,7 +38,7 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
   if (status === 429) {
     return appendRateLimitResetHint(
-      'Too many requests. Please try again later.',
+      'Too many requests. Please wait a moment and try again.',
       data && typeof data === 'object' ? (data as Record<string, unknown>).reset_time : undefined,
       status
     );

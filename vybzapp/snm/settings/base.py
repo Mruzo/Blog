@@ -113,7 +113,7 @@ ROOT_URLCONF = 'snm.urls'
 
 LOGIN_REDIRECT_URL = 'homepage'
 
-LOGIN_URL = 'login_req'
+LOGIN_URL = '/login/'
 
 # Application definition
 
@@ -360,7 +360,8 @@ REST_FRAMEWORK = {
         'checkout': '40/hour',
         'newsletter': '10/hour',
         'contact': '10/hour',
-    }
+    },
+    'EXCEPTION_HANDLER': 'snmov.api_exceptions.api_exception_handler',
 }
 
 # CORS settings

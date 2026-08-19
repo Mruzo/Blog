@@ -45,8 +45,6 @@ import { ApiProvider, useApi } from './contexts/ApiContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
 import { GuideProvider } from './contexts/GuideContext';
 import InteractiveGuide from './components/InteractiveGuide';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import './App.css';
 
 const StaffOnlyAdsRoute: React.FC = () => {
   const { currentUser } = useApi();

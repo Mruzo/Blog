@@ -372,7 +372,8 @@ def verify_email(request, user_id, token):
         return redirect('invalid_link')
 
 def invalidlink_view(request):
-    return render(request, "invalid_link.html", {"message": "Invalid verification link"})
+    from django.http import HttpResponse
+    return HttpResponse('Invalid verification link', content_type='text/html')
 
 def custom_404(request, exception):
     return render(request, '404.html', status=404)

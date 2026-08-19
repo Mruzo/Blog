@@ -2,7 +2,7 @@ import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import Contact from '../Contact';
 import apiService from '../../services/api';
-import { renderWithRouter } from '../../__tests__/testUtils';
+import { renderWithRouter } from '../../testing/testHelpers';
 
 // Mock the API service
 jest.mock('../../services/api', () => ({

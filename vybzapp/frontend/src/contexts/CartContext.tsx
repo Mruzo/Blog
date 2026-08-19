@@ -40,6 +40,27 @@ function parseCartApiErrorBody(
   response: Response,
   fallback: string
 ): string {
+  if (response.status === 429) {
+    const resetTime =
+      body && typeof body === 'object' && body !== null
+        ? (body as Record<string, unknown>).reset_time
+        : undefined;
+    const base = 'Too many requests. Please wait a moment and try again.';
+    if (typeof resetTime === 'number' && resetTime > 0 && Number.isFinite(resetTime)) {
+      const mins = Math.ceil(resetTime / 60);
+      if (mins >= 60) {
+        const hours = Math.ceil(mins / 60);
+        return `${base} You can try again in about ${hours} hour${hours === 1 ? '' : 's'}.`;
+      }
+      if (mins > 1) {
+        return `${base} You can try again in about ${mins} minutes.`;
+      }
+      const secs = Math.ceil(resetTime);
+      return `${base} You can try again in about ${secs} second${secs === 1 ? '' : 's'}.`;
+    }
+    return base;
+  }
+
   if (body && typeof body === 'object' && body !== null) {
     const o = body as Record<string, unknown>;
     if (typeof o.error === 'string' && o.error.trim()) return o.error;
@@ -76,6 +97,7 @@ interface CartContextType {
   totalPrice: number;
   cartTotals: CartTotals;
   isLoading: boolean;
+  cartInitialized: boolean;
   addToCart: (productId: string, quantity?: number) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
   removeItem: (productId: string) => Promise<void>;
@@ -107,6 +129,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     merchandiseSubtotal: 0,
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [cartInitialized, setCartInitialized] = useState<boolean>(false);
 
   const applyCartPayload = (data: {
     cart_items?: CartItem[];
@@ -148,6 +171,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
+    } finally {
+      setCartInitialized(true);
     }
   };
 
@@ -393,6 +418,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     totalPrice,
     cartTotals,
     isLoading,
+    cartInitialized,
     addToCart,
     updateQuantity,
     removeItem,

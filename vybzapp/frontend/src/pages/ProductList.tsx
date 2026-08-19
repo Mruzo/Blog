@@ -3,6 +3,7 @@ import { useCart } from '../contexts/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import { snmovApiUrl } from '../utils/snmovApi';
+import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 
 interface ProductImage {
   id: number;
@@ -343,12 +344,27 @@ const ProductList: React.FC<ProductListProps> = () => {
     try {
       const response = await fetch(snmovApiUrl('products/'));
       if (!response.ok) {
-        throw new Error('Failed to fetch products');
+        let data: unknown = null;
+        try {
+          data = await response.json();
+        } catch {
+          data = null;
+        }
+        setError(
+          getApiErrorMessage(
+            {
+              message: `Request failed with status code ${response.status}`,
+              response: { status: response.status, data: data as Record<string, unknown> | undefined },
+            },
+            'Unable to load products. Please try again.'
+          )
+        );
+        return;
       }
       const data = await response.json();
       setProducts(data.results || data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(getApiErrorMessage(err, 'Unable to load products. Please try again.'));
     } finally {
       setLoading(false);
     }

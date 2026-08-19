@@ -4,6 +4,7 @@ from storages.backends.s3boto3 import S3Boto3Storage
 class MediaStorage(S3Boto3Storage):
     location = 'media'
     file_overwrite = False
+    querystring_auth = False
     # Bucket uses "Bucket owner enforced" - ACLs are completely disabled
     # Access controlled via bucket policy only
 
@@ -11,6 +12,7 @@ class MediaStorage(S3Boto3Storage):
 class StaticStorage(S3Boto3Storage):
     location = 'static'
     default_acl = None  # Must be None (not missing) - bucket uses "Bucket owner enforced" which disables ACLs
+    querystring_auth = False
     # Access controlled via bucket policy (which allows public read for static/*)
     
     def _get_write_parameters(self, name, content):

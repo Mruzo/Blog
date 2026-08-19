@@ -130,9 +130,10 @@ class Command(BaseCommand):
                 pdf_type='invoice'
             )
             
-            full_path = os.path.join(settings.MEDIA_ROOT, pdf_path)
-            self.stdout.write(self.style.SUCCESS(f'✓ Invoice PDF generated: {full_path}'))
-            self.stdout.write(f'  Access at: /media/{pdf_path}')
+            from snm.media_files import media_url
+
+            self.stdout.write(self.style.SUCCESS(f'✓ Invoice PDF generated: {pdf_path}'))
+            self.stdout.write(f'  Access at: {media_url(pdf_path)}')
             
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Error generating invoice PDF: {e}'))
@@ -232,9 +233,10 @@ class Command(BaseCommand):
                 pdf_type='credit_note'
             )
             
-            full_path = os.path.join(settings.MEDIA_ROOT, pdf_path)
-            self.stdout.write(self.style.SUCCESS(f'✓ Credit Note PDF generated: {full_path}'))
-            self.stdout.write(f'  Access at: /media/{pdf_path}')
+            from snm.media_files import media_url
+
+            self.stdout.write(self.style.SUCCESS(f'✓ Credit Note PDF generated: {pdf_path}'))
+            self.stdout.write(f'  Access at: {media_url(pdf_path)}')
             
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Error generating credit note PDF: {e}'))

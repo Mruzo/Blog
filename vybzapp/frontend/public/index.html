@@ -35,10 +35,15 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <link rel="canonical" href="https://www.justvybz.com" />
     
-    <!-- Bootstrap CSS is bundled via App.tsx (after reboot, App.css wins) -->
+    <!-- Critical CSS + Bootstrap load before React (reduces FOUC on / and /studios/) -->
+    <link rel="preload" href="%PUBLIC_URL%/fonts/Varela-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="%PUBLIC_URL%/fonts/Quicksand.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="%PUBLIC_URL%/fonts/gillsansmt.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="%PUBLIC_URL%/critical.css" />
     
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" as="style" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
     
     <!-- Material Symbols Outlined -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />

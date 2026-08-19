@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import BackButton from '../components/BackButton';
+import { aboutImageUrl } from '../utils/brandImages';
 
 const About: React.FC = () => {
   return (
@@ -53,7 +54,7 @@ const About: React.FC = () => {
 
             <div className="mt-4">
               <img 
-                src="/static/snmov/img/about.png" 
+                src={aboutImageUrl} 
                 className="rounded-0 mx-0 d-block img-fluid" 
                 alt="Christopher Uzoewulu" 
                 style={{ width: '15%' }}

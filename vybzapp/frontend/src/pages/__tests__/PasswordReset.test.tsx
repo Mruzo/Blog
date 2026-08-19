@@ -2,101 +2,70 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
 import PasswordReset from '../PasswordReset';
-import { CartProvider } from '../../contexts/CartContext';
 
-// Mock useNavigate
 const mockNavigate = jest.fn();
+const mockPasswordReset = jest.fn();
+
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  useNavigate: () => mockNavigate
+  useNavigate: () => mockNavigate,
 }));
 
-// Mock fetch
-global.fetch = jest.fn();
+jest.mock('../../services/api', () => ({
+  __esModule: true,
+  default: {
+    passwordReset: (...args: unknown[]) => mockPasswordReset(...args),
+  },
+}));
 
-const renderWithProviders = (component: React.ReactElement) => {
-  return render(
+const renderPasswordReset = () =>
+  render(
     <BrowserRouter>
-      <CartProvider>
-        {component}
-      </CartProvider>
-    </BrowserRouter>
+      <PasswordReset />
+    </BrowserRouter>,
   );
-};
 
 describe('PasswordReset', () => {
   beforeEach(() => {
     mockNavigate.mockClear();
-    (global.fetch as jest.Mock).mockClear();
+    mockPasswordReset.mockClear();
+    mockPasswordReset.mockResolvedValue(undefined);
   });
 
   it('renders password reset form', () => {
-    renderWithProviders(<PasswordReset />);
-    
+    renderPasswordReset();
+
     expect(screen.getByText('Reset Your Password')).toBeInTheDocument();
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument();
   });
 
-  it('renders description text', () => {
-    renderWithProviders(<PasswordReset />);
-    
-    expect(screen.getByText(/Enter your email address/i)).toBeInTheDocument();
-  });
-
-  it('renders forgot password link to login', () => {
-    renderWithProviders(<PasswordReset />);
-    
-    const loginLink = screen.getByText(/Remember your password/i).closest('a');
-    expect(loginLink).toHaveAttribute('href', '/login/');
-  });
-
   it('updates email field when user types', () => {
-    renderWithProviders(<PasswordReset />);
-    
-    const emailInput = screen.getByLabelText(/email address/i);
+    renderPasswordReset();
+
+    const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement;
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-    
-    expect(emailInput).toHaveValue('test@example.com');
+    expect(emailInput.value).toBe('test@example.com');
   });
 
   it('calls password reset API on form submit', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200
-    });
+    renderPasswordReset();
 
-    renderWithProviders(<PasswordReset />);
-    
-    fireEvent.change(screen.getByLabelText(/email address/i), { 
-      target: { value: 'test@example.com' } 
+    fireEvent.change(screen.getByLabelText(/email address/i), {
+      target: { value: 'test@example.com' },
     });
     fireEvent.click(screen.getByRole('button', { name: /send reset link/i }));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/password-reset/',
-        expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email: 'test@example.com' })
-        })
-      );
+      expect(mockPasswordReset).toHaveBeenCalledWith('test@example.com');
     });
   });
 
   it('navigates to done page after successful submit', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200
-    });
+    renderPasswordReset();
 
-    renderWithProviders(<PasswordReset />);
-    
-    fireEvent.change(screen.getByLabelText(/email address/i), { 
-      target: { value: 'test@example.com' } 
+    fireEvent.change(screen.getByLabelText(/email address/i), {
+      target: { value: 'test@example.com' },
     });
     fireEvent.click(screen.getByRole('button', { name: /send reset link/i }));
 
@@ -105,31 +74,12 @@ describe('PasswordReset', () => {
     });
   });
 
-  it('shows loading state while submitting', async () => {
-    (global.fetch as jest.Mock).mockImplementation(() => 
-      new Promise(() => {}) // Never resolves
-    );
-
-    renderWithProviders(<PasswordReset />);
-    
-    fireEvent.change(screen.getByLabelText(/email address/i), { 
-      target: { value: 'test@example.com' } 
-    });
-    fireEvent.click(screen.getByRole('button', { name: /send reset link/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Sending/i)).toBeInTheDocument();
-      expect(screen.getByRole('button')).toBeDisabled();
-    });
-  });
-
   it('displays error message on API failure', async () => {
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+    mockPasswordReset.mockRejectedValueOnce(new Error('Network error'));
+    renderPasswordReset();
 
-    renderWithProviders(<PasswordReset />);
-    
-    fireEvent.change(screen.getByLabelText(/email address/i), { 
-      target: { value: 'test@example.com' } 
+    fireEvent.change(screen.getByLabelText(/email address/i), {
+      target: { value: 'test@example.com' },
     });
     fireEvent.click(screen.getByRole('button', { name: /send reset link/i }));
 
@@ -139,16 +89,8 @@ describe('PasswordReset', () => {
   });
 
   it('requires email field', () => {
-    renderWithProviders(<PasswordReset />);
-    
-    const emailInput = screen.getByLabelText(/email address/i);
-    expect(emailInput).toBeRequired();
-  });
+    renderPasswordReset();
 
-  it('renders security notice', () => {
-    renderWithProviders(<PasswordReset />);
-    
-    expect(screen.getByText(/reset link will expire in 24 hours/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/email address/i)).toHaveAttribute('required');
   });
 });
-

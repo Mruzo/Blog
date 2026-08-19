@@ -202,11 +202,17 @@ class ProductBackInStockSignalTestCase(TestCase):
     """Tests for product back in stock signal integration"""
     
     def setUp(self):
+        self.user = User.objects.create_user(
+            username='stockuser',
+            email='stock@example.com',
+            password='password123',
+        )
         self.product = Product.objects.create(
             title='Test Product',
             price=10.00,
             stock=0,
-            available=False
+            available=False,
+            user=self.user,
         )
         self.notification = ProductNotification.objects.create(
             first_name='John',

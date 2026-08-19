@@ -1,6 +1,15 @@
 import { getApiErrorMessage } from './getApiErrorMessage';
 
 describe('getApiErrorMessage', () => {
+  it('uses a friendly default for bare 429 responses', () => {
+    expect(
+      getApiErrorMessage(
+        { message: 'Request failed with status code 429', response: { status: 429, data: {} } },
+        'fallback'
+      )
+    ).toBe('Too many requests. Please wait a moment and try again.');
+  });
+
   it('uses data.error for 429 and appends reset_time hint', () => {
     const msg = getApiErrorMessage(
       {

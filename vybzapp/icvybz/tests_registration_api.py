@@ -103,6 +103,9 @@ class RegisterAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         if hasattr(User(), 'is_email_verified'):
             mock_send_mail.assert_called_once()
-            self.assertIn('Verify Your Email', mock_send_mail.call_args[0][0])
+            call_kwargs = mock_send_mail.call_args.kwargs
+            call_args = mock_send_mail.call_args.args
+            subject = call_kwargs.get('subject') or (call_args[0] if call_args else '')
+            self.assertIn('Verify Your Email', subject)
         else:
             mock_send_mail.assert_not_called()

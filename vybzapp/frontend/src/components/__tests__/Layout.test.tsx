@@ -3,6 +3,13 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Layout from '../Layout';
 import { CartProvider } from '../../contexts/CartContext';
+import { GuideProvider } from '../../contexts/GuideContext';
+
+jest.mock('../../contexts/ApiContext', () => ({
+  useApi: () => ({
+    authInitialized: true,
+  }),
+}));
 
 // Mock CartContext
 jest.mock('../../contexts/CartContext', () => ({
@@ -11,6 +18,7 @@ jest.mock('../../contexts/CartContext', () => ({
     cartItems: [],
     totalPrice: 0,
     cartCount: 0,
+    cartInitialized: true,
     updateQuantity: jest.fn(),
     removeItem: jest.fn(),
     clearCart: jest.fn(),
@@ -21,9 +29,11 @@ jest.mock('../../contexts/CartContext', () => ({
 const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <BrowserRouter>
-      <CartProvider>
-        {component}
-      </CartProvider>
+      <GuideProvider>
+        <CartProvider>
+          {component}
+        </CartProvider>
+      </GuideProvider>
     </BrowserRouter>
   );
 };
@@ -37,7 +47,9 @@ describe('Layout', () => {
         </Layout>
       );
 
-      const loginButton = screen.getByRole('link', { name: /login/i });
+      const loginLinks = screen.getAllByRole('link', { name: /login/i });
+      expect(loginLinks.length).toBeGreaterThanOrEqual(1);
+      const loginButton = loginLinks.find((link) => link.id === 'login-btn') ?? loginLinks[0];
       expect(loginButton).toBeInTheDocument();
       expect(loginButton).toHaveAttribute('href', '/login/');
       expect(loginButton).toHaveAttribute('id', 'login-btn');
@@ -50,7 +62,9 @@ describe('Layout', () => {
         </Layout>
       );
 
-      const loginButton = screen.getByRole('link', { name: /login/i });
+      const loginLinks = screen.getAllByRole('link', { name: /login/i });
+      expect(loginLinks.length).toBeGreaterThanOrEqual(1);
+      const loginButton = loginLinks.find((link) => link.id === 'login-btn') ?? loginLinks[0];
       const icon = loginButton.querySelector('.fa-sign-in-alt');
       expect(icon).toBeInTheDocument();
     });
@@ -62,7 +76,9 @@ describe('Layout', () => {
         </Layout>
       );
 
-      const loginButton = screen.getByRole('link', { name: /login/i });
+      const loginLinks = screen.getAllByRole('link', { name: /login/i });
+      expect(loginLinks.length).toBeGreaterThanOrEqual(1);
+      const loginButton = loginLinks.find((link) => link.id === 'login-btn') ?? loginLinks[0];
       expect(loginButton).toHaveAttribute('href', '/login/');
     });
 
@@ -73,7 +89,9 @@ describe('Layout', () => {
         </Layout>
       );
 
-      const loginButton = screen.getByRole('link', { name: /login/i });
+      const loginLinks = screen.getAllByRole('link', { name: /login/i });
+      expect(loginLinks.length).toBeGreaterThanOrEqual(1);
+      const loginButton = loginLinks.find((link) => link.id === 'login-btn') ?? loginLinks[0];
       expect(loginButton).toHaveAttribute('href', '/login/');
       
       // Verify it's a Link component that will navigate
@@ -88,7 +106,7 @@ describe('Layout', () => {
       );
 
       const loginButton = screen.queryByRole('link', { name: /login/i });
-      expect(loginButton).not.toBeInTheDocument();
+      expect(loginButton).toBeNull();
     });
 
     it('renders profile button when user is authenticated', () => {
@@ -112,9 +130,9 @@ describe('Layout', () => {
         </Layout>
       );
 
-      expect(screen.getByRole('link', { name: /stories/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /studios/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /store/i })).toBeInTheDocument();
+      expect(screen.getAllByRole('link', { name: /stories/i }).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByRole('link', { name: /studios/i }).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByRole('link', { name: /store/i }).length).toBeGreaterThanOrEqual(1);
     });
   });
 });

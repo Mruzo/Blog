@@ -382,9 +382,26 @@ class ShippingAddress(models.Model):
     state = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
     country_code = models.CharField(max_length=2)  # e.g., 'US', 'CA'
+    label = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Label for saved address (e.g., 'Home', 'Work')",
+    )
+    is_saved = models.BooleanField(
+        default=False,
+        help_text='Whether this is a saved address for future use',
+    )
+    is_default = models.BooleanField(
+        default=False,
+        help_text='Default saved address for this user',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     class Meta:
         verbose_name_plural = "ShippingAddress"
+        ordering = ['-is_default', '-created_at']
 
     def save(self, *args, **kwargs):
         if not self.full_name:

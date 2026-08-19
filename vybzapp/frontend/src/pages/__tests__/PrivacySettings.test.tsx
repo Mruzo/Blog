@@ -1,7 +1,7 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithRouter } from '../../__tests__/testUtils';
+import { renderWithRouter } from '../../testing/testHelpers';
 import PrivacySettings from '../PrivacySettings';
 
 const mockNavigate = jest.fn();

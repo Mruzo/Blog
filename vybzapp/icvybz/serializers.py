@@ -79,8 +79,10 @@ class ComicSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at', 'user', 'studio', 'total_views', 'moderation_status']
     
     def validate_title(self, value):
-        """Validate title length"""
-        if value and len(value) > 50:
+        """Validate title length and presence."""
+        if not value or not str(value).strip():
+            raise serializers.ValidationError("Story title is required.")
+        if len(value) > 50:
             raise serializers.ValidationError("Story title cannot exceed 50 characters.")
         return value
     

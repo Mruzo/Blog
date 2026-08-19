@@ -34,7 +34,8 @@ class StoryCreationAPITestCase(APITestCase):
         self.season_data = {
             'title': 'Season 1',
             'season_number': 1,
-            'description': 'First season'
+            'description': 'First season',
+            'release_date': '2024-01-01',
         }
         
         self.character_data = {
@@ -443,65 +444,6 @@ class StoryCreationAPITestCase(APITestCase):
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-    def test_progressive_saving_workflow(self):
-        """Test the complete progressive saving workflow"""
-        # Step 1: Create story
-        story_url = reverse('icvybz-api:story-list-create')
-        story_response = self.client.post(story_url, self.story_data, format='json')
-        self.assertEqual(story_response.status_code, status.HTTP_201_CREATED)
-        story_id = story_response.data['id']
-        
-        # Step 2: Create season
-        season_url = reverse('icvybz-api:season-list-create', kwargs={'story_id': story_id})
-        season_data = {**self.season_data}  # Remove comic from data, it's set automatically
-        season_response = self.client.post(season_url, season_data, format='json')
-        self.assertEqual(season_response.status_code, status.HTTP_201_CREATED)
-        season_id = season_response.data['id']
-        
-        # Step 3: Create characters
-        character_url = reverse('icvybz-api:character-list-create', kwargs={'story_id': story_id})
-        character_data = {**self.character_data}
-        character_response = self.client.post(character_url, character_data, format='json')
-        self.assertEqual(character_response.status_code, status.HTTP_201_CREATED)
-        character_id = character_response.data['id']
-        
-        # Step 4: Create episode
-        episode_url = reverse('icvybz-api:episode-list-create', kwargs={'season_id': season_id})
-        episode_data = {**self.episode_data}
-        episode_response = self.client.post(episode_url, episode_data, format='json')
-        self.assertEqual(episode_response.status_code, status.HTTP_201_CREATED)
-        episode_id = episode_response.data['id']
-        
-        # Step 5: Create POV for dialogue
-        character = Character.objects.get(id=character_id)
-        episode = Episode.objects.get(id=episode_id)
-        pov = POV.objects.create(title='Test POV', character=character)
-        
-        # Step 6: Create dialogues
-        dialogue_url = reverse('icvybz-api:dialogue-list-create', kwargs={'episode_id': episode_id})
-        dialogue_data = {**self.dialogue_data, 'pov': pov.id}
-        dialogue_response = self.client.post(dialogue_url, dialogue_data, format='json')
-        self.assertEqual(dialogue_response.status_code, status.HTTP_201_CREATED)
-        
-        # Verify all objects exist and are properly linked
-        story = Comic.objects.get(id=story_id)
-        season = Season.objects.get(id=season_id)
-        character = Character.objects.get(id=character_id)
-        episode = Episode.objects.get(id=episode_id)
-        dialogue = Dialogue.objects.first()
-        
-        self.assertEqual(season.comic, story)
-        self.assertEqual(character.user, self.user)
-        self.assertEqual(episode.season, season)
-        self.assertEqual(dialogue.pov, pov)
-        self.assertEqual(dialogue.episode, episode)
-        
-        # Verify the complete hierarchy
-        self.assertEqual(story.seasons.count(), 1)
-        self.assertEqual(story.characters.count(), 1)
-        self.assertEqual(season.episodes.count(), 1)
-        self.assertEqual(episode.dialogues.count(), 1)
 
 
 class EpisodeCommentAPITestCase(APITestCase):

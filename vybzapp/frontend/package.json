@@ -30,7 +30,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "build:prod": "PUBLIC_URL=/v2 react-scripts build",
+    "build:prod": "PUBLIC_URL=/v2 REACT_APP_STATIC_URL=https://d3vnhbsvpdc5c7.cloudfront.net/static/ react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

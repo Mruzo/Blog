@@ -226,23 +226,19 @@ describe('MyStudio Component', () => {
   });
 
   test('handles empty stories array', async () => {
-    const emptyStoriesContext = {
-      ...mockApiContext,
-      stories: []
-    };
-    
-    jest.mocked(require('../../contexts/ApiContext').useApi).mockReturnValue(emptyStoriesContext);
-    
+    mockApiContext.stories = [];
+
     renderWithRouter(<MyStudio />);
-    
+
     await waitFor(() => {
-      // Should show some message about no stories
       expect(screen.getByText('Test Studio')).toBeInTheDocument();
     });
+
+    mockApiContext.stories = defaultStories;
   });
 
   test('handles stories with empty titles gracefully', async () => {
-    const storiesWithEmptyTitles = [
+    mockApiContext.stories = [
       {
         id: 1,
         title: '',
@@ -251,23 +247,17 @@ describe('MyStudio Component', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
         user: 1,
-        moderation_status: 'approved'
-      }
+        moderation_status: 'approved',
+      },
     ];
-    
-    const contextWithEmptyTitles = {
-      ...mockApiContext,
-      stories: storiesWithEmptyTitles
-    };
-    
-    jest.mocked(require('../../contexts/ApiContext').useApi).mockReturnValue(contextWithEmptyTitles);
-    
+
     renderWithRouter(<MyStudio />);
-    
+
     await waitFor(() => {
-      // Should still render the story card even with empty title
       expect(screen.getByText('A story with empty title')).toBeInTheDocument();
     });
+
+    mockApiContext.stories = defaultStories;
   });
 
   test('verifies characters are story-specific', async () => {

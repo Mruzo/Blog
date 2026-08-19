@@ -399,10 +399,10 @@ class FeedbackTicketAPITest(APITestCase):
             message='This is a test message that is long enough',
         )
         
-        # Access with email
+        # Access with secret access token (anonymous ticket lookup)
         response = self.client.get(
             f'/api/feedback/api/tickets/{ticket.ticket_number}/',
-            {'email': 'test@example.com'}
+            {'access_token': ticket.access_token},
         )
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)

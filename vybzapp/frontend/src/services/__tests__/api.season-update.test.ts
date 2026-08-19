@@ -149,9 +149,9 @@ describe('ApiService - Season Update Operations', () => {
       // Verify only the title was included in FormData
       const formDataCall = mockedAxios.patch.mock.calls[0][1] as FormData;
       expect(formDataCall.get('title')).toBe('Only Title Updated');
-      expect(formDataCall.get('description')).toBe('');
-      expect(formDataCall.get('season_number')).toBe('');
-      expect(formDataCall.get('release_date')).toBe('');
+      expect(formDataCall.get('description')).toBeNull();
+      expect(formDataCall.get('season_number')).toBeNull();
+      expect(formDataCall.get('release_date')).toBeNull();
 
       expect(result).toEqual(mockResponse.data);
     });
@@ -188,10 +188,10 @@ describe('ApiService - Season Update Operations', () => {
 
       // Verify FormData was constructed with empty values
       const formDataCall = mockedAxios.patch.mock.calls[0][1] as FormData;
-      expect(formDataCall.get('title')).toBe('');
-      expect(formDataCall.get('description')).toBe('');
-      expect(formDataCall.get('season_number')).toBe('');
-      expect(formDataCall.get('release_date')).toBe('');
+      expect(formDataCall.get('title')).toBeNull();
+      expect(formDataCall.get('description')).toBeNull();
+      expect(formDataCall.get('season_number')).toBeNull();
+      expect(formDataCall.get('release_date')).toBeNull();
 
       expect(result).toEqual(mockResponse.data);
     });
@@ -226,7 +226,7 @@ describe('ApiService - Season Update Operations', () => {
       };
       mockedAxios.patch.mockRejectedValue(error);
 
-      await expect(apiService.updateSeason(26, seasonData)).rejects.toThrow();
+      await expect(apiService.updateSeason(26, seasonData)).rejects.toEqual(error);
     });
 
     it('should handle file upload errors', async () => {

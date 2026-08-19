@@ -240,9 +240,12 @@ class ReturnRequestAPITestCase(APITestCase):
     
     def test_create_return_request_expired_window(self):
         """Test: Creating return after return window expires returns 400"""
-        # Set order date to 35 days ago (beyond 30-day window)
-        self.order.order_date = timezone.now() - timedelta(days=35)
-        self.order.save()
+        expired = timezone.now() - timedelta(days=35)
+        Order.objects.filter(pk=self.order.pk).update(
+            order_date=expired,
+            delivered_at=expired,
+        )
+        self.order.refresh_from_db()
         
         return_data = {
             'order_id': self.order.id,

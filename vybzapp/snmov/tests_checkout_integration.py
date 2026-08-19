@@ -163,29 +163,29 @@ class CheckoutIntegrationTestCase(APITestCase):
         self.assertEqual(order.shipping_address.full_name, 'Saved User')
         self.assertEqual(order.shipping_address.address_line_1, '456 Saved St')
     
-    def test_checkout_requires_authentication(self):
-        """Test: Checkout requires authentication"""
-        # Create unauthenticated client
+    def test_guest_checkout_requires_email(self):
+        """Guest checkout requires an email address."""
         unauthenticated_client = APIClient()
-        
+
         checkout_data = {
             'full_name': 'Test User',
             'address_line_1': '123 Test St',
             'city': 'Toronto',
             'state': 'ON',
             'postal_code': 'M5H 2N2',
-            'country_code': 'CA'
+            'country_code': 'CA',
         }
-        
+
         response = unauthenticated_client.post(
             '/api/checkout/',
             checkout_data,
-            format='json'
+            format='json',
         )
-        
-        # DRF returns 403 Forbidden for unauthenticated requests with IsAuthenticated permission
-        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
-    
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data['success'])
+        self.assertIn('email', response.data['error'].lower())
+
     def test_checkout_validates_address_format(self):
         """Test: Checkout validates Canadian postal code format"""
         # Manually set cart in session
