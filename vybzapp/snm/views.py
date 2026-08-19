@@ -29,6 +29,7 @@ from django.contrib.sites.models import Site
 from django.contrib.sites.shortcuts import get_current_site
 import mimetypes
 import os
+import re
 
 
 class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
@@ -38,6 +39,9 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
 email_verification_token = EmailVerificationTokenGenerator()
 
 
+FRONTEND_BUILD_DIR = os.path.join(settings.BASE_DIR, 'frontend', 'build')
+
+# CRA copies public/ into frontend/build/ at build time (not collectstatic / S3).
 FRONTEND_PUBLIC_ASSETS = frozenset({
     'jv_header.svg',
     'jv_header 1.2.svg',
@@ -63,26 +67,21 @@ FRONTEND_FONT_FILES = frozenset({
 })
 
 
-def serve_frontend_public_asset(request, filename):
-    """Serve CRA public/ files from frontend/build/ (not collected by collectstatic)."""
-    if filename not in FRONTEND_PUBLIC_ASSETS:
-        return HttpResponseNotFound()
-    filepath = os.path.join(settings.BASE_DIR, 'frontend', 'build', filename)
+def frontend_build_asset_url_pattern() -> str:
+    """Regex for whitelisted CRA build root files and fonts/*.ttf (before React catch-all)."""
+    root = '|'.join(re.escape(name) for name in sorted(FRONTEND_PUBLIC_ASSETS))
+    fonts = '|'.join(re.escape(name) for name in sorted(FRONTEND_FONT_FILES))
+    return rf'^(?:(?P<root>{root})|fonts/(?P<font>{fonts}))$'
+
+
+def serve_frontend_build_file(request, root=None, font=None):
+    """Serve a whitelisted file from frontend/build/."""
+    subpath = root if root is not None else f'fonts/{font}'
+    filepath = os.path.join(FRONTEND_BUILD_DIR, subpath)
     if not os.path.isfile(filepath):
         return HttpResponseNotFound()
     content_type, _ = mimetypes.guess_type(filepath)
     return FileResponse(open(filepath, 'rb'), content_type=content_type or 'application/octet-stream')
-
-
-def serve_frontend_font(request, filename):
-    """Serve CRA public/fonts/ from frontend/build/fonts/."""
-    if filename not in FRONTEND_FONT_FILES:
-        return HttpResponseNotFound()
-    filepath = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'fonts', filename)
-    if not os.path.isfile(filepath):
-        return HttpResponseNotFound()
-    return FileResponse(open(filepath, 'rb'), content_type='font/ttf')
-
 
 
 class ReactAppView(TemplateView):

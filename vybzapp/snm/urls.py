@@ -11,8 +11,8 @@ from .views import(
     register_view,
     verify_email,
     invalidlink_view,
-    serve_frontend_public_asset,
-    serve_frontend_font,
+    serve_frontend_build_file,
+    frontend_build_asset_url_pattern,
 )
 from django.conf import settings
 from django.contrib import admin
@@ -93,15 +93,9 @@ if settings.DEBUG:
 # IMPORTANT: Exclude API endpoints from catch-all - they must be handled by Django
 # Note: Most Django template routes are commented out above - React handles client-side routing
 # Routes that don't match Django views will fall through to this catch-all for React.
-# CRA public/ assets (logos, favicon) live in frontend/build/ root and must be served before catch-all.
+# CRA public/ assets live in frontend/build/ and must be served before the React catch-all.
 urlpatterns += [
-    path('critical.css', serve_frontend_public_asset, {'filename': 'critical.css'}),
-    path('fonts/<str:filename>', serve_frontend_font),
-    path('jv_header.svg', serve_frontend_public_asset, {'filename': 'jv_header.svg'}),
-    path('jv_header 1.2.svg', serve_frontend_public_asset, {'filename': 'jv_header 1.2.svg'}),
-    path('logo-80x80.svg', serve_frontend_public_asset, {'filename': 'logo-80x80.svg'}),
-    path('logo 80x80.svg', serve_frontend_public_asset, {'filename': 'logo 80x80.svg'}),
-    path('powered-by-logo.png', serve_frontend_public_asset, {'filename': 'powered-by-logo.png'}),
+    re_path(frontend_build_asset_url_pattern(), serve_frontend_build_file),
 ]
 urlpatterns += [
     re_path(r'^(?!api/).+', ReactAppView.as_view(), name='react_app'),
