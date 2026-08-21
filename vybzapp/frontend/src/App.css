@@ -1,11 +1,4 @@
-/* Fonts loaded from /public/fonts via critical.css (index.html) — avoids duplicate @font-face reflow */
-@font-face {
-  font-family: 'animeace';
-  src: url('./fonts/comic.ttf') format('truetype');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
+/* Fonts (varela, quicksand, gillsans, animeace/Comic) load from /public/fonts via critical.css */
 
 /* CSS Custom Properties for efficiency */
 :root {

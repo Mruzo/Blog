@@ -23,6 +23,23 @@
   font-display: block;
 }
 
+/* AnimeAce (dialogue bubbles / character labels; Django template used family name 'Comic') */
+@font-face {
+  font-family: 'animeace';
+  src: url('fonts/comic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Comic';
+  src: url('fonts/comic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* App.css loads later with full rules; block avoids headline font swap on home/studios. */
 
 :root {
