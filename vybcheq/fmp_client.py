@@ -30,6 +30,38 @@ def fmp_action_gap_seconds() -> float:
     )
 
 
+def fmp_402_hint(detail: str) -> str:
+    """Contextual guidance for FMP HTTP 402 (plan / quota / parameter limits)."""
+    low = detail.lower()
+    if "limit" in low:
+        return (
+            "FMP free plan allows limit ≤ 5 quarterly rows on fundamentals endpoints. "
+            "This app caps limit automatically; on a paid plan set VYBCHEQ_FMP_QUARTERLY_LIMIT "
+            "(and optionally VYBCHEQ_FMP_EOD_YEARS) higher."
+        )
+    if "period" in low:
+        return (
+            "FMP free plan may block period=quarter on ratios/key-metrics. "
+            "Vybcheq retries with annual data, then TTM, automatically."
+        )
+    if "symbol" in low and "period" not in low:
+        return (
+            "This symbol may not be on your FMP plan. "
+            "Check your FMP dashboard or upgrade the subscription."
+        )
+    if "endpoint" in low or "restricted" in low:
+        return (
+            "This API endpoint is not on your FMP plan. "
+            "For the symbol catalog, free tier usually supports /stable/stock-list; "
+            "financial-statement-symbol-list is often premium."
+        )
+    return (
+        "Possible causes: daily call quota (250/day on free), endpoint not on plan, "
+        "or bandwidth limit. Try fewer securities, wait for daily reset, "
+        "or lower VYBCHEQ_FMP_EOD_YEARS for EOD history."
+    )
+
+
 def fmp_get(
     url: str,
     *,
@@ -54,10 +86,7 @@ def fmp_get(
                 detail = str(body.get("Error Message") or body.get("message") or "").strip()
         except ValueError:
             detail = resp.text[:120].strip()
-        hint = (
-            "Free plan: 250 calls/day, ~5 years EOD history max, 500MB rolling bandwidth. "
-            "Try fewer securities, wait for daily reset, or lower VYBCHEQ_FMP_EOD_YEARS."
-        )
+        hint = fmp_402_hint(detail)
         msg = f"FMP plan limit reached (402){sym_hint}."
         if detail:
             msg = f"{msg} {detail}"

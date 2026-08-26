@@ -1,0 +1,28 @@
+{% comment %}
+Optional blocks: actions, stats (list of {label, value, tone})
+{% endcomment %}
+<div class="vybcheq-page-header mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div class="vybcheq-page-header__main">
+            <h1 class="vybcheq-page-title mb-0">{{ title }}</h1>
+            {% if subtitle %}
+            <p class="vybcheq-page-subtitle mb-0 mt-2">{{ subtitle|safe }}</p>
+            {% endif %}
+        </div>
+        {% if actions %}
+        <div class="vybcheq-page-header__actions d-flex flex-wrap gap-2">
+            {{ actions }}
+        </div>
+        {% endif %}
+    </div>
+    {% if stats %}
+    <div class="vybcheq-page-stats d-flex flex-wrap gap-2 mt-3">
+        {% for stat in stats %}
+        <span class="vybcheq-stat-pill vybcheq-stat-pill--{{ stat.tone|default:'neutral' }}">
+            <span class="vybcheq-stat-pill__label">{{ stat.label }}</span>
+            <span class="vybcheq-stat-pill__value">{{ stat.value }}</span>
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

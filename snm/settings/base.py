@@ -204,6 +204,8 @@ VYBCHEQ_FMP_API_KEY = config.get(
 )
 # FMP free tier: max ~5 years EOD history and 250 API calls/day. Raise on paid plans.
 VYBCHEQ_FMP_EOD_YEARS = int(os.environ.get("VYBCHEQ_FMP_EOD_YEARS", "5"))
+# FMP free tier: quarterly ratios/key-metrics allow limit ≤ 5. Raise on paid plans.
+VYBCHEQ_FMP_QUARTERLY_LIMIT = int(os.environ.get("VYBCHEQ_FMP_QUARTERLY_LIMIT", "5"))
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

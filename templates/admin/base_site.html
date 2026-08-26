@@ -5,4 +5,24 @@
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'admin/css/emoji-picker.css' %}">
 <script type="module" src="{% static 'admin/js/emoji-picker.js' %}"></script>
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/*
+  nav_sidebar.css sets #nav-sidebar .module th { width: 100% }, which overrides
+  .visually-hidden on the sidebar thead and squeezes header text vertically.
+*/
+#nav-sidebar .module thead.visually-hidden th {
+    width: 1px !important;
+    max-width: 1px;
+    overflow-wrap: normal;
+    white-space: nowrap;
+}
+#nav-sidebar .module tbody th[scope="row"] {
+    width: auto;
+    overflow-wrap: normal;
+}
+</style>
 {% endblock %} 

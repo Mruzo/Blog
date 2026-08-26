@@ -39,7 +39,7 @@ class MetricsSnapshotRowsFilterTests(SimpleTestCase):
                 }
             )
         )
-        self.assertIn("Close / implied price:225", out)
+        self.assertIn("Close (implied or quarter-end):225", out)
         self.assertIn("P/E (trailing):18.5", out)
         self.assertNotIn("_raw", out)
         self.assertNotIn("_price_method", out)

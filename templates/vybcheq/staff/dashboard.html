@@ -4,14 +4,10 @@
 {% block vybcheq_title %}Dashboard{% endblock %}
 
 {% block vybcheq_content %}
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-    <div>
-        <h1 class="h3 mb-1">Vybcheq</h1>
-        <p class="text-secondary mb-0 small">Research cockpit — watchlist, screening, sim trading.</p>
-    </div>
-    <div class="d-flex flex-wrap gap-2">
-        <a href="{% url 'vybcheq_staff:rule_set_list' %}" class="btn btn-warning btn-sm">Criteria</a>
-        <a href="{% url 'vybcheq_staff:run_screen_pick' %}" class="btn btn-outline-warning btn-sm">Run a check</a>
+<div class="vybcheq-page-header mb-4">
+    <div class="vybcheq-page-header__main">
+        <h1 class="vybcheq-page-title mb-0">Vybcheq</h1>
+        <p class="vybcheq-page-subtitle mb-0 mt-2">Research cockpit — watchlist, screening, and sim trading.</p>
     </div>
 </div>
 
@@ -54,6 +50,41 @@
     </div>
 </div>
 
+<div class="card bg-dark border-secondary text-light mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+            <div>
+                <h2 class="h5 card-title mb-1">Period history</h2>
+                <p class="small text-secondary mb-0">By fiscal period end — EOD quarter-end closes and fundamentals-implied prices. Fundamentals may be quarterly, annual, or TTM depending on your FMP plan.</p>
+            </div>
+        </div>
+        {% if chart_data.securities %}
+        <div class="row g-2 g-md-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-security">Security</label>
+                <select id="vybcheq-chart-security" class="form-select form-select-sm bg-dark text-light border-secondary">
+                    {% for s in chart_data.securities %}
+                    <option value="{{ s.id }}"{% if not s.has_data %} disabled{% endif %}>{{ s.label }}{% if not s.has_data %} (no history){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-5">
+                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-metric">Metric</label>
+                <select id="vybcheq-chart-metric" class="form-select form-select-sm bg-dark text-light border-secondary"></select>
+            </div>
+        </div>
+        <div class="border border-secondary rounded p-2 p-md-3" style="position: relative; height: 280px;">
+            <canvas id="vybcheq-fiscal-chart" aria-label="Period metric history"></canvas>
+        </div>
+        <p id="vybcheq-chart-empty" class="small text-secondary mb-0 mt-2 d-none">No data for this security and metric. Run quarterly fundamentals refresh in admin.</p>
+        {{ chart_data|json_script:"vybcheq-chart-data" }}
+        <script type="application/json" id="vybcheq-chart-series-url-tpl">"{% url 'vybcheq_staff:fiscal_chart_series' security_id=0 %}"</script>
+        {% else %}
+        <p class="text-secondary small mb-0">No active securities. Add tickers in admin, then refresh quarterly fundamentals.</p>
+        {% endif %}
+    </div>
+</div>
+
 <div class="card bg-dark border-warning text-light mb-4">
     <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
@@ -67,27 +98,32 @@
                     {% endif %}
                 </p>
             </div>
-            <a href="{% url 'vybcheq_staff:rule_set_list' %}" class="btn btn-outline-warning btn-sm flex-shrink-0">View all</a>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0 align-items-center">
+                <a href="{% url 'vybcheq_staff:rule_set_list' %}" class="btn btn-warning btn-sm">Criteria</a>
+                <a href="{% url 'vybcheq_staff:run_screen_pick' %}" class="btn btn-outline-warning btn-sm">Run a check</a>
+            </div>
         </div>
         <div class="row g-2">
             {% for row in briefing_rows %}
             <div class="col-6 col-md-4 col-xl-2">
-                <a href="{% url 'vybcheq_staff:rule_set_list' %}#brief-{{ row.slug }}" class="text-decoration-none d-block h-100">
-                    <div class="border border-secondary rounded p-2 h-100{% if row.rule_set %} border-warning border-opacity-50{% endif %}">
-                        <div class="small text-secondary text-uppercase mb-1" style="font-size: 0.6rem;">{{ row.category }}</div>
-                        <div class="small fw-semibold text-light mb-1">{{ row.title }}</div>
-                        {% if row.effective_rules %}
-                        <div class="font-monospace text-warning" style="font-size: 0.7rem;">{{ row.effective_rules.0|format_screening_rule }}</div>
-                        {% endif %}
-                        {% if row.last_run_total %}
-                        <div class="text-secondary mt-1" style="font-size: 0.65rem;">{{ row.last_run_pass_count }}/{{ row.last_run_total }} last run</div>
-                        {% elif row.rule_set %}
-                        <div class="text-secondary mt-1" style="font-size: 0.65rem;">Not run yet</div>
-                        {% else %}
-                        <div class="text-secondary mt-1" style="font-size: 0.65rem;">Suggested</div>
-                        {% endif %}
+                <div class="border border-secondary rounded p-2 h-100 position-relative{% if row.rule_set %} border-warning border-opacity-50{% endif %}">
+                    <div class="small text-secondary text-uppercase mb-1" style="font-size: 0.6rem;">{{ row.category }}</div>
+                    <div class="d-flex align-items-start justify-content-between gap-1 mb-1">
+                        <span class="small fw-semibold text-light">{{ row.title }}</span>
+                        {% include "vybcheq/staff/_briefing_info_btn.html" with label=row.title summary=row.summary interpretation=row.interpretation %}
                     </div>
-                </a>
+                    {% if row.effective_rules %}
+                    <div class="font-monospace text-warning" style="font-size: 0.7rem;">{{ row.effective_rules.0|format_screening_rule }}</div>
+                    {% endif %}
+                    {% if row.last_run_total %}
+                    <div class="text-secondary mt-1" style="font-size: 0.65rem;">{{ row.last_run_pass_count }}/{{ row.last_run_total }} last run</div>
+                    {% elif row.rule_set %}
+                    <div class="text-secondary mt-1" style="font-size: 0.65rem;">Not run yet</div>
+                    {% else %}
+                    <div class="text-secondary mt-1" style="font-size: 0.65rem;">Suggested</div>
+                    {% endif %}
+                    <a href="{% url 'vybcheq_staff:rule_set_list' %}#brief-{{ row.slug }}" class="stretched-link" aria-label="View {{ row.title }} criteria"></a>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -95,7 +131,7 @@
 </div>
 
 <div class="row g-3 mb-4 align-items-stretch">
-    <div class="col-md-8">
+    <div class="col-md-4">
         <div class="card bg-dark border-secondary text-light h-100">
             <div class="card-body d-flex flex-column">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
@@ -133,52 +169,20 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-8">
         <div class="card bg-dark border-secondary text-light h-100">
             <div class="card-body">
                 <h2 class="h6 text-secondary text-uppercase small mb-3">Data workflow</h2>
                 <ol class="small ps-3 mb-0">
                     <li class="mb-2">Add tickers in admin → <strong>Securities</strong></li>
-                    <li class="mb-2">Star the ones you track → <strong>Watch list entries</strong></li>
-                    <li class="mb-2">Refresh fundamentals (2 FMP calls / ticker)</li>
+                    <li class="mb-2">Star the ones you track → <strong>Watch list entries</strong> (or <a href="{% url 'vybcheq_staff:fmp_symbol_directory' %}" class="link-warning">FMP catalog</a>)</li>
+                    <li class="mb-2">Refresh <strong>EOD market close</strong> (1 FMP call / ticker) for real last trade-date prices</li>
+                    <li class="mb-2">Refresh <strong>quarterly fundamentals</strong> (3 FMP calls / ticker) for ratios, growth, and implied valuation price</li>
+                    <li class="mb-2">Optional: report filing dates (1 FMP call / ticker)</li>
                     <li class="mb-0">Run screens — zero API calls; snapshots saved on each run</li>
                 </ol>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="card bg-dark border-secondary text-light mb-4">
-    <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-            <div>
-                <h2 class="h5 card-title mb-1">Quarterly history</h2>
-                <p class="small text-secondary mb-0">Stored fiscal quarters — implied price and screening metrics over time.</p>
-            </div>
-        </div>
-        {% if chart_data.securities %}
-        <div class="row g-2 g-md-3 align-items-end mb-3">
-            <div class="col-12 col-md-5">
-                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-security">Security</label>
-                <select id="vybcheq-chart-security" class="form-select form-select-sm bg-dark text-light border-secondary">
-                    {% for s in chart_data.securities %}
-                    <option value="{{ s.id }}"{% if not s.has_data %} disabled{% endif %}>{{ s.label }}{% if not s.has_data %} (no history){% endif %}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 col-md-5">
-                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-metric">Metric</label>
-                <select id="vybcheq-chart-metric" class="form-select form-select-sm bg-dark text-light border-secondary"></select>
-            </div>
-        </div>
-        <div class="border border-secondary rounded p-2 p-md-3" style="position: relative; height: 280px;">
-            <canvas id="vybcheq-fiscal-chart" aria-label="Quarterly metric history"></canvas>
-        </div>
-        <p id="vybcheq-chart-empty" class="small text-secondary mb-0 mt-2 d-none">No data for this security and metric. Run quarterly fundamentals refresh in admin.</p>
-        {{ chart_data|json_script:"vybcheq-chart-data" }}
-        {% else %}
-        <p class="text-secondary small mb-0">No active securities. Add tickers in admin, then refresh quarterly fundamentals.</p>
-        {% endif %}
     </div>
 </div>
 
@@ -187,7 +191,7 @@
         <div class="card bg-dark border-secondary text-light h-100">
             <div class="card-body d-flex flex-column">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                    <h2 class="h5 card-title mb-0">Watchlist · low → high price</h2>
+                    <h2 class="h5 card-title mb-0">Watchlist · cached prices</h2>
                     <span class="badge bg-secondary">{{ watchlist_count }}</span>
                 </div>
                 {% if watchlist_top5 %}
@@ -196,7 +200,8 @@
                         <thead>
                             <tr>
                                 <th>Ticker</th>
-                                <th>Price</th>
+                                <th>EOD · trade date</th>
+                                <th>Implied · fiscal period</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -205,7 +210,22 @@
                             {% with s=e.security %}
                             <tr>
                                 <td class="font-monospace">{{ s.symbol }} · {{ s.exchange }}</td>
-                                <td class="font-monospace">{{ s.currency|currency_prefix }}{{ s.quote_last_price|format_money }}</td>
+                                <td>
+                                    {% if s.quote_eod_close %}
+                                    <span class="font-monospace">{{ s.currency|currency_prefix }}{{ s.quote_eod_close|format_money }}</span>
+                                    <span class="text-secondary">· {{ s.quote_eod_trade_date|date:"Y-m-d" }}</span>
+                                    {% else %}
+                                    <span class="text-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if s.quote_implied_close %}
+                                    <span class="font-monospace">{{ s.currency|currency_prefix }}{{ s.quote_implied_close|format_money }}</span>
+                                    <span class="text-secondary">· {{ s.quote_implied_period_end|date:"Y-m-d" }} · {{ s|implied_price_context }}</span>
+                                    {% else %}
+                                    <span class="text-secondary">—</span>
+                                    {% endif %}
+                                </td>
                                 <td><a href="{% url 'vybcheq_staff:security_metrics' pk=s.pk %}" class="btn btn-sm btn-outline-warning py-0">Metrics</a></td>
                             </tr>
                             {% endwith %}
@@ -214,7 +234,7 @@
                     </table>
                 </div>
                 {% else %}
-                <p class="text-secondary small flex-grow-1">No cached prices on watchlist. Refresh fundamentals in admin.</p>
+                <p class="text-secondary small flex-grow-1">No cached prices on watchlist. Refresh EOD or fundamentals in admin.</p>
                 {% endif %}
                 <a href="{% url 'vybcheq_staff:watchlist' %}" class="btn btn-outline-warning btn-sm align-self-start mt-3">Full watchlist</a>
             </div>
@@ -234,17 +254,17 @@
                             <tr>
                                 <th>Ticker</th>
                                 <th>Value</th>
-                                <th>P&amp;L</th>
+                                <th>Total return</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for p in portfolio_top5 %}
+                            {% for row in portfolio_top5 %}
                             <tr>
-                                <td class="font-monospace">{{ p.security.symbol }}</td>
-                                <td class="font-monospace">{{ p.mark_value_cheqs|format_money }}</td>
-                                <td class="font-monospace {% if p.unrealized_pnl_cheqs > 0 %}text-success{% elif p.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.unrealized_pnl_cheqs|format_money }}</td>
-                                <td><a href="{% url 'vybcheq_staff:sim_position_detail' pk=p.pk %}" class="btn btn-sm btn-outline-warning py-0">History</a></td>
+                                <td class="font-monospace">{{ row.security.symbol }}</td>
+                                <td class="font-monospace">{{ row.mark_value_cheqs|format_money }}</td>
+                                <td class="font-monospace {% if row.unrealized_pnl_cheqs > 0 %}text-success{% elif row.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ row.unrealized_pnl_cheqs|format_money }}</td>
+                                <td><a href="{% url 'vybcheq_staff:sim_security_lots' security_id=row.security.pk %}" class="btn btn-sm btn-outline-warning py-0">History</a></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -263,6 +283,7 @@
 <script>
 (function () {
     var dataEl = document.getElementById("vybcheq-chart-data");
+    var urlEl = document.getElementById("vybcheq-chart-series-url-tpl");
     var secSel = document.getElementById("vybcheq-chart-security");
     var metSel = document.getElementById("vybcheq-chart-metric");
     var canvas = document.getElementById("vybcheq-fiscal-chart");
@@ -270,20 +291,26 @@
     if (!dataEl || !secSel || !metSel || !canvas || typeof Chart === "undefined") return;
 
     var payload = JSON.parse(dataEl.textContent);
+    var seriesUrlTpl = urlEl ? JSON.parse(urlEl.textContent) : "";
+    var seriesCache = {};
     var chart = null;
+    var loadToken = 0;
 
-    function metricsForSecurity(secId) {
-        var points = payload.series[String(secId)] || [];
+    function seriesUrl(secId) {
+        return seriesUrlTpl.replace("/0/", "/" + secId + "/");
+    }
+
+    function metricsForPoints(points) {
         var out = [];
-        payload.metrics.forEach(function (m) {
+        (payload.metrics || []).forEach(function (m) {
             var has = points.some(function (p) { return p[m.key] != null && !isNaN(p[m.key]); });
             if (has) out.push(m);
         });
         return out;
     }
 
-    function fillMetricSelect(secId) {
-        var metrics = metricsForSecurity(secId);
+    function fillMetricSelect(points) {
+        var metrics = metricsForPoints(points);
         var prev = metSel.value;
         metSel.innerHTML = "";
         metrics.forEach(function (m) {
@@ -299,7 +326,7 @@
 
     function fmtVal(v, key) {
         if (v == null || isNaN(v)) return "—";
-        if (key === "close") {
+        if (key === "eod_close" || key === "implied_close" || key === "close") {
             return Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
         var abs = Math.abs(v);
@@ -310,10 +337,8 @@
         return Number(v).toLocaleString("en-US", { maximumFractionDigits: 4 });
     }
 
-    function draw() {
-        var secId = secSel.value;
+    function draw(points) {
         var metricKey = metSel.value;
-        var points = payload.series[String(secId)] || [];
         var labels = [];
         var values = [];
         points.forEach(function (p) {
@@ -381,13 +406,43 @@
         });
     }
 
+    function applySeries(secId, points) {
+        fillMetricSelect(points);
+        draw(points);
+    }
+
+    function loadSeries(secId) {
+        if (seriesCache[secId]) {
+            applySeries(secId, seriesCache[secId]);
+            return;
+        }
+        var token = ++loadToken;
+        fetch(seriesUrl(secId), { credentials: "same-origin", headers: { "Accept": "application/json" } })
+            .then(function (r) {
+                if (!r.ok) throw new Error("chart series " + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                if (token !== loadToken) return;
+                var points = data.points || [];
+                seriesCache[secId] = points;
+                applySeries(secId, points);
+            })
+            .catch(function () {
+                if (token !== loadToken) return;
+                applySeries(secId, []);
+            });
+    }
+
     function onSecurityChange() {
-        fillMetricSelect(secSel.value);
-        draw();
+        loadSeries(secSel.value);
     }
 
     secSel.addEventListener("change", onSecurityChange);
-    metSel.addEventListener("change", draw);
+    metSel.addEventListener("change", function () {
+        var points = seriesCache[secSel.value] || [];
+        draw(points);
+    });
 
     for (var i = 0; i < secSel.options.length; i++) {
         if (!secSel.options[i].disabled) {

@@ -64,7 +64,8 @@
                         {% endfor %}
                     </dl>
                     {% else %}
-                    <span class="text-secondary">—</span>
+                    <p class="small text-warning mb-0">No stored metrics for this ticker.</p>
+                    <p class="small text-secondary mb-0">Admin → select security → <strong>FMP: refresh quarterly fundamentals</strong> (3 API calls), then run again.</p>
                     {% endif %}
                     {% endwith %}
                     {% with internal=row.metrics_snapshot|metrics_snapshot_internal_keys %}

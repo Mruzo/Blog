@@ -1,0 +1,52 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
+
+{% block vybcheq_title %}{{ security.symbol }} lots{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-1">{{ security.symbol }} <span class="text-secondary fs-6">{{ security.exchange }}</span></h1>
+<p class="text-secondary small mb-3">Individual lots — each open trade is stored separately and rolled up on the portfolio page.</p>
+
+<p class="mb-4">
+    <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="btn btn-sm btn-outline-secondary">← Portfolio</a>
+</p>
+
+{% if lots %}
+<div class="table-responsive border border-secondary rounded">
+    <table class="table table-dark table-striped mb-0 align-middle small">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Opened</th>
+                <th>Shares</th>
+                <th>Cheqs in</th>
+                <th>Entry</th>
+                <th>Closed</th>
+                <th>Exit</th>
+                <th>Return</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lot in lots %}
+            <tr>
+                <td>{% if lot.closed_at %}<span class="badge bg-secondary">Closed</span>{% else %}<span class="badge bg-warning text-dark">Open</span>{% endif %}</td>
+                <td>{{ lot.opened_at|date:"Y-m-d H:i" }}</td>
+                <td class="font-monospace">{{ lot.shares|floatformat:-4 }}</td>
+                <td>{{ lot.cheqs_opened|format_money }}</td>
+                <td>{{ lot.entry_price|format_money }}</td>
+                <td>{% if lot.closed_at %}{{ lot.closed_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
+                <td>{% if lot.exit_price %}{{ lot.exit_price|format_money }}{% else %}—{% endif %}</td>
+                <td class="{% if lot.realized_pnl_cheqs > 0 %}text-success{% elif lot.realized_pnl_cheqs < 0 %}text-danger{% endif %}">
+                    {% if lot.closed_at %}{{ lot.realized_pnl_cheqs|format_money }}{% else %}{{ lot.unrealized_pnl_cheqs|format_money }}{% endif %}
+                </td>
+                <td><a href="{% url 'vybcheq_staff:sim_position_detail' pk=lot.pk %}" class="btn btn-sm btn-outline-secondary py-0">Marks</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-secondary">No lots for this security.</p>
+{% endif %}
+{% endblock %}

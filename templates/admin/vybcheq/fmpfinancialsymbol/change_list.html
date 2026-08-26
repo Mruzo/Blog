@@ -1,0 +1,29 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+<li>
+    <form method="post" action="{% url 'admin:vybcheq_fmpfinancialsymbol_sync_from_fmp' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="button">{% trans "Refresh from FMP (1 API call)" %}</button>
+    </form>
+</li>
+{{ block.super }}
+{% endblock %}
+
+{% block content %}
+{% if fmp_directory_meta.synced_at %}
+<p class="help">
+    Last synced {{ fmp_directory_meta.synced_at }} —
+    {{ fmp_directory_meta.total_count }} symbols
+    ({{ fmp_directory_meta.us_count }} US major · {{ fmp_directory_meta.foreign_count }} other).
+    Staff UI: <a href="{% url 'vybcheq_staff:fmp_symbol_directory' %}">browse US catalog</a>.
+</p>
+{% else %}
+<p class="help">
+    Directory not synced yet. Use <strong>Refresh from FMP (1 API call)</strong> above, or the
+    <a href="{% url 'vybcheq_staff:fmp_symbol_directory' %}">staff catalog page</a>.
+</p>
+{% endif %}
+{{ block.super }}
+{% endblock %}

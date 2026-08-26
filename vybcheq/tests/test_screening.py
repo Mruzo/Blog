@@ -75,6 +75,35 @@ class RunScreenAgainstWatchlistTests(TestCase):
         self.assertTrue(r1.passed)
         self.assertFalse(r2.passed)
 
+    def test_strips_internal_keys_from_snapshot(self):
+        self.s1.screening_metrics = {
+            "pe_ratio": 12,
+            "_raw": {"huge": True},
+            "_fmp_symbol": "AAA",
+        }
+        self.s1.save(update_fields=["screening_metrics"])
+        run = run_screen_against_watchlist(self.rs)
+        snap = run.screen_results.get(security=self.s1).metrics_snapshot
+        self.assertEqual(snap.get("pe_ratio"), 12)
+        self.assertNotIn("_raw", snap)
+        self.assertNotIn("_fmp_symbol", snap)
+
+    def test_run_screen_uses_bounded_queries(self):
+        from vybcheq.models import SecurityFiscalQuarter
+        from datetime import date
+
+        for sec in (self.s1, self.s2):
+            SecurityFiscalQuarter.objects.create(
+                security=sec,
+                period_end=date(2024, 12, 31),
+                trade_date=date(2024, 12, 31),
+                close=Decimal("10"),
+                metrics={"pe_ratio": 10 if sec == self.s1 else 50},
+            )
+        # securities list + quarters prefetch + create run + bulk results + update run
+        with self.assertNumQueries(5):
+            run_screen_against_watchlist(self.rs)
+
     def test_skips_non_watchlist(self):
         Security.objects.create(
             symbol="ZZZ",

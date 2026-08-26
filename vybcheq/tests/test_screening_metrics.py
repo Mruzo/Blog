@@ -21,19 +21,23 @@ class ScreeningMetricsTests(TestCase):
             security=self.sec,
             period_end=date(2024, 6, 30),
             trade_date=date(2024, 6, 28),
-            close=Decimal("190"),
+            close=Decimal("200"),
+            implied_close=Decimal("190"),
             metrics={"pe_ratio": 20},
         )
         SecurityFiscalQuarter.objects.create(
             security=self.sec,
             period_end=date(2024, 9, 30),
             trade_date=date(2024, 9, 30),
-            close=Decimal("225"),
+            close=Decimal("230"),
+            implied_close=Decimal("225"),
             metrics={"pe_ratio": 18},
         )
         metrics = latest_screening_metrics(self.sec)
         self.assertEqual(metrics["pe_ratio"], 18)
         self.assertEqual(metrics["close"], 225.0)
+        self.assertEqual(metrics["implied_close"], 225.0)
+        self.assertEqual(metrics["eod_close"], 230.0)
         self.assertEqual(metrics["period_end"], "2024-09-30")
 
     def test_sync_cache_from_latest_quarter(self):
@@ -41,7 +45,7 @@ class ScreeningMetricsTests(TestCase):
             security=self.sec,
             period_end=date(2024, 12, 31),
             trade_date=date(2024, 12, 31),
-            close=Decimal("240"),
+            implied_close=Decimal("240"),
             metrics={"roe": 0.5},
         )
         sync_security_screening_metrics_cache(self.sec)

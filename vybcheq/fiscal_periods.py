@@ -8,6 +8,8 @@ from typing import Any
 
 # FMP free tier allows ~5 years of EOD history per request; paid plans allow more.
 QUARTERLY_HISTORY_YEARS = 5
+# FMP free tier caps ``limit`` on quarterly ratios/key-metrics at 5 rows per call.
+FMP_QUARTERLY_ROW_LIMIT_DEFAULT = 5
 
 
 def configured_history_years() -> int:
@@ -15,6 +17,23 @@ def configured_history_years() -> int:
     from django.conf import settings
 
     return max(int(getattr(settings, "VYBCHEQ_FMP_EOD_YEARS", QUARTERLY_HISTORY_YEARS)), 1)
+
+
+def configured_quarterly_row_limit() -> int:
+    """
+    Rows to request from FMP quarterly fundamentals (ratios + key-metrics + growth).
+
+    Capped by ``VYBCHEQ_FMP_QUARTERLY_LIMIT`` (default 5 for FMP free tier).
+    Paid plans can raise the cap and/or ``VYBCHEQ_FMP_EOD_YEARS``.
+    """
+    from django.conf import settings
+
+    cap = max(
+        int(getattr(settings, "VYBCHEQ_FMP_QUARTERLY_LIMIT", FMP_QUARTERLY_ROW_LIMIT_DEFAULT)),
+        1,
+    )
+    requested = configured_history_years() * 4
+    return min(requested, cap)
 
 
 def calendar_quarter_end(d: date) -> date:

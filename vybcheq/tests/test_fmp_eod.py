@@ -73,12 +73,16 @@ class FmpEodFetchTests(TestCase):
         self.assertGreaterEqual(result.quarters_stored, 1)
 
         q1 = SecurityFiscalQuarter.objects.get(security=self.sec, period_end=date(2026, 3, 31))
-        self.assertEqual(q1.trade_date, date(2026, 3, 31))
+        self.assertEqual(q1.eod_trade_date, date(2026, 3, 31))
         self.assertEqual(q1.close, Decimal("169.0"))
 
         self.sec.refresh_from_db()
         self.assertEqual(self.sec.quote_last_price, Decimal("171.5"))
+        self.assertEqual(self.sec.quote_eod_close, Decimal("171.5"))
+        self.assertEqual(self.sec.quote_eod_trade_date, date(2026, 4, 10))
+        self.assertEqual(self.sec.quote_mark_source, "eod")
         self.assertIsNotNone(self.sec.quote_updated_at)
+        self.assertIsNotNone(self.sec.quote_eod_refreshed_at)
         self.assertEqual(self.sec.screening_metrics.get("close"), 169.0)
 
         call_kwargs = mock_session_cls.return_value.get.call_args

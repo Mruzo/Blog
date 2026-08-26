@@ -1,0 +1,78 @@
+{% load vybcheq_tags %}
+{# Shows EOD vs implied cached prices with the dates each represents. #}
+{% if compact %}
+<div class="vybcheq-price-stack small">
+    {% if security.quote_eod_close %}
+    <div>
+        <span class="badge bg-info text-dark me-1">EOD</span>
+        <span class="font-monospace">{{ security.currency|currency_prefix }}{{ security.quote_eod_close|format_money }}</span>
+        <span class="text-secondary">· trade {{ security.quote_eod_trade_date|date:"Y-m-d" }}</span>
+    </div>
+    {% endif %}
+    {% if security.quote_implied_close %}
+    <div class="{% if security.quote_eod_close %}mt-1{% endif %}">
+        <span class="badge bg-secondary me-1">Implied</span>
+        <span class="font-monospace">{{ security.currency|currency_prefix }}{{ security.quote_implied_close|format_money }}</span>
+        <span class="text-secondary">· period {{ security.quote_implied_period_end|date:"Y-m-d" }} · {{ security|implied_price_context }}</span>
+    </div>
+    {% endif %}
+    {% if not security.quote_eod_close and not security.quote_implied_close %}
+    <span class="text-secondary">No cached prices</span>
+    {% endif %}
+</div>
+{% else %}
+<div class="vybcheq-price-panel border border-secondary rounded p-3 bg-dark bg-opacity-50 small mb-0">
+    <h3 class="h6 text-secondary mb-3">Cached prices</h3>
+    <dl class="row g-3 mb-0">
+        <div class="col-md-6">
+            <dt class="text-secondary mb-1"><span class="badge bg-info text-dark me-1">EOD</span> Market close</dt>
+            <dd class="mb-0">
+                {% if security.quote_eod_close %}
+                <div class="font-monospace fs-6">{{ security.currency|currency_prefix }}{{ security.quote_eod_close|format_money }}</div>
+                <div class="text-secondary mt-1">
+                    For trade date <strong class="text-light">{{ security.quote_eod_trade_date|date:"Y-m-d" }}</strong>
+                    {% if security.quote_eod_refreshed_at %}
+                    · pulled {{ security.quote_eod_refreshed_at|date:"Y-m-d H:i" }}
+                    {% endif %}
+                </div>
+                {% else %}
+                <span class="text-secondary">Not loaded. Admin → Securities → <strong>FMP: refresh EOD market close</strong> (1 API call).</span>
+                {% endif %}
+            </dd>
+        </div>
+        <div class="col-md-6">
+            <dt class="text-secondary mb-1"><span class="badge bg-secondary me-1">Implied</span> From fundamentals</dt>
+            <dd class="mb-0">
+                {% if security.quote_implied_close %}
+                <div class="font-monospace fs-6">{{ security.currency|currency_prefix }}{{ security.quote_implied_close|format_money }}</div>
+                <div class="text-secondary mt-1">
+                    For fiscal period <strong class="text-light">{{ security.quote_implied_period_end|date:"Y-m-d" }}</strong>
+                    · {{ security|implied_price_context }}
+                    {% if security.quote_implied_refreshed_at %}
+                    · pulled {{ security.quote_implied_refreshed_at|date:"Y-m-d H:i" }}
+                    {% endif %}
+                </div>
+                {% else %}
+                <span class="text-secondary">Not loaded. Admin → Securities → <strong>FMP: refresh quarterly fundamentals</strong> (3 API calls).</span>
+                {% endif %}
+            </dd>
+        </div>
+        {% if security.quote_last_price %}
+        <div class="col-12">
+            <dt class="text-secondary mb-1">Sim trading mark</dt>
+            <dd class="mb-0 text-secondary">
+                Uses
+                {% if security.quote_mark_source == "eod" %}
+                <strong class="text-light">EOD market close</strong> (trade {{ security.quote_eod_trade_date|date:"Y-m-d" }})
+                {% elif security.quote_mark_source == "implied" %}
+                <strong class="text-light">implied fundamentals price</strong> (period {{ security.quote_implied_period_end|date:"Y-m-d" }})
+                {% else %}
+                cached quote
+                {% endif %}
+                · {{ security.currency|currency_prefix }}{{ security.quote_last_price|format_money }}
+            </dd>
+        </div>
+        {% endif %}
+    </dl>
+</div>
+{% endif %}

@@ -1,29 +1,43 @@
 {% load vybcheq_tags %}
 <tr id="brief-{{ row.slug }}">
     <td>
-        <div class="fw-semibold">{{ row.title }}</div>
-        <div class="small text-secondary">{{ row.category }}</div>
-        <details class="small text-secondary mt-1">
-            <summary class="user-select-none" style="cursor: pointer;">What is this?</summary>
-            <p class="mb-1 mt-1">{{ row.summary }}</p>
-            <p class="mb-0">{{ row.interpretation }}</p>
-        </details>
+        <div class="d-flex align-items-start gap-2">
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold">{{ row.title }}</div>
+                <div class="small text-secondary">{{ row.category }}</div>
+            </div>
+            {% include "vybcheq/staff/_briefing_info_btn.html" with summary=row.summary interpretation=row.interpretation label=row.title %}
+        </div>
     </td>
-    <td class="font-monospace small">
-        {% if row.effective_rules %}
-        {{ row.effective_rules.0|format_screening_rule }}
-        {% else %}
-        —
-        {% endif %}
+    <td>
+        <form
+            method="post"
+            action="{% url 'vybcheq_staff:rule_set_save_brief' slug=row.slug %}"
+            class="vybcheq-threshold-form d-flex align-items-center gap-2 flex-wrap"
+        >
+            {% csrf_token %}
+            <span class="vybcheq-threshold-op font-monospace" aria-hidden="true">
+                {{ row.suggested_rule.op|screening_op_symbol }}
+            </span>
+            <div class="vybcheq-threshold-input-wrap">
+                {{ threshold_form.value }}
+                {% if threshold_form.value.errors %}
+                <div class="text-danger small">{{ threshold_form.value.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2">
+                {% if row.rule_set %}Update{% else %}Save{% endif %}
+            </button>
+        </form>
         {% if not row.rule_set %}
-        <div class="text-secondary font-sans-serif mt-1" style="font-family: inherit;">Suggested default</div>
+        <div class="small text-secondary mt-1">Suggested default — edit and save to enable.</div>
         {% endif %}
     </td>
     <td>
         {% if row.rule_set %}
         <span class="badge bg-success">Saved</span>
         {% else %}
-        <span class="badge bg-secondary">Not set up</span>
+        <span class="badge bg-secondary">Not saved</span>
         {% endif %}
     </td>
     <td class="small">
@@ -41,9 +55,8 @@
     <td class="text-nowrap text-end">
         {% if row.rule_set %}
         <a href="{% url 'vybcheq_staff:run_screen_confirm' rule_set_id=row.rule_set.pk %}" class="btn btn-sm btn-warning py-0">Run</a>
-        <a href="{% url 'vybcheq_staff:rule_set_edit' pk=row.rule_set.pk %}" class="btn btn-sm btn-outline-secondary py-0">Edit</a>
         {% else %}
-        <a href="{% url 'vybcheq_staff:rule_set_create' %}?brief={{ row.slug }}" class="btn btn-sm btn-outline-warning py-0">Set up</a>
+        <span class="text-secondary small">Save first</span>
         {% endif %}
     </td>
 </tr>

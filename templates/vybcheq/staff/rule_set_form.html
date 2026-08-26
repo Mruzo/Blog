@@ -3,12 +3,14 @@
 {% block vybcheq_title %}{% if is_create %}New rule set{% else %}Edit · {{ rule_set.name }}{% endif %}{% endblock %}
 
 {% block vybcheq_content %}
-<h1 class="h3 mb-1">{% if is_create %}New rule set{% else %}Edit rule set{% endif %}</h1>
-{% if not is_create %}
-<p class="text-secondary mb-4">{{ rule_set.name }}</p>
-{% else %}
-<p class="text-secondary mb-4">Define screening criteria for the watchlist universe.</p>
-{% endif %}
+<div class="vybcheq-page-header mb-4">
+    <div class="vybcheq-page-header__main">
+        <h1 class="vybcheq-page-title mb-0">{% if is_create %}Custom check{% else %}Edit custom check{% endif %}</h1>
+        <p class="vybcheq-page-subtitle mb-0 mt-2">
+            {% if is_create %}Multi-metric rules for P/E, dividend yield, or other combos beyond the six core checks.{% else %}{{ rule_set.name }}{% endif %}
+        </p>
+    </div>
+</div>
 
 {% if brief_item %}
 <div class="alert alert-secondary small mb-4">

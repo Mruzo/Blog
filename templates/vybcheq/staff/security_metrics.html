@@ -1,10 +1,32 @@
 {% extends "vybcheq/staff/base_vybcheq.html" %}
+{% load vybcheq_tags %}
 
 {% block vybcheq_title %}Metrics · {{ security.symbol }}{% endblock %}
 
 {% block vybcheq_content %}
 <h1 class="h3 mb-1">{{ security.symbol }} <span class="text-secondary fs-6">{{ security.exchange }}</span></h1>
 <p class="text-secondary mb-4">{{ security.name|default:"" }}</p>
+
+{% include "vybcheq/staff/_security_prices.html" with security=security %}
+
+<div class="border border-secondary rounded p-3 mb-4 bg-dark bg-opacity-50 small mt-4">
+    <h2 class="h6 text-secondary mb-2">Stored fundamentals (read-only)</h2>
+    <dl class="row mb-0 g-2">
+        <div class="col-sm-6">
+            <dt class="text-secondary d-inline">Latest period:</dt>
+            <dd class="d-inline ms-1 mb-0 font-monospace">{% if latest_quarter %}{{ latest_quarter.period_end|date:"Y-m-d" }}{% else %}—{% endif %}</dd>
+        </div>
+        <div class="col-sm-6">
+            <dt class="text-secondary d-inline">Report filed:</dt>
+            <dd class="d-inline ms-1 mb-0 font-monospace">{% if latest_quarter and latest_quarter.report_date %}{{ latest_quarter.report_date|date:"Y-m-d" }}{% elif security.last_report_date %}{{ security.last_report_date|date:"Y-m-d" }}{% else %}—{% endif %}</dd>
+        </div>
+        <div class="col-sm-6">
+            <dt class="text-secondary d-inline">Report dates refreshed:</dt>
+            <dd class="d-inline ms-1 mb-0 font-monospace">{% if security.report_dates_updated_at %}{{ security.report_dates_updated_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</dd>
+        </div>
+    </dl>
+    <p class="text-secondary mb-0 mt-2">Admin → Securities → <strong>FMP: refresh EOD market close</strong> (1 call), <strong>quarterly fundamentals</strong> (3 calls), or <strong>report filing dates</strong> (1 call).</p>
+</div>
 
 <form method="post" class="border border-secondary rounded p-3 bg-dark bg-opacity-50">
     {% csrf_token %}

@@ -27,6 +27,7 @@ from vybcheq.fmp_client import FmpError, fmp_get
 from vybcheq.market_symbols import external_symbol_for_security
 from vybcheq.models import Security, SecurityFiscalQuarter
 from vybcheq.money import quantize_money
+from vybcheq.quote_cache import apply_eod_quote
 from vybcheq.screening_metrics import sync_security_screening_metrics_cache
 
 FMP_STABLE_EOD_URL = "https://financialmodelingprep.com/stable/historical-price-eod/full"
@@ -95,34 +96,74 @@ def upsert_quarter_end_eod(
     rows: list[dict[str, Any]],
     *,
     period_ends: list[date],
-) -> int:
-    """Insert or update SecurityFiscalQuarter rows for calendar quarter ends."""
+) -> tuple[int, date | None]:
+    """
+    Insert or update EOD market fields on fiscal quarter rows (never touches fundamentals).
+
+    Returns (rows_written, latest_period_end_among_written).
+    """
     rows_by_date = index_eod_rows_by_date(rows)
     sorted_dates = sorted(rows_by_date)
-    n = 0
+    prepared: list[tuple[date, date, Decimal, dict[str, Any]]] = []
     for period_end in period_ends:
         picked = pick_bar_on_or_before(sorted_dates, rows_by_date, period_end)
         if picked is None:
             continue
-        trade_date, row = picked
+        bar_trade_date, row = picked
         close = _decimal_or_none(row.get("close"))
         if close is None:
             continue
-        SecurityFiscalQuarter.objects.update_or_create(
+        prepared.append((period_end, bar_trade_date, close, row))
+
+    if not prepared:
+        return 0, None
+
+    existing = {
+        q.period_end: q
+        for q in SecurityFiscalQuarter.objects.filter(
             security=security,
-            period_end=period_end,
-            defaults={
-                "trade_date": trade_date,
-                "close": close,
-                "open": _decimal_or_none(row.get("open")),
-                "high": _decimal_or_none(row.get("high")),
-                "low": _decimal_or_none(row.get("low")),
-                "volume": row.get("volume"),
-                "source": "fmp",
-            },
+            period_end__in=[p[0] for p in prepared],
         )
-        n += 1
-    return n
+    }
+    to_create: list[SecurityFiscalQuarter] = []
+    to_update: list[SecurityFiscalQuarter] = []
+    eod_fields = ["eod_trade_date", "close", "open", "high", "low", "volume"]
+
+    for period_end, bar_trade_date, close, row in prepared:
+        open_v = _decimal_or_none(row.get("open"))
+        high_v = _decimal_or_none(row.get("high"))
+        low_v = _decimal_or_none(row.get("low"))
+        volume = row.get("volume")
+        quarter = existing.get(period_end)
+        if quarter is None:
+            to_create.append(
+                SecurityFiscalQuarter(
+                    security=security,
+                    period_end=period_end,
+                    trade_date=bar_trade_date,
+                    eod_trade_date=bar_trade_date,
+                    close=close,
+                    open=open_v,
+                    high=high_v,
+                    low=low_v,
+                    volume=volume,
+                    source="fmp",
+                )
+            )
+            continue
+        quarter.eod_trade_date = bar_trade_date
+        quarter.close = close
+        quarter.open = open_v
+        quarter.high = high_v
+        quarter.low = low_v
+        quarter.volume = volume
+        to_update.append(quarter)
+
+    if to_create:
+        SecurityFiscalQuarter.objects.bulk_create(to_create)
+    if to_update:
+        SecurityFiscalQuarter.objects.bulk_update(to_update, eod_fields)
+    return len(prepared), max(p[0] for p in prepared)
 
 
 def sync_security_eod_from_fmp(
@@ -144,7 +185,9 @@ def sync_security_eod_from_fmp(
         return None
 
     period_ends = calendar_quarter_ends_between(from_date, to_date)
-    quarters_stored = upsert_quarter_end_eod(security, rows, period_ends=period_ends)
+    quarters_stored, latest_period = upsert_quarter_end_eod(
+        security, rows, period_ends=period_ends
+    )
     if quarters_stored == 0:
         return None
 
@@ -154,17 +197,13 @@ def sync_security_eod_from_fmp(
     if latest_close is None:
         return None
 
-    latest_period = (
-        security.fiscal_quarters.order_by("-period_end").values_list("period_end", flat=True).first()
-    )
-
     if update_cached_quote:
-        Security.objects.filter(pk=security.pk).update(
-            quote_last_price=latest_close,
-            quote_updated_at=timezone.now(),
+        apply_eod_quote(
+            security,
+            close=latest_close,
+            trade_date=latest_trade_date,
+            save=True,
         )
-        security.quote_last_price = latest_close
-        security.quote_updated_at = timezone.now()
 
     sync_security_screening_metrics_cache(security)
 

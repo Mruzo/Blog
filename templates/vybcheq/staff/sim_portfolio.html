@@ -4,19 +4,56 @@
 {% block vybcheq_title %}Sim trading{% endblock %}
 
 {% block vybcheq_content %}
-<h1 class="h3 mb-2">Sim trading (cheqs)</h1>
-<p class="text-secondary small mb-4">
-    Paper portfolio for staff. <strong>1 cheq ≈ 1 USD</strong> notional vs cached valuation price.
-    Refresh fundamentals manually in admin (FMP action) — uses your daily API quota.
-</p>
-
-<div class="d-flex flex-wrap gap-2 align-items-center mb-4">
-    <div class="card bg-dark border-warning text-light px-4 py-3">
-        <div class="small text-secondary">Wallet balance</div>
-        <div class="h4 mb-0 text-warning">{{ cheq_account.balance|format_cheqs }} cheqs</div>
+<div class="vybcheq-page-header mb-4">
+    <div class="vybcheq-page-header__main">
+        <h1 class="vybcheq-page-title mb-0">Sim trading (cheqs)</h1>
+        <p class="vybcheq-page-subtitle mb-0 mt-2">
+            Paper portfolio for staff. <strong>1 cheq ≈ 1 USD</strong> notional.
+            Marks use EOD market close when loaded, otherwise fundamentals-implied price.
+        </p>
     </div>
-    <a href="{% url 'vybcheq_staff:sim_open_trade' %}" class="btn btn-warning">Trade</a>
 </div>
+
+<div class="vybcheq-sim-summary mb-4">
+    <div class="row g-2 g-md-3 align-items-stretch">
+        <div class="col-12 col-md-5">
+            <div class="vybcheq-stat-card vybcheq-stat-card--wallet h-100">
+                <div class="small text-secondary">Wallet balance</div>
+                <div class="vybcheq-stat-card__value text-warning">{{ cheq_account.balance|format_cheqs }} <span class="vybcheq-stat-card__unit">cheqs</span></div>
+            </div>
+        </div>
+        <div class="col-12 col-md-5">
+            <div class="vybcheq-stat-card h-100">
+                <div class="small text-secondary">Invested (mark-to-market)</div>
+                <div class="vybcheq-stat-card__value">{{ portfolio_totals.investment_value|format_cheqs }} <span class="vybcheq-stat-card__unit text-secondary">cheqs</span></div>
+                <div class="small text-secondary mt-1">Cheqs in {{ portfolio_totals.cost_basis|format_cheqs }}</div>
+                <div class="small mt-1 {% if portfolio_totals.total_return > 0 %}text-success{% elif portfolio_totals.total_return < 0 %}text-danger{% else %}text-secondary{% endif %}">
+                    Unrealized P&amp;L {{ portfolio_totals.total_return|format_cheqs }}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-2 d-flex">
+            <a href="{% url 'vybcheq_staff:sim_open_trade' %}" class="btn btn-warning w-100 align-self-stretch d-flex align-items-center justify-content-center">Trade</a>
+        </div>
+    </div>
+</div>
+
+<section class="vybcheq-panel mb-4">
+    <div class="mb-3">
+        <h2 class="vybcheq-panel__title mb-1">Portfolio over time</h2>
+        <p class="vybcheq-panel__subtitle mb-0">
+            Cost basis vs mark-to-market — gap is unrealized P&amp;L.
+        </p>
+    </div>
+    {% if portfolio_chart.has_data %}
+    <div class="vybcheq-portfolio-chart-wrap border border-secondary rounded p-2 p-md-3">
+        <canvas id="vybcheq-portfolio-chart" aria-label="Portfolio value and return over time"></canvas>
+    </div>
+    {{ portfolio_chart|json_script:"vybcheq-portfolio-chart-data" }}
+    {% else %}
+    <p class="text-secondary small mb-0">No portfolio history yet. Open a trade to start the series; record marks in admin to add later points.</p>
+    {% endif %}
+</section>
 
 <h2 class="h5">Open positions</h2>
 {% if open_positions %}
@@ -24,36 +61,61 @@
     <table class="table table-dark table-striped mb-0 align-middle small">
         <thead>
             <tr>
-                <th>Security</th>
-                <th>Cheqs in</th>
-                <th>Entry</th>
-                <th>Quote</th>
-                <th>Value</th>
-                <th>P&amp;L</th>
-                <th></th>
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Security" tip="One row per ticker; totals across all open lots." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Shares" tip="Total shares held across all open lots." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Cheqs in" tip="Total cheqs spent to open (cost basis)." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Mark" tip="Current cached quote per share (EOD or implied)." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Value" tip="Total position value: sum of shares × mark." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Total return" tip="Total value minus total cheqs in." %}
+                <th scope="col"></th>
             </tr>
         </thead>
         <tbody>
-            {% for p in open_positions %}
+            {% for row in open_positions %}
             <tr>
-                <td class="font-monospace">{{ p.security.symbol }} · {{ p.security.exchange }}</td>
-                <td>{{ p.cheqs_opened|format_money }}</td>
-                <td>{{ p.entry_price|format_money }}</td>
+                <td class="font-monospace">
+                    {{ row.security.symbol }} · {{ row.security.exchange }}
+                    {% if row.lot_count > 1 %}<span class="text-secondary">({{ row.lot_count }} lots)</span>{% endif %}
+                </td>
+                <td class="font-monospace">{{ row.shares|floatformat:-4 }}</td>
+                <td>{{ row.cheqs_opened|format_money }}</td>
                 <td>
-                    {% if p.security.quote_last_price %}
-                        {{ p.security.currency|currency_prefix }}{{ p.security.quote_last_price|format_money }}
+                    {% if row.security.quote_last_price %}
+                        <div class="font-monospace">{{ row.security.currency|currency_prefix }}{{ row.security.quote_last_price|format_money }}</div>
+                        <div class="text-secondary">
+                            {% if row.security.quote_mark_source == "eod" %}
+                            EOD · trade {{ row.security.quote_eod_trade_date|date:"Y-m-d" }}
+                            {% elif row.security.quote_mark_source == "implied" %}
+                            Implied · period {{ row.security.quote_implied_period_end|date:"Y-m-d" }}
+                            {% else %}
+                            {{ row.security.quote_mark_source|quote_mark_source_label }}
+                            {% endif %}
+                        </div>
                     {% else %}
                         —
                     {% endif %}
                 </td>
-                <td>{{ p.mark_value_cheqs|format_money }}</td>
-                <td class="{% if p.unrealized_pnl_cheqs > 0 %}text-success{% elif p.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.unrealized_pnl_cheqs|format_money }}</td>
+                <td>{{ row.mark_value_cheqs|format_money }}</td>
+                <td class="{% if row.unrealized_pnl_cheqs > 0 %}text-success{% elif row.unrealized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ row.unrealized_pnl_cheqs|format_money }}</td>
                 <td class="text-nowrap">
-                    <a href="{% url 'vybcheq_staff:sim_position_detail' pk=p.pk %}" class="btn btn-sm btn-outline-secondary">History</a>
-                    <form method="post" action="{% url 'vybcheq_staff:sim_close_trade' position_id=p.pk %}" class="d-inline" onsubmit="return confirm('Close at the currently cached quote?');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Close</button>
-                    </form>
+                    <a href="{% url 'vybcheq_staff:sim_security_lots' security_id=row.security.pk %}" class="btn btn-sm btn-outline-secondary">History</a>
+                    {% if row.security.quote_last_price %}
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger sim-sell-btn"
+                        data-bs-toggle="modal"
+                        data-bs-target="#sim-sell-modal"
+                        data-security-id="{{ row.security.pk }}"
+                        data-symbol="{{ row.security.symbol }}"
+                        data-exchange="{{ row.security.exchange }}"
+                        data-currency="{{ row.security.currency|currency_prefix }}"
+                        data-max-shares="{{ row.shares }}"
+                        data-price="{{ row.security.quote_last_price|format_money }}"
+                        data-price-source="{% if row.security.quote_mark_source == 'eod' %}EOD · trade {{ row.security.quote_eod_trade_date|date:'Y-m-d' }}{% elif row.security.quote_mark_source == 'implied' %}Implied · period {{ row.security.quote_implied_period_end|date:'Y-m-d' }}{% else %}{{ row.security.quote_mark_source|quote_mark_source_label }}{% endif %}"
+                    >Sell</button>
+                    {% else %}
+                    <span class="text-secondary small">No quote</span>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -64,33 +126,243 @@
 <p class="text-secondary mb-4">No open positions.</p>
 {% endif %}
 
-<h2 class="h5">Recently closed</h2>
-{% if closed_positions %}
+<h2 class="h5">Trade history</h2>
+<p class="text-secondary small mb-2">Every buy is listed here. Sell rows appear when you close shares. Open buys stay in <strong>Open positions</strong> until sold.</p>
+{% if trade_history %}
 <div class="table-responsive border border-secondary rounded">
     <table class="table table-dark table-striped mb-0 align-middle small">
         <thead>
             <tr>
-                <th>Security</th>
-                <th>Opened</th>
-                <th>In</th>
-                <th>Out</th>
-                <th>Realized P&amp;L</th>
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Security" tip="Ticker and exchange." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Side" tip="Buy = open a lot. Sell = close shares at the cached quote." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Date" tip="When the buy or sell happened." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Shares" tip="Shares bought or sold." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Price" tip="Per-share price at buy or sell." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Cheqs" tip="Cheqs out on buy (−) or returned on sell (+)." %}
+                {% include "vybcheq/staff/_th_tooltip.html" with label="Return" tip="Realized gain or loss on sell rows." %}
             </tr>
         </thead>
         <tbody>
-            {% for p in closed_positions %}
+            {% for p in trade_history %}
+            {% if p.parent_position_id %}
             <tr>
-                <td class="font-monospace">{{ p.security.symbol }}</td>
-                <td>{{ p.opened_at|date:"Y-m-d" }}</td>
-                <td>{{ p.cheqs_opened|format_money }}</td>
-                <td>{{ p.cheqs_proceeds|format_money }}</td>
+                <td class="font-monospace">{{ p.security.symbol }} · {{ p.security.exchange }}</td>
+                <td>Sell <span class="text-secondary">(partial)</span></td>
+                <td>{{ p.closed_at|date:"Y-m-d H:i" }}</td>
+                <td class="font-monospace">{{ p.shares|floatformat:-4 }}</td>
+                <td>{{ p.exit_price|format_money }}</td>
+                <td class="text-success">+{{ p.cheqs_proceeds|format_money }}</td>
                 <td class="{% if p.realized_pnl_cheqs > 0 %}text-success{% elif p.realized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.realized_pnl_cheqs|format_money }}</td>
             </tr>
+            {% else %}
+            <tr>
+                <td class="font-monospace" rowspan="{% if p.closed_at %}2{% else %}1{% endif %}">{{ p.security.symbol }} · {{ p.security.exchange }}</td>
+                <td>Buy</td>
+                <td>{{ p.opened_at|date:"Y-m-d H:i" }}</td>
+                <td class="font-monospace">{{ p.shares|floatformat:-4 }}</td>
+                <td>{{ p.entry_price|format_money }}</td>
+                <td class="text-danger">−{{ p.cheqs_opened|format_money }}</td>
+                <td class="text-secondary">{% if p.closed_at %}—{% else %}<span class="badge bg-secondary">Open</span>{% endif %}</td>
+            </tr>
+            {% if p.closed_at %}
+            <tr>
+                <td>Sell</td>
+                <td>{{ p.closed_at|date:"Y-m-d H:i" }}</td>
+                <td class="font-monospace">{{ p.shares|floatformat:-4 }}</td>
+                <td>{% if p.exit_price %}{{ p.exit_price|format_money }}{% else %}—{% endif %}</td>
+                <td class="text-success">+{{ p.cheqs_proceeds|format_money }}</td>
+                <td class="{% if p.realized_pnl_cheqs > 0 %}text-success{% elif p.realized_pnl_cheqs < 0 %}text-danger{% endif %}">{{ p.realized_pnl_cheqs|format_money }}</td>
+            </tr>
+            {% endif %}
+            {% endif %}
             {% endfor %}
         </tbody>
     </table>
 </div>
 {% else %}
-<p class="text-secondary">No closed trades yet.</p>
+<p class="text-secondary">No trades yet.</p>
+{% endif %}
+
+<div class="modal fade" id="sim-sell-modal" tabindex="-1" aria-labelledby="sim-sell-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <form method="post" id="sim-sell-form" action="">
+                {% csrf_token %}
+                <div class="modal-header border-secondary">
+                    <h2 class="modal-title h5" id="sim-sell-modal-label">Sell shares</h2>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-secondary mb-3" id="sim-sell-symbol"></p>
+                    <div class="mb-3 p-3 border border-secondary rounded">
+                        <div class="small text-secondary">Mark price</div>
+                        <div class="font-monospace fs-5" id="sim-sell-price"></div>
+                        <div class="small text-secondary" id="sim-sell-price-source"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="sim-sell-shares">Shares to sell</label>
+                        <input type="number" class="form-control bg-dark text-light border-secondary" name="shares" id="sim-sell-shares" step="0.0001" min="0.00000001" required>
+                        <div class="form-text text-secondary">Max: <span id="sim-sell-max-shares"></span> shares</div>
+                    </div>
+                    <div class="small text-secondary">
+                        Estimated proceeds: <span class="font-monospace text-light" id="sim-sell-proceeds">—</span> cheqs
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Sell at mark</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const modal = document.getElementById("sim-sell-modal");
+    if (!modal) return;
+    const form = document.getElementById("sim-sell-form");
+    const sharesInput = document.getElementById("sim-sell-shares");
+    const proceedsEl = document.getElementById("sim-sell-proceeds");
+    let unitPrice = 0;
+    let currency = "$";
+
+    function updateProceeds() {
+        const shares = parseFloat(sharesInput.value);
+        if (!unitPrice || !shares || shares <= 0) {
+            proceedsEl.textContent = "—";
+            return;
+        }
+        proceedsEl.textContent = (shares * unitPrice).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    }
+
+    modal.addEventListener("show.bs.modal", function (event) {
+        const btn = event.relatedTarget;
+        if (!btn) return;
+        const securityId = btn.getAttribute("data-security-id");
+        const symbol = btn.getAttribute("data-symbol");
+        const exchange = btn.getAttribute("data-exchange");
+        const maxShares = btn.getAttribute("data-max-shares");
+        currency = btn.getAttribute("data-currency") || "$";
+        unitPrice = parseFloat(btn.getAttribute("data-price").replace(/,/g, "")) || 0;
+        const priceSource = btn.getAttribute("data-price-source") || "";
+
+        form.action = "{% url 'vybcheq_staff:sim_close_security' security_id=0 %}".replace("/0/", "/" + securityId + "/");
+        document.getElementById("sim-sell-symbol").textContent = symbol + " · " + exchange;
+        document.getElementById("sim-sell-price").textContent = currency + btn.getAttribute("data-price");
+        document.getElementById("sim-sell-price-source").textContent = priceSource;
+        document.getElementById("sim-sell-max-shares").textContent = maxShares;
+        sharesInput.max = maxShares;
+        sharesInput.value = maxShares;
+        updateProceeds();
+    });
+
+    sharesInput.addEventListener("input", updateProceeds);
+})();
+</script>
+
+{% if portfolio_chart.has_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script>
+(function () {
+    var dataEl = document.getElementById("vybcheq-portfolio-chart-data");
+    var canvas = document.getElementById("vybcheq-portfolio-chart");
+    if (!dataEl || !canvas || typeof Chart === "undefined") return;
+
+    var payload = JSON.parse(dataEl.textContent);
+    var points = payload.points || [];
+    var labels = points.map(function (p) { return p.period; });
+    var costBasis = points.map(function (p) { return Number(p.cost_basis); });
+    var invested = points.map(function (p) { return Number(p.investment_value); });
+
+    function fmtCheqs(v) {
+        if (v == null || isNaN(v)) return "—";
+        return Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    new Chart(canvas, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Cheqs in",
+                    data: costBasis,
+                    borderColor: "#adb5bd",
+                    backgroundColor: "rgba(173, 181, 189, 0.18)",
+                    pointBackgroundColor: "#adb5bd",
+                    pointRadius: 2,
+                    tension: 0.15,
+                    fill: true,
+                    order: 2
+                },
+                {
+                    label: "Mark-to-market",
+                    data: invested,
+                    borderColor: "#ffc107",
+                    backgroundColor: "rgba(255, 193, 7, 0.2)",
+                    pointBackgroundColor: "#ffc107",
+                    pointRadius: 2,
+                    tension: 0.15,
+                    fill: "-1",
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: "#dee2e6",
+                        boxWidth: 12,
+                        padding: 12,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ": " + fmtCheqs(ctx.parsed.y) + " cheqs";
+                        },
+                        afterBody: function (items) {
+                            if (!items.length) return "";
+                            var i = items[0].dataIndex;
+                            var gap = invested[i] - costBasis[i];
+                            var label = gap >= 0 ? "Unrealized P&L (icing)" : "Unrealized P&L (erosion)";
+                            return label + ": " + fmtCheqs(gap) + " cheqs";
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: "#adb5bd",
+                        maxRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: window.innerWidth < 768 ? 4 : 8,
+                        font: { size: 10 }
+                    },
+                    grid: { color: "rgba(108, 117, 125, 0.35)" }
+                },
+                y: {
+                    ticks: {
+                        color: "#adb5bd",
+                        font: { size: 10 },
+                        callback: function (v) { return fmtCheqs(v); }
+                    },
+                    grid: { color: "rgba(108, 117, 125, 0.35)" }
+                }
+            }
+        }
+    });
+})();
+</script>
 {% endif %}
 {% endblock %}

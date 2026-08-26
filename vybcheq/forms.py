@@ -86,8 +86,8 @@ SCREENING_METRIC_FIELDS = [
     ("forward_pe_ratio", "P/E (forward)"),
     ("price_to_book", "Price / book"),
     ("roe", "Return on equity (fraction, e.g. 0.25)"),
-    ("revenue_growth_yoy", "Revenue growth (TTM)"),
-    ("earnings_growth_yoy", "Earnings growth (TTM)"),
+    ("revenue_growth_yoy", "Revenue growth (YoY)"),
+    ("earnings_growth_yoy", "Earnings growth (YoY)"),
     ("dividend_yield", "Dividend yield (fraction)"),
     ("market_cap", "Market cap"),
 ]
@@ -102,7 +102,7 @@ SCREENING_OPS = [
 ]
 
 RULE_METRIC_CHOICES = [("", "— select —")] + list(SCREENING_METRIC_FIELDS) + [
-    ("close", "Close / implied price"),
+    ("close", "Close (implied or quarter-end)"),
 ]
 
 
@@ -179,6 +179,22 @@ class ScreeningRuleSetForm(forms.ModelForm):
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+
+class BriefingThresholdForm(forms.Form):
+    """Inline threshold editor for a single core briefing check."""
+
+    value = forms.DecimalField(
+        max_digits=24,
+        decimal_places=6,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control form-control-sm vybcheq-threshold-input",
+                "step": "any",
+                "inputmode": "decimal",
+            }
+        ),
+    )
 
 
 class ScreeningMetricsForm(forms.Form):
@@ -327,3 +343,45 @@ class SimTradeOpenForm(forms.Form):
                 f"You would need more cheqs. " 
             )
         return cleaned
+
+
+class SimCloseSharesForm(forms.Form):
+    """Sell some or all shares of an open position at the cached quote."""
+
+    shares = forms.DecimalField(
+        label="Shares to sell",
+        min_value=Decimal("0.00000001"),
+        max_digits=24,
+        decimal_places=8,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control",
+                "step": "0.0001",
+                "min": "0.00000001",
+            }
+        ),
+    )
+
+    def __init__(
+        self,
+        *args,
+        max_shares: Decimal | None = None,
+        quote_price: Decimal | None = None,
+        **kwargs,
+    ):
+        self.max_shares = max_shares
+        self.quote_price = quote_price
+        super().__init__(*args, **kwargs)
+        if max_shares is not None:
+            self.fields["shares"].widget.attrs["max"] = format(max_shares, "f")
+
+    def clean_shares(self):
+        shares = self.cleaned_data["shares"]
+        shares = shares.quantize(Decimal("0.00000001"))
+        if shares <= 0:
+            raise ValidationError("Enter a positive number of shares.")
+        if self.max_shares is not None and shares > self.max_shares:
+            raise ValidationError(
+                f"You can sell at most {self.max_shares.normalize()} shares."
+            )
+        return shares

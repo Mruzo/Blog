@@ -42,9 +42,68 @@ class Security(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Cached last EOD close (FMP); used for simulated marks. 1 cheq ≈ 1 USD notional.",
+        help_text="Sim mark price: EOD close when loaded, else fundamentals-implied. 1 cheq ≈ 1 USD.",
     )
     quote_updated_at = models.DateTimeField(null=True, blank=True)
+    quote_mark_source = models.CharField(
+        max_length=16,
+        blank=True,
+        help_text="Which cached price feeds quote_last_price: eod or implied.",
+    )
+    quote_eod_close = models.DecimalField(
+        max_digits=24,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Last market EOD close from FMP historical-price-eod.",
+    )
+    quote_eod_trade_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Trade date the EOD close is for (not when it was fetched).",
+    )
+    quote_eod_refreshed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When EOD data was last pulled from FMP.",
+    )
+    quote_implied_close = models.DecimalField(
+        max_digits=24,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Price implied from FMP ratios/key-metrics for a fiscal period.",
+    )
+    quote_implied_period_end = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Fiscal period end the implied price is aligned with.",
+    )
+    quote_implied_method = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text="How implied price was derived (e.g. pe_x_eps).",
+    )
+    quote_implied_period_mode = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text="FMP period mode: quarter, annual, ttm, etc.",
+    )
+    quote_implied_refreshed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When fundamentals-implied price was last refreshed.",
+    )
+    last_report_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Most recent filing date from FMP financial-reports-dates.",
+    )
+    report_dates_updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When report filing dates were last refreshed from FMP.",
+    )
 
     class Meta:
         ordering = ["exchange", "symbol"]
@@ -105,13 +164,37 @@ class SecurityFiscalQuarter(models.Model):
         help_text="Calendar quarter end (Mar 31, Jun 30, Sep 30, Dec 31).",
     )
     trade_date = models.DateField(
-        help_text="Last trading day on or before period_end used for the close.",
+        help_text="Fiscal period date from FMP fundamentals (not the EOD bar date).",
     )
-    close = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    eod_trade_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Last trading day on or before period_end used for the EOD market close.",
+    )
+    close = models.DecimalField(
+        max_digits=24,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="EOD market close on eod_trade_date (quarter-end bar from FMP).",
+    )
+    implied_close = models.DecimalField(
+        max_digits=24,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Price implied from FMP ratios/key-metrics for this fiscal period.",
+    )
     open = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
     high = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
     low = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
     volume = models.BigIntegerField(null=True, blank=True)
+    report_date = models.DateField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Date the financial report was filed/published (FMP financial-reports-dates).",
+    )
     metrics = models.JSONField(
         default=_default_metrics_snapshot,
         blank=True,
@@ -129,7 +212,8 @@ class SecurityFiscalQuarter(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.security} Q {self.period_end} @ {self.close}"
+        price = self.implied_close if self.implied_close is not None else self.close
+        return f"{self.security} Q {self.period_end} @ {price}"
 
 
 class WatchlistEntry(models.Model):
@@ -160,6 +244,12 @@ class ScreeningRuleSet(models.Model):
     """Versioned set of screening rules (JSON), e.g. vibe-check criteria."""
 
     name = models.CharField(max_length=128)
+    brief_slug = models.CharField(
+        max_length=64,
+        blank=True,
+        db_index=True,
+        help_text="Links core checks to the briefing catalog (e.g. gross_margin).",
+    )
     is_active = models.BooleanField(default=False)
     rules = models.JSONField(
         default=_default_rules,
@@ -356,6 +446,14 @@ class SimPosition(models.Model):
         blank=True,
         help_text="Cheqs returned to wallet on close.",
     )
+    parent_position = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="partial_closes",
+        help_text="Set when this row records a partial sell from a still-open lot.",
+    )
 
     class Meta:
         ordering = ["-opened_at"]
@@ -411,3 +509,62 @@ class PositionMark(models.Model):
     @property
     def delta_vs_opened_cheqs(self) -> Decimal:
         return self.value_cheqs - self.position.cheqs_opened
+
+
+class FmpDirectoryMeta(models.Model):
+    """Singleton metadata for the cached FMP financial-statement symbol list."""
+
+    synced_at = models.DateTimeField(null=True, blank=True)
+    total_count = models.PositiveIntegerField(default=0)
+    us_count = models.PositiveIntegerField(default=0)
+    foreign_count = models.PositiveIntegerField(default=0)
+    endpoint = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "FMP symbol directory"
+        verbose_name_plural = "FMP symbol directory"
+
+    def __str__(self):
+        if self.synced_at:
+            return f"FMP directory · {self.total_count} symbols · {self.synced_at:%Y-%m-%d %H:%M}"
+        return "FMP directory (not synced)"
+
+    @classmethod
+    def get_solo(cls) -> "FmpDirectoryMeta":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class FmpFinancialSymbol(models.Model):
+    """
+    Cached row from FMP symbol directory (1 API call refresh via stock-list or statement list).
+
+    ``fmp_symbol`` is the ticker string FMP expects on ratios/key-metrics calls.
+    ``symbol`` + ``exchange`` align with Vybcheq ``Security`` for catalog/watchlist joins.
+    """
+
+    fmp_symbol = models.CharField(max_length=32, unique=True, db_index=True)
+    symbol = models.CharField(max_length=32, db_index=True)
+    exchange = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=255, blank=True)
+    currency = models.CharField(max_length=8, blank=True)
+    exchange_short_name = models.CharField(max_length=64, blank=True)
+    exchange_full_name = models.CharField(max_length=128, blank=True)
+    country = models.CharField(max_length=64, blank=True)
+    symbol_type = models.CharField(max_length=32, blank=True)
+    is_us_major = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="NASDAQ, NYSE, or AMEX — typical FMP free-tier fundamentals coverage.",
+    )
+    raw = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["exchange", "symbol"]
+        indexes = [
+            models.Index(fields=["is_us_major", "exchange", "symbol"]),
+        ]
+
+    def __str__(self):
+        return f"{self.symbol}.{self.exchange} ({self.fmp_symbol})"

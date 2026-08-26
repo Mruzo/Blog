@@ -1,0 +1,157 @@
+{% extends "vybcheq/staff/base_vybcheq.html" %}
+
+{% block vybcheq_title %}FMP catalog{% endblock %}
+
+{% block vybcheq_content %}
+<h1 class="h3 mb-2">Symbol catalog</h1>
+<p class="text-secondary mb-3">
+    Pick US tickers for fundamentals refresh. FMP <strong>bulk</strong> directories are often premium on free plans —
+    use the <strong>built-in US catalog</strong> (0 API calls) or <strong>search FMP</strong> (1 call per query).
+</p>
+
+<div class="alert alert-secondary border-secondary small mb-3">
+    <strong>Free plan tip:</strong> If “Refresh from FMP” returns 402, click
+    <strong>Load built-in US catalog</strong>. To find a specific name, use <strong>Search FMP</strong> below.
+</div>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <form method="post" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="load_builtin">
+        <button type="submit" class="btn btn-warning btn-sm">Load built-in US catalog (0 API calls)</button>
+    </form>
+    <form method="post" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="sync">
+        <button type="submit" class="btn btn-outline-warning btn-sm">Refresh bulk from FMP (1 call)</button>
+    </form>
+    {% if meta.synced_at %}
+    <span class="small text-secondary">
+        Last update {{ meta.synced_at|date:"Y-m-d H:i" }} ·
+        {{ meta.total_count }} total · {{ meta.us_count }} US major · {{ meta.foreign_count }} other
+        {% if meta.endpoint %}· {{ meta.endpoint }}{% endif %}
+    </span>
+    {% else %}
+    <span class="small text-warning">No catalog loaded yet — start with the built-in US list.</span>
+    {% endif %}
+</div>
+
+<form method="get" class="row g-2 g-md-3 align-items-end mb-2">
+    <div class="col-12 col-md-4">
+        <label class="form-label small text-secondary mb-1" for="fmp-q">Filter loaded catalog</label>
+        <input id="fmp-q" type="search" name="q" value="{{ query }}" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Symbol or company name">
+    </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label small text-secondary mb-1" for="fmp-exchange">Exchange</label>
+        <select id="fmp-exchange" name="exchange" class="form-select form-select-sm bg-dark text-light border-secondary">
+            <option value="">All{% if us_only %} US{% endif %}</option>
+            {% for ex in exchange_choices %}
+            <option value="{{ ex }}"{% if exchange == ex %} selected{% endif %}>{{ ex }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label small text-secondary mb-1" for="fmp-us">Region</label>
+        <select id="fmp-us" name="us" class="form-select form-select-sm bg-dark text-light border-secondary">
+            <option value="1"{% if us_only %} selected{% endif %}>US major only (recommended)</option>
+            <option value="0"{% if not us_only %} selected{% endif %}>All exchanges</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-2">
+        <button type="submit" class="btn btn-outline-warning btn-sm w-100">Filter</button>
+    </div>
+</form>
+
+<form method="post" class="row g-2 align-items-end mb-4">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="search_fmp">
+    <div class="col-12 col-md-6">
+        <label class="form-label small text-secondary mb-1" for="fmp-search">Search FMP live (1 API call)</label>
+        <input id="fmp-search" type="search" name="q" value="{{ query }}" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="e.g. apple, NVDA, shopify">
+    </div>
+    <div class="col-12 col-md-3">
+        <button type="submit" class="btn btn-outline-secondary btn-sm w-100">Search FMP &amp; merge</button>
+    </div>
+</form>
+
+<p class="small text-secondary mb-2">{{ total_filtered }} match{{ total_filtered|pluralize:"es" }}</p>
+
+{% if page_obj.object_list %}
+<div class="table-responsive border border-secondary rounded">
+    <table class="table table-dark table-striped table-hover mb-0 align-middle small">
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Exchange</th>
+                <th>FMP ticker</th>
+                <th>Name</th>
+                <th>Currency</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in page_obj %}
+            <tr>
+                <td class="font-monospace">{{ row.symbol }}</td>
+                <td>{{ row.exchange }}</td>
+                <td class="font-monospace text-secondary">{{ row.fmp_symbol }}</td>
+                <td>{{ row.name|default:"—" }}</td>
+                <td>{{ row.currency|default:"—" }}</td>
+                <td>{{ row.symbol_type|default:"—" }}</td>
+                <td>
+                    {% if row.on_watchlist %}
+                    <span class="badge bg-success">Watchlist</span>
+                    {% elif row.in_catalog %}
+                    <span class="badge bg-secondary">Catalog</span>
+                    {% else %}
+                    <span class="text-secondary">—</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    {% if not row.on_watchlist %}
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="entry_id" value="{{ row.pk }}">
+                        <button type="submit" class="btn btn-sm btn-outline-warning py-0">Add to watchlist</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-3" aria-label="FMP catalog pages">
+    <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link bg-dark border-secondary text-light" href="?page={{ page_obj.previous_page_number }}&q={{ query|urlencode }}&exchange={{ exchange|urlencode }}&us={% if us_only %}1{% else %}0{% endif %}">Prev</a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled">
+            <span class="page-link bg-dark border-secondary text-secondary">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link bg-dark border-secondary text-light" href="?page={{ page_obj.next_page_number }}&q={{ query|urlencode }}&exchange={{ exchange|urlencode }}&us={% if us_only %}1{% else %}0{% endif %}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<p class="text-secondary">
+    {% if meta.synced_at %}
+    No symbols match this filter.
+    {% else %}
+    Load the built-in US catalog (recommended on free FMP), or search FMP for a specific ticker.
+    {% endif %}
+</p>
+{% endif %}
+{% endblock %}

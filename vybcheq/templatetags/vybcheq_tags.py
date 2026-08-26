@@ -4,6 +4,7 @@ from django import template
 
 from vybcheq.forms import SCREENING_METRIC_FIELDS
 from vybcheq.money import format_money
+from vybcheq.quote_cache import MARK_SOURCE_EOD, MARK_SOURCE_IMPLIED, implied_method_label, period_mode_label
 from vybcheq.screening import _fmt_val
 
 register = template.Library()
@@ -97,16 +98,17 @@ def screening_metric_label(metric_key: str) -> str:
     if not key:
         return "—"
     extras = {
-        "close": "Close / implied price",
+        "close": "Close (implied or quarter-end)",
         "period_end": "Period end",
         "trade_date": "Trade date",
+        "report_date": "Report filed",
     }
     if key in extras:
         return extras[key]
     return _SCREENING_METRIC_LABELS.get(key, key.replace("_", " "))
 
 
-_METRICS_SNAPSHOT_PRIORITY = ("close", "period_end", "trade_date")
+_METRICS_SNAPSHOT_PRIORITY = ("close", "period_end", "report_date", "trade_date")
 
 
 @register.filter
@@ -155,6 +157,12 @@ def metrics_snapshot_internal_keys(snapshot):
 
 
 @register.filter
+def screening_op_symbol(op) -> str:
+    """Operator code -> single symbol for compact threshold inputs."""
+    return _OP_DISPLAY.get(str(op), str(op))
+
+
+@register.filter
 def format_screening_rule(rule) -> str:
     """
     One rule dict -> readable line, e.g. 'P/E (trailing) ≤ 25'.
@@ -173,3 +181,25 @@ def format_screening_rule(rule) -> str:
     except (TypeError, ValueError):
         val_txt = str(value)
     return f"{label} {op_txt} {val_txt}"
+
+
+@register.filter
+def implied_price_context(security) -> str:
+    """Human-readable implied price basis (method + FMP period mode)."""
+    method = implied_method_label(getattr(security, "quote_implied_method", None) or None)
+    mode = period_mode_label(getattr(security, "quote_implied_period_mode", None) or None)
+    if method == "implied" and mode == "fundamentals":
+        return "fundamentals"
+    if method == "implied":
+        return mode
+    return f"{method} · {mode}"
+
+
+@register.filter
+def quote_mark_source_label(source: str) -> str:
+    if source == MARK_SOURCE_EOD:
+        return "EOD market close"
+    if source == MARK_SOURCE_IMPLIED:
+        return "implied fundamentals"
+    return source or "—"
+
