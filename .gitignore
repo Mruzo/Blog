@@ -20,6 +20,9 @@ tilf/logs/
 *.json
 !requirements*.json
 !package*.json
+# Bundled US ticker seed for vybcheq (0-API catalog load)
+!vybcheq/data/
+!vybcheq/data/us_major_seed.json
 
 # IDE/editor files
 .vscode/
