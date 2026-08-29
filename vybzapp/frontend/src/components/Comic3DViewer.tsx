@@ -89,6 +89,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const [adPlacementsLoading, setAdPlacementsLoading] = useState(false);
   const [currentDialValues, setCurrentDialValues] = useState<any>(null);
   const [isWaitingForDialogues, setIsWaitingForDialogues] = useState(false);
+  const [isImmersiveFullscreen, setIsImmersiveFullscreen] = useState(false);
   const trackedEpisodesRef = useRef<Set<number>>(new Set()); // Track which episodes have had views incremented
   const trackedAdEventsRef = useRef<Set<string>>(new Set());
   const activeAdPlacementsRef = useRef<Map<string, AdPlacement>>(new Map());
@@ -1573,6 +1574,55 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }
   }, [selectedEpisode, previousModel, getModelFromSeason]);
 
+  const exitImmersiveFullscreen = useCallback(() => {
+    setIsImmersiveFullscreen(false);
+  }, []);
+
+  const toggleImmersiveFullscreen = useCallback(() => {
+    setIsImmersiveFullscreen((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedEpisode) {
+      setIsImmersiveFullscreen(false);
+    }
+  }, [selectedEpisode]);
+
+  useEffect(() => {
+    if (!isImmersiveFullscreen) {
+      return;
+    }
+    document.body.classList.add('comic3d-fullscreen-active');
+    return () => {
+      document.body.classList.remove('comic3d-fullscreen-active');
+    };
+  }, [isImmersiveFullscreen]);
+
+  useEffect(() => {
+    if (!isImmersiveFullscreen) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        exitImmersiveFullscreen();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isImmersiveFullscreen, exitImmersiveFullscreen]);
+
+  useEffect(() => {
+    if (!isStarted) {
+      return;
+    }
+    const frameId = window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'));
+      const viewer = modelViewerRef.current as { updateFraming?: () => void } | null;
+      viewer?.updateFraming?.();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isImmersiveFullscreen, isStarted]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -1582,52 +1632,78 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     };
   }, []);
 
+  const sortedEpisodes = useMemo(
+    () => [...episodes].sort((a, b) => a.episode_number - b.episode_number),
+    [episodes]
+  );
+
+  const renderEpisodeSelector = (variant: 'inline' | 'fullscreen') => {
+    if (sortedEpisodes.length === 0) {
+      return <p className="text-muted mb-0">No episodes available for this story.</p>;
+    }
+
+    return (
+      <div
+        className={`episode-select-container${
+          variant === 'fullscreen' ? ' comic3d-stage-episode-select' : ''
+        }`}
+      >
+        {sortedEpisodes.map((episode) => {
+          const isActive = selectedEpisode?.id === episode.id;
+          return (
+            <button
+              key={episode.id}
+              type="button"
+              className={`btn ${isActive ? 'btn-primary' : 'btn-outline-primary'} episode-select-btn`}
+              onClick={() => handleEpisodeSelect(episode)}
+            >
+              {isActive ? (
+                <>
+                  E{episode.episode_number}: {episode.title}
+                </>
+              ) : (
+                <>E{episode.episode_number}</>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="comic-3d-viewer">
-      {/* Episode Selection */}
-      <div className="row mb-2">
-        <div className="col-12">
-          <div className="card border-0">
-            {!readOnly && (
-              <div className="card-header border-0">
-                <h5 className="subtext-btn mb-0">Scene Viewer</h5>
-              </div>
-            )}
-            <div className="card-body p-0">
-              {episodes.length === 0 ? (
-                <p className="text-muted">No episodes available for this story.</p>
-              ) : (
-                <div className="episode-select-container">
-                  {[...episodes].sort((a, b) => a.episode_number - b.episode_number).map(episode => {
-                    const isActive = selectedEpisode?.id === episode.id;
-                    return (
-                      <button
-                        key={episode.id}
-                        className={`btn ${isActive ? 'btn-primary' : 'btn-outline-primary'} episode-select-btn`}
-                        onClick={() => handleEpisodeSelect(episode)}
-                      >
-                        {isActive ? (
-                          <>
-                            E{episode.episode_number}: {episode.title}
-                          </>
-                        ) : (
-                          <>E{episode.episode_number}</>
-                        )}
-                      </button>
-                    );
-                  })}
+      {/* Episode Selection — inline only; duplicated in fullscreen stage */}
+      {!isImmersiveFullscreen && (
+        <div className="row mb-2 comic3d-episode-row">
+          <div className="col-12">
+            <div className="card border-0">
+              {!readOnly && (
+                <div className="card-header border-0">
+                  <h5 className="subtext-btn mb-0">Scene Viewer</h5>
                 </div>
               )}
+              <div className="card-body p-0">{renderEpisodeSelector('inline')}</div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 3D Model Container */}
+      {/* 3D Model Container + playback chrome (immersive fullscreen on mobile) */}
       {selectedEpisode && (
-        <div className="row">
-          <div className="col-12">
-            <div className="card model-container position-relative">
+        <div className={`comic3d-stage-host${isImmersiveFullscreen ? ' comic3d-stage-host--immersive' : ''}`}>
+          {isImmersiveFullscreen && (
+            <div className="comic3d-stage-placeholder" aria-hidden="true" />
+          )}
+          <div className={`comic3d-stage${isImmersiveFullscreen ? ' comic3d-fullscreen' : ''}`}>
+            {isImmersiveFullscreen && (
+              <div className="comic3d-stage-episode-bar">
+                {renderEpisodeSelector('fullscreen')}
+              </div>
+            )}
+            <div className="row comic3d-stage-canvas-row">
+              <div className="col-12">
+                <div className="card model-container position-relative">
               {/* Overlay with Start Button */}
               {!isStarted && (
                 <div className="overlay-container position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 2, background: 'rgba(0,0,0,0.5)' }}>
@@ -1752,8 +1828,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     </div>
                   )}
                   
-                  {/* Debug info */}
-                  <div className="position-absolute top-0 start-0 p-2 bg-dark text-white small" style={{ zIndex: 1000 }}>
+                  {/* Debug info (hidden in immersive fullscreen) */}
+                  <div className="comic3d-debug-panel position-absolute top-0 start-0 p-2 bg-dark text-white small" style={{ zIndex: 1000 }}>
                     <div>isStarted: {isStarted ? 'true' : 'false'}</div>
                     <div>isModelReady: {isModelReady ? 'true' : 'false'}</div>
                     <div>isEditMode: {isEditMode ? 'true' : 'false'}</div>
@@ -1785,7 +1861,135 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   )}
                 </div>
               )}
+                </div>
+              </div>
             </div>
+
+            {isStarted && (
+              <div className="comic3d-stage-chrome">
+                <div className="row mt-2 comic3d-stage-progress">
+                  <div className="col-12">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="progress flex-grow-1" style={{ height: '8px' }}>
+                        <div
+                          className="progress-bar bg-success"
+                          style={{
+                            width: `${
+                              playbackPhase === 'outro'
+                                ? 100
+                                : playbackPhase === 'intro'
+                                  ? 0
+                                  : episodeDialogues.length > 0
+                                    ? ((currentDialogueIndex + 1) / episodeDialogues.length) * 100
+                                    : 0
+                            }%`,
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+                      <div className="text-end comic3d-stage-progress-count" style={{ fontSize: '0.8rem', minWidth: '40px' }}>
+                        <span>
+                          {playbackPhase === 'outro'
+                            ? (episodeDialogues.length > 0 ? `${episodeDialogues.length} / ${episodeDialogues.length}` : '0 / 0')
+                            : playbackPhase === 'intro'
+                              ? (episodeDialogues.length > 0 ? `0 / ${episodeDialogues.length}` : '0 / 0')
+                              : (episodeDialogues.length > 0 ? `${currentDialogueIndex + 1} / ${episodeDialogues.length}` : '0 / 0')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="row mt-2 comic3d-stage-nav">
+                  <div className="col-12">
+                    <div className="card bg-transparent border-0">
+                      <div className="card-body p-0">
+                        <div className="row justify-content-between align-items-center">
+                          <div className="col-auto">
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              onClick={goToPreviousDialogue}
+                              disabled={
+                                episodeDialogues.length === 0 ||
+                                playbackPhase === 'intro' ||
+                                (playbackPhase === 'dialogue' && currentDialogueIndex === 0)
+                              }
+                              title={episodeDialogues.length > 0 ? `Previous dialogue (${currentDialogueIndex}/${episodeDialogues.length})` : 'Waiting for dialogues...'}
+                              aria-label="Previous dialogue"
+                            >
+                              <i className="fas fa-chevron-left" aria-hidden="true"></i>
+                            </button>
+                          </div>
+
+                          <div className="col-auto d-flex align-items-center gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-success"
+                              onClick={togglePlay}
+                              aria-label={isPlaying ? 'Pause' : 'Play'}
+                            >
+                              <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`} aria-hidden="true"></i>
+                            </button>
+
+                            <div className="btn-group comic3d-play-speed" role="group">
+                              <button
+                                type="button"
+                                className={`btn btn-sm ${playSpeed === 5000 ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                onClick={() => setPlaySpeed(5000)}
+                              >
+                                1x
+                              </button>
+                              <button
+                                type="button"
+                                className={`btn btn-sm ${playSpeed === 3333 ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                onClick={() => setPlaySpeed(3333)}
+                              >
+                                1.5x
+                              </button>
+                            </div>
+
+                            {getModelFromSeason(selectedEpisode) && (
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary comic3d-fullscreen-toggle"
+                                onClick={toggleImmersiveFullscreen}
+                                aria-label={isImmersiveFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                                title={isImmersiveFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                              >
+                                <i
+                                  className={`fas ${isImmersiveFullscreen ? 'fa-compress' : 'fa-expand'}`}
+                                  aria-hidden="true"
+                                />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="col-auto">
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              onClick={goToNextDialogue}
+                              disabled={episodeDialogues.length === 0}
+                              title={
+                                playbackPhase === 'intro'
+                                  ? (episodeDialogues.length > 0 ? 'Go to first dialogue' : 'Waiting for dialogues...')
+                                  : playbackPhase === 'outro'
+                                    ? (episodeDialogues.length > 0 ? 'Replay from first dialogue' : 'Episode complete')
+                                    : (episodeDialogues.length > 0 ? `Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})` : 'Waiting for dialogues...')
+                              }
+                              aria-label="Next dialogue"
+                            >
+                              <i className="fas fa-chevron-right" aria-hidden="true"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1812,119 +2016,6 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
               })}
             />
           ))}
-        </div>
-      )}
-
-      {/* Progress Bar - Show after Start is clicked, even if waiting for dialogues */}
-      {selectedEpisode && isStarted && (
-        <div className="row mt-2">
-          <div className="col-12">
-            <div className="d-flex align-items-center gap-3">
-              <div className="progress flex-grow-1" style={{ height: '8px' }}>
-                <div 
-                  className="progress-bar bg-success" 
-                  style={{ 
-                    width: `${
-                      playbackPhase === 'outro'
-                        ? 100
-                        : playbackPhase === 'intro'
-                          ? 0
-                          : episodeDialogues.length > 0
-                            ? ((currentDialogueIndex + 1) / episodeDialogues.length) * 100
-                            : 0
-                    }%`,
-                    transition: 'width 0.3s ease'
-                  }}
-                />
-              </div>
-              <div className="text-end" style={{ fontSize: '0.8rem', minWidth: '40px' }}>
-                <span>
-                  {playbackPhase === 'outro'
-                    ? (episodeDialogues.length > 0 ? `${episodeDialogues.length} / ${episodeDialogues.length}` : '0 / 0')
-                    : playbackPhase === 'intro'
-                      ? (episodeDialogues.length > 0 ? `0 / ${episodeDialogues.length}` : '0 / 0')
-                      : (episodeDialogues.length > 0 ? `${currentDialogueIndex + 1} / ${episodeDialogues.length}` : '0 / 0')}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Navigation Controls - Show after Start Episode is clicked, even if waiting for dialogues */}
-      {isStarted && selectedEpisode && (
-        <div className="row mt-2">
-          <div className="col-12">
-            <div className="card bg-transparent border-0">
-              <div className="card-body p-0">
-                <div className="row justify-content-between align-items-center">
-                  <div className="col-auto">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={goToPreviousDialogue}
-                      disabled={
-                        episodeDialogues.length === 0 ||
-                        playbackPhase === 'intro' ||
-                        (playbackPhase === 'dialogue' && currentDialogueIndex === 0)
-                      }
-                      title={episodeDialogues.length > 0 ? `Previous dialogue (${currentDialogueIndex}/${episodeDialogues.length})` : 'Waiting for dialogues...'}
-                      aria-label="Previous dialogue"
-                    >
-                      <i className="fas fa-chevron-left" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                  
-                  <div className="col-auto d-flex align-items-center gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-success"
-                      onClick={togglePlay}
-                      aria-label={isPlaying ? 'Pause' : 'Play'}
-                    >
-                      <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`} aria-hidden="true"></i>
-                    </button>
-                    
-                    <div className="btn-group" role="group">
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${playSpeed === 5000 ? 'btn-primary' : 'btn-outline-secondary'}`}
-                        onClick={() => setPlaySpeed(5000)}
-                      >
-                        1x
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${playSpeed === 3333 ? 'btn-primary' : 'btn-outline-secondary'}`}
-                        onClick={() => setPlaySpeed(3333)}
-                      >
-                        1.5x
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="col-auto">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={goToNextDialogue}
-                      disabled={episodeDialogues.length === 0}
-                      title={
-                        playbackPhase === 'intro'
-                          ? (episodeDialogues.length > 0 ? 'Go to first dialogue' : 'Waiting for dialogues...')
-                          : playbackPhase === 'outro'
-                            ? (episodeDialogues.length > 0 ? 'Replay from first dialogue' : 'Episode complete')
-                            : (episodeDialogues.length > 0 ? `Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})` : 'Waiting for dialogues...')
-                      }
-                      aria-label="Next dialogue"
-                    >
-                      <i className="fas fa-chevron-right" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 

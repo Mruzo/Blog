@@ -1043,7 +1043,13 @@ a.product-landing__ctaGhost:active {
   border: none;
 }
 
-.stories-landing__viewerWrap .comic-3d-viewer > .row.mb-2 {
+.stories-landing__viewerWrap .comic3d-stage-host--immersive .comic3d-stage-placeholder {
+  max-width: none;
+  margin: 0;
+}
+
+.stories-landing__viewerWrap .comic-3d-viewer > .row.mb-2,
+.stories-landing__viewerWrap .comic-3d-viewer > .comic3d-episode-row {
   margin-bottom: 0.3rem !important;
   padding: 0.35rem 0.55rem 0;
 }
@@ -1051,6 +1057,18 @@ a.product-landing__ctaGhost:active {
 .stories-landing__viewerWrap .comic-3d-viewer > .row.mt-2 {
   margin-top: 0.35rem !important;
   padding: 0 0.55rem 0.4rem;
+}
+
+.stories-landing__viewerWrap .comic3d-stage-chrome {
+  padding: 0 0.55rem 0.4rem;
+}
+
+.stories-landing__viewerWrap .comic3d-stage-chrome .comic3d-stage-progress {
+  margin-top: 0.35rem !important;
+}
+
+.stories-landing__viewerWrap .comic3d-stage-chrome .comic3d-stage-nav {
+  margin-top: 0.35rem !important;
 }
 
 .stories-landing__card {
@@ -4033,7 +4051,9 @@ button.store-page__linkBtn {
     padding-inline: 0.55rem;
   }
   .stories-landing__viewerWrap .comic-3d-viewer > .row.mb-2,
-  .stories-landing__viewerWrap .comic-3d-viewer > .row.mt-2 {
+  .stories-landing__viewerWrap .comic-3d-viewer > .comic3d-episode-row,
+  .stories-landing__viewerWrap .comic-3d-viewer > .row.mt-2,
+  .stories-landing__viewerWrap .comic3d-stage-chrome {
     padding-inline: 0.45rem;
   }
   .product-landing__section {
