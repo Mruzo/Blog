@@ -55,37 +55,21 @@
 </section>
 </main>
 
-<div class="container">
-  <div class="row justify-content-center my-4">
-    <div class="col-12 col-md-10 col-lg-9 d-flex justify-content-between align-items-center gap-2 gap-md-3 gap-lg-4">
-      
-      <div class="col-auto">
-        <button onclick="loadContent('/about/', this)" class="neumorphic {% if request.resolver_match.url_name == 'about' %}active{% endif %}" style="font-size: 0.9rem; ">
-          <span>PERSONA</span>
-        </button>
-      </div>
-
-      <div class="col-auto">
-        <button onclick="loadContent('/immersivecomics/', this)" class="neumorphic {% if request.resolver_match.url_name == 'comic_list' %}active{% endif %}" style="font-size: 0.9rem; ">
-          <span>COMICS</span>
-        </button>
-      </div>
-
-      <div class="col-auto">
-        <button onclick="loadContent('/home-list/', this)" class="neumorphic {% if request.resolver_match.url_name == 'homelist' %}active{% endif %}" style="font-size: 0.9rem;">
-          <span>REFLECTIONS</span>
-        </button>
-      </div>
-
-      <div class="col-auto">
-        <button onclick="loadContent('/crafts/', this)" class="neumorphic {% if request.resolver_match.url_name == 'craft' %}active{% endif %}" style="font-size: 0.9rem; ">
-          <span>OTHER PROJECTS</span>
-        </button>
-    </div>
-
-    </div>
-  </div>
-</div>
+<nav class="home-section-nav container my-4 px-2" aria-label="Site sections">
+  <button type="button" onclick="loadContent('/about/', this)" class="neumorphic {% if request.resolver_match.url_name == 'about' %}active{% endif %}" aria-label="Persona">
+    <span>PERSONA</span>
+  </button>
+  <button type="button" onclick="loadContent('/immersivecomics/', this)" class="neumorphic {% if request.resolver_match.url_name == 'comic_list' %}active{% endif %}" aria-label="Comics">
+    <span>COMICS</span>
+  </button>
+  <button type="button" onclick="loadContent('/home-list/', this)" class="neumorphic {% if request.resolver_match.url_name == 'homelist' %}active{% endif %}" aria-label="Reflections">
+    <span>REFLECTIONS</span>
+  </button>
+  <button type="button" onclick="loadContent('/crafts/', this)" class="neumorphic {% if request.resolver_match.url_name == 'craft' %}active{% endif %}" aria-label="Other projects">
+    <span class="nav-label-long">OTHER PROJECTS</span>
+    <span class="nav-label-short" aria-hidden="true">PROJECTS</span>
+  </button>
+</nav>
 
 <!--    {% endif %}-->
 

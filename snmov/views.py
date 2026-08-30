@@ -27,13 +27,14 @@ class article_list_view(generic.ListView):
 
     def get_queryset(self):
         sort_by = self.request.GET.get('sort', 'latest')
+        qs = Article.objects.published()
 
         if sort_by == 'earliest':
-            return Article.objects.order_by('publish_date')
+            return qs.order_by('publish_date')
         elif sort_by == 'title':
-            return Article.objects.order_by('title')
+            return qs.order_by('title')
         else:
-            return Article.objects.order_by('-publish_date')
+            return qs.order_by('-publish_date')
 
 
 @staff_member_required
@@ -52,7 +53,7 @@ def article_create_view(request):
 
 
 def article_detail(request, slug):
-    article = get_object_or_404(Article, slug=slug)
+    article = get_object_or_404(Article.objects.published(), slug=slug)
     structured_data = {
         'type': 'Article',
         'title': article.title,
@@ -68,7 +69,7 @@ def article_detail(request, slug):
         'meta_data': article.generate_meta_tags(),
         'structured_data': structured_data
     }
-    return render(request, 'snmov/home.html', context)
+    return render(request, 'snmov/detail.html', context)
 
 
 @login_required
@@ -105,75 +106,45 @@ def add_comment_to_article(request, slug):
 @login_required
 def article_preference(request, slug, value):
     if request.method == "POST":
-        object = get_object_or_404(Article, slug=slug)
-        obj = ""
-        valueobj = ""
+        article = get_object_or_404(Article, slug=slug)
+        value = int(value)
 
         try:
-            obj = Preference.objects.get(user=request.user, post=object)
-            valueobj = obj.value  # value of userpreference
-            value = int(value)
+            pref = Preference.objects.get(user=request.user, post=article)
+            previous_value = pref.value
 
-            if valueobj != value:
-                obj.delete()
-                upref = Preference()
-                upref.user = request.user  # current logged in user
-                upref.post = object
-                upref.value = value
+            if previous_value != value:
+                pref.delete()
+                upref = Preference(user=request.user, post=article, value=value)
 
-                if value == 1 and valueobj != 1:
-                    object.likes += 1
-                    object.dislikes -= 1
-                elif value == 2 and valueobj != 2:
-                    object.dislikes += 1
-                    object.likes -= 1
+                if value == 1 and previous_value != 1:
+                    article.likes += 1
+                    article.dislikes -= 1
+                elif value == 2 and previous_value != 2:
+                    article.dislikes += 1
+                    article.likes -= 1
                 upref.save()
-                object.save()
-
-                return render(request,
-                              template_name='snmov/home.html',
-                              context={'object': object, 'slug': slug}
-                              )
-            elif valueobj == value:
-                obj.delete()
+                article.save()
+            else:
+                pref.delete()
 
                 if value == 1:
-                    object.likes -= 1
+                    article.likes -= 1
                 elif value == 2:
-                    object.dislikes -= 1
+                    article.dislikes -= 1
 
-                object.save()
-
-                return render(request,
-                              template_name='snmov/home.html',
-                              context={'object': object, 'slug': slug}
-                              )
+                article.save()
 
         except Preference.DoesNotExist:
-            upref = Preference()
-            upref.user = request.user
-            upref.post = object
-            upref.value = value
-            value = int(value)
+            Preference.objects.create(user=request.user, post=article, value=value)
 
             if value == 1:
-                object.likes += 1
+                article.likes += 1
             elif value == 2:
-                object.dislikes += 1
-            upref.save()
-            object.save()
+                article.dislikes += 1
+            article.save()
 
-            return render(request,
-                          template_name='snmov/home.html',
-                          context={'object': object, 'slug': slug})
-
-    else:
-        objects = get_object_or_404(Article, slug=slug)
-
-        return render(request,
-                      template_name='snmov/home.html',
-                      context={'objects': objects, 'slug': slug}
-                      )
+    return redirect('article_detail', slug=slug)
 
 
 @staff_member_required
@@ -214,7 +185,7 @@ def article_delete_view(request, slug):
 #         obj.delete()
 #         data['form_is_valid'] = True
 #         objs = Comment.objects.all()
-#         data['comment_list'] = render_to_string('snmov/home.html', {'objs': objs})
+#         data['comment_list'] = render_to_string('snmov/detail.html', {'object': obj.comment_post})
 #     else:
 #         context = {'obj': obj}
 #         data['deletec_html'] = render_to_string('snmov/deletec.html',

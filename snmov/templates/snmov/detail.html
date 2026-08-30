@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ object.title }} | misteruzo{% endblock %}
+
+{% block meta_tags %}
+    {{ meta_data|safe }}
+{% endblock %}
+
+{% block content %}
+
+<div class="reflections-page">
+    <header class="reflections-header text-center py-4 px-3">
+        <p class="reflections-back mb-0">
+            <a href="{% url 'article_list' %}">← Reflections</a>
+        </p>
+    </header>
+
+    <article class="reflection-detail mx-auto px-3 pb-5">
+        <header class="reflection-detail-header">
+            <h1 class="reflection-detail-title">{{ object.title }}</h1>
+            <p class="reflection-detail-byline">
+                By <a href="/about/">Chris Uzo</a>
+                <time datetime="{{ object.publish_date|date:'Y-m-d' }}">{{ object.publish_date|date:"M d, Y" }}</time>
+            </p>
+        </header>
+
+        {% if object.gif_model or object.image %}
+        <div class="reflection-detail-media">
+            {% if object.gif_model %}
+                <img src="{{ object.gif_model.url }}" alt="{{ object.title }}">
+            {% else %}
+                <img src="{{ object.image.url }}" alt="{{ object.title }}">
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="reflection-detail-body">
+            {{ object.content|safe }}
+        </div>
+
+        {% with comments=object.approved_comments %}
+        {% if comments %}
+        <section class="reflection-detail-comments" aria-label="Comments">
+            <h2 class="reflection-detail-comments-title">Comments</h2>
+            {% for comment in comments %}
+            <div class="reflection-detail-comment">
+                <p class="reflection-detail-comment-author">{{ comment.user_name }}</p>
+                <div class="reflection-detail-comment-body">{{ comment.comment_cont|linebreaks }}</div>
+                {% if request.user.is_authenticated and request.user == comment.user_name %}
+                <p class="reflection-detail-comment-actions">
+                    <a href="{% url 'delete_comment' object.slug comment.pk %}">Delete</a>
+                </p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+        {% endwith %}
+
+        <footer class="reflection-detail-footer">
+            <a class="reflection-post-cta neumorphic" href="{% url 'article_list' %}"><span>More reflections</span></a>
+        </footer>
+
+        {% if request.user.is_authenticated and request.user.is_staff %}
+        <p class="reflection-detail-staff">
+            <a href="{{ object.get_edit_url }}">Edit</a>
+            ·
+            <a href="{{ object.get_delete_url }}">Delete</a>
+        </p>
+        {% endif %}
+    </article>
+</div>
+
+{% endblock %}

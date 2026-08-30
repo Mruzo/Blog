@@ -1,51 +1,48 @@
-
-
-{% block content %}
-
 {% load static %}
-{% if messages %}
-    <ul class="messages">
-        {% for message in messages %}
-            <li class="{{ message.tags }}">
-                {{ message }} <button onclick="this.parentElement.style.display='none'">X</button>
-            </li>
-        {% endfor %}
-    </ul>
-{% endif %}
 
-<div class="row position-relative">
-    {% for item in article_list %}
-    <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
-        <div class="card">
-            <!-- Display either the GIF or image -->
-            {% if item.media_url %}
-                <img class="card-img-top mb-2" src="{{ item.media_url }}" alt="Media for {{ item.article.title }}" width="270px">
-            {% else %}
-                <p>No image available</p>
-            {% endif %}
-            
-            <div class="card-body">
-                <div class="row border-bottom">
-                    <div class="col-8">
-                        <h5 class="card-title font-weight-bolder px-2 m-0">{{ item.article.title }}</h5>
-                    </div>
-                    <div class="col-4">
-                        {{ item.article.publish_date | date:"M d, Y" }}
-                    </div>
+<div class="reflections-page reflections-home-list">
+    <header class="reflections-header text-center py-3 px-3">
+        
+        
+    </header>
+
+    <div class="reflections-list mx-auto px-3 pb-4">
+        {% for article in article_list %}
+        <article class="reflection-post">
+            <a href="{{ article.get_absolute_url }}" class="reflection-post-link">
+                <div class="reflection-post-media">
+                    {% if article.gif_model %}
+                        <img src="{{ article.gif_model.url }}" alt="{{ article.title }}" loading="lazy">
+                    {% elif article.image %}
+                        <img src="{{ article.image.url }}" alt="{{ article.title }}" loading="lazy">
+                    {% else %}
+                        <div class="reflection-post-media-placeholder" aria-hidden="true">
+                            <img src="{% static 'snmov/img/wbicon.png' %}" alt="">
+                        </div>
+                    {% endif %}
                 </div>
-                <article class="card-subtitle px-2">{{ item.article.content | safe | linebreaks | truncatewords:23 }}</article>
-            </div>
-            
-            <div class="card-footer">
-                <a class="neumorphicc col-4 float-right fw-bolder" style="background: #FFBC00;" href="{{ item.article.get_absolute_url }}">continue</a>
-            </div>
-        </div>
+                <div class="reflection-post-body">
+                    <div class="reflection-post-meta">
+                        <h3 class="reflection-post-title">{{ article.title }}</h3>
+                        <time datetime="{{ article.publish_date|date:'Y-m-d' }}">{{ article.publish_date|date:"M d, Y" }}</time>
+                    </div>
+                    <p class="reflection-post-excerpt">
+                        {% if article.description %}
+                            {{ article.description }}
+                        {% else %}
+                            {{ article.content|striptags|truncatewords:32 }}
+                        {% endif %}
+                    </p>
+                    <span class="reflection-post-cta neumorphic" aria-hidden="true"><span>Read →</span></span>
+                </div>
+            </a>
+        </article>
+        {% empty %}
+        <p class="reflections-empty text-center py-4">No reflections published yet.</p>
+        {% endfor %}
+
+        <footer class="reflections-home-list-footer text-center pt-3 pb-2">
+            <a class="reflection-post-cta neumorphic" href="/article/"><span>All reflections</span></a>
+        </footer>
     </div>
-    {% endfor %}
 </div>
-
-<div class="card mb-4 col-5 col-md-3 mx-auto bg-transparent border-0">
-    <a class="d-flex justify-content-center neumorphic" href="/article"><h6 class="fw-bolder my-1">view more</h6></a>
-</div>
-
-{% endblock %}
