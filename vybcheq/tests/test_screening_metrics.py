@@ -52,3 +52,17 @@ class ScreeningMetricsTests(TestCase):
         self.sec.refresh_from_db()
         self.assertEqual(self.sec.screening_metrics["roe"], 0.5)
         self.assertEqual(self.sec.screening_metrics["close"], 240.0)
+
+    def test_five_year_averages_from_fiscal_quarters(self):
+        from vybcheq.screening_metrics import build_screening_metrics_from_fiscal_quarters
+
+        for i, roe in enumerate([0.18, 0.16, 0.14, 0.12, 0.10]):
+            SecurityFiscalQuarter.objects.create(
+                security=self.sec,
+                period_end=date(2024 - i, 12, 31),
+                trade_date=date(2024 - i, 12, 31),
+                metrics={"roe": roe},
+            )
+        metrics = build_screening_metrics_from_fiscal_quarters(self.sec)
+        self.assertAlmostEqual(metrics["roe"], 0.18)
+        self.assertAlmostEqual(metrics["roe_5y_avg"], 0.14)

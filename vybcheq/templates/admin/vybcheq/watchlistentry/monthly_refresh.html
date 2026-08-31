@@ -1,0 +1,74 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans "Home" %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url 'admin:vybcheq_watchlistentry_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; {% trans "Monthly FMP refresh" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{% trans "Monthly watchlist refresh" %}</h1>
+
+<p>
+  {% blocktrans with count=watchlist_count budget=daily_budget %}
+  Watchlist: <strong>{{ count }}</strong> securities · FMP daily budget: <strong>{{ budget }}</strong> calls
+  {% endblocktrans %}
+</p>
+
+<p class="help">
+  {% trans "Run in two phases across two calendar days to stay within the free-tier limit (~500 calls over two days)." %}
+</p>
+
+<table style="border-collapse:collapse;width:100%;max-width:720px;margin:1em 0;">
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "When" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Phase" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Est. calls" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{% trans "Day before month-end" %}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{% trans "Fundamentals (ratios, key-metrics, growth, 5y avgs)" %}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">~{{ est_fundamentals }}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{% trans "Month-end" %}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{% trans "EOD prices + operating cash flow" %}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">~{{ est_eod_cashflow }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<form method="post">
+  {% csrf_token %}
+  <fieldset class="module aligned">
+    <div class="form-row">
+      <label for="id_phase_fundamentals">
+        <input type="radio" name="phase" id="id_phase_fundamentals" value="{{ phase_fundamentals }}" required>
+        {% trans "Phase 1 — Fundamentals (~3 calls/security)" %}
+      </label>
+    </div>
+    <div class="form-row">
+      <label for="id_phase_eod">
+        <input type="radio" name="phase" id="id_phase_eod" value="{{ phase_eod_cashflow }}">
+        {% trans "Phase 2 — EOD + cash flow (~2 calls/security)" %}
+      </label>
+    </div>
+  </fieldset>
+  <div class="submit-row">
+    <input type="submit" value="{% trans "Run selected phase" %}" class="default">
+    <a href="{% url 'admin:vybcheq_watchlistentry_changelist' %}" class="button cancel-link">{% trans "Cancel" %}</a>
+  </div>
+</form>
+
+<p class="help">
+  {% trans "CLI equivalent:" %}
+  <code>python manage.py refresh_vybcheq_monthly --phase fundamentals --dry-run</code>
+</p>
+{% endblock %}

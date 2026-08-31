@@ -54,6 +54,7 @@ class FmpFundamentalsTests(TestCase):
                     "date": "2024-09-28",
                     "peRatio": 25,
                     "returnOnEquity": 0.42,
+                    "returnOnAssets": 0.18,
                     "marketCap": 2_000_000_000_000,
                     "netIncomePerShare": 10,
                 },
@@ -68,8 +69,9 @@ class FmpFundamentalsTests(TestCase):
         ]
         data = fetch_screening_metrics_fmp(self.sec)
         self.assertEqual(mock_get.call_count, 3)
-        for call in mock_get.call_args_list:
+        for call in mock_get.call_args_list[:3]:
             self.assertEqual(call.kwargs["params"]["limit"], 5)
+            self.assertEqual(call.kwargs["params"]["period"], "annual")
         self.assertEqual(data["gross_margin"], 0.46)
         self.assertEqual(data["pretax_margin"], 0.31)
         self.assertEqual(data["net_margin"], 0.25)
@@ -77,6 +79,9 @@ class FmpFundamentalsTests(TestCase):
         self.assertEqual(data["current_ratio"], 1.2)
         self.assertEqual(data["quick_ratio"], 1.0)
         self.assertEqual(data["pe_ratio"], 25)
+        self.assertEqual(data["roe"], 0.42)
+        self.assertEqual(data["roa"], 0.18)
+        self.assertEqual(data["eps"], 10.0)
         self.assertEqual(data["revenue_growth_yoy"], 0.12)
         self.assertEqual(data["earnings_growth_yoy"], 0.08)
         self.assertEqual(data["close"], 250.0)
@@ -85,6 +90,8 @@ class FmpFundamentalsTests(TestCase):
         self.assertEqual(quarter.implied_close, Decimal("250.00"))
         self.assertIsNone(quarter.close)
         self.assertEqual(quarter.metrics["_price_method"], "pe_x_eps")
+        self.assertEqual(quarter.metrics["roa"], 0.18)
+        self.assertEqual(quarter.metrics["eps"], 10.0)
         self.assertIn("ratios", quarter.metrics["_raw"])
         self.assertIn("growth", quarter.metrics["_raw"])
 
@@ -95,6 +102,7 @@ class FmpFundamentalsTests(TestCase):
         self.assertEqual(self.sec.quote_implied_method, "pe_x_eps")
         self.assertEqual(self.sec.quote_mark_source, "implied")
 
+    @override_settings(VYBCHEQ_FMP_PREFER_ANNUAL=False)
     @patch("vybcheq.fmp_fundamentals.fmp_get")
     def test_falls_back_from_quarter_to_annual(self, mock_get):
         from vybcheq.fmp_client import FmpError

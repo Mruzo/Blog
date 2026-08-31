@@ -27,7 +27,16 @@ import requests
 
 from .fmp_client import FmpError, fmp_action_gap_seconds
 from .fmp_eod import sync_security_eod_from_fmp
+from .fmp_capability_probe import run_fmp_capability_probe
+from .fmp_cash_flow import merge_cash_flow_from_fmp
 from .fmp_fundamentals import merge_screening_metrics_from_fmp
+from .monthly_refresh import (
+    PHASE_EOD_CASHFLOW,
+    PHASE_FUNDAMENTALS,
+    estimate_phase_calls,
+    run_monthly_refresh_phase,
+    watchlist_securities,
+)
 from .fmp_report_dates import merge_report_dates_from_fmp
 from .fmp_symbol_directory import sync_fmp_symbol_directory
 from .market_symbols import MarketSymbolError
@@ -60,7 +69,7 @@ def _details_as_html(obj: ScreenResult | None) -> str:
 
 
 @admin.action(
-    description=_("FMP: refresh quarterly fundamentals + implied price (3 API calls per security)")
+    description=_("FMP: refresh quarterly fundamentals + implied price (~3 API calls per security)")
 )
 def fmp_refresh_screening_metrics(modeladmin, request, queryset):
     securities = list(queryset)
@@ -69,8 +78,8 @@ def fmp_refresh_screening_metrics(modeladmin, request, queryset):
         modeladmin.message_user(
             request,
             _(
-                "Quarterly fundamentals (ratios + key-metrics + financial-growth) uses "
-                "%(calls)s FMP API call(s) (up to 3× per security)."
+                "Fundamentals (ratios + key-metrics + financial-growth) uses "
+                "%(calls)s FMP API call(s) (~3× per security with annual-first)."
             )
             % {"calls": n * 3},
             level=messages.INFO,
@@ -104,6 +113,48 @@ def fmp_refresh_screening_metrics(modeladmin, request, queryset):
                 "EOD market close (if already loaded) is kept for sim marks."
             )
             % {"n": updated},
+            level=messages.SUCCESS,
+        )
+
+
+@admin.action(
+    description=_("FMP: refresh operating cash flow (1 API call per security)")
+)
+def fmp_refresh_cash_flow(modeladmin, request, queryset):
+    securities = list(queryset)
+    n = len(securities)
+    if n:
+        modeladmin.message_user(
+            request,
+            _("Cash-flow statement uses %(calls)s FMP API call(s) (1× per security).")
+            % {"calls": n},
+            level=messages.INFO,
+        )
+    session = requests.Session()
+    gap = fmp_action_gap_seconds()
+    updated = 0
+    for i, sec in enumerate(securities):
+        if i > 0:
+            time.sleep(gap)
+        try:
+            merge_cash_flow_from_fmp(sec, session=session)
+            updated += 1
+        except (FmpError, MarketSymbolError) as exc:
+            modeladmin.message_user(
+                request,
+                _("%(sec)s: %(err)s") % {"sec": sec, "err": exc},
+                level=messages.ERROR,
+            )
+        except Exception as exc:  # noqa: BLE001
+            modeladmin.message_user(
+                request,
+                _("%(sec)s: %(err)s") % {"sec": sec, "err": exc},
+                level=messages.ERROR,
+            )
+    if updated:
+        modeladmin.message_user(
+            request,
+            _("Updated operating cash flow for %(n)s security(ies).") % {"n": updated},
             level=messages.SUCCESS,
         )
 
@@ -203,6 +254,21 @@ def fmp_refresh_eod_quotes(modeladmin, request, queryset):
         )
 
 
+@admin.action(
+    description=_("FMP: capability probe (read-only, one ticker, up to 11 API calls)")
+)
+def fmp_capability_probe_action(modeladmin, request, queryset):
+    if queryset.count() != 1:
+        modeladmin.message_user(
+            request,
+            _("Select exactly one security for the FMP capability probe."),
+            level=messages.ERROR,
+        )
+        return
+    security = queryset.first()
+    return redirect("admin:vybcheq_security_fmp_probe", security.pk)
+
+
 @admin.register(Security)
 class SecurityAdmin(admin.ModelAdmin):
     list_display = (
@@ -219,7 +285,13 @@ class SecurityAdmin(admin.ModelAdmin):
     )
     list_filter = ("exchange", "is_active", "sector")
     search_fields = ("symbol", "name", "cik")
-    actions = [fmp_refresh_eod_quotes, fmp_refresh_screening_metrics, fmp_refresh_report_dates]
+    actions = [
+        fmp_refresh_eod_quotes,
+        fmp_refresh_screening_metrics,
+        fmp_refresh_cash_flow,
+        fmp_refresh_report_dates,
+        fmp_capability_probe_action,
+    ]
     readonly_fields = (
         "quote_eod_close",
         "quote_eod_trade_date",
@@ -255,6 +327,46 @@ class SecurityAdmin(admin.ModelAdmin):
             return "—"
         src = obj.quote_mark_source or "?"
         return f"{obj.quote_last_price} ({src})"
+
+    def get_urls(self):
+        info = self.model._meta.app_label, self.model._meta.model_name
+        urls = super().get_urls()
+        custom = [
+            path(
+                "fmp-probe/<int:pk>/",
+                self.admin_site.admin_view(self.fmp_probe_view),
+                name="%s_%s_fmp_probe" % info,
+            ),
+        ]
+        return custom + urls
+
+    def fmp_probe_view(self, request, pk):
+        security = get_object_or_404(Security, pk=pk)
+        if not self.has_view_permission(request, security):
+            raise PermissionDenied
+        try:
+            result = run_fmp_capability_probe(security, session=requests.Session())
+        except (FmpError, MarketSymbolError) as exc:
+            messages.error(request, str(exc))
+            return redirect("admin:vybcheq_security_change", security.pk)
+        except Exception as exc:  # noqa: BLE001
+            messages.error(request, str(exc))
+            return redirect("admin:vybcheq_security_change", security.pk)
+
+        populated = [m for m in result.metrics if m.status == "populated"]
+        partial = [m for m in result.metrics if m.status == "partial"]
+        missing = [m for m in result.metrics if m.status == "missing"]
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "security": security,
+            "result": result,
+            "populated_count": len(populated),
+            "partial_count": len(partial),
+            "missing_count": len(missing),
+            "title": _("FMP capability probe: %(sym)s") % {"sym": security.symbol},
+        }
+        return render(request, "admin/vybcheq/security/fmp_probe_result.html", context)
 
 
 @admin.register(FmpFinancialSymbol)
@@ -372,11 +484,85 @@ class SecurityDailyQuoteAdmin(admin.ModelAdmin):
 
 @admin.register(WatchlistEntry)
 class WatchlistEntryAdmin(admin.ModelAdmin):
+    change_list_template = "admin/vybcheq/watchlistentry/change_list.html"
     list_display = ("security", "priority", "last_reviewed_at", "added_at")
     list_select_related = ("security",)
     list_filter = ("priority",)
     search_fields = ("security__symbol", "security__name", "note")
     autocomplete_fields = ("security",)
+
+    def get_urls(self):
+        info = self.model._meta.app_label, self.model._meta.model_name
+        urls = super().get_urls()
+        custom = [
+            path(
+                "monthly-refresh/",
+                self.admin_site.admin_view(self.monthly_refresh_view),
+                name="%s_%s_monthly_refresh" % info,
+            ),
+        ]
+        return custom + urls
+
+    def monthly_refresh_view(self, request):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+
+        securities = watchlist_securities()
+        n = len(securities)
+        est_fundamentals = estimate_phase_calls(n, PHASE_FUNDAMENTALS)
+        est_eod_cf = estimate_phase_calls(n, PHASE_EOD_CASHFLOW)
+
+        if request.method == "POST":
+            phase = request.POST.get("phase")
+            if phase not in (PHASE_FUNDAMENTALS, PHASE_EOD_CASHFLOW):
+                messages.error(request, _("Choose a valid refresh phase."))
+            elif n == 0:
+                messages.warning(request, _("Watchlist is empty; nothing to refresh."))
+            else:
+                result = run_monthly_refresh_phase(phase, securities, session=requests.Session())
+                if result.securities_ok:
+                    messages.success(
+                        request,
+                        _(
+                            "Phase %(phase)s finished: %(ok)s/%(total)s securities "
+                            "(~%(calls)s API calls)."
+                        )
+                        % {
+                            "phase": phase,
+                            "ok": result.securities_ok,
+                            "total": result.securities_total,
+                            "calls": result.estimated_calls,
+                        },
+                    )
+                if result.errors:
+                    for err in result.errors[:20]:
+                        messages.error(request, err)
+                    if len(result.errors) > 20:
+                        messages.error(
+                            request,
+                            _("…and %(n)s more errors.") % {"n": len(result.errors) - 20},
+                        )
+                if result.securities_ok:
+                    return redirect("admin:vybcheq_watchlistentry_changelist")
+
+        from vybcheq.fiscal_periods import configured_fmp_daily_call_budget
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": _("Monthly watchlist refresh"),
+            "watchlist_count": n,
+            "est_fundamentals": est_fundamentals,
+            "est_eod_cashflow": est_eod_cf,
+            "daily_budget": configured_fmp_daily_call_budget(),
+            "phase_fundamentals": PHASE_FUNDAMENTALS,
+            "phase_eod_cashflow": PHASE_EOD_CASHFLOW,
+        }
+        return render(
+            request,
+            "admin/vybcheq/watchlistentry/monthly_refresh.html",
+            context,
+        )
 
 
 @admin.register(ScreeningRuleSet)

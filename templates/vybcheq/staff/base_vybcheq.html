@@ -223,11 +223,42 @@
             border-color: #ffc107;
             outline: none;
         }
-        .vybcheq-tooltip .tooltip-inner {
-            max-width: 280px;
-            text-align: left;
-            font-size: 0.8rem;
-            line-height: 1.35;
+        .vybcheq-wallet-amount-wrap {
+            width: 100%;
+            overflow: hidden;
+        }
+        .vybcheq-wallet-amount {
+            white-space: nowrap;
+            line-height: 1.15;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .vybcheq-chart-compare-box {
+            max-height: 11rem;
+            overflow-y: auto;
+            border: 1px solid rgba(108, 117, 125, 0.45);
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.65rem;
+            background: rgba(0, 0, 0, 0.15);
+        }
+        .vybcheq-chart-ticker-row {
+            cursor: pointer;
+            border-radius: 0.25rem;
+            padding: 0.15rem 0.25rem;
+            margin-bottom: 0;
+        }
+        .vybcheq-chart-ticker-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .vybcheq-chart-compare-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.5rem;
+            margin-top: 0.35rem;
+        }
+        .vybcheq-chart-legend-wrap {
+            max-height: 4.5rem;
+            overflow-y: auto;
         }
     </style>
 

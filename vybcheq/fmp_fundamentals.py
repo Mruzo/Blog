@@ -16,7 +16,7 @@ from typing import Any
 import requests
 from django.utils import timezone
 
-from vybcheq.fiscal_periods import calendar_quarter_end, configured_quarterly_row_limit
+from vybcheq.fiscal_periods import calendar_quarter_end, configured_quarterly_row_limit, prefer_annual_fundamentals
 from vybcheq.fmp_client import (
     FmpError,
     fmp_action_gap_seconds,
@@ -42,6 +42,8 @@ _KEY_METRICS_MAP: list[tuple[str, tuple[str, ...]]] = [
     ("forward_pe_ratio", ("forwardPEratio", "forwardPeRatio", "forwardPeRatioTTM")),
     ("price_to_book", ("pbRatio", "priceToBookRatio", "priceBookValueRatio", "pbRatioTTM")),
     ("roe", ("returnOnEquity", "returnOnEquityTTM", "roe", "roeTTM")),
+    ("roa", ("returnOnAssets", "returnOnAssetsTTM", "roa", "roaTTM")),
+    ("eps", ("netIncomePerShare", "eps", "netIncomePerShareTTM", "earningsPerShare")),
     ("market_cap", ("marketCap", "marketCapTTM")),
     # Growth usually lives on financial-growth; keep these as soft fallbacks.
     ("revenue_growth_yoy", ("revenueGrowth", "revenueGrowthTTM")),
@@ -54,7 +56,7 @@ _RATIOS_MAP: list[tuple[str, tuple[str, ...]]] = [
     ("gross_margin", ("grossProfitMargin", "grossProfitMarginTTM")),
     ("pretax_margin", ("pretaxProfitMargin", "preTaxProfitMargin", "pretaxProfitMarginTTM")),
     ("net_margin", ("netProfitMargin", "netProfitMarginTTM")),
-    ("debt_to_equity", ("debtEquityRatio", "debtToEquity", "debtToEquityRatioTTM", "debtEquityRatioTTM")),
+    ("debt_to_equity", ("debtToEquityRatio", "debtEquityRatio", "debtToEquity", "debtToEquityRatioTTM", "debtEquityRatioTTM")),
     ("current_ratio", ("currentRatio", "currentRatioTTM")),
     ("quick_ratio", ("quickRatio", "quickRatioTTM")),
     ("pe_ratio", ("priceToEarningsRatio", "priceToEarningsRatioTTM", "peRatio", "peRatioTTM")),
@@ -181,14 +183,19 @@ def _fetch_endpoint_rows_with_fallback(
     """
     Fetch ratios or key-metrics, falling back when FMP blocks query params.
 
-    Order: period=quarter → period=annual → TTM snapshot (free tier friendly).
+    Order: annual → quarter → TTM when ``VYBCHEQ_FMP_PREFER_ANNUAL`` (free tier),
+    else quarter → annual → TTM.
     """
     sym = external_symbol_for_security(security)
+    if prefer_annual_fundamentals():
+        period_trials = ("annual", "quarter")
+    else:
+        period_trials = ("quarter", "annual")
     attempts: list[tuple[str, str, dict[str, Any]]] = [
-        ("quarter", url, {"symbol": sym, "period": "quarter", "limit": limit}),
-        ("annual", url, {"symbol": sym, "period": "annual", "limit": limit}),
-        ("ttm", ttm_url, {"symbol": sym}),
+        (mode, url, {"symbol": sym, "period": mode, "limit": limit})
+        for mode in period_trials
     ]
+    attempts.append(("ttm", ttm_url, {"symbol": sym}))
     errors: list[str] = []
 
     for mode, fetch_url, params in attempts:
@@ -221,13 +228,16 @@ def _fetch_growth_rows_with_fallback(
     session: requests.Session | None,
 ) -> tuple[list[dict[str, Any]], str | None]:
     """
-    Fetch financial-growth rows (quarter → annual). Best-effort: return empty on plan blocks.
+    Fetch financial-growth rows (annual → quarter when prefer_annual). Best-effort on plan blocks.
     Growth lives on this endpoint, not on ratios/key-metrics.
     """
     sym = external_symbol_for_security(security)
+    if prefer_annual_fundamentals():
+        modes = ("annual", "quarter")
+    else:
+        modes = ("quarter", "annual")
     attempts: list[tuple[str, dict[str, Any]]] = [
-        ("quarter", {"symbol": sym, "period": "quarter", "limit": limit}),
-        ("annual", {"symbol": sym, "period": "annual", "limit": limit}),
+        (mode, {"symbol": sym, "period": mode, "limit": limit}) for mode in modes
     ]
     for mode, params in attempts:
         try:

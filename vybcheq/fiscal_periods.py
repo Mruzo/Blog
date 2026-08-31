@@ -36,6 +36,22 @@ def configured_quarterly_row_limit() -> int:
     return min(requested, cap)
 
 
+def prefer_annual_fundamentals() -> bool:
+    """When True, request annual rows first (saves API calls on FMP free tier)."""
+    from django.conf import settings
+
+    raw = getattr(settings, "VYBCHEQ_FMP_PREFER_ANNUAL", True)
+    if isinstance(raw, str):
+        return raw.lower() in ("1", "true", "yes")
+    return bool(raw)
+
+
+def configured_fmp_daily_call_budget() -> int:
+    from django.conf import settings
+
+    return max(int(getattr(settings, "VYBCHEQ_FMP_DAILY_CALL_BUDGET", 250)), 1)
+
+
 def calendar_quarter_end(d: date) -> date:
     """Last calendar day of the quarter containing ``d``."""
     month = ((d.month - 1) // 3 + 1) * 3

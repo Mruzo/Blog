@@ -13,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_GET, require_POST
 
 from .chart_data import (
+    build_fiscal_chart_avg_snapshot,
     build_fiscal_chart_meta,
     build_fiscal_chart_series,
     build_sim_portfolio_chart_data,
@@ -124,7 +125,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     # Match prior Python sort: valid cached quote first (ascending by quote), else entry price.
     portfolio_top5 = aggregate_open_positions(request.user)[:5]
 
-    chart_data = build_fiscal_chart_meta()
+    chart_data = build_fiscal_chart_meta(watchlist_only=True)
 
     return render(
         request,
@@ -154,6 +155,14 @@ def fiscal_chart_series(request: HttpRequest, security_id: int) -> JsonResponse:
     if not Security.objects.filter(pk=security_id, is_active=True).exists():
         raise Http404
     return JsonResponse(build_fiscal_chart_series(security_id))
+
+
+@staff_member_required
+@require_GET
+def fiscal_chart_avg_snapshot(request: HttpRequest, security_id: int) -> JsonResponse:
+    if not Security.objects.filter(pk=security_id, is_active=True).exists():
+        raise Http404
+    return JsonResponse(build_fiscal_chart_avg_snapshot(security_id))
 
 
 @staff_member_required

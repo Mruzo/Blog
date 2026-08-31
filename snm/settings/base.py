@@ -206,6 +206,13 @@ VYBCHEQ_FMP_API_KEY = config.get(
 VYBCHEQ_FMP_EOD_YEARS = int(os.environ.get("VYBCHEQ_FMP_EOD_YEARS", "5"))
 # FMP free tier: quarterly ratios/key-metrics allow limit ≤ 5. Raise on paid plans.
 VYBCHEQ_FMP_QUARTERLY_LIMIT = int(os.environ.get("VYBCHEQ_FMP_QUARTERLY_LIMIT", "5"))
+# Free tier: annual-first avoids wasted 402 quarter attempts (3 vs ~5 calls per security).
+VYBCHEQ_FMP_PREFER_ANNUAL = os.environ.get("VYBCHEQ_FMP_PREFER_ANNUAL", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+VYBCHEQ_FMP_DAILY_CALL_BUDGET = int(os.environ.get("VYBCHEQ_FMP_DAILY_CALL_BUDGET", "250"))
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

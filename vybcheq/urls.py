@@ -14,6 +14,11 @@ urlpatterns = [
         views_staff.fiscal_chart_series,
         name="fiscal_chart_series",
     ),
+    path(
+        "chart/avg-snapshot/<int:security_id>/",
+        views_staff.fiscal_chart_avg_snapshot,
+        name="fiscal_chart_avg_snapshot",
+    ),
     path("watchlist/", views_staff.watchlist, name="watchlist"),
     path("fmp-symbols/", views_staff.fmp_symbol_directory, name="fmp_symbol_directory"),
     path("security/<int:pk>/metrics/", views_staff.security_metrics, name="security_metrics"),

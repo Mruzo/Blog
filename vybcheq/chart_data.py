@@ -9,9 +9,11 @@ from django.utils import timezone
 
 from vybcheq.forms import SCREENING_METRIC_FIELDS
 from vybcheq.models import PositionMark, Security, SecurityFiscalQuarter, SimPosition
+from vybcheq.screening_metrics import FIVE_YEAR_AVG_METRICS, five_year_avg_snapshots
 
 _METRIC_LABELS = dict(SCREENING_METRIC_FIELDS)
 _CHART_METRIC_KEYS = ["eod_close", "implied_close", *[k for k, _ in SCREENING_METRIC_FIELDS]]
+_CHART_5Y_AVG_KEYS = [k for k, _ in FIVE_YEAR_AVG_METRICS]
 
 
 def _num(value: Any) -> float | None:
@@ -45,6 +47,15 @@ def _quarter_point(quarter: SecurityFiscalQuarter) -> dict[str, Any]:
     return point
 
 
+def _avg_metric_catalog(present: set[str]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for mk in _CHART_5Y_AVG_KEYS:
+        if mk not in present:
+            continue
+        out.append({"key": mk, "label": _METRIC_LABELS.get(mk, mk.replace("_", " "))})
+    return out
+
+
 def _metric_catalog(present: set[str]) -> list[dict[str, str]]:
     out: list[dict[str, str]] = []
     for mk in _CHART_METRIC_KEYS:
@@ -58,17 +69,24 @@ def _metric_catalog(present: set[str]) -> list[dict[str, str]]:
     return out
 
 
-def build_fiscal_chart_meta(*, max_securities: int = 300) -> dict[str, Any]:
+def build_fiscal_chart_meta(
+    *,
+    max_securities: int = 300,
+    watchlist_only: bool = False,
+) -> dict[str, Any]:
     """
     Lightweight selector payload for the dashboard chart (no series points).
 
     Series for one security are loaded on demand via ``build_fiscal_chart_series``.
     """
     has_quarter = SecurityFiscalQuarter.objects.filter(security_id=OuterRef("pk"))
+    qs = Security.objects.filter(is_active=True)
+    if watchlist_only:
+        qs = qs.filter(watchlist_entry__isnull=False).distinct()
     securities = list(
-        Security.objects.filter(is_active=True)
-        .annotate(has_data=Exists(has_quarter))
-        .order_by("exchange", "symbol")[:max_securities]
+        qs.annotate(has_data=Exists(has_quarter)).order_by("exchange", "symbol")[
+            :max_securities
+        ]
     )
     sec_meta = [
         {
@@ -81,7 +99,11 @@ def build_fiscal_chart_meta(*, max_securities: int = 300) -> dict[str, Any]:
     sec_meta.sort(key=lambda x: (not x["has_data"], x["label"]))
     # Full metric catalog so the client can label points without a second catalog call.
     metrics_out = _metric_catalog(set(_CHART_METRIC_KEYS))
-    return {"securities": sec_meta, "metrics": metrics_out}
+    avg_metrics_out = [
+        {"key": mk, "label": _METRIC_LABELS.get(mk, mk.replace("_", " "))}
+        for mk in _CHART_5Y_AVG_KEYS
+    ]
+    return {"securities": sec_meta, "metrics": metrics_out, "avg_metrics": avg_metrics_out}
 
 
 def build_fiscal_chart_series(security_id: int) -> dict[str, Any]:
@@ -99,6 +121,17 @@ def build_fiscal_chart_series(security_id: int) -> dict[str, Any]:
         "security_id": security_id,
         "points": points,
         "metrics": _metric_catalog(present),
+    }
+
+
+def build_fiscal_chart_avg_snapshot(security_id: int) -> dict[str, Any]:
+    """Current 5-year averages for one security (matches screening rule inputs)."""
+    security = Security.objects.get(pk=security_id)
+    snapshots = five_year_avg_snapshots(security)
+    return {
+        "security_id": security_id,
+        "snapshots": snapshots,
+        "metrics": _avg_metric_catalog(set(snapshots)),
     }
 
 

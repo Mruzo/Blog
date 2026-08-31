@@ -43,7 +43,9 @@
         <div class="card bg-dark border-warning text-light h-100">
             <div class="card-body py-3">
                 <div class="small text-secondary text-uppercase mb-1" style="font-size: 0.65rem;">Sim wallet</div>
-                <div class="fs-4 fw-semibold text-warning">{{ wallet_balance|format_cheqs }}</div>
+                <div class="vybcheq-wallet-amount-wrap">
+                    <div id="vybcheq-wallet-amount" class="vybcheq-wallet-amount text-warning">{{ wallet_balance|format_cheqs }}</div>
+                </div>
                 <a href="{% url 'vybcheq_staff:sim_portfolio' %}" class="small link-warning">Portfolio →</a>
             </div>
         </div>
@@ -55,30 +57,76 @@
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
             <div>
                 <h2 class="h5 card-title mb-1">Period history</h2>
-                <p class="small text-secondary mb-0">By fiscal period end — EOD quarter-end closes and fundamentals-implied prices. Fundamentals may be quarterly, annual, or TTM depending on your FMP plan.</p>
+                <p class="small text-secondary mb-0">Compare up to 8 watchlist tickers on the same chart. X-axis is fiscal year (from period end) so annual and quarterly rows align.</p>
             </div>
         </div>
         {% if chart_data.securities %}
-        <div class="row g-2 g-md-3 align-items-end mb-3">
-            <div class="col-12 col-md-5">
-                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-security">Security</label>
-                <select id="vybcheq-chart-security" class="form-select form-select-sm bg-dark text-light border-secondary">
+        <div class="row g-2 g-md-3 align-items-start mb-3">
+            <div class="col-12 col-md-7">
+                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-filter">Watchlist tickers</label>
+                <input type="search" id="vybcheq-chart-filter" class="form-control form-control-sm bg-dark text-light border-secondary mb-2" placeholder="Filter by symbol or exchange…" autocomplete="off">
+                <div id="vybcheq-chart-securities" class="vybcheq-chart-compare-box" role="group" aria-describedby="vybcheq-chart-help">
                     {% for s in chart_data.securities %}
-                    <option value="{{ s.id }}"{% if not s.has_data %} disabled{% endif %}>{{ s.label }}{% if not s.has_data %} (no history){% endif %}</option>
+                    <label class="vybcheq-chart-ticker-row d-flex align-items-center gap-2 mb-1{% if not s.has_data %} opacity-50{% endif %}">
+                        <input type="checkbox" class="form-check-input flex-shrink-0 vybcheq-chart-sec-cb" value="{{ s.id }}" data-label="{{ s.label }}"{% if not s.has_data %} disabled{% endif %}>
+                        <span class="small">{{ s.label }}{% if not s.has_data %} · no history{% endif %}</span>
+                    </label>
                     {% endfor %}
-                </select>
+                </div>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-1">
+                    <p id="vybcheq-chart-help" class="small text-secondary mb-0">
+                        <span id="vybcheq-chart-sel-count">0</span> / 8 selected · {{ chart_data.securities|length }} on watchlist · click to toggle
+                    </p>
+                    <div class="vybcheq-chart-compare-actions mb-0">
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-0" id="vybcheq-chart-select-clear">Clear</button>
+                    </div>
+                </div>
             </div>
             <div class="col-12 col-md-5">
                 <label class="form-label small text-secondary mb-1" for="vybcheq-chart-metric">Metric</label>
                 <select id="vybcheq-chart-metric" class="form-select form-select-sm bg-dark text-light border-secondary"></select>
             </div>
         </div>
-        <div class="border border-secondary rounded p-2 p-md-3" style="position: relative; height: 280px;">
+        <div class="border border-secondary rounded p-2 p-md-3" style="position: relative; height: 320px;">
             <canvas id="vybcheq-fiscal-chart" aria-label="Period metric history"></canvas>
         </div>
-        <p id="vybcheq-chart-empty" class="small text-secondary mb-0 mt-2 d-none">No data for this security and metric. Run quarterly fundamentals refresh in admin.</p>
+        <p id="vybcheq-chart-limit-note" class="small text-warning mb-0 mt-2 d-none">Compare at most 8 tickers at once — extra selections were cleared.</p>
+        <p id="vybcheq-chart-empty" class="small text-secondary mb-0 mt-2 d-none">No data for the selected tickers and metric. Run fundamentals refresh in admin.</p>
+
+        <hr class="border-secondary my-4">
+
+        <div class="mb-2">
+            <h3 class="h6 card-title mb-1">Five-year averages</h3>
+            <p class="small text-secondary mb-0">Side-by-side snapshot for selected tickers — the same trailing average screening rules use (not a year-by-year history; use Period history above for trends).</p>
+        </div>
+        <div class="row g-2 g-md-3 align-items-start mb-3">
+            <div class="col-12 col-md-5 ms-md-auto">
+                <label class="form-label small text-secondary mb-1" for="vybcheq-chart-avg-metric">5-year average metric</label>
+                <select id="vybcheq-chart-avg-metric" class="form-select form-select-sm bg-dark text-light border-secondary"></select>
+            </div>
+        </div>
+        <div class="border border-secondary rounded p-2 p-md-3" style="position: relative; height: min(320px, 52px + 36px * var(--vybcheq-avg-rows, 3)); min-height: 160px;">
+            <canvas id="vybcheq-fiscal-avg-chart" aria-label="Five-year average comparison"></canvas>
+        </div>
+        <div class="table-responsive mt-2">
+            <table class="table table-sm table-dark table-borderless align-middle mb-0 small" id="vybcheq-chart-avg-table">
+                <thead>
+                    <tr class="text-secondary">
+                        <th scope="col">Ticker</th>
+                        <th scope="col" class="text-end">5y avg</th>
+                        <th scope="col" class="text-end">Latest period</th>
+                        <th scope="col" class="text-end">Periods in avg</th>
+                        <th scope="col" class="text-end">As of</th>
+                    </tr>
+                </thead>
+                <tbody id="vybcheq-chart-avg-tbody"></tbody>
+            </table>
+        </div>
+        <p id="vybcheq-chart-avg-empty" class="small text-secondary mb-0 mt-2 d-none">No 5-year average data for the selected tickers. Refresh fundamentals — each metric needs at least one period with that field.</p>
+
         {{ chart_data|json_script:"vybcheq-chart-data" }}
         <script type="application/json" id="vybcheq-chart-series-url-tpl">"{% url 'vybcheq_staff:fiscal_chart_series' security_id=0 %}"</script>
+        <script type="application/json" id="vybcheq-chart-avg-snapshot-url-tpl">"{% url 'vybcheq_staff:fiscal_chart_avg_snapshot' security_id=0 %}"</script>
         {% else %}
         <p class="text-secondary small mb-0">No active securities. Add tickers in admin, then refresh quarterly fundamentals.</p>
         {% endif %}
@@ -284,44 +332,89 @@
 (function () {
     var dataEl = document.getElementById("vybcheq-chart-data");
     var urlEl = document.getElementById("vybcheq-chart-series-url-tpl");
-    var secSel = document.getElementById("vybcheq-chart-security");
+    var avgUrlEl = document.getElementById("vybcheq-chart-avg-snapshot-url-tpl");
+    var secBox = document.getElementById("vybcheq-chart-securities");
+    var filterInput = document.getElementById("vybcheq-chart-filter");
+    var selCountEl = document.getElementById("vybcheq-chart-sel-count");
+    var limitNote = document.getElementById("vybcheq-chart-limit-note");
     var metSel = document.getElementById("vybcheq-chart-metric");
+    var avgMetSel = document.getElementById("vybcheq-chart-avg-metric");
     var canvas = document.getElementById("vybcheq-fiscal-chart");
+    var avgCanvas = document.getElementById("vybcheq-fiscal-avg-chart");
     var emptyEl = document.getElementById("vybcheq-chart-empty");
-    if (!dataEl || !secSel || !metSel || !canvas || typeof Chart === "undefined") return;
+    var avgEmptyEl = document.getElementById("vybcheq-chart-avg-empty");
+    var avgTbody = document.getElementById("vybcheq-chart-avg-tbody");
+    var btnClear = document.getElementById("vybcheq-chart-select-clear");
+    if (!dataEl || !secBox || !metSel || !canvas || typeof Chart === "undefined") return;
 
     var payload = JSON.parse(dataEl.textContent);
     var seriesUrlTpl = urlEl ? JSON.parse(urlEl.textContent) : "";
+    var avgSeriesUrlTpl = avgUrlEl ? JSON.parse(avgUrlEl.textContent) : "";
     var seriesCache = {};
+    var avgSnapshotCache = {};
     var chart = null;
+    var avgChart = null;
     var loadToken = 0;
+    var MAX_COMPARE = 8;
+    var LINE_COLORS = ["#ffc107", "#0dcaf0", "#20c997", "#fd7e14", "#e685ff", "#ff6b6b", "#69db7c", "#74c0fc"];
 
     function seriesUrl(secId) {
         return seriesUrlTpl.replace("/0/", "/" + secId + "/");
     }
 
-    function metricsForPoints(points) {
+    function avgSnapshotUrl(secId) {
+        return avgSeriesUrlTpl.replace("/0/", "/" + secId + "/");
+    }
+
+    function selectedSecurities() {
         var out = [];
-        (payload.metrics || []).forEach(function (m) {
-            var has = points.some(function (p) { return p[m.key] != null && !isNaN(p[m.key]); });
-            if (has) out.push(m);
+        secBox.querySelectorAll(".vybcheq-chart-sec-cb:checked").forEach(function (cb) {
+            out.push({ id: cb.value, label: cb.getAttribute("data-label") || cb.value });
         });
         return out;
     }
 
-    function fillMetricSelect(points) {
-        var metrics = metricsForPoints(points);
-        var prev = metSel.value;
-        metSel.innerHTML = "";
-        metrics.forEach(function (m) {
+    function checkedCount() {
+        return secBox.querySelectorAll(".vybcheq-chart-sec-cb:checked").length;
+    }
+
+    function updateSelCount() {
+        if (selCountEl) selCountEl.textContent = String(checkedCount());
+    }
+
+    function onTickerToggle(changedCb) {
+        if (changedCb && changedCb.checked && checkedCount() > MAX_COMPARE) {
+            changedCb.checked = false;
+            if (limitNote) limitNote.classList.remove("d-none");
+            updateSelCount();
+            return;
+        }
+        if (limitNote) limitNote.classList.add("d-none");
+        updateSelCount();
+        refreshCharts();
+    }
+
+    function fillMetricSelect(selectEl, metrics, preferredKey) {
+        if (!selectEl) return;
+        var prev = selectEl.value;
+        selectEl.innerHTML = "";
+        (metrics || []).forEach(function (m) {
             var opt = document.createElement("option");
             opt.value = m.key;
             opt.textContent = m.label;
-            metSel.appendChild(opt);
+            selectEl.appendChild(opt);
         });
-        if (prev && metrics.some(function (m) { return m.key === prev; })) {
-            metSel.value = prev;
+        if (prev && (metrics || []).some(function (m) { return m.key === prev; })) {
+            selectEl.value = prev;
+        } else if (metrics && metrics.length) {
+            var pick = metrics.find(function (m) { return m.key === preferredKey; });
+            selectEl.value = pick ? pick.key : metrics[0].key;
         }
+    }
+
+    function fillMetricSelects() {
+        fillMetricSelect(metSel, payload.metrics || [], "implied_close");
+        fillMetricSelect(avgMetSel, payload.avg_metrics || [], "roe_5y_avg");
     }
 
     function fmtVal(v, key) {
@@ -337,61 +430,101 @@
         return Number(v).toLocaleString("en-US", { maximumFractionDigits: 4 });
     }
 
-    function draw(points) {
-        var metricKey = metSel.value;
-        var labels = [];
-        var values = [];
+    /** Collapse period rows to one value per fiscal year (latest period in that year). */
+    function fiscalYearSeries(points, metricKey) {
+        var byYear = {};
         points.forEach(function (p) {
             var v = p[metricKey];
-            if (v == null || isNaN(v)) return;
-            labels.push(p.period);
-            values.push(Number(v));
+            if (v == null || isNaN(v) || !p.period) return;
+            var year = parseInt(String(p.period).slice(0, 4), 10);
+            if (isNaN(year)) return;
+            if (!byYear[year] || p.period > byYear[year].period) {
+                byYear[year] = { period: p.period, value: Number(v) };
+            }
+        });
+        return byYear;
+    }
+
+    function unionYears(seriesById, secIds, metricKey) {
+        var years = {};
+        secIds.forEach(function (id) {
+            var fy = fiscalYearSeries(seriesById[id] || [], metricKey);
+            Object.keys(fy).forEach(function (y) { years[y] = true; });
+        });
+        return Object.keys(years).map(Number).sort(function (a, b) { return a - b; });
+    }
+
+    function valuesForYears(fyMap, years) {
+        return years.map(function (y) {
+            var slot = fyMap[y];
+            return slot ? slot.value : null;
+        });
+    }
+
+    function drawLineChart(targetCanvas, selected, metricKey, cache, emptyNode) {
+        if (!targetCanvas) return;
+        var secIds = selected.map(function (s) { return s.id; });
+        var years = unionYears(cache, secIds, metricKey);
+        var labels = years.map(function (y) { return "FY " + y; });
+        var datasets = [];
+        var hasAny = false;
+
+        selected.forEach(function (sec, idx) {
+            var fyMap = fiscalYearSeries(cache[sec.id] || [], metricKey);
+            var values = valuesForYears(fyMap, years);
+            if (values.some(function (v) { return v != null; })) hasAny = true;
+            var color = LINE_COLORS[idx % LINE_COLORS.length];
+            datasets.push({
+                label: sec.label,
+                data: values,
+                borderColor: color,
+                backgroundColor: color,
+                pointBackgroundColor: color,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                borderWidth: 2,
+                tension: 0.2,
+                fill: false,
+                spanGaps: false
+            });
         });
 
-        if (emptyEl) {
-            emptyEl.classList.toggle("d-none", values.length > 0);
-        }
-        if (canvas.parentElement) {
-            canvas.parentElement.style.opacity = values.length ? "1" : "0.35";
-        }
+        if (emptyNode) emptyNode.classList.toggle("d-none", hasAny);
+        if (targetCanvas.parentElement) targetCanvas.parentElement.style.opacity = hasAny ? "1" : "0.35";
 
-        var metricLabel = (payload.metrics.find(function (m) { return m.key === metricKey; }) || {}).label || metricKey;
-
-        if (chart) {
-            chart.destroy();
-            chart = null;
+        var chartRef = targetCanvas === canvas ? "main" : "avg";
+        if (chartRef === "main") {
+            if (chart) { chart.destroy(); chart = null; }
+        } else if (avgChart) {
+            avgChart.destroy();
+            avgChart = null;
         }
-        chart = new Chart(canvas, {
+        if (!hasAny) return;
+
+        var instance = new Chart(targetCanvas, {
             type: "line",
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: metricLabel,
-                    data: values,
-                    borderColor: "#ffc107",
-                    backgroundColor: "rgba(255, 193, 7, 0.12)",
-                    pointBackgroundColor: "#ffc107",
-                    pointRadius: 3,
-                    tension: 0.15,
-                    fill: true
-                }]
-            },
+            data: { labels: labels, datasets: datasets },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
                 plugins: {
-                    legend: { labels: { color: "#dee2e6" } },
+                    legend: {
+                        position: "bottom",
+                        labels: { color: "#dee2e6", boxWidth: 10, font: { size: 11 }, padding: 8 }
+                    },
                     tooltip: {
                         callbacks: {
                             label: function (ctx) {
-                                return metricLabel + ": " + fmtVal(ctx.parsed.y, metricKey);
+                                return ctx.dataset.label + ": " + fmtVal(ctx.parsed.y, metricKey);
                             }
                         }
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: "#adb5bd", maxRotation: 45, autoSkip: true, maxTicksLimit: 12 },
+                        title: { display: true, text: "Fiscal year", color: "#adb5bd", font: { size: 11 } },
+                        ticks: { color: "#adb5bd", maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
                         grid: { color: "rgba(108, 117, 125, 0.35)" }
                     },
                     y: {
@@ -404,53 +537,229 @@
                 }
             }
         });
+        if (chartRef === "main") chart = instance;
+        else avgChart = instance;
     }
 
-    function applySeries(secId, points) {
-        fillMetricSelect(points);
-        draw(points);
+    function drawCompare(selected) {
+        drawLineChart(canvas, selected, metSel.value, seriesCache, emptyEl);
     }
 
-    function loadSeries(secId) {
-        if (seriesCache[secId]) {
-            applySeries(secId, seriesCache[secId]);
-            return;
+    function drawCompareAvg(selected) {
+        if (!avgMetSel || !avgCanvas) return;
+        var metricKey = avgMetSel.value;
+        var rows = [];
+        selected.forEach(function (sec, idx) {
+            var snap = (avgSnapshotCache[sec.id] || {})[metricKey];
+            if (snap && snap.value != null && !isNaN(snap.value)) {
+                rows.push({ sec: sec, snap: snap, color: LINE_COLORS[idx % LINE_COLORS.length] });
+            }
+        });
+        var hasAny = rows.length > 0;
+        if (avgEmptyEl) avgEmptyEl.classList.toggle("d-none", hasAny);
+        if (avgCanvas.parentElement) {
+            avgCanvas.parentElement.style.opacity = hasAny ? "1" : "0.35";
+            avgCanvas.parentElement.style.setProperty("--vybcheq-avg-rows", String(Math.max(rows.length, 1)));
         }
-        var token = ++loadToken;
-        fetch(seriesUrl(secId), { credentials: "same-origin", headers: { "Accept": "application/json" } })
+        if (avgChart) { avgChart.destroy(); avgChart = null; }
+        fillAvgTable(selected, metricKey);
+        if (!hasAny) return;
+
+        rows.sort(function (a, b) { return b.snap.value - a.snap.value; });
+        avgChart = new Chart(avgCanvas, {
+            type: "bar",
+            data: {
+                labels: rows.map(function (r) { return r.sec.label; }),
+                datasets: [{
+                    label: avgMetSel.options[avgMetSel.selectedIndex].text,
+                    data: rows.map(function (r) { return r.snap.value; }),
+                    backgroundColor: rows.map(function (r) { return r.color; }),
+                    borderColor: rows.map(function (r) { return r.color; }),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: "y",
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                var row = rows[ctx.dataIndex];
+                                var snap = row.snap;
+                                var lines = [fmtVal(ctx.parsed.x, metricKey)];
+                                if (snap.latest_value != null) {
+                                    lines.push("Latest: " + fmtVal(snap.latest_value, snap.base_key || metricKey));
+                                }
+                                lines.push("Periods: " + snap.periods_used + "/" + snap.periods_max);
+                                return lines;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: "#adb5bd",
+                            callback: function (v) { return fmtVal(v, metricKey); }
+                        },
+                        grid: { color: "rgba(108, 117, 125, 0.35)" }
+                    },
+                    y: {
+                        ticks: { color: "#dee2e6", font: { size: 11 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function fillAvgTable(selected, metricKey) {
+        if (!avgTbody) return;
+        avgTbody.innerHTML = "";
+        selected.forEach(function (sec) {
+            var snap = (avgSnapshotCache[sec.id] || {})[metricKey];
+            var tr = document.createElement("tr");
+            if (!snap || snap.value == null || isNaN(snap.value)) {
+                tr.innerHTML = "<td>" + sec.label + "</td><td colspan=\"4\" class=\"text-secondary\">— no data</td>";
+            } else {
+                tr.innerHTML =
+                    "<td>" + sec.label + "</td>" +
+                    "<td class=\"text-end font-monospace\">" + fmtVal(snap.value, metricKey) + "</td>" +
+                    "<td class=\"text-end font-monospace\">" + fmtVal(snap.latest_value, snap.base_key || metricKey) + "</td>" +
+                    "<td class=\"text-end\">" + snap.periods_used + " / " + snap.periods_max + "</td>" +
+                    "<td class=\"text-end text-secondary\">" + (snap.as_of_period || "—") + "</td>";
+            }
+            avgTbody.appendChild(tr);
+        });
+    }
+
+    function fetchCachedSeries(secId, urlFn, cache) {
+        if (cache[secId]) return Promise.resolve(cache[secId]);
+        return fetch(urlFn(secId), { credentials: "same-origin", headers: { "Accept": "application/json" } })
             .then(function (r) {
                 if (!r.ok) throw new Error("chart series " + r.status);
                 return r.json();
             })
             .then(function (data) {
-                if (token !== loadToken) return;
-                var points = data.points || [];
-                seriesCache[secId] = points;
-                applySeries(secId, points);
+                cache[secId] = data.points || [];
+                return cache[secId];
             })
             .catch(function () {
-                if (token !== loadToken) return;
-                applySeries(secId, []);
+                cache[secId] = [];
+                return [];
             });
     }
 
-    function onSecurityChange() {
-        loadSeries(secSel.value);
+    function fetchSeries(secId) {
+        return fetchCachedSeries(secId, seriesUrl, seriesCache);
     }
 
-    secSel.addEventListener("change", onSecurityChange);
-    metSel.addEventListener("change", function () {
-        var points = seriesCache[secSel.value] || [];
-        draw(points);
-    });
+    function fetchAvgSnapshot(secId) {
+        if (avgSnapshotCache[secId]) return Promise.resolve(avgSnapshotCache[secId]);
+        return fetch(avgSnapshotUrl(secId), { credentials: "same-origin", headers: { "Accept": "application/json" } })
+            .then(function (r) {
+                if (!r.ok) throw new Error("avg snapshot " + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                avgSnapshotCache[secId] = data.snapshots || {};
+                return avgSnapshotCache[secId];
+            })
+            .catch(function () {
+                avgSnapshotCache[secId] = {};
+                return {};
+            });
+    }
 
-    for (var i = 0; i < secSel.options.length; i++) {
-        if (!secSel.options[i].disabled) {
-            secSel.selectedIndex = i;
-            break;
+    function refreshCharts() {
+        updateSelCount();
+        var selected = selectedSecurities();
+        if (!selected.length) {
+            if (chart) { chart.destroy(); chart = null; }
+            if (avgChart) { avgChart.destroy(); avgChart = null; }
+            if (emptyEl) emptyEl.classList.remove("d-none");
+            if (avgEmptyEl) avgEmptyEl.classList.remove("d-none");
+            if (canvas.parentElement) canvas.parentElement.style.opacity = "0.35";
+            if (avgCanvas && avgCanvas.parentElement) avgCanvas.parentElement.style.opacity = "0.35";
+            if (avgTbody) avgTbody.innerHTML = "";
+            return;
+        }
+        var token = ++loadToken;
+        var fetches = selected.map(function (s) { return fetchSeries(s.id); });
+        if (avgCanvas && avgSeriesUrlTpl) {
+            fetches = fetches.concat(selected.map(function (s) { return fetchAvgSnapshot(s.id); }));
+        }
+        Promise.all(fetches)
+            .then(function () {
+                if (token !== loadToken) return;
+                drawCompare(selected);
+                drawCompareAvg(selected);
+            });
+    }
+
+    function defaultSelection() {
+        var picked = 0;
+        secBox.querySelectorAll(".vybcheq-chart-sec-cb:not(:disabled)").forEach(function (cb) {
+            if (picked >= 3) return;
+            cb.checked = true;
+            picked += 1;
+        });
+    }
+
+    if (filterInput) {
+        filterInput.addEventListener("input", function () {
+            var q = filterInput.value.trim().toLowerCase();
+            secBox.querySelectorAll(".vybcheq-chart-ticker-row").forEach(function (row) {
+                var text = (row.textContent || "").toLowerCase();
+                row.style.display = !q || text.indexOf(q) !== -1 ? "" : "none";
+            });
+        });
+    }
+
+    secBox.addEventListener("change", function (e) {
+        if (e.target && e.target.classList.contains("vybcheq-chart-sec-cb")) {
+            onTickerToggle(e.target);
+        }
+    });
+    metSel.addEventListener("change", refreshCharts);
+    if (avgMetSel) avgMetSel.addEventListener("change", refreshCharts);
+    if (btnClear) {
+        btnClear.addEventListener("click", function () {
+            secBox.querySelectorAll(".vybcheq-chart-sec-cb").forEach(function (cb) { cb.checked = false; });
+            if (limitNote) limitNote.classList.add("d-none");
+            refreshCharts();
+        });
+    }
+
+    fillMetricSelects();
+    defaultSelection();
+    refreshCharts();
+})();
+
+(function () {
+    var el = document.getElementById("vybcheq-wallet-amount");
+    if (!el) return;
+    var wrap = el.parentElement;
+    var maxPx = 24;
+    var minPx = 11;
+
+    function fitWallet() {
+        el.style.fontSize = maxPx + "px";
+        var size = maxPx;
+        while (size > minPx && el.scrollWidth > wrap.clientWidth) {
+            size -= 1;
+            el.style.fontSize = size + "px";
         }
     }
-    onSecurityChange();
+
+    if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(fitWallet).observe(wrap);
+    }
+    window.addEventListener("resize", fitWallet);
+    fitWallet();
 })();
 </script>
 {% endif %}

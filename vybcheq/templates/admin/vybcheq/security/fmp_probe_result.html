@@ -1,0 +1,156 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans "Home" %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url 'admin:vybcheq_security_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url 'admin:vybcheq_security_change' security.pk %}">{{ security.symbol }}</a>
+  &rsaquo; {% trans "FMP capability probe" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{% trans "FMP capability probe" %}: {{ security.symbol }}</h1>
+
+<p class="help">
+  {% blocktrans with sym=result.fmp_symbol limit=result.row_limit %}
+  Read-only probe for FMP symbol <strong>{{ sym }}</strong>. Row limit per call: {{ limit }}.
+  No data was written to the database.
+  {% endblocktrans %}
+</p>
+
+<h2>{% trans "Period mode" %}</h2>
+<p>
+  <strong>{% trans "Combined fundamentals mode" %}:</strong>
+  <code>{{ result.combined_period_mode }}</code>
+  · {{ result.period_count }} {% trans "aligned period(s)" %}
+</p>
+{% if result.period_modes_mixed %}
+<p style="padding:0.65em 0.85em;border-left:3px solid #856404;background:#fff3cd;color:#212529;font-size:13px;line-height:1.45;">
+  {{ result.mixed_mode_warning }}
+</p>
+{% endif %}
+
+<h2>{% trans "Endpoints" %}</h2>
+<table style="border-collapse:collapse;width:100%;max-width:960px;">
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Endpoint" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Succeeded" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Mode" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Rows" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Attempts" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ep in result.endpoints %}
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;"><code>{{ ep.name }}</code></td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">
+        {% if ep.succeeded %}<span style="color:#198754;">{% trans "yes" %}</span>{% else %}<span style="color:#dc3545;">{% trans "no" %}</span>{% endif %}
+      </td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{{ ep.mode|default:"—" }}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{{ ep.row_count }}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;">
+        {% for attempt in ep.attempts %}
+          <div>{{ attempt.mode }}: {{ attempt.status }}{% if attempt.detail %} — {{ attempt.detail|truncatechars:80 }}{% endif %}</div>
+        {% empty %}
+          —
+        {% endfor %}
+        {% if ep.error %}<div style="color:#dc3545;">{{ ep.error|truncatechars:120 }}</div>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>{% trans "15 screening metrics" %}</h2>
+<p>
+  {% blocktrans with ok=populated_count partial=partial_count miss=missing_count %}
+  {{ ok }} populated · {{ partial }} partial (5y avg with &lt;5 periods) · {{ miss }} missing
+  {% endblocktrans %}
+</p>
+<p class="help">
+  {% trans "Latest = newest period that contains the metric (matches screening cache behavior). Source shows whether the value came directly from FMP fields or was calculated from statement lines." %}
+</p>
+
+<table style="border-collapse:collapse;width:100%;max-width:1100px;">
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Metric" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Key" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Latest" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Latest period" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Source" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Avg / periods" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Status" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in result.metrics %}
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{{ m.label }}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;"><code>{{ m.key }}</code></td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{% if m.latest is not None %}{{ m.latest }}{% else %}—{% endif %}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{{ m.latest_period|default:"—" }}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;">
+        {% if m.source %}{{ m.source }}{% if m.note %}<br><span style="color:#6c757d;">{{ m.note }}</span>{% endif %}{% else %}—{% endif %}
+      </td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">
+        {% if m.average is not None %}{{ m.average|floatformat:4 }}{% else %}—{% endif %}
+        · {{ m.periods_with_data }}/{{ m.period_rows_available }}
+      </td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">
+        {% if m.status == "populated" %}
+          <span style="color:#198754;">{% trans "populated" %}</span>
+        {% elif m.status == "partial" %}
+          <span style="color:#856404;">{% trans "partial" %}</span>
+        {% else %}
+          <span style="color:#dc3545;">{% trans "missing" %}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>{% trans "Calculable metrics" %}</h2>
+<p class="help">
+  {% trans "Whether each ratio can be supplied by FMP directly or derived from statement lines probed above." %}
+</p>
+<table style="border-collapse:collapse;width:100%;max-width:1100px;">
+  <thead>
+    <tr>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Metric" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Formula" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Needs" %}</th>
+      <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">{% trans "Outcome" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for hint in result.calculable_hints %}
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">{{ hint.label }}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;"><code>{{ hint.formula }}</code></td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;">{{ hint.needs }}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">
+        {% if hint.outcome == "available" %}
+          <span style="color:#198754;">{% trans "available (FMP field)" %}</span>
+        {% elif hint.outcome == "calculated" %}
+          <span style="color:#0d6efd;">{% trans "calculated from statements" %}</span>
+        {% else %}
+          <span style="color:#dc3545;">{% trans "not available on plan" %}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p class="submit-row" style="margin-top:1.5em;">
+  <a href="{% url 'admin:vybcheq_security_change' security.pk %}" class="button">{% trans "Back to security" %}</a>
+  <a href="{% url 'admin:vybcheq_security_fmp_probe' security.pk %}" class="button">{% trans "Re-run probe" %}</a>
+</p>
+{% endblock %}

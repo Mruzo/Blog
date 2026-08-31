@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from vybcheq.chart_data import (
+    build_fiscal_chart_avg_snapshot,
     build_fiscal_chart_data,
     build_fiscal_chart_meta,
     build_fiscal_chart_series,
@@ -63,6 +64,44 @@ class FiscalChartDataTests(TestCase):
         self.assertIn("eod_close", keys)
         self.assertIn("implied_close", keys)
         self.assertIn("pe_ratio", keys)
+
+    def test_watchlist_only_limits_securities(self):
+        from vybcheq.models import WatchlistEntry
+
+        on_wl = Security.objects.create(symbol="AAPL", exchange="NASDAQ", currency="USD", is_active=True)
+        Security.objects.create(symbol="ZZZZ", exchange="NASDAQ", currency="USD", is_active=True)
+        WatchlistEntry.objects.create(security=on_wl)
+        SecurityFiscalQuarter.objects.create(
+            security=on_wl,
+            period_end=date(2024, 3, 31),
+            trade_date=date(2024, 3, 28),
+            close=Decimal("170.00"),
+        )
+        meta = build_fiscal_chart_meta(watchlist_only=True)
+        labels = [s["label"] for s in meta["securities"]]
+        self.assertEqual(labels, ["AAPL · NASDAQ"])
+
+    def test_avg_snapshot_matches_screening(self):
+        sec = Security.objects.create(symbol="MSFT", exchange="NASDAQ", currency="USD", is_active=True)
+        for i, gm in enumerate([0.60, 0.62, 0.64, 0.66, 0.68]):
+            SecurityFiscalQuarter.objects.create(
+                security=sec,
+                period_end=date(2020 + i, 12, 31),
+                trade_date=date(2020 + i, 12, 31),
+                metrics={"gross_margin": gm},
+            )
+        snap = build_fiscal_chart_avg_snapshot(sec.pk)
+        gm = snap["snapshots"]["gross_margin_5y_avg"]
+        self.assertAlmostEqual(gm["value"], sum([0.60, 0.62, 0.64, 0.66, 0.68]) / 5)
+        self.assertEqual(gm["periods_used"], 5)
+        self.assertAlmostEqual(gm["latest_value"], 0.68)
+        self.assertEqual(gm["as_of_period"], "2024-12-31")
+
+    def test_meta_includes_avg_metric_catalog(self):
+        meta = build_fiscal_chart_meta()
+        keys = {m["key"] for m in meta["avg_metrics"]}
+        self.assertIn("roe_5y_avg", keys)
+        self.assertIn("revenue_growth_5y_avg", keys)
 
 
 class SimPortfolioChartDataTests(TestCase):
