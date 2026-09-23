@@ -280,7 +280,7 @@ class StaffVybcheqUITests(TestCase):
         self.assertContains(resp, "Six screening checks")
         self.assertContains(resp, "Criteria")
         self.assertContains(resp, "vybcheq-th-info")
-        self.assertContains(resp, "Revenue left after direct costs")
+        self.assertContains(resp, "Of every dollar of sales")
 
     def test_rule_set_create_prefill_from_brief(self):
         self.client.login(username="staff_ui", password="pw")

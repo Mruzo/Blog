@@ -106,7 +106,7 @@ class FiscalChartDataTests(TestCase):
         self.assertIn("roe_5y_avg", keys)
         self.assertIn("revenue_growth_5y_avg", keys)
         roe = next(m for m in meta["avg_metrics"] if m["key"] == "roe_5y_avg")
-        self.assertIn("five fiscal years", roe["summary"].lower())
+        self.assertIn("last five years", roe["summary"].lower())
 
 
 class SimPortfolioChartDataTests(TestCase):

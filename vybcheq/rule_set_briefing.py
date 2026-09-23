@@ -25,8 +25,8 @@ BRIEFING_CATALOG: tuple[dict[str, Any], ...] = (
         "title": "Gross margin",
         "category": "Profitability",
         "metric_key": "gross_margin",
-        "summary": "Revenue left after direct costs (COGS). Signals pricing power and unit economics.",
-        "interpretation": "Higher gross margin usually means the business can absorb overhead and still profit. Compare within sector.",
+        "summary": "Of every dollar of sales, how much is left after the cost of making or buying the product. 0.40 means 40 cents.",
+        "interpretation": "Higher is better. A grocery store can live on a small number; a software company usually needs a big one. Compare companies in the same line of work.",
         "suggested_rule": {"metric": "gross_margin", "op": ">=", "value": 0.40},
         "sort_order": 10,
     },
@@ -35,8 +35,8 @@ BRIEFING_CATALOG: tuple[dict[str, Any], ...] = (
         "title": "Pre-tax margin",
         "category": "Profitability",
         "metric_key": "pretax_margin",
-        "summary": "Earnings before tax as a fraction of revenue — operating result before tax regime effects.",
-        "interpretation": "Useful when tax rates differ by country or period. Sustained pre-tax margin shows core earning strength.",
+        "summary": "Of every dollar of sales, how much is profit before the tax bill. 0.15 means 15 cents.",
+        "interpretation": "Higher is better. This ignores that some countries tax more than others, so it is fairer than net margin when comparing across countries.",
         "suggested_rule": {"metric": "pretax_margin", "op": ">=", "value": 0.15},
         "sort_order": 20,
     },
@@ -45,8 +45,8 @@ BRIEFING_CATALOG: tuple[dict[str, Any], ...] = (
         "title": "Net margin",
         "category": "Profitability",
         "metric_key": "net_margin",
-        "summary": "Bottom-line profit as a fraction of revenue after all expenses and tax.",
-        "interpretation": "What actually lands for shareholders. Low net margin can still work in high-turnover models — context matters.",
+        "summary": "Of every dollar of sales, how much is leftover profit after every cost, including tax. 0.10 means 10 cents.",
+        "interpretation": "This is the money that actually belongs to owners. A low number is not always bad if the company sells a huge volume.",
         "suggested_rule": {"metric": "net_margin", "op": ">=", "value": 0.10},
         "sort_order": 30,
     },
@@ -55,8 +55,8 @@ BRIEFING_CATALOG: tuple[dict[str, Any], ...] = (
         "title": "Debt / equity",
         "category": "Leverage",
         "metric_key": "debt_to_equity",
-        "summary": "Total debt relative to shareholders’ equity — balance-sheet leverage.",
-        "interpretation": "Lower is generally safer; capital-heavy industries run higher ratios by design.",
+        "summary": "How many dollars the company owes for each dollar the owners have in the business. 1.0 means $1 of debt per $1 of equity.",
+        "interpretation": "Lower usually means less risk. Factories and utilities often carry more debt on purpose. A very high number means a small slump can hurt.",
         "suggested_rule": {"metric": "debt_to_equity", "op": "<=", "value": 1.0},
         "sort_order": 40,
     },
@@ -65,8 +65,8 @@ BRIEFING_CATALOG: tuple[dict[str, Any], ...] = (
         "title": "Current ratio",
         "category": "Liquidity",
         "metric_key": "current_ratio",
-        "summary": "Current assets ÷ current liabilities — short-term bill-paying capacity.",
-        "interpretation": "Below 1.0 can mean liquidity stress; very high may mean idle working capital.",
+        "summary": "Cash and things it can turn into cash soon, compared with bills due soon. 1.5 means $1.50 of near-term assets per $1 of near-term bills.",
+        "interpretation": "Below 1.0 can mean it may struggle to pay bills this year. A very high number can mean cash sitting idle.",
         "suggested_rule": {"metric": "current_ratio", "op": ">=", "value": 1.5},
         "sort_order": 50,
     },
@@ -75,8 +75,8 @@ BRIEFING_CATALOG: tuple[dict[str, Any], ...] = (
         "title": "Quick ratio",
         "category": "Liquidity",
         "metric_key": "quick_ratio",
-        "summary": "Liquid assets (ex-inventory) ÷ current liabilities — stricter liquidity test.",
-        "interpretation": "Inventory is excluded; better read when inventory is slow-moving or marked down.",
+        "summary": "Same idea as current ratio, but it ignores inventory (stock sitting in a warehouse).",
+        "interpretation": "Stricter than current ratio. Use this when the company might not sell its inventory quickly.",
         "suggested_rule": {"metric": "quick_ratio", "op": ">=", "value": 1.0},
         "sort_order": 60,
     },
@@ -89,56 +89,56 @@ BRIEFING_BY_METRIC = {item["metric_key"]: item for item in BRIEFING_CATALOG}
 # Extra chart metrics (not in the six core briefing slots). Same shape as criteria copy.
 _EXTRA_METRIC_COPY: dict[str, dict[str, str]] = {
     "eod_close": {
-        "summary": "Market close on the last trading day at or before quarter-end (FMP EOD history).",
-        "interpretation": "Use this for actual traded price. Gaps mean EOD refresh has not run for that ticker.",
+        "summary": "The last traded share price at the end of that fiscal period.",
+        "interpretation": "This is the real market price. If a line is missing, EOD prices were not loaded for that ticker.",
     },
     "implied_close": {
-        "summary": "Price implied from FMP valuation inputs for the fiscal period (e.g. P/E × EPS).",
-        "interpretation": "Useful when EOD is missing. It is a model price, not a print on the exchange.",
+        "summary": "A guessed share price from the financial statements (for example price-to-earnings × earnings per share).",
+        "interpretation": "Use this when the market close is missing. It is a model, not the price someone paid that day.",
     },
     "pe_ratio": {
-        "summary": "Trailing price-to-earnings — how many dollars of price per dollar of earnings.",
-        "interpretation": "Lower can mean cheaper, or a business the market distrusts. Compare within sector.",
+        "summary": "How many dollars you pay for $1 of last year’s profit. 25 means $25 of price per $1 of earnings.",
+        "interpretation": "Lower can mean cheaper — or that investors do not trust the profit. Compare similar companies, not a grocer to a software firm.",
     },
     "forward_pe_ratio": {
-        "summary": "Price relative to expected next-period earnings rather than reported trailing earnings.",
-        "interpretation": "Sensitive to estimate quality. A low forward P/E can still be expensive if forecasts are too high.",
+        "summary": "Same as P/E, but using next year’s expected profit instead of last year’s.",
+        "interpretation": "Only as good as those forecasts. A “cheap” forward P/E is not cheap if the forecast is too rosy.",
     },
     "price_to_book": {
-        "summary": "Market price relative to book value of equity.",
-        "interpretation": "Asset-heavy industries cluster higher; software names often look expensive on P/B by design.",
+        "summary": "Share price compared with what the books say the company is worth if you sold the assets and paid the debts.",
+        "interpretation": "A factory-heavy business often looks cheaper on this than a software company, which has little “book” value.",
     },
     "roe": {
-        "summary": "Return on equity — net income as a fraction of shareholders’ equity.",
-        "interpretation": "High ROE can be quality or leverage. Pair with debt/equity before treating it as a buy signal.",
+        "summary": "Profit compared with the owners’ book value. 0.25 means 25 cents of profit per $1 of equity. 1.64 means 164%.",
+        "interpretation": "A huge number often means equity was shrunk (buybacks) or there is a lot of debt — not that the business magically earns 164 cents on every real dollar.",
     },
     "roa": {
-        "summary": "Return on assets — net income as a fraction of total assets.",
-        "interpretation": "Less distorted by leverage than ROE. Low ROA is common in banks and heavy industry.",
+        "summary": "Profit compared with everything the company owns (buildings, cash, inventory, etc.). 0.10 means 10 cents per $1 of assets.",
+        "interpretation": "Harder to juice with buybacks than ROE. Banks and factories often look low here; that can be normal.",
     },
     "eps": {
-        "summary": "Earnings per share for the fiscal period.",
-        "interpretation": "Trend matters more than one print. Dilution and one-offs can move EPS without changing the business.",
+        "summary": "Profit divided by the number of shares. One number per share, in dollars.",
+        "interpretation": "Watch the trend, not one year. Extra shares or one-time gains can move this without the business getting better.",
     },
     "revenue_growth_yoy": {
-        "summary": "Year-over-year change in revenue (fraction, e.g. 0.12 = 12%).",
-        "interpretation": "Fast growth is easier from a small base. Compare to earnings growth to see if scale is dropping through.",
+        "summary": "How much sales grew versus the same period a year ago. 0.12 means sales were up 12%.",
+        "interpretation": "Easy to look fast when you start small. Check whether profit grew too, or they only added sales.",
     },
     "earnings_growth_yoy": {
-        "summary": "Year-over-year change in earnings (fraction).",
-        "interpretation": "More volatile than revenue. A one-year spike is not a 5-year story — use the 5y average for that.",
+        "summary": "How much profit grew versus a year ago. 0.08 means profit was up 8%.",
+        "interpretation": "Jumps around more than sales. One hot year is not a five-year story — use the 5-year average for that.",
     },
     "operating_cash_flow": {
-        "summary": "Cash generated by operations in the period (currency units, not a ratio).",
-        "interpretation": "Compare names of similar size, or look at trend. Scale dwarfs smaller issuers on a linear chart.",
+        "summary": "Cash the day-to-day business brought in, in dollars (not a percent).",
+        "interpretation": "Bigger companies show bigger numbers. Compare similar-sized names, or look at whether it is rising.",
     },
     "dividend_yield": {
-        "summary": "Dividend as a fraction of price.",
-        "interpretation": "High yield can be generous cash return or a falling price. Check payout sustainability separately.",
+        "summary": "The dividend compared with the share price. 0.03 means about 3% a year.",
+        "interpretation": "A high number can mean a generous payout — or a falling stock price. It does not tell you if they can keep paying it.",
     },
     "market_cap": {
-        "summary": "Shares outstanding × price — size of the equity.",
-        "interpretation": "Mega-caps will flatten smaller names on one linear axis. Prefer ratios when comparing mixed sizes.",
+        "summary": "What the whole company would cost if you bought every share at the current price.",
+        "interpretation": "Apple and Nvidia will look huge next to everyone else. For a fair overlay, pick a ratio (margin, ROE, P/E) instead.",
     },
 }
 
@@ -155,9 +155,7 @@ def metric_explainer(key: str) -> dict[str, str]:
     if base:
         inner = metric_explainer(base)
         return {
-            "summary": (
-                "Trailing average over up to five fiscal years — the same figure screening rules use."
-            ),
+            "summary": "Average of the last five years of this metric (or fewer if that is all we have).",
             "interpretation": inner["interpretation"] or inner["summary"],
         }
     return {"summary": "", "interpretation": ""}
