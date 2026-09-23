@@ -6,6 +6,7 @@ from vybcheq.rule_set_briefing import (
     briefing_item,
     build_briefing_rows,
     extended_rule_sets,
+    metric_explainer,
     rule_sets_for_brief_slugs,
     save_briefing_check,
 )
@@ -15,6 +16,14 @@ from vybcheq.screening import run_composite_screen_against_watchlist
 class RuleSetBriefingTests(TestCase):
     def test_catalog_has_six_core_items(self):
         self.assertEqual(len(BRIEFING_CATALOG), 6)
+
+    def test_metric_explainer_matches_criteria_copy(self):
+        item = briefing_item("gross_margin")
+        expl = metric_explainer("gross_margin")
+        self.assertEqual(expl["summary"], item["summary"])
+        self.assertEqual(expl["interpretation"], item["interpretation"])
+        self.assertTrue(metric_explainer("implied_close")["summary"])
+        self.assertTrue(metric_explainer("roe_5y_avg")["interpretation"])
 
     def test_matches_rule_set_by_metric(self):
         rs = ScreeningRuleSet.objects.create(

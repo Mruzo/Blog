@@ -85,6 +85,7 @@
             <div class="col-12 col-md-5">
                 <label class="form-label small text-secondary mb-1" for="vybcheq-chart-metric">Metric</label>
                 <select id="vybcheq-chart-metric" class="form-select form-select-sm bg-dark text-light border-secondary"></select>
+                <div id="vybcheq-chart-metric-help" class="small mt-2" hidden></div>
             </div>
         </div>
         <div class="border border-secondary rounded p-2 p-md-3" style="position: relative; height: 320px;">
@@ -103,6 +104,7 @@
             <div class="col-12 col-md-5 ms-md-auto">
                 <label class="form-label small text-secondary mb-1" for="vybcheq-chart-avg-metric">5-year average metric</label>
                 <select id="vybcheq-chart-avg-metric" class="form-select form-select-sm bg-dark text-light border-secondary"></select>
+                <div id="vybcheq-chart-avg-metric-help" class="small mt-2" hidden></div>
             </div>
         </div>
         <div class="border border-secondary rounded p-2 p-md-3" style="position: relative; height: min(320px, 52px + 36px * var(--vybcheq-avg-rows, 3)); min-height: 160px;">
@@ -338,7 +340,9 @@
     var selCountEl = document.getElementById("vybcheq-chart-sel-count");
     var limitNote = document.getElementById("vybcheq-chart-limit-note");
     var metSel = document.getElementById("vybcheq-chart-metric");
+    var metHelp = document.getElementById("vybcheq-chart-metric-help");
     var avgMetSel = document.getElementById("vybcheq-chart-avg-metric");
+    var avgMetHelp = document.getElementById("vybcheq-chart-avg-metric-help");
     var canvas = document.getElementById("vybcheq-fiscal-chart");
     var avgCanvas = document.getElementById("vybcheq-fiscal-avg-chart");
     var emptyEl = document.getElementById("vybcheq-chart-empty");
@@ -415,6 +419,39 @@
     function fillMetricSelects() {
         fillMetricSelect(metSel, payload.metrics || [], "implied_close");
         fillMetricSelect(avgMetSel, payload.avg_metrics || [], "roe_5y_avg");
+        updateMetricHelp(metSel, payload.metrics || [], metHelp);
+        updateMetricHelp(avgMetSel, payload.avg_metrics || [], avgMetHelp);
+    }
+
+    function updateMetricHelp(selectEl, metrics, helpEl) {
+        if (!helpEl) return;
+        if (!selectEl || !selectEl.value) {
+            helpEl.hidden = true;
+            helpEl.innerHTML = "";
+            return;
+        }
+        var m = (metrics || []).find(function (item) { return item.key === selectEl.value; }) || {};
+        var summary = m.summary || "";
+        var interpretation = m.interpretation || "";
+        if (!summary && !interpretation) {
+            helpEl.hidden = true;
+            helpEl.innerHTML = "";
+            return;
+        }
+        helpEl.hidden = false;
+        helpEl.innerHTML = "";
+        if (summary) {
+            var p1 = document.createElement("p");
+            p1.className = "mb-1 text-light";
+            p1.textContent = summary;
+            helpEl.appendChild(p1);
+        }
+        if (interpretation) {
+            var p2 = document.createElement("p");
+            p2.className = "mb-0 text-secondary";
+            p2.textContent = interpretation;
+            helpEl.appendChild(p2);
+        }
     }
 
     function fmtVal(v, key) {
@@ -724,8 +761,14 @@
             onTickerToggle(e.target);
         }
     });
-    metSel.addEventListener("change", refreshCharts);
-    if (avgMetSel) avgMetSel.addEventListener("change", refreshCharts);
+    metSel.addEventListener("change", function () {
+        updateMetricHelp(metSel, payload.metrics || [], metHelp);
+        refreshCharts();
+    });
+    if (avgMetSel) avgMetSel.addEventListener("change", function () {
+        updateMetricHelp(avgMetSel, payload.avg_metrics || [], avgMetHelp);
+        refreshCharts();
+    });
     if (btnClear) {
         btnClear.addEventListener("click", function () {
             secBox.querySelectorAll(".vybcheq-chart-sec-cb").forEach(function (cb) { cb.checked = false; });

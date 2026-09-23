@@ -64,6 +64,9 @@ class FiscalChartDataTests(TestCase):
         self.assertIn("eod_close", keys)
         self.assertIn("implied_close", keys)
         self.assertIn("pe_ratio", keys)
+        implied = next(m for m in data["metrics"] if m["key"] == "implied_close")
+        self.assertTrue(implied["summary"])
+        self.assertTrue(implied["interpretation"])
 
     def test_watchlist_only_limits_securities(self):
         from vybcheq.models import WatchlistEntry
@@ -102,6 +105,8 @@ class FiscalChartDataTests(TestCase):
         keys = {m["key"] for m in meta["avg_metrics"]}
         self.assertIn("roe_5y_avg", keys)
         self.assertIn("revenue_growth_5y_avg", keys)
+        roe = next(m for m in meta["avg_metrics"] if m["key"] == "roe_5y_avg")
+        self.assertIn("five fiscal years", roe["summary"].lower())
 
 
 class SimPortfolioChartDataTests(TestCase):

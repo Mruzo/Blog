@@ -10,6 +10,7 @@ from django.utils import timezone
 from vybcheq.forms import SCREENING_METRIC_FIELDS
 from vybcheq.models import PositionMark, Security, SecurityFiscalQuarter, SimPosition
 from vybcheq.screening_metrics import FIVE_YEAR_AVG_METRICS, five_year_avg_snapshots
+from vybcheq.rule_set_briefing import metric_explainer
 
 _METRIC_LABELS = dict(SCREENING_METRIC_FIELDS)
 _CHART_METRIC_KEYS = ["eod_close", "implied_close", *[k for k, _ in SCREENING_METRIC_FIELDS]]
@@ -47,12 +48,22 @@ def _quarter_point(quarter: SecurityFiscalQuarter) -> dict[str, Any]:
     return point
 
 
+def _catalog_entry(key: str, label: str) -> dict[str, str]:
+    expl = metric_explainer(key)
+    entry = {"key": key, "label": label}
+    if expl["summary"]:
+        entry["summary"] = expl["summary"]
+    if expl["interpretation"]:
+        entry["interpretation"] = expl["interpretation"]
+    return entry
+
+
 def _avg_metric_catalog(present: set[str]) -> list[dict[str, str]]:
     out: list[dict[str, str]] = []
     for mk in _CHART_5Y_AVG_KEYS:
         if mk not in present:
             continue
-        out.append({"key": mk, "label": _METRIC_LABELS.get(mk, mk.replace("_", " "))})
+        out.append(_catalog_entry(mk, _METRIC_LABELS.get(mk, mk.replace("_", " "))))
     return out
 
 
@@ -65,7 +76,7 @@ def _metric_catalog(present: set[str]) -> list[dict[str, str]]:
             "eod_close": "EOD close (quarter-end)",
             "implied_close": "Implied close (fundamentals)",
         }.get(mk, _METRIC_LABELS.get(mk, mk.replace("_", " ")))
-        out.append({"key": mk, "label": label})
+        out.append(_catalog_entry(mk, label))
     return out
 
 
@@ -100,7 +111,7 @@ def build_fiscal_chart_meta(
     # Full metric catalog so the client can label points without a second catalog call.
     metrics_out = _metric_catalog(set(_CHART_METRIC_KEYS))
     avg_metrics_out = [
-        {"key": mk, "label": _METRIC_LABELS.get(mk, mk.replace("_", " "))}
+        _catalog_entry(mk, _METRIC_LABELS.get(mk, mk.replace("_", " ")))
         for mk in _CHART_5Y_AVG_KEYS
     ]
     return {"securities": sec_meta, "metrics": metrics_out, "avg_metrics": avg_metrics_out}
