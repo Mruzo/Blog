@@ -47,11 +47,11 @@ const Home: React.FC = () => {
 
       <header className="home-page__hero">
         <div className="home-page__heroInner">
-          <p className="home-page__eyebrow">Build and Share</p>
+          <p className="home-page__eyebrow">Direct and Share</p>
           <h1 className="home-page__headline landtext mb-3 land-border">
             <span className="d-block">IMMERSIVE</span>
             {/* <span className="home-page__headlineMeet d-block">meets</span> */}
-            <span className="d-block">3D COMICS</span>
+            <span className="d-block">EXPERIENCES</span>
           </h1>
           <p className="home-page__tagline">
             {/* Build and share immersive 3D comics.
@@ -59,22 +59,20 @@ const Home: React.FC = () => {
             <br /> */}
             Create your own 3D story with our innovative tools.
             <br />
-            Easily test your story concept before committing years to a script.
+            Easily test your story concepts.
           </p>
         </div>
       </header>
 
       <section className="home-page__section" aria-labelledby="home-about-heading">
         <h2 id="home-about-heading" className="home-page__sectionTitle test-border">
-          About us
+          About
         </h2>
         <div className="home-page__aboutCard">
           <p>
-            Justvybz is your studio for storytellers who see the world from the edges. We believe
-            the most powerful perspective is the one that stays still while everything else moves.
+            Justvybz is your studio for storytellers. We believe the medium for storytelling must continue to evolve like the stories themselves.
             <br /> <br />
-            Our platform empowers storytellers to create immersive tales from the perspective of
-            road signs, without needing to draw.
+            Our platform empowers storytellers to create immersive tales without needing to draw.
           </p>
         </div>
       </section>

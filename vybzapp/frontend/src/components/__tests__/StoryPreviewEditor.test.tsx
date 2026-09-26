@@ -65,12 +65,26 @@ function enterEditMode() {
   fireEvent.click(screen.getByRole('button', { name: /edit mode/i }));
 }
 
-function dial(id: string) {
-  return document.getElementById(id) as HTMLInputElement;
+function chip(id: string) {
+  return document.getElementById(id) as HTMLElement;
+}
+
+function slider() {
+  return document.getElementById('cameraDial') as HTMLInputElement;
+}
+
+function setDial(id: string, value: string) {
+  fireEvent.click(chip(id));
+  fireEvent.change(slider(), { target: { value } });
+}
+
+function expectDialValue(id: string, value: string) {
+  fireEvent.click(chip(id));
+  expect(slider()).toHaveValue(value);
 }
 
 describe('StoryPreviewEditor camera dials', () => {
-  it('shows the same Material icon set as Comic3DViewer in edit mode', () => {
+  it('shows CameraDials icons in edit mode', () => {
     render(
       <StoryPreviewEditor
         data={buildData()}
@@ -106,12 +120,12 @@ describe('StoryPreviewEditor camera dials', () => {
 
     enterEditMode();
 
-    fireEvent.change(dial('orbitAzimuth'), { target: { value: '45' } });
-    fireEvent.change(dial('orbitPolar'), { target: { value: '60' } });
-    fireEvent.change(dial('orbitRadius'), { target: { value: '3.5' } });
-    fireEvent.change(dial('targetX'), { target: { value: '1.1' } });
-    fireEvent.change(dial('targetY'), { target: { value: '2.0' } });
-    fireEvent.change(dial('targetZ'), { target: { value: '-0.4' } });
+    setDial('orbitAzimuth', '45');
+    setDial('orbitPolar', '60');
+    setDial('orbitRadius', '3.5');
+    setDial('targetX', '1.1');
+    setDial('targetY', '2.0');
+    setDial('targetZ', '-0.4');
 
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
@@ -155,32 +169,32 @@ describe('StoryPreviewEditor camera dials', () => {
 
     enterEditMode();
 
-    expect(dial('orbitAzimuth')).toHaveValue('10');
-    expect(dial('orbitPolar')).toHaveValue('70');
-    expect(dial('orbitRadius')).toHaveValue('2.5');
-    expect(dial('fieldOfView')).toBeNull();
-    expect(dial('zoomSpeed')).toBeNull();
+    expectDialValue('orbitAzimuth', '10');
+    expectDialValue('orbitPolar', '70');
+    expectDialValue('orbitRadius', '2.5');
+    expect(chip('fieldOfView')).toBeNull();
+    expect(chip('zoomSpeed')).toBeNull();
 
     fireEvent.click(screen.getByTitle(/next dialogue/i));
 
     await waitFor(() => {
-      expect(dial('orbitAzimuth')).toHaveValue('-20');
+      expectDialValue('orbitAzimuth', '-20');
     });
-    expect(dial('orbitPolar')).toHaveValue('80');
-    expect(dial('orbitRadius')).toHaveValue('4');
-    expect(dial('targetX')).toHaveValue('-1');
-    expect(dial('targetY')).toHaveValue('1.8');
-    expect(dial('targetZ')).toHaveValue('0.5');
+    expectDialValue('orbitPolar', '80');
+    expectDialValue('orbitRadius', '4');
+    expectDialValue('targetX', '-1');
+    expectDialValue('targetY', '1.8');
+    expectDialValue('targetZ', '0.5');
 
     fireEvent.click(screen.getByTitle(/previous dialogue/i));
 
     await waitFor(() => {
-      expect(dial('orbitAzimuth')).toHaveValue('10');
+      expectDialValue('orbitAzimuth', '10');
     });
-    expect(dial('targetX')).toHaveValue('0.5');
+    expectDialValue('targetX', '0.5');
   });
 
-  it('hides field of view and zoom speed dials like Comic3DViewer', () => {
+  it('hides field of view and zoom speed dials', () => {
     render(
       <StoryPreviewEditor
         data={buildData()}
@@ -192,9 +206,9 @@ describe('StoryPreviewEditor camera dials', () => {
 
     enterEditMode();
 
-    expect(dial('orbitAzimuth')).toBeTruthy();
-    expect(dial('fieldOfView')).toBeNull();
-    expect(dial('zoomSpeed')).toBeNull();
+    expect(chip('orbitAzimuth')).toBeTruthy();
+    expect(chip('fieldOfView')).toBeNull();
+    expect(chip('zoomSpeed')).toBeNull();
     expect(screen.queryByText(/field of view/i)).toBeNull();
     expect(screen.queryByText(/zoom speed/i)).toBeNull();
   });
@@ -210,13 +224,13 @@ describe('StoryPreviewEditor camera dials', () => {
 
     enterEditMode();
 
-    fireEvent.change(dial('orbitAzimuth'), { target: { value: '90' } });
-    expect(dial('orbitAzimuth')).toHaveValue('90');
+    setDial('orbitAzimuth', '90');
+    expectDialValue('orbitAzimuth', '90');
 
     fireEvent.click(screen.getByRole('button', { name: /^reset$/i }));
 
     await waitFor(() => {
-      expect(dial('orbitAzimuth')).toHaveValue('10');
+      expectDialValue('orbitAzimuth', '10');
     });
     expect(screen.getByText(/reset to last saved values/i)).toBeInTheDocument();
   });

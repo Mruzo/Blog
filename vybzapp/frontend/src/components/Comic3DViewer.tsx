@@ -2,7 +2,21 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Episode, Dialogue, Season, AdPlacement } from '../services/api';
 import apiService from '../services/api';
 import AnimationController from './AnimationController';
+import CameraDials, {
+  CameraOrbit,
+  CameraTarget,
+  DEFAULT_CAMERA_ORBIT,
+  DEFAULT_CAMERA_TARGET,
+  formatCameraOrbit,
+  formatCameraTarget,
+  parseCameraOrbit,
+  parseCameraTarget,
+} from './CameraDials';
+import DialoguePlaybackBar, {
+  PLAYBACK_SPEED_1X_MS,
+} from './DialoguePlaybackBar';
 import logger from '../utils/logger';
+import { applyHotspotOcclusion, HotspotOcclusionTarget } from '../utils/hotspotOcclusion';
 import './Comic3DViewer.css';
 
 // Extend JSX.IntrinsicElements for model-viewer
@@ -76,7 +90,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const [isModelReady, setIsModelReady] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [isAnimating] = useState(false);
-  const [playSpeed, setPlaySpeed] = useState(5000);
+  const [playSpeed, setPlaySpeed] = useState(PLAYBACK_SPEED_1X_MS);
   const [playbackPhase, setPlaybackPhase] = useState<EpisodePlaybackPhase>('dialogue');
   const [currentEditingDialogue, setCurrentEditingDialogue] = useState<DialogueData | null>(null);
   const [originalValues, setOriginalValues] = useState<any>(null);
@@ -88,6 +102,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const [adPlacements, setAdPlacements] = useState<AdPlacement[]>([]);
   const [adPlacementsLoading, setAdPlacementsLoading] = useState(false);
   const [currentDialValues, setCurrentDialValues] = useState<any>(null);
+  const [dialOrbit, setDialOrbit] = useState<CameraOrbit>({ ...DEFAULT_CAMERA_ORBIT });
+  const [dialTarget, setDialTarget] = useState<CameraTarget>({ ...DEFAULT_CAMERA_TARGET });
   const [isWaitingForDialogues, setIsWaitingForDialogues] = useState(false);
   const [isImmersiveFullscreen, setIsImmersiveFullscreen] = useState(false);
   const trackedEpisodesRef = useRef<Set<number>>(new Set()); // Track which episodes have had views incremented
@@ -98,6 +114,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const lastAdClickAtRef = useRef<number>(0);
   
   const modelViewerRef = useRef<any>(null);
+  const characterHotspotTargetsRef = useRef<HotspotOcclusionTarget[]>([]);
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const animationsStartedRef = useRef<boolean>(false);
   const adSessionKeyRef = useRef<string>(
@@ -134,6 +151,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
     // Create hotspots for each unique character
     const uniqueCharacters = new Set<string>();
+    const targets: HotspotOcclusionTarget[] = [];
     dialogueData.forEach((dialogue) => {
       // Extract base character name (remove numbers if any)
       const baseCharacterName = dialogue.character.replace(/\s*\d+$/, '');
@@ -146,10 +164,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         hotspot.setAttribute('slot', `hotspot-${baseCharacterName}`);
         hotspot.className = 'hotspot character-hotspot';
         hotspot.setAttribute('data-position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
-        hotspot.setAttribute('data-normal', '0m 1m 0m');
         hotspot.setAttribute('data-character', baseCharacterName);
         hotspot.setAttribute('data-surface', 'false');
-        hotspot.setAttribute('visibility-angle', "0");
 
         
         // Create the dot element inside the hotspot
@@ -160,10 +176,16 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         
         // Add the hotspot to the model-viewer
         modelViewer.appendChild(hotspot);
+        targets.push({
+          slot: `hotspot-${baseCharacterName}`,
+          head: { x: dialogue.head_x, y: dialogue.head_y, z: dialogue.head_z },
+        });
         
         logger.log('Comic3DViewer: Created hotspot for character', baseCharacterName, 'at position', `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`);
       }
     });
+    characterHotspotTargetsRef.current = targets;
+    applyHotspotOcclusion(modelViewer, targets);
   }, [dialogueData]);
 
   const trackAdEvent = useCallback((placement: AdPlacement, eventType: 'impression' | 'click') => {
@@ -650,9 +672,11 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   // Handle camera change event
   const handleCameraChange = useCallback(() => {
+    if (modelViewerRef.current) {
+      applyHotspotOcclusion(modelViewerRef.current, characterHotspotTargetsRef.current);
+    }
     if (!isAnimating) {
       logger.camera('Comic3DViewer: Camera changed');
-      // Update pointer if needed
     }
   }, [isAnimating]);
 
@@ -857,34 +881,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     
     setCurrentEditingDialogue(dialogue);
     
-    // Parse camera orbit
-    const orbitMatch = dialogue.camera_orbit.match(/(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)deg\s+(-?\d+(?:\.\d+)?)m/);
-    if (orbitMatch) {
-      const azimuth = parseFloat(orbitMatch[1]);
-      const polar = parseFloat(orbitMatch[2]);
-      const radius = parseFloat(orbitMatch[3]);
-      
-      // Update sliders (this will be handled by the slider components)
-      setSliderValue('orbitAzimuth', azimuth, -180, 180);
-      setSliderValue('orbitPolar', polar, 0, 180);
-      setSliderValue('orbitRadius', radius, 0.1, 10);
-    }
-    
-    // Parse camera target
-    const targetMatch = dialogue.camera_target.match(/(-?\d+(?:\.\d+)?)m\s+(-?\d+(?:\.\d+)?)m\s+(-?\d+(?:\.\d+)?)m/);
-    if (targetMatch) {
-      const x = parseFloat(targetMatch[1]);
-      const y = parseFloat(targetMatch[2]);
-      const z = parseFloat(targetMatch[3]);
-      
-      setSliderValue('targetX', x, -5, 5);
-      setSliderValue('targetY', y, 0, 3);
-      setSliderValue('targetZ', z, -5, 5);
-    }
-    
-    // Set other values
-    setSliderValue('fieldOfView', dialogue.field_of_view, 10, 90);
-    setSliderValue('zoomSpeed', dialogue.zoom_speed, 0.1, 3);
+    setDialOrbit(parseCameraOrbit(dialogue.camera_orbit));
+    setDialTarget(parseCameraTarget(dialogue.camera_target));
     
     // Store original values for reset
     setOriginalValues({
@@ -894,53 +892,6 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       zoom_speed: dialogue.zoom_speed
     });
   }, [isEditMode, dialogueData, currentDialogueIndex]);
-
-  // Set slider value helper
-  const setSliderValue = (sliderId: string, value: number, min: number, max: number) => {
-    const slider = document.getElementById(sliderId) as HTMLInputElement;
-    const valueDisplay = document.getElementById(sliderId + 'Value');
-    
-    if (slider) {
-      slider.min = min.toString();
-      slider.max = max.toString();
-      slider.value = value.toString();
-    }
-    
-    if (valueDisplay) {
-      if (sliderId.includes('Azimuth') || sliderId.includes('Polar') || sliderId.includes('FOV')) {
-        valueDisplay.textContent = value + '°';
-      } else if (sliderId.includes('Radius') || sliderId.includes('target')) {
-        valueDisplay.textContent = value + 'm';
-      } else if (sliderId.includes('Speed')) {
-        valueDisplay.textContent = value + 'x';
-      }
-    }
-  };
-
-  /** Sliders are uncontrolled — always compose orbit/target from DOM so one dial never clobbers others with stale React state. */
-  const readCameraOrbitFromDom = (): string | null => {
-    const azEl = document.getElementById('orbitAzimuth') as HTMLInputElement | null;
-    const polEl = document.getElementById('orbitPolar') as HTMLInputElement | null;
-    const radEl = document.getElementById('orbitRadius') as HTMLInputElement | null;
-    if (!azEl || !polEl || !radEl) return null;
-    const azimuth = parseFloat(azEl.value);
-    const polar = parseFloat(polEl.value);
-    const radius = parseFloat(radEl.value);
-    if ([azimuth, polar, radius].some((n) => Number.isNaN(n))) return null;
-    return `${azimuth}deg ${polar}deg ${radius}m`;
-  };
-
-  const readCameraTargetFromDom = (): string | null => {
-    const xEl = document.getElementById('targetX') as HTMLInputElement | null;
-    const yEl = document.getElementById('targetY') as HTMLInputElement | null;
-    const zEl = document.getElementById('targetZ') as HTMLInputElement | null;
-    if (!xEl || !yEl || !zEl) return null;
-    const x = parseFloat(xEl.value);
-    const y = parseFloat(yEl.value);
-    const z = parseFloat(zEl.value);
-    if ([x, y, z].some((n) => Number.isNaN(n))) return null;
-    return `${x}m ${y}m ${z}m`;
-  };
 
   /**
    * model-viewer keeps an internal "smooth" camera goal. Setting `cameraTarget` / `cameraOrbit`
@@ -957,19 +908,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   /**
    * When `cameraTarget` changes, model-viewer can momentarily re-resolve the camera goal, which
    * can feel like the zoom (orbit radius) "jumps". We aggressively re-apply the current orbit
-   * radius from the DOM to keep the user's last dialed zoom consistent.
+   * radius to keep the user's last dialed zoom consistent.
    */
-  const getOrbitToKeep = (): string => {
-    const mv = modelViewerRef.current as any;
-    return (
-      readCameraOrbitFromDom() ||
-      (typeof mv?.cameraOrbit === 'string' ? mv.cameraOrbit : null) ||
-      currentEditingDialogue?.camera_orbit ||
-      dialogueData[currentDialogueIndex]?.camera_orbit ||
-      '0deg 75deg 3m'
-    );
-  };
-
   const applyCameraTargetKeepingOrbit = (newTarget: string, orbitToKeep: string): void => {
     const mv = modelViewerRef.current as any;
 
@@ -999,26 +939,17 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   };
 
   // Update dialogue text with current dial values (real-time)
-  const updateDialogueTextWithCurrentValues = () => {
+  const updateDialogueTextWithCurrentValues = (orbit = dialOrbit, target = dialTarget) => {
     if (!isEditMode || !currentEditingDialogue) return;
     
-    // Get current slider values
-    const azimuth = parseFloat((document.getElementById('orbitAzimuth') as HTMLInputElement)?.value || '0');
-    const polar = parseFloat((document.getElementById('orbitPolar') as HTMLInputElement)?.value || '75');
-    const radius = parseFloat((document.getElementById('orbitRadius') as HTMLInputElement)?.value || '3');
-    
-    const targetX = parseFloat((document.getElementById('targetX') as HTMLInputElement)?.value || '0');
-    const targetY = parseFloat((document.getElementById('targetY') as HTMLInputElement)?.value || '1.6');
-    const targetZ = parseFloat((document.getElementById('targetZ') as HTMLInputElement)?.value || '0');
-    
-    const fieldOfView = parseFloat((document.getElementById('fieldOfView') as HTMLInputElement)?.value || '45');
-    const zoomSpeed = parseFloat((document.getElementById('zoomSpeed') as HTMLInputElement)?.value || '1.0');
+    const fieldOfView = currentEditingDialogue.field_of_view || 45;
+    const zoomSpeed = currentEditingDialogue.zoom_speed || 1.0;
     
     // Create updated dialogue with current dial values
     const updatedDialogue = {
       ...currentEditingDialogue,
-      camera_orbit: `${azimuth}deg ${polar}deg ${radius}m`,
-      camera_target: `${targetX}m ${targetY}m ${targetZ}m`,
+      camera_orbit: formatCameraOrbit(orbit),
+      camera_target: formatCameraTarget(target),
       field_of_view: fieldOfView,
       zoom_speed: zoomSpeed
     };
@@ -1041,6 +972,35 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     });
   };
 
+  const handleOrbitDialChange = (orbit: CameraOrbit) => {
+    setDialOrbit(orbit);
+    const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
+    if (!current || !current.dialogue_id || !current.camera_orbit) {
+      logger.error('Comic3DViewer: Invalid dialogue data for orbit update:', current);
+      return;
+    }
+    const newOrbit = formatCameraOrbit(orbit);
+    updateDialogueTextWithCurrentValues(orbit, dialTarget);
+    updateCameraDebounced(current.dialogue_id, { camera_orbit: newOrbit });
+    if (modelViewerRef.current && isModelReady) {
+      modelViewerRef.current.cameraOrbit = newOrbit;
+      jumpModelViewerCameraToGoal();
+      logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
+    }
+  };
+
+  const handleTargetDialChange = (target: CameraTarget) => {
+    setDialTarget(target);
+    const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
+    if (!current) return;
+    const newTarget = formatCameraTarget(target);
+    const orbitToKeep = formatCameraOrbit(dialOrbit);
+    applyCameraTargetKeepingOrbit(newTarget, orbitToKeep);
+    updateDialogueTextWithCurrentValues(dialOrbit, target);
+    updateCameraDebounced(current.dialogue_id, { camera_target: newTarget, camera_orbit: orbitToKeep });
+    logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
+  };
+
   // Save camera changes
   const saveCameraChanges = async () => {
     if (!currentEditingDialogue) return;
@@ -1049,23 +1009,11 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     setSaveMessage(null);
     
     try {
-      // Get current slider values
-      const azimuth = parseFloat((document.getElementById('orbitAzimuth') as HTMLInputElement)?.value || '0');
-      const polar = parseFloat((document.getElementById('orbitPolar') as HTMLInputElement)?.value || '75');
-      const radius = parseFloat((document.getElementById('orbitRadius') as HTMLInputElement)?.value || '3');
-      
-      const targetX = parseFloat((document.getElementById('targetX') as HTMLInputElement)?.value || '0');
-      const targetY = parseFloat((document.getElementById('targetY') as HTMLInputElement)?.value || '1.6');
-      const targetZ = parseFloat((document.getElementById('targetZ') as HTMLInputElement)?.value || '0');
-      
-      const fieldOfView = parseFloat((document.getElementById('fieldOfView') as HTMLInputElement)?.value || '45');
-      const zoomSpeed = parseFloat((document.getElementById('zoomSpeed') as HTMLInputElement)?.value || '1.0');
-      
       const data = {
-        camera_orbit: `${azimuth}deg ${polar}deg ${radius}m`,
-        camera_target: `${targetX}m ${targetY}m ${targetZ}m`,
-        field_of_view: fieldOfView,
-        zoom_speed: zoomSpeed
+        camera_orbit: formatCameraOrbit(dialOrbit),
+        camera_target: formatCameraTarget(dialTarget),
+        field_of_view: currentEditingDialogue.field_of_view || 45,
+        zoom_speed: currentEditingDialogue.zoom_speed || 1.0
       };
       
       // Update the dialogue via the parent component
@@ -1198,27 +1146,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     
     logger.log('Comic3DViewer: Updating dials from dialogue:', dialogue);
     
-    // Parse camera orbit (format: "azimuthdeg polardeg radiusm")
-    const orbitParts = dialogue.camera_orbit.split(' ');
-    const azimuth = parseFloat(orbitParts[0].replace('deg', ''));
-    const polar = parseFloat(orbitParts[1].replace('deg', ''));
-    const radius = parseFloat(orbitParts[2].replace('m', ''));
-    
-    // Parse camera target (format: "xm ym zm")
-    const targetParts = dialogue.camera_target.split(' ');
-    const targetX = parseFloat(targetParts[0].replace('m', ''));
-    const targetY = parseFloat(targetParts[1].replace('m', ''));
-    const targetZ = parseFloat(targetParts[2].replace('m', ''));
-    
-    // Update all sliders
-    setSliderValue('orbitAzimuth', azimuth, -180, 180);
-    setSliderValue('orbitPolar', polar, 0, 180);
-    setSliderValue('orbitRadius', radius, 0.1, 10);
-    setSliderValue('targetX', targetX, -5, 5);
-    setSliderValue('targetY', targetY, 0, 3);
-    setSliderValue('targetZ', targetZ, -5, 5);
-    setSliderValue('fieldOfView', dialogue.field_of_view, 10, 90);
-    setSliderValue('zoomSpeed', dialogue.zoom_speed, 0.1, 3);
+    setDialOrbit(parseCameraOrbit(dialogue.camera_orbit));
+    setDialTarget(parseCameraTarget(dialogue.camera_target));
     
     logger.log('Comic3DViewer: Dials updated to match dialogue values');
   };
@@ -1537,8 +1466,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }
   }, [episodes, selectedEpisode, onEpisodeSelect]);
 
-  // Reset dialogue playback when episode changes; keep the model viewer running
-  // when the GLB is unchanged so ad textures persist across episodes in a season.
+  // Reset playback when the episode changes so the new cover/Start screen
+  // shows instead of the previous episode's last camera pose.
   useEffect(() => {
     if (!selectedEpisode) {
       return;
@@ -1546,6 +1475,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
     setCurrentDialogueIndex(0);
     setIsPlaying(false);
+    setIsStarted(false);
+    setIsModelReady(false);
     setPlaybackPhase('intro');
     setCurrentDialogueText('');
     animationsStartedRef.current = false;
@@ -1695,6 +1626,13 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
           {isImmersiveFullscreen && (
             <div className="comic3d-stage-placeholder" aria-hidden="true" />
           )}
+          {isImmersiveFullscreen && (
+            <div
+              className="comic3d-stage-backdrop"
+              aria-hidden="true"
+              onClick={exitImmersiveFullscreen}
+            />
+          )}
           <div className={`comic3d-stage${isImmersiveFullscreen ? ' comic3d-fullscreen' : ''}`}>
             {isImmersiveFullscreen && (
               <div className="comic3d-stage-episode-bar">
@@ -1707,6 +1645,18 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
               {/* Overlay with Start Button */}
               {!isStarted && (
                 <div className="overlay-container position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 2, background: 'rgba(0,0,0,0.5)' }}>
+                  {isImmersiveFullscreen && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary comic3d-fullscreen-toggle"
+                      style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}
+                      onClick={exitImmersiveFullscreen}
+                      aria-label="Exit fullscreen"
+                      title="Exit fullscreen"
+                    >
+                      <i className="fas fa-compress" aria-hidden="true" />
+                    </button>
+                  )}
                   <button
                     className="btn btn-primary btn-lg"
                     onClick={startEpisode}
@@ -1866,129 +1816,57 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
             </div>
 
             {isStarted && (
-              <div className="comic3d-stage-chrome">
-                <div className="row mt-2 comic3d-stage-progress">
-                  <div className="col-12">
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="progress flex-grow-1" style={{ height: '8px' }}>
-                        <div
-                          className="progress-bar bg-success"
-                          style={{
-                            width: `${
-                              playbackPhase === 'outro'
-                                ? 100
-                                : playbackPhase === 'intro'
-                                  ? 0
-                                  : episodeDialogues.length > 0
-                                    ? ((currentDialogueIndex + 1) / episodeDialogues.length) * 100
-                                    : 0
-                            }%`,
-                            transition: 'width 0.3s ease',
-                          }}
-                        />
-                      </div>
-                      <div className="text-end comic3d-stage-progress-count" style={{ fontSize: '0.8rem', minWidth: '40px' }}>
-                        <span>
-                          {playbackPhase === 'outro'
-                            ? (episodeDialogues.length > 0 ? `${episodeDialogues.length} / ${episodeDialogues.length}` : '0 / 0')
-                            : playbackPhase === 'intro'
-                              ? (episodeDialogues.length > 0 ? `0 / ${episodeDialogues.length}` : '0 / 0')
-                              : (episodeDialogues.length > 0 ? `${currentDialogueIndex + 1} / ${episodeDialogues.length}` : '0 / 0')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="row mt-2 comic3d-stage-nav">
-                  <div className="col-12">
-                    <div className="card bg-transparent border-0">
-                      <div className="card-body p-0">
-                        <div className="row justify-content-between align-items-center">
-                          <div className="col-auto">
-                            <button
-                              type="button"
-                              className="btn btn-primary"
-                              onClick={goToPreviousDialogue}
-                              disabled={
-                                episodeDialogues.length === 0 ||
-                                playbackPhase === 'intro' ||
-                                (playbackPhase === 'dialogue' && currentDialogueIndex === 0)
-                              }
-                              title={episodeDialogues.length > 0 ? `Previous dialogue (${currentDialogueIndex}/${episodeDialogues.length})` : 'Waiting for dialogues...'}
-                              aria-label="Previous dialogue"
-                            >
-                              <i className="fas fa-chevron-left" aria-hidden="true"></i>
-                            </button>
-                          </div>
-
-                          <div className="col-auto d-flex align-items-center gap-2">
-                            <button
-                              type="button"
-                              className="btn btn-success"
-                              onClick={togglePlay}
-                              aria-label={isPlaying ? 'Pause' : 'Play'}
-                            >
-                              <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`} aria-hidden="true"></i>
-                            </button>
-
-                            <div className="btn-group comic3d-play-speed" role="group">
-                              <button
-                                type="button"
-                                className={`btn btn-sm ${playSpeed === 5000 ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                onClick={() => setPlaySpeed(5000)}
-                              >
-                                1x
-                              </button>
-                              <button
-                                type="button"
-                                className={`btn btn-sm ${playSpeed === 3333 ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                onClick={() => setPlaySpeed(3333)}
-                              >
-                                1.5x
-                              </button>
-                            </div>
-
-                            {getModelFromSeason(selectedEpisode) && (
-                              <button
-                                type="button"
-                                className="btn btn-outline-secondary comic3d-fullscreen-toggle"
-                                onClick={toggleImmersiveFullscreen}
-                                aria-label={isImmersiveFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                                title={isImmersiveFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                              >
-                                <i
-                                  className={`fas ${isImmersiveFullscreen ? 'fa-compress' : 'fa-expand'}`}
-                                  aria-hidden="true"
-                                />
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="col-auto">
-                            <button
-                              type="button"
-                              className="btn btn-primary"
-                              onClick={goToNextDialogue}
-                              disabled={episodeDialogues.length === 0}
-                              title={
-                                playbackPhase === 'intro'
-                                  ? (episodeDialogues.length > 0 ? 'Go to first dialogue' : 'Waiting for dialogues...')
-                                  : playbackPhase === 'outro'
-                                    ? (episodeDialogues.length > 0 ? 'Replay from first dialogue' : 'Episode complete')
-                                    : (episodeDialogues.length > 0 ? `Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})` : 'Waiting for dialogues...')
-                              }
-                              aria-label="Next dialogue"
-                            >
-                              <i className="fas fa-chevron-right" aria-hidden="true"></i>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <DialoguePlaybackBar
+                className="comic3d-stage-chrome"
+                current={
+                  playbackPhase === 'outro'
+                    ? episodeDialogues.length
+                    : playbackPhase === 'intro'
+                      ? 0
+                      : episodeDialogues.length > 0
+                        ? currentDialogueIndex + 1
+                        : 0
+                }
+                total={episodeDialogues.length}
+                progressPercent={
+                  playbackPhase === 'outro'
+                    ? 100
+                    : playbackPhase === 'intro'
+                      ? 0
+                      : episodeDialogues.length > 0
+                        ? ((currentDialogueIndex + 1) / episodeDialogues.length) * 100
+                        : 0
+                }
+                isPlaying={isPlaying}
+                playSpeed={playSpeed}
+                onPrevious={goToPreviousDialogue}
+                onNext={goToNextDialogue}
+                onTogglePlay={togglePlay}
+                onSpeedChange={setPlaySpeed}
+                previousDisabled={
+                  episodeDialogues.length === 0 ||
+                  playbackPhase === 'intro' ||
+                  (playbackPhase === 'dialogue' && currentDialogueIndex === 0)
+                }
+                nextDisabled={episodeDialogues.length === 0}
+                previousTitle={
+                  episodeDialogues.length > 0
+                    ? `Previous dialogue (${currentDialogueIndex}/${episodeDialogues.length})`
+                    : 'Waiting for dialogues...'
+                }
+                nextTitle={
+                  playbackPhase === 'intro'
+                    ? (episodeDialogues.length > 0 ? 'Go to first dialogue' : 'Waiting for dialogues...')
+                    : playbackPhase === 'outro'
+                      ? (episodeDialogues.length > 0 ? 'Replay from first dialogue' : 'Episode complete')
+                      : (episodeDialogues.length > 0
+                        ? `Next dialogue (${currentDialogueIndex + 1}/${episodeDialogues.length})`
+                        : 'Waiting for dialogues...')
+                }
+                showFullscreen={Boolean(selectedEpisode && getModelFromSeason(selectedEpisode))}
+                isFullscreen={isImmersiveFullscreen}
+                onToggleFullscreen={toggleImmersiveFullscreen}
+              />
             )}
           </div>
         </div>
@@ -2142,409 +2020,16 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 </div>
               </div>
               
-              <div className="modern-card-body p-0" style={{
-                // padding: '1.5rem 1.5rem 1rem 1.5rem',
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1.2rem 1rem'
-              }}>
-                {/* Camera Orbit (Left Column) */}
-                <div className="col mt-0 p-1 p-md-4">
-                  <div className="section-header">
-                    Camera Orbit
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="orbitAzimuth" className="form-label d-flex align-items-center gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}>360</span>
-                      <span>Azimuth</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="orbitAzimuth"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="-180"
-                        max="180"
-                        step="1"
-                        onChange={(e) => {
-                          const azimuth = e.target.value;
-                          const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
-                          
-                          // Validate current dialogue data
-                          if (!current || !current.dialogue_id || !current.camera_orbit) {
-                            logger.error('Comic3DViewer: Invalid dialogue data for azimuth update:', current);
-                            return;
-                          }
-                          
-                          const newOrbit = readCameraOrbitFromDom();
-                          if (!newOrbit) return;
-                          
-                          // Update dialogue text in real-time
-                          updateDialogueTextWithCurrentValues();
-                          
-                          // Update dialogue data (only send the specific field being updated)
-                          updateCameraDebounced(current.dialogue_id, { camera_orbit: newOrbit });
-                          
-                          // Update 3D model camera in real-time (Django pattern)
-                          if (modelViewerRef.current && isModelReady) {
-                            modelViewerRef.current.cameraOrbit = newOrbit;
-                            jumpModelViewerCameraToGoal();
-                            logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
-                          }
-                          
-                          // Update value badge
-                          const valueBadge = document.getElementById('orbitAzimuthValue');
-                          if (valueBadge) {
-                            valueBadge.textContent = `${azimuth}°`;
-                          }
-                        }}
-                      />
-                      <span className="value-badge" id="orbitAzimuthValue">
-                        0°
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="orbitPolar" className="form-label d-flex align-items-center gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', transform: 'rotate(90deg)', fontVariationSettings: "'FILL' 1" }}>360</span>
-                      <span>Polar</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="orbitPolar"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="0"
-                        max="180"
-                        step="1"
-                        onChange={(e) => {
-                          const polar = e.target.value;
-                          const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
-                          if (!current) return;
-                          const newOrbit = readCameraOrbitFromDom();
-                          if (!newOrbit) return;
-                          
-                          // Update dialogue text in real-time
-                          updateDialogueTextWithCurrentValues();
-                          
-                          // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { camera_orbit: newOrbit });
-                          
-                          // Update 3D model camera in real-time (Django pattern)
-                          if (modelViewerRef.current && isModelReady) {
-                            modelViewerRef.current.cameraOrbit = newOrbit;
-                            jumpModelViewerCameraToGoal();
-                            logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
-                          }
-                          
-                          // Update value badge
-                          const valueBadge = document.getElementById('orbitPolarValue');
-                          if (valueBadge) {
-                            valueBadge.textContent = `${polar}°`;
-                          }
-                        }}
-                      />
-                      <span className="value-badge" id="orbitPolarValue">
-                        75°
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="orbitRadius" className="form-label">
-                      <span className="material-symbols-outlined" style={{ fontSize: '1.5rem', fontVariationSettings: "'FILL' 0, 'GRAD' 0", verticalAlign: 'middle', marginRight: '0.5rem' }}>clock_loader_90</span>
-                      Radius
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="orbitRadius"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="0.1"
-                        max="10"
-                        step="0.1"
-                        onChange={(e) => {
-                          const radius = e.target.value;
-                          const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
-                          if (!current) return;
-                          const newOrbit = readCameraOrbitFromDom();
-                          if (!newOrbit) return;
-                          
-                          // Update dialogue text in real-time
-                          updateDialogueTextWithCurrentValues();
-                          
-                          // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { camera_orbit: newOrbit });
-                          
-                          // Update 3D model camera in real-time (Django pattern)
-                          if (modelViewerRef.current && isModelReady) {
-                            modelViewerRef.current.cameraOrbit = newOrbit;
-                            jumpModelViewerCameraToGoal();
-                            logger.camera('Comic3DViewer: Real-time camera orbit update:', newOrbit);
-                          }
-                          
-                          // Update value badge
-                          const valueBadge = document.getElementById('orbitRadiusValue');
-                          if (valueBadge) {
-                            valueBadge.textContent = `${radius}m`;
-                          }
-                        }}
-                      />
-                      <span className="value-badge" id="orbitRadiusValue">
-                        3m
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Field of View (Left Column) - Hidden for now */}
-                  {/* <div className="form-group mb-3" style={{ display: 'none' }}>
-                    <label htmlFor="fieldOfView" className="form-label">Field of View</label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="fieldOfView"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="10"
-                        max="90"
-                        step="1"
-                        onChange={(e) => {
-                          const fov = parseFloat(e.target.value);
-                          const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
-                          if (!current) return;
-                          
-                          // Update dialogue text in real-time
-                          updateDialogueTextWithCurrentValues();
-                          
-                          // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { field_of_view: fov });
-                          
-                          // Update 3D model camera in real-time (Django pattern)
-                          if (modelViewerRef.current && isModelReady) {
-                            modelViewerRef.current.fieldOfView = `${fov}deg`;
-                            logger.camera('Comic3DViewer: Real-time field of view update:', fov);
-                          }
-                          
-                          // Update value badge
-                          const valueBadge = document.getElementById('fieldOfViewValue');
-                          if (valueBadge) {
-                            valueBadge.textContent = `${fov}°`;
-                          }
-                        }}
-                      />
-                      <span className="value-badge" id="fieldOfViewValue">
-                        45°
-                      </span>
-                    </div>
-                  </div> */}
-                </div>
-                
-                {/* Camera Target (Right Column) */}
-                <div className="col mt-0 p-1 p-md-4">
-                  <div className="section-header">
-                    Camera Target
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="targetX" className="form-label d-flex align-items-center gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }} aria-hidden="true">arrow_range</span>
-                      <span>X</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="targetX"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="-5"
-                        max="5"
-                        step="0.1"
-                        onChange={(e) => {
-                          const x = e.target.value;
-                          const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
-                          if (!current) return;
-                          const newTarget = readCameraTargetFromDom();
-                          if (!newTarget) return;
-                          const orbitToKeep = getOrbitToKeep();
-                          applyCameraTargetKeepingOrbit(newTarget, orbitToKeep);
-                          
-                          // Update dialogue text in real-time
-                          updateDialogueTextWithCurrentValues();
-                          
-                          // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget, camera_orbit: orbitToKeep });
-                          logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
-                          
-                          // Update value badge
-                          const valueBadge = document.getElementById('targetXValue');
-                          if (valueBadge) {
-                            valueBadge.textContent = `${x}m`;
-                          }
-                        }}
-                      />
-                      <span className="value-badge" id="targetXValue">
-                        0m
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="targetY" className="form-label d-flex align-items-center gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', transform: 'rotate(90deg)', fontVariationSettings: "'FILL' 1" }}>arrow_range</span>
-                      <span>Y</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="targetY"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="0"
-                        max="3"
-                        step="0.1"
-                        onChange={(e) => {
-                          const y = e.target.value;
-                          const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
-                          if (!current) return;
-                          const newTarget = readCameraTargetFromDom();
-                          if (!newTarget) return;
-                          const orbitToKeep = getOrbitToKeep();
-                          applyCameraTargetKeepingOrbit(newTarget, orbitToKeep);
-                          
-                          // Update dialogue text in real-time
-                          updateDialogueTextWithCurrentValues();
-                          
-                          // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget, camera_orbit: orbitToKeep });
-                          logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
-                          
-                          // Update value badge
-                          const valueBadge = document.getElementById('targetYValue');
-                          if (valueBadge) {
-                            valueBadge.textContent = `${y}m`;
-                          }
-                        }}
-                      />
-                      <span className="value-badge" id="targetYValue">
-                        1.6m
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="targetZ" className="form-label d-flex align-items-center gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}>arrow_range</span>
-                      <span>Z</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="targetZ"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="-5"
-                        max="5"
-                        step="0.1"
-                        onChange={(e) => {
-                          const z = e.target.value;
-                          const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
-                          if (!current) return;
-                          const newTarget = readCameraTargetFromDom();
-                          if (!newTarget) return;
-                          const orbitToKeep = getOrbitToKeep();
-                          applyCameraTargetKeepingOrbit(newTarget, orbitToKeep);
-                          
-                          // Update dialogue text in real-time
-                          updateDialogueTextWithCurrentValues();
-                          
-                          // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { camera_target: newTarget, camera_orbit: orbitToKeep });
-                          logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
-                          
-                          // Update value badge
-                          const valueBadge = document.getElementById('targetZValue');
-                          if (valueBadge) {
-                            valueBadge.textContent = `${z}m`;
-                          }
-                        }}
-                      />
-                      <span className="value-badge" id="targetZValue">
-                        0m
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Zoom Speed (Right Column) - Hidden for now */}
-                  {/* <div className="form-group mb-3">
-                    <label htmlFor="zoomSpeed" className="form-label">Zoom Speed</label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="zoomSpeed"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="0.1"
-                        max="3"
-                        step="0.1"
-                        onChange={(e) => {
-                          const speed = parseFloat(e.target.value);
-                          const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
-                          if (!current) return;
-                          
-                          // Update dialogue text in real-time
-                          updateDialogueTextWithCurrentValues();
-                          
-                          // Update dialogue data
-                          updateCameraDebounced(current.dialogue_id, { zoom_speed: speed });
-                          
-                          // Note: Zoom speed doesn't directly affect the 3D model camera
-                          // It's used for animation speed, so no real-time update needed
-                          logger.log('Comic3DViewer: Zoom speed updated:', speed);
-                          
-                          // Update value badge
-                          const valueBadge = document.getElementById('zoomSpeedValue');
-                          if (valueBadge) {
-                            valueBadge.textContent = `${speed}x`;
-                          }
-                        }}
-                      />
-                      <span className="value-badge" id="zoomSpeedValue">
-                        1.0x
-                      </span>
-                    </div>
-                  </div> */}
-                </div>
-                
-                {/* Current Values (Full Width) */}
-                <div className="col-md-6 mt-2" style={{ gridColumn: '1 / -1' }}>
-                  <div className="current-values-box">
-                    <h6 className="text-primary mb-2">Values (Last Saved)</h6>
-                    <div><strong>Camera Orbit:</strong> <span id="currentOrbit">{originalValues?.camera_orbit || '0deg 75deg 3m'}</span></div>
-                    <div><strong>Camera Target:</strong> <span id="currentTarget">{originalValues?.camera_target || '0m 1.6m 0m'}</span></div>
-                    {/* Field of View and Zoom Speed hidden for now */}
-                    {/* <div><strong>Field of View:</strong> <span id="currentFOV">{originalValues?.field_of_view || 45}°</span></div>
-                    <div><strong>Zoom Speed:</strong> <span id="currentZoom">{originalValues?.zoom_speed || 1.0}</span></div> */}
-                  </div>
-                </div>
-                
-                {/* Save Message */}
-                {saveMessage && (
-                  <div className="col-12 mt-2">
-                    <div className={`alert alert-${saveMessage.type === 'success' ? 'success' : 'danger'}`} style={{
-                      marginBottom: '0',
-                      padding: '0.5rem 1rem',
-                      fontSize: '0.9em'
-                    }}>
-                      {saveMessage.text}
-                    </div>
-                  </div>
-                )}
-                
+              <CameraDials
+                orbit={dialOrbit}
+                target={dialTarget}
+                onOrbitChange={handleOrbitDialChange}
+                onTargetChange={handleTargetDialChange}
+                savedOrbit={originalValues?.camera_orbit || '0deg 75deg 3m'}
+                savedTarget={originalValues?.camera_target || '0m 1.6m 0m'}
+                savedHeading="Values (Last Saved)"
+                saveMessage={saveMessage}
+              />
                 {/* Animation Controls — hidden for now; model auto-plays GLB clips on load.
                     Revisit later when clips are wired per dialogue/character. */}
                 {false && (
@@ -2570,7 +2055,6 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   />
                 </div>
                 )}
-              </div>
             </div>
           </div>
         </div>

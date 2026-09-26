@@ -144,6 +144,10 @@ body.comic3d-fullscreen-active {
   position: relative;
 }
 
+.comic3d-stage-backdrop {
+  display: none;
+}
+
 .comic3d-stage.comic3d-fullscreen {
   position: fixed;
   inset: 0;
@@ -209,17 +213,10 @@ body.comic3d-fullscreen-active {
   display: none !important;
 }
 
-/* Fullscreen toggle lives in the bottom chrome bar (mobile); hidden on desktop unless active */
 .comic3d-fullscreen-toggle {
-  display: none;
+  display: inline-flex;
   min-width: 2.5rem;
   padding-inline: 0.65rem;
-}
-
-@media (max-width: 768px) {
-  .comic3d-fullscreen-toggle {
-    display: inline-flex;
-  }
 }
 
 .comic3d-fullscreen .comic3d-fullscreen-toggle {
@@ -240,9 +237,32 @@ body.comic3d-fullscreen-active {
 }
 
 @media (min-width: 769px) {
+  .comic3d-stage-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(8, 10, 18, 0.58);
+    cursor: pointer;
+  }
+
   .comic3d-stage.comic3d-fullscreen {
-    /* Desktop can still exit if entered on resize; keep overlay usable */
-    height: 100dvh;
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(500px, calc(100vw - 2.5rem), calc((100dvh - 2.5rem) * 2 / 3));
+    height: auto;
+    max-height: calc(100dvh - 2.5rem);
+    aspect-ratio: 1 / 1.5;
+    padding: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  }
+
+  .comic3d-fullscreen .comic3d-stage-chrome {
+    padding-bottom: 0.5rem;
   }
 }
 
@@ -256,8 +276,8 @@ body.comic3d-fullscreen-active {
   border: none;
   background: transparent;
   pointer-events: none;
-  /* Hide when facing away; occlusion class also forces hide */
-  --min-hotspot-opacity: 0;
+  /* Keep labels visible from every angle; mesh occlusion uses .is-occluded */
+  --min-hotspot-opacity: 1;
 }
 
 .story-preview-editor__characterHotspot .dot,
@@ -284,7 +304,7 @@ body.comic3d-fullscreen-active {
 }
 
 .story-preview-editor__characterHotspot.is-occluded,
-.story-preview-editor__characterHotspot:not([data-visible]) {
+.comic-3d-viewer .character-hotspot.is-occluded {
   opacity: 0 !important;
   visibility: hidden;
 }
@@ -692,6 +712,75 @@ body.comic3d-fullscreen-active {
   }
 }
 
+.camera-dials {
+  padding: 0.75rem 1rem 1rem;
+}
+
+.camera-dials__groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.camera-dials__group {
+  min-width: 0;
+}
+
+.camera-dials__group--wide {
+  flex: 1 1 100%;
+}
+
+.camera-dials .section-header {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.camera-dials__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.camera-dials__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  background: #fff;
+  color: #222;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.camera-dials__chip.is-active {
+  border-color: #111e7f;
+  background: #111e7f;
+  color: #fff;
+}
+
+.camera-dials__chipLabel {
+  white-space: nowrap;
+}
+
+.camera-dials__chipValue {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.camera-dials__sliderLabel {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-weight: 600;
+  color: #111e7f;
+}
+
 /* Modern Slider Styles */
 input[type="range"].modern-slider {
   width: 100%;
@@ -870,6 +959,31 @@ input[type="range"].modern-slider:focus {
 
 /* Responsive Design */
 @media (max-width: 600px) {
+  .camera-dials {
+    padding: 0.5rem 0.65rem 0.75rem;
+  }
+
+  .camera-dials__groups {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .camera-dials__group--wide {
+    grid-column: 1 / -1;
+  }
+
+  .camera-dials__chips {
+    flex-direction: column;
+  }
+
+  .camera-dials__chip {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.28rem 0.4rem;
+    font-size: 0.7rem;
+  }
+
   .modern-card {
     padding: 0.2rem;
   }

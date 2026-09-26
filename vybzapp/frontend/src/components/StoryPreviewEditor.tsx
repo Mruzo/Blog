@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { StoryCreationData } from './StoryCreationWizard';
 import { coordsForSceneSlot } from '../utils/sceneSlots';
+import { applyHotspotOcclusion, Vec3 } from '../utils/hotspotOcclusion';
+import CameraDials from './CameraDials';
+import DialoguePlaybackBar, { PLAYBACK_SPEED_1X_MS } from './DialoguePlaybackBar';
 import './Comic3DViewer.css';
 
 interface StoryPreviewEditorProps {
@@ -82,8 +85,6 @@ const cloneCameraData = (camera: CameraData): CameraData => ({
 
 type StoryCharacter = StoryCreationData['characters'][number];
 
-type Vec3 = { x: number; y: number; z: number };
-
 type CharacterHotspot = {
   key: string | number;
   slot: string;
@@ -117,23 +118,6 @@ const getCharacterHeadPosition = (character: StoryCharacter): Vec3 | null => {
   return null;
 };
 
-/** model-viewer spherical orbit → world-space camera position */
-const cameraWorldFromOrbit = (
-  orbit: { theta: number; phi: number; radius: number },
-  target: Vec3
-): Vec3 => ({
-  x: target.x + orbit.radius * Math.sin(orbit.phi) * Math.sin(orbit.theta),
-  y: target.y + orbit.radius * Math.cos(orbit.phi),
-  z: target.z + orbit.radius * Math.sin(orbit.phi) * Math.cos(orbit.theta),
-});
-
-const distanceSquared = (a: Vec3, b: Vec3) => {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  const dz = a.z - b.z;
-  return dx * dx + dy * dy + dz * dz;
-};
-
 const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   data,
   onDataUpdate,
@@ -143,7 +127,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentDialogueIndex, setCurrentDialogueIndex] = useState(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState(5000); // milliseconds
+  const [playbackSpeed, setPlaybackSpeed] = useState(PLAYBACK_SPEED_1X_MS);
   const [showEditingOverlay, setShowEditingOverlay] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -216,9 +200,6 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
       el.setAttribute('slot', hotspot.slot);
       el.className = 'hotspot character-hotspot story-preview-editor__characterHotspot';
       el.setAttribute('data-position', hotspot.position);
-      // Same default as Comic3DViewer — facing/back-face visibility
-      el.setAttribute('data-normal', '0m 1m 0m');
-      el.setAttribute('data-visibility-attribute', 'visible');
       el.setAttribute('data-character', hotspot.name);
       el.setAttribute('aria-label', hotspot.name);
 
@@ -231,49 +212,10 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   }, [characterHotspots]);
 
   const updateHotspotOcclusion = useCallback(() => {
-    const modelViewer = modelViewerRef.current;
-    if (!modelViewer?.queryHotspot || !modelViewer.positionAndNormalFromPoint) {
+    if (!modelViewerRef.current) {
       return;
     }
-
-    const orbit = modelViewer.getCameraOrbit?.();
-    const target = modelViewer.getCameraTarget?.();
-    if (!orbit || !target) {
-      return;
-    }
-
-    const camera = cameraWorldFromOrbit(orbit, target);
-    // Ignore tiny self-hits on the character mesh near the label
-    const epsilonMeters = 0.35;
-    const epsilonSq = epsilonMeters * epsilonMeters;
-
-    characterHotspots.forEach((hotspot) => {
-      const el = modelViewer.querySelector(
-        `.character-hotspot[slot="${hotspot.slot}"]`
-      ) as HTMLElement | null;
-      if (!el) {
-        return;
-      }
-
-      const hotspotData = modelViewer.queryHotspot(hotspot.slot);
-      if (!hotspotData?.canvasPosition || hotspotData.facingCamera === false) {
-        el.classList.add('is-occluded');
-        return;
-      }
-
-      const { x, y } = hotspotData.canvasPosition;
-      const hit = modelViewer.positionAndNormalFromPoint(x, y);
-      if (!hit?.position) {
-        el.classList.remove('is-occluded');
-        return;
-      }
-
-      const hitPos = hit.position as Vec3;
-      const distHitSq = distanceSquared(camera, hitPos);
-      const distLabelSq = distanceSquared(camera, hotspot.head);
-      const occluded = distHitSq + epsilonSq < distLabelSq;
-      el.classList.toggle('is-occluded', occluded);
-    });
+    applyHotspotOcclusion(modelViewerRef.current, characterHotspots);
   }, [characterHotspots]);
 
   const applyCameraToViewer = useCallback((camera: CameraData) => {
@@ -441,7 +383,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   }, []);
 
   // Create 3D-anchored labels (same model-viewer hotspot path as Comic3DViewer)
-  // and hide them when scene geometry is closer than the label point.
+  // and hide them only when scene geometry is closer than the label point.
   useEffect(() => {
     const modelViewer = modelViewerRef.current;
     if (!modelViewer || !data.model.previewUrl) {
@@ -567,93 +509,22 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
         </div>
       </div>
 
-      {/* Progress Bar */}
       {totalDialogues > 0 && (
-        <div className="row mt-2">
-          <div className="col-12">
-            <div className="d-flex align-items-center gap-3">
-              <div className="progress flex-grow-1" style={{ height: '8px' }}>
-                <div 
-                  className="progress-bar bg-success" 
-                  style={{ 
-                    width: `${progress}%`,
-                    transition: 'width 0.3s ease'
-                  }}
-                />
-              </div>
-              <div className="text-end" style={{ fontSize: '0.8rem', minWidth: '40px' }}>
-                <span>{currentDialogueIndex + 1} / {totalDialogues}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Navigation Controls */}
-      {totalDialogues > 0 && (
-        <div className="row mt-2">
-          <div className="col-12">
-            <div className="card bg-transparent border-0">
-              <div className="card-body p-0">
-                <div className="row justify-content-between align-items-center">
-                  <div className="col-auto">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={prevDialogue}
-                      disabled={currentDialogueIndex === 0}
-                      title={`Previous dialogue (${currentDialogueIndex}/${totalDialogues})`}
-                      aria-label="Previous dialogue"
-                    >
-                      <i className="fas fa-chevron-left" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                  
-                  <div className="col-auto d-flex align-items-center gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-success"
-                      onClick={isPlaying ? pausePlayback : startPlayback}
-                      aria-label={isPlaying ? 'Pause' : 'Play'}
-                    >
-                      <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`} aria-hidden="true"></i>
-                    </button>
-                    
-                    <div className="btn-group" role="group">
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${playbackSpeed === 5000 ? 'btn-primary' : 'btn-outline-secondary'}`}
-                        onClick={() => handleSpeedChange(5000)}
-                      >
-                        1x
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${playbackSpeed === 3333 ? 'btn-primary' : 'btn-outline-secondary'}`}
-                        onClick={() => handleSpeedChange(3333)}
-                      >
-                        1.5x
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="col-auto">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={nextDialogue}
-                      disabled={currentDialogueIndex >= totalDialogues - 1}
-                      title={`Next dialogue (${currentDialogueIndex + 1}/${totalDialogues})`}
-                      aria-label="Next dialogue"
-                    >
-                      <i className="fas fa-chevron-right" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DialoguePlaybackBar
+          current={currentDialogueIndex + 1}
+          total={totalDialogues}
+          progressPercent={progress}
+          isPlaying={isPlaying}
+          playSpeed={playbackSpeed}
+          onPrevious={prevDialogue}
+          onNext={nextDialogue}
+          onTogglePlay={isPlaying ? pausePlayback : startPlayback}
+          onSpeedChange={handleSpeedChange}
+          previousDisabled={currentDialogueIndex === 0}
+          nextDisabled={currentDialogueIndex >= totalDialogues - 1}
+          previousTitle={`Previous dialogue (${currentDialogueIndex}/${totalDialogues})`}
+          nextTitle={`Next dialogue (${currentDialogueIndex + 1}/${totalDialogues})`}
+        />
       )}
 
 
@@ -745,248 +616,16 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                 </div>
               </div>
               
-              <div className="modern-card-body p-0" style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1.2rem 1rem'
-              }}>
-                {/* Camera Orbit (Left Column) */}
-                <div className="col mt-0 p-1 p-md-4">
-                  <div className="section-header">
-                    Camera Orbit
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="orbitAzimuth" className="form-label d-flex align-items-center gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}>360</span>
-                      <span>Azimuth</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="orbitAzimuth"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="-180"
-                        max="180"
-                        step="1"
-                        value={cameraData.orbit.azimuth}
-                        onChange={(e) => {
-                          patchCameraData({ orbit: { azimuth: parseFloat(e.target.value) } });
-                        }}
-                      />
-                      <span className="value-badge">{cameraData.orbit.azimuth.toFixed(1)}°</span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="orbitPolar" className="form-label d-flex align-items-center gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', transform: 'rotate(90deg)', fontVariationSettings: "'FILL' 1" }}>360</span>
-                      <span>Polar</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="orbitPolar"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="0"
-                        max="180"
-                        step="1"
-                        value={cameraData.orbit.polar}
-                        onChange={(e) => {
-                          patchCameraData({ orbit: { polar: parseFloat(e.target.value) } });
-                        }}
-                      />
-                      <span className="value-badge">{cameraData.orbit.polar.toFixed(1)}°</span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="orbitRadius" className="form-label">
-                      <span
-                        className="material-symbols-outlined"
-                        style={{
-                          fontSize: '1.5rem',
-                          fontVariationSettings: "'FILL' 0, 'GRAD' 0",
-                          verticalAlign: 'middle',
-                          marginRight: '0.5rem',
-                        }}
-                      >
-                        clock_loader_90
-                      </span>
-                      Radius
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="orbitRadius"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="0.1"
-                        max="10"
-                        step="0.1"
-                        value={cameraData.orbit.radius}
-                        onChange={(e) => {
-                          patchCameraData({ orbit: { radius: parseFloat(e.target.value) } });
-                        }}
-                      />
-                      <span className="value-badge">{cameraData.orbit.radius.toFixed(1)}m</span>
-                    </div>
-                  </div>
-                  
-                  {/* Field of View - Hidden for now (matches Comic3DViewer) */}
-                  {/* <div className="form-group mb-3">
-                    <label htmlFor="fieldOfView" className="form-label">Field of View</label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="fieldOfView"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="10"
-                        max="90"
-                        step="1"
-                        value={cameraData.fieldOfView}
-                        onChange={(e) => {
-                          patchCameraData({ fieldOfView: parseFloat(e.target.value) });
-                        }}
-                      />
-                      <span className="value-badge">{cameraData.fieldOfView.toFixed(1)}°</span>
-                    </div>
-                  </div> */}
-                </div>
-                
-                {/* Camera Target (Right Column) */}
-                <div className="col mt-0 p-1 p-md-4">
-                  <div className="section-header">
-                    Camera Target
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="targetX" className="form-label d-flex align-items-center gap-2">
-                      <span
-                        className="material-symbols-outlined"
-                        style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}
-                      >
-                        arrow_range
-                      </span>
-                      <span>X</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="targetX"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="-5"
-                        max="5"
-                        step="0.1"
-                        value={cameraData.target.x}
-                        onChange={(e) => {
-                          patchCameraData({ target: { x: parseFloat(e.target.value) } });
-                        }}
-                      />
-                      <span className="value-badge">{cameraData.target.x.toFixed(1)}m</span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="targetY" className="form-label d-flex align-items-center gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '2rem', transform: 'rotate(90deg)', fontVariationSettings: "'FILL' 1" }}>arrow_range</span>
-                      <span>Y</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="targetY"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="0"
-                        max="3"
-                        step="0.1"
-                        value={cameraData.target.y}
-                        onChange={(e) => {
-                          patchCameraData({ target: { y: parseFloat(e.target.value) } });
-                        }}
-                      />
-                      <span className="value-badge">{cameraData.target.y.toFixed(1)}m</span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group mb-3">
-                    <label htmlFor="targetZ" className="form-label d-flex align-items-center gap-2">
-                      <span
-                        className="material-symbols-outlined"
-                        style={{ fontSize: '2rem', fontVariationSettings: "'FILL' 1" }}
-                      >
-                        arrow_range
-                      </span>
-                      <span>Z</span>
-                    </label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="targetZ"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="-5"
-                        max="5"
-                        step="0.1"
-                        value={cameraData.target.z}
-                        onChange={(e) => {
-                          patchCameraData({ target: { z: parseFloat(e.target.value) } });
-                        }}
-                      />
-                      <span className="value-badge">{cameraData.target.z.toFixed(1)}m</span>
-                    </div>
-                  </div>
-                  
-                  {/* Zoom Speed - Hidden for now (matches Comic3DViewer) */}
-                  {/* <div className="form-group mb-3">
-                    <label htmlFor="zoomSpeed" className="form-label">Zoom Speed</label>
-                    <div className="slider-row">
-                      <input
-                        type="range"
-                        id="zoomSpeed"
-                        className="form-range modern-slider"
-                        style={{ flex: 1 }}
-                        min="0.1"
-                        max="3"
-                        step="0.1"
-                        value={cameraData.zoomSpeed}
-                        onChange={(e) => {
-                          patchCameraData({ zoomSpeed: parseFloat(e.target.value) });
-                        }}
-                      />
-                      <span className="value-badge">{cameraData.zoomSpeed.toFixed(1)}x</span>
-                    </div>
-                  </div> */}
-                </div>
-                
-                {/* Current Values (Full Width) */}
-                <div className="col-12 mt-2" style={{ gridColumn: '1 / -1', padding: '0 1rem' }}>
-                  <div className="current-values-box">
-                    <h6 className="text-primary mb-2">
-                      Last saved for dialogue {currentDialogueIndex + 1}
-                      {totalDialogues > 0 ? ` / ${totalDialogues}` : ''}
-                    </h6>
-                    <div><strong>Camera Orbit:</strong> <span>{currentValues.orbit.azimuth.toFixed(1)}deg {currentValues.orbit.polar.toFixed(1)}deg {currentValues.orbit.radius.toFixed(1)}m</span></div>
-                    <div><strong>Camera Target:</strong> <span>{currentValues.target.x.toFixed(1)}m {currentValues.target.y.toFixed(1)}m {currentValues.target.z.toFixed(1)}m</span></div>
-                    {/* Field of View and Zoom Speed hidden for now */}
-                    {/* <div><strong>Field of View:</strong> <span>{currentValues.fieldOfView.toFixed(1)}°</span></div>
-                    <div><strong>Zoom Speed:</strong> <span>{currentValues.zoomSpeed.toFixed(1)}</span></div> */}
-                    {saveMessage && (
-                      <div
-                        className={`mt-2 small ${saveMessage.type === 'success' ? 'text-success' : 'text-danger'}`}
-                        role="status"
-                      >
-                        {saveMessage.text}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <CameraDials
+                orbit={cameraData.orbit}
+                target={cameraData.target}
+                onOrbitChange={(orbit) => patchCameraData({ orbit })}
+                onTargetChange={(target) => patchCameraData({ target })}
+                savedOrbit={`${currentValues.orbit.azimuth.toFixed(1)}deg ${currentValues.orbit.polar.toFixed(1)}deg ${currentValues.orbit.radius.toFixed(1)}m`}
+                savedTarget={`${currentValues.target.x.toFixed(1)}m ${currentValues.target.y.toFixed(1)}m ${currentValues.target.z.toFixed(1)}m`}
+                savedHeading={`Last saved for dialogue ${currentDialogueIndex + 1}${totalDialogues > 0 ? ` / ${totalDialogues}` : ''}`}
+                saveMessage={saveMessage}
+              />
             </div>
           </div>
         </div>

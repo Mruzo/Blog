@@ -39,19 +39,19 @@ except ImportError:
 
 
 def _find_brand_header_svg():
-    """Resolve path to jv_header 1.2.svg (static) or INVOICE_HEADER_SVG override."""
+    """Resolve path to jv_header.svg (static) or INVOICE_HEADER_SVG override."""
     override = getattr(settings, 'INVOICE_HEADER_SVG', None)
     if override and os.path.isfile(override):
         return override
     try:
         from django.contrib.staticfiles import finders
-        path = finders.find('snmov/img/jv_header 1.2.svg')
+        path = finders.find('snmov/img/jv_header.svg')
         if path and os.path.isfile(path):
             return path
     except Exception as e:
         logger.debug("staticfiles find for header svg: %s", e)
     fallback = os.path.join(
-        settings.BASE_DIR, 'static', 'snmov', 'img', 'jv_header 1.2.svg'
+        settings.BASE_DIR, 'static', 'snmov', 'img', 'jv_header.svg'
     )
     if os.path.isfile(fallback):
         return fallback

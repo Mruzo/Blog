@@ -103,7 +103,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
             <img
               src={headerLogoUrl}
               alt="VYBZ Logo - Updated"
-              height="40"
+              height="55"
             />
           </Link>
 

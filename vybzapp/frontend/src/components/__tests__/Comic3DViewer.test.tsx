@@ -157,6 +157,40 @@ describe('Comic3DViewer immersive fullscreen', () => {
     expect(document.querySelector('.comic3d-fullscreen')).not.toBeInTheDocument();
   });
 
+  it('keeps a phone-shaped stage on desktop and exits from the backdrop', () => {
+    renderViewer();
+    startPlayback();
+    enterFullscreen();
+
+    expect(document.querySelector('.comic3d-stage-backdrop')).toBeInTheDocument();
+    fireEvent.click(document.querySelector('.comic3d-stage-backdrop') as HTMLElement);
+    expect(document.querySelector('.comic3d-fullscreen')).not.toBeInTheDocument();
+  });
+
+  it('shows the next episode cover instead of the previous 3D scene', () => {
+    renderViewer({
+      episodes: [
+        buildEpisode({ cover_image: 'https://example.com/e1.jpg' }),
+        buildEpisode({
+          id: 2,
+          title: 'The Next Beat',
+          episode_number: 2,
+          cover_image: 'https://example.com/e2.jpg',
+        }),
+      ],
+    });
+
+    expect(screen.getByAltText(/Pilot cover/i)).toHaveAttribute('src', 'https://example.com/e1.jpg');
+    startPlayback();
+    expect(document.querySelector('model-viewer')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^E2$/i }));
+
+    expect(document.querySelector('model-viewer')).not.toBeInTheDocument();
+    expect(screen.getByAltText(/The Next Beat cover/i)).toHaveAttribute('src', 'https://example.com/e2.jpg');
+    expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument();
+  });
+
   it('keeps immersive fullscreen when switching episodes that share the same model', () => {
     renderViewer();
     startPlayback();

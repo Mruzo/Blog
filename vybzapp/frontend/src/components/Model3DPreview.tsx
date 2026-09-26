@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import AnimationController from './AnimationController';
 import SmallButton from './SmallButton';
+import CameraDials, { formatCameraOrbit, formatCameraTarget } from './CameraDials';
 import './Comic3DViewer.css';
 
 interface Model3DPreviewProps {
@@ -109,55 +110,19 @@ const Model3DPreview: React.FC<Model3DPreviewProps> = ({
     setIsModelLoaded(true);
   };
 
-  const handleSliderChange = (property: string, value: number) => {
-    const newCameraData = { ...cameraData };
-    
-    if (property.startsWith('orbit.')) {
-      const field = property.split('.')[1] as keyof CameraData['orbit'];
-      newCameraData.orbit[field] = value;
-    } else if (property.startsWith('target.')) {
-      const field = property.split('.')[1] as keyof CameraData['target'];
-      newCameraData.target[field] = value;
-    } else if (property === 'fieldOfView') {
-      newCameraData.fieldOfView = value;
-    } else if (property === 'zoomSpeed') {
-      newCameraData.zoomSpeed = value;
-    }
-    
+  const applyCamera = (newCameraData: CameraData) => {
     setCameraData(newCameraData);
-    
-    // Update model viewer
+    if (onCameraChange) {
+      onCameraChange(newCameraData);
+    }
     if (modelViewerRef.current) {
       const modelViewer = modelViewerRef.current;
-      const orbitString = `${newCameraData.orbit.azimuth}deg ${newCameraData.orbit.polar}deg ${newCameraData.orbit.radius}m`;
-      const targetString = `${newCameraData.target.x}m ${newCameraData.target.y}m ${newCameraData.target.z}m`;
-      
-      modelViewer.cameraOrbit = orbitString;
-      modelViewer.cameraTarget = targetString;
+      modelViewer.cameraOrbit = formatCameraOrbit(newCameraData.orbit);
+      modelViewer.cameraTarget = formatCameraTarget(newCameraData.target);
       modelViewer.fieldOfView = `${newCameraData.fieldOfView}deg`;
     }
   };
 
-  const handleSave = () => {
-    setCurrentValues(cameraData);
-    if (onSave) {
-      onSave(cameraData);
-    }
-  };
-
-  const handleReset = () => {
-    setCameraData(currentValues);
-    if (onReset) {
-      onReset();
-    }
-  };
-
-  const formatValue = (value: number, type: string) => {
-    if (type === 'angle') return `${value.toFixed(1)}°`;
-    if (type === 'distance') return `${value.toFixed(1)}m`;
-    if (type === 'speed') return `${value.toFixed(1)}x`;
-    return value.toString();
-  };
 
   return (
     <div className={`comic-3d-viewer model-3d-preview ${className}`}>
@@ -250,162 +215,15 @@ const Model3DPreview: React.FC<Model3DPreviewProps> = ({
             <div className="modern-card-header">
               <span className="modern-card-title">Camera Editing Controls</span>
             </div>
-            <div className="modern-card-body row g-3">
-              {/* Camera Orbit (Left Column) */}
-              <div className="col-md-6 mt-0">
-                <div className="section-header">Camera Orbit</div>
-                <div className="form-group mb-3">
-                  <label htmlFor="orbitAzimuth" className="form-label">Azimuth</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="orbitAzimuth" 
-                      className="form-range modern-slider" 
-                      min="-180" 
-                      max="180" 
-                      step="1"
-                      value={cameraData.orbit.azimuth}
-                      onChange={(e) => handleSliderChange('orbit.azimuth', parseFloat(e.target.value))}
-                    />
-                    <span className="value-badge">{formatValue(cameraData.orbit.azimuth, 'angle')}</span>
-                  </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label htmlFor="orbitPolar" className="form-label">Polar</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="orbitPolar" 
-                      className="form-range modern-slider" 
-                      min="0" 
-                      max="180" 
-                      step="1"
-                      value={cameraData.orbit.polar}
-                      onChange={(e) => handleSliderChange('orbit.polar', parseFloat(e.target.value))}
-                    />
-                    <span className="value-badge">{formatValue(cameraData.orbit.polar, 'angle')}</span>
-                  </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label htmlFor="orbitRadius" className="form-label">Radius</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="orbitRadius" 
-                      className="form-range modern-slider" 
-                      min="0.1" 
-                      max="10" 
-                      step="0.1"
-                      value={cameraData.orbit.radius}
-                      onChange={(e) => handleSliderChange('orbit.radius', parseFloat(e.target.value))}
-                    />
-                    <span className="value-badge">{formatValue(cameraData.orbit.radius, 'distance')}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Camera Target (Right Column) */}
-              <div className="col-md-6 mt-0">
-                <div className="section-header">Camera Target</div>
-                <div className="form-group mb-3">
-                  <label htmlFor="targetX" className="form-label">X</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="targetX" 
-                      className="form-range modern-slider" 
-                      min="-5" 
-                      max="5" 
-                      step="0.1"
-                      value={cameraData.target.x}
-                      onChange={(e) => handleSliderChange('target.x', parseFloat(e.target.value))}
-                    />
-                    <span className="value-badge">{formatValue(cameraData.target.x, 'distance')}</span>
-                  </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label htmlFor="targetY" className="form-label">Y</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="targetY" 
-                      className="form-range modern-slider" 
-                      min="0" 
-                      max="3" 
-                      step="0.1"
-                      value={cameraData.target.y}
-                      onChange={(e) => handleSliderChange('target.y', parseFloat(e.target.value))}
-                    />
-                    <span className="value-badge">{formatValue(cameraData.target.y, 'distance')}</span>
-                  </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label htmlFor="targetZ" className="form-label">Z</label>
-                  <div className="slider-row">
-                    <input 
-                      type="range" 
-                      id="targetZ" 
-                      className="form-range modern-slider" 
-                      min="-5" 
-                      max="5" 
-                      step="0.1"
-                      value={cameraData.target.z}
-                      onChange={(e) => handleSliderChange('target.z', parseFloat(e.target.value))}
-                    />
-                    <span className="value-badge">{formatValue(cameraData.target.z, 'distance')}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Field of View and Zoom Speed (Full Width) */}
-              <div className="col-12 mt-0">
-                <div className="row g-3">
-                  <div className="col-md-6">
-                    <label htmlFor="fieldOfView" className="form-label">Field of View</label>
-                    <div className="slider-row">
-                      <input 
-                        type="range" 
-                        id="fieldOfView" 
-                        className="form-range modern-slider" 
-                        min="10" 
-                        max="90" 
-                        step="1"
-                        value={cameraData.fieldOfView}
-                        onChange={(e) => handleSliderChange('fieldOfView', parseFloat(e.target.value))}
-                      />
-                      <span className="value-badge">{formatValue(cameraData.fieldOfView, 'angle')}</span>
-                    </div>
-                  </div>
-                  <div className="col-md-6 mt-0">
-                    <label htmlFor="zoomSpeed" className="form-label">Zoom Speed</label>
-                    <div className="slider-row">
-                      <input 
-                        type="range" 
-                        id="zoomSpeed" 
-                        className="form-range modern-slider" 
-                        min="0.1" 
-                        max="3" 
-                        step="0.1"
-                        value={cameraData.zoomSpeed}
-                        onChange={(e) => handleSliderChange('zoomSpeed', parseFloat(e.target.value))}
-                      />
-                      <span className="value-badge">{formatValue(cameraData.zoomSpeed, 'speed')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Current Values (Full Width) */}
-              <div className="col-12 mt-2">
-                <div className="current-values-box">
-                  <h6 className="text-primary mb-2">Current Values (Last Saved)</h6>
-                  <div><strong>Camera Orbit:</strong> <span>{cameraData.orbit.azimuth}deg {cameraData.orbit.polar}deg {cameraData.orbit.radius}m</span></div>
-                  <div><strong>Camera Target:</strong> <span>{cameraData.target.x}m {cameraData.target.y}m {cameraData.target.z}m</span></div>
-                  <div><strong>Field of View:</strong> <span>{cameraData.fieldOfView}°</span></div>
-                  <div><strong>Zoom Speed:</strong> <span>{cameraData.zoomSpeed}</span></div>
-                </div>
-              </div>
-            </div>
+            <CameraDials
+              orbit={cameraData.orbit}
+              target={cameraData.target}
+              onOrbitChange={(orbit) => applyCamera({ ...cameraData, orbit })}
+              onTargetChange={(target) => applyCamera({ ...cameraData, target })}
+              savedOrbit={formatCameraOrbit(currentValues.orbit)}
+              savedTarget={formatCameraTarget(currentValues.target)}
+              savedHeading="Current Values (Last Saved)"
+            />
           </div>
         </div>
       )}
