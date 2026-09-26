@@ -568,54 +568,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
       {showEditingOverlay && (
         <div className="row mt-2">
           <div className="col-12">
-            <div className="modern-card">
-              <div className="modern-card-header">
-                <span className="modern-card-title">Camera Editing Controls</span>
-              </div>
-              
-              {/* Save/Reset Buttons Row */}
-              <div className="row g-2" style={{ padding: '1rem 1.5rem 0.5rem 1.5rem' }}>
-                <div className="col-6">
-                  <button 
-                    type="button"
-                    className="btn btn-success btn-sm w-100"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleSave();
-                    }}
-                    disabled={!currentDialogue}
-                    style={{ 
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      borderRadius: '8px',
-                      padding: '0.5rem 1rem'
-                    }}
-                  >
-                    <i className="fas fa-save me-1"></i>Save
-                  </button>
-                </div>
-                <div className="col-6">
-                  <button 
-                    type="button"
-                    className="btn btn-secondary btn-sm w-100"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleReset();
-                    }}
-                    style={{ 
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      borderRadius: '8px',
-                      padding: '0.5rem 1rem'
-                    }}
-                  >
-                    <i className="fas fa-undo me-1"></i>Reset
-                  </button>
-                </div>
-              </div>
-              
+            <div className="modern-card camera-edit-card">
               <CameraDials
                 orbit={cameraData.orbit}
                 target={cameraData.target}
@@ -625,6 +578,33 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                 savedTarget={`${currentValues.target.x.toFixed(1)}m ${currentValues.target.y.toFixed(1)}m ${currentValues.target.z.toFixed(1)}m`}
                 savedHeading={`Last saved for dialogue ${currentDialogueIndex + 1}${totalDialogues > 0 ? ` / ${totalDialogues}` : ''}`}
                 saveMessage={saveMessage}
+                actions={
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-success btn-sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSave();
+                      }}
+                      disabled={!currentDialogue}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleReset();
+                      }}
+                    >
+                      Reset
+                    </button>
+                  </>
+                }
               />
             </div>
           </div>
@@ -632,7 +612,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
       )}
 
       {/* Navigation Buttons */}
-      <div className="row mt-4">
+      <div className="row mt-2">
         <div className="col-12">
           {/* <div className="d-flex justify-content-between">
             <SmallButton variant="outline-secondary" onClick={onBack}>

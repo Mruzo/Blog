@@ -61,6 +61,7 @@ type DialSpec = {
   key: DialKey;
   id: string;
   label: string;
+  shortLabel: string;
   icon: string;
   iconRotate?: boolean;
   compactIcon?: boolean;
@@ -72,17 +73,17 @@ type DialSpec = {
 };
 
 const BASE_DIALS: DialSpec[] = [
-  { key: 'azimuth', id: 'orbitAzimuth', label: 'Azimuth', icon: '360', group: 'orbit', min: -180, max: 180, step: 1, unit: '°' },
-  { key: 'polar', id: 'orbitPolar', label: 'Polar', icon: '360', iconRotate: true, group: 'orbit', min: 0, max: 180, step: 1, unit: '°' },
-  { key: 'radius', id: 'orbitRadius', label: 'Radius', icon: 'clock_loader_90', compactIcon: true, group: 'orbit', min: 0.1, max: 10, step: 0.1, unit: 'm' },
-  { key: 'x', id: 'targetX', label: 'X', icon: 'arrow_range', group: 'target', min: -5, max: 5, step: 0.1, unit: 'm' },
-  { key: 'y', id: 'targetY', label: 'Y', icon: 'arrow_range', iconRotate: true, group: 'target', min: 0, max: 3, step: 0.1, unit: 'm' },
-  { key: 'z', id: 'targetZ', label: 'Z', icon: 'arrow_range', group: 'target', min: -5, max: 5, step: 0.1, unit: 'm' },
+  { key: 'azimuth', id: 'orbitAzimuth', label: 'Azimuth', shortLabel: 'Az', icon: '360', group: 'orbit', min: -180, max: 180, step: 1, unit: '°' },
+  { key: 'polar', id: 'orbitPolar', label: 'Polar', shortLabel: 'Pol', icon: '360', iconRotate: true, group: 'orbit', min: 0, max: 180, step: 1, unit: '°' },
+  { key: 'radius', id: 'orbitRadius', label: 'Radius', shortLabel: 'Rad', icon: 'clock_loader_90', compactIcon: true, group: 'orbit', min: 0.1, max: 10, step: 0.1, unit: 'm' },
+  { key: 'x', id: 'targetX', label: 'X', shortLabel: 'X', icon: 'arrow_range', group: 'target', min: -5, max: 5, step: 0.1, unit: 'm' },
+  { key: 'y', id: 'targetY', label: 'Y', shortLabel: 'Y', icon: 'arrow_range', iconRotate: true, group: 'target', min: 0, max: 3, step: 0.1, unit: 'm' },
+  { key: 'z', id: 'targetZ', label: 'Z', shortLabel: 'Z', icon: 'arrow_range', group: 'target', min: -5, max: 5, step: 0.1, unit: 'm' },
 ];
 
 const ADVANCED_DIALS: DialSpec[] = [
-  { key: 'fieldOfView', id: 'fieldOfView', label: 'FOV', icon: '360', group: 'advanced', min: 10, max: 90, step: 1, unit: '°' },
-  { key: 'zoomSpeed', id: 'zoomSpeed', label: 'Zoom', icon: 'clock_loader_90', compactIcon: true, group: 'advanced', min: 0.1, max: 3, step: 0.1, unit: 'x' },
+  { key: 'fieldOfView', id: 'fieldOfView', label: 'FOV', shortLabel: 'FOV', icon: '360', group: 'advanced', min: 10, max: 90, step: 1, unit: '°' },
+  { key: 'zoomSpeed', id: 'zoomSpeed', label: 'Zoom', shortLabel: 'Zoom', icon: 'clock_loader_90', compactIcon: true, group: 'advanced', min: 0.1, max: 3, step: 0.1, unit: 'x' },
 ];
 
 function readDialValue(
@@ -130,6 +131,7 @@ export interface CameraDialsProps {
   zoomSpeed?: number;
   onFieldOfViewChange?: (value: number) => void;
   onZoomSpeedChange?: (value: number) => void;
+  actions?: React.ReactNode;
 }
 
 const CameraDials: React.FC<CameraDialsProps> = ({
@@ -146,8 +148,10 @@ const CameraDials: React.FC<CameraDialsProps> = ({
   zoomSpeed = 1,
   onFieldOfViewChange,
   onZoomSpeedChange,
+  actions,
 }) => {
   const [activeKey, setActiveKey] = useState<DialKey>('azimuth');
+  const [showSavedHint, setShowSavedHint] = useState(false);
   const dials = showAdvanced ? [...BASE_DIALS, ...ADVANCED_DIALS] : BASE_DIALS;
   const active = dials.find((dial) => dial.key === activeKey) || BASE_DIALS[0];
   const activeValue = readDialValue(active, orbit, target, fieldOfView, zoomSpeed);
@@ -170,52 +174,31 @@ const CameraDials: React.FC<CameraDialsProps> = ({
 
   return (
     <div className="camera-dials">
-      <div className="camera-dials__groups" role="radiogroup" aria-label="Camera parameter">
-        <div className="camera-dials__group">
-          <div className="section-header">Orbit</div>
-          <div className="camera-dials__chips">
-            {dials.filter((dial) => dial.group === 'orbit').map((dial) => (
-              <DialChip
-                key={dial.key}
-                spec={dial}
-                value={readDialValue(dial, orbit, target, fieldOfView, zoomSpeed)}
-                selected={dial.key === active.key}
-                onSelect={() => setActiveKey(dial.key)}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="camera-dials__group">
-          <div className="section-header">Target</div>
-          <div className="camera-dials__chips">
-            {dials.filter((dial) => dial.group === 'target').map((dial) => (
-              <DialChip
-                key={dial.key}
-                spec={dial}
-                value={readDialValue(dial, orbit, target, fieldOfView, zoomSpeed)}
-                selected={dial.key === active.key}
-                onSelect={() => setActiveKey(dial.key)}
-              />
-            ))}
-          </div>
-        </div>
-        {showAdvanced && (
-          <div className="camera-dials__group camera-dials__group--wide">
-            <div className="section-header">Advanced</div>
-            <div className="camera-dials__chips">
-              {dials.filter((dial) => dial.group === 'advanced').map((dial) => (
-                <DialChip
-                  key={dial.key}
-                  spec={dial}
-                  value={readDialValue(dial, orbit, target, fieldOfView, zoomSpeed)}
-                  selected={dial.key === active.key}
-                  onSelect={() => setActiveKey(dial.key)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+      {actions && <div className="camera-dials__actions">{actions}</div>}
+      <div className="camera-dials__chips" role="radiogroup" aria-label="Camera parameter">
+        {dials.filter((dial) => dial.group !== 'advanced').map((dial) => (
+          <DialChip
+            key={dial.key}
+            spec={dial}
+            value={readDialValue(dial, orbit, target, fieldOfView, zoomSpeed)}
+            selected={dial.key === active.key}
+            onSelect={() => setActiveKey(dial.key)}
+          />
+        ))}
       </div>
+      {showAdvanced && (
+        <div className="camera-dials__chips">
+          {dials.filter((dial) => dial.group === 'advanced').map((dial) => (
+            <DialChip
+              key={dial.key}
+              spec={dial}
+              value={readDialValue(dial, orbit, target, fieldOfView, zoomSpeed)}
+              selected={dial.key === active.key}
+              onSelect={() => setActiveKey(dial.key)}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="slider-row">
         <input
@@ -231,38 +214,44 @@ const CameraDials: React.FC<CameraDialsProps> = ({
           aria-label={active.label}
           onChange={(e) => applyValue(parseFloat(e.target.value))}
         />
-        <span className="value-badge" id={`${active.id}Value`}>
-          {formatBadge(activeValue, active.unit)}
-        </span>
       </div>
 
       <div className="current-values-box">
-        <h6 className="text-primary mb-2">{savedHeading}</h6>
-        <div>
-          <strong>Camera Orbit:</strong>{' '}
-          <span id="currentOrbit">{savedOrbit || formatCameraOrbit(orbit)}</span>
-        </div>
-        <div>
-          <strong>Camera Target:</strong>{' '}
-          <span id="currentTarget">{savedTarget || formatCameraTarget(target)}</span>
-        </div>
+        <button
+          type="button"
+          className="camera-dials__info"
+          aria-expanded={showSavedHint}
+          aria-controls="cameraSavedHint"
+          title="These are the last saved camera values. The slider above changes the live preview until you Save."
+          onClick={() => setShowSavedHint((open) => !open)}
+        >
+          <i className="fas fa-info-circle" aria-hidden="true"></i>
+          <span className="sr-only">About saved camera values</span>
+        </button>
+        <span className="sr-only">{savedHeading}</span>
+        {showSavedHint && (
+          <span id="cameraSavedHint" className="camera-dials__hint" role="note">
+            Last saved camera. The slider above edits the live preview until you Save.
+          </span>
+        )}
+        <span id="currentOrbit">{savedOrbit || formatCameraOrbit(orbit)}</span>
+        <span aria-hidden="true"> · </span>
+        <span id="currentTarget">{savedTarget || formatCameraTarget(target)}</span>
         {showAdvanced && (
           <>
-            <div>
-              <strong>Field of View:</strong> <span>{fieldOfView}°</span>
-            </div>
-            <div>
-              <strong>Zoom Speed:</strong> <span>{zoomSpeed}</span>
-            </div>
+            <span aria-hidden="true"> · </span>
+            <span>{fieldOfView}°</span>
+            <span aria-hidden="true"> · </span>
+            <span>{zoomSpeed}x</span>
           </>
         )}
         {saveMessage && (
-          <div
-            className={`mt-2 small ${saveMessage.type === 'success' ? 'text-success' : 'text-danger'}`}
+          <span
+            className={`current-values-box__message ${saveMessage.type === 'success' ? 'text-success' : 'text-danger'}`}
             role="status"
           >
             {saveMessage.text}
-          </div>
+          </span>
         )}
       </div>
     </div>
@@ -293,7 +282,7 @@ function DialChip({
       <span
         className="material-symbols-outlined"
         style={{
-          fontSize: spec.compactIcon ? '1.1rem' : '1.25rem',
+          fontSize: spec.compactIcon ? '0.95rem' : '1rem',
           transform: spec.iconRotate ? 'rotate(90deg)' : undefined,
           fontVariationSettings: spec.compactIcon ? "'FILL' 0, 'GRAD' 0" : "'FILL' 1",
         }}
@@ -301,7 +290,7 @@ function DialChip({
       >
         {spec.icon}
       </span>
-      <span className="camera-dials__chipLabel">{spec.label}</span>
+      <span className="camera-dials__chipLabel">{spec.shortLabel}</span>
       <span className="camera-dials__chipValue">{formatBadge(value, spec.unit)}</span>
     </button>
   );

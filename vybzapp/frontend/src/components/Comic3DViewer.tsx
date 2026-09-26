@@ -1961,65 +1961,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         return (
           <div className="row mt-2">
             <div className="col-12">
-              <div className="modern-card" style={{
-              background: '#fff',
-              borderRadius: '18px',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-              border: '1px solid #e0e0e0',
-              padding: '0',
-              marginBottom: '1.5rem'
-            }}>
-              <div className="modern-card-header p-1" style={{
-                background: 'linear-gradient(90deg, #f8f9fa 60%, #f9a602 100%)',
-                borderRadius: '10px 10px 0 0',
-                // padding: '1rem 1.5rem 0.5rem 1.5rem',
-                borderBottom: '1px solid #e0e0e0'
-              }}>
-                <span className="modern-card-title px-md-4" style={{
-                  fontSize: '1.2rem',
-                  fontWeight: '700',
-                  color: '#222',
-                  letterSpacing: '0.5px'
-                }}>
-                  Scene Editing Controls
-                </span>
-              </div>
-              
-              {/* Save/Reset Buttons Row */}
-              <div className="row g-2" style={{ padding: '1rem 1.5rem 0.5rem 1.5rem' }}>
-                <div className="col-6">
-                  <button 
-                    className="btn btn-success btn-sm w-100"
-                    onClick={saveCameraChanges}
-                    disabled={isSaving}
-                    style={{ 
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      borderRadius: '8px',
-                      padding: '0.5rem 1rem'
-                    }}
-                  >
-                    <i className="fas fa-save"></i>
-                    <span>{isSaving ? 'Saving...' : 'Save'}</span>
-                  </button>
-                </div>
-                <div className="col-6">
-                  <button 
-                    className="btn btn-secondary btn-sm w-100"
-                    onClick={resetCameraChanges}
-                    style={{ 
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      borderRadius: '8px',
-                      padding: '0.5rem 1rem'
-                    }}
-                  >
-                    <i className="fas fa-undo"></i>
-                    <span>Reset</span>
-                  </button>
-                </div>
-              </div>
-              
+              <div className="modern-card camera-edit-card">
               <CameraDials
                 orbit={dialOrbit}
                 target={dialTarget}
@@ -2029,6 +1971,25 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 savedTarget={originalValues?.camera_target || '0m 1.6m 0m'}
                 savedHeading="Values (Last Saved)"
                 saveMessage={saveMessage}
+                actions={
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-success btn-sm"
+                      onClick={saveCameraChanges}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={resetCameraChanges}
+                    >
+                      Reset
+                    </button>
+                  </>
+                }
               />
                 {/* Animation Controls — hidden for now; model auto-plays GLB clips on load.
                     Revisit later when clips are wired per dialogue/character. */}

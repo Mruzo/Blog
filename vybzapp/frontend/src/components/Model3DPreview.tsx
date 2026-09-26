@@ -211,10 +211,7 @@ const Model3DPreview: React.FC<Model3DPreviewProps> = ({
       {/* Editing Controls Overlay */}
       {showEditingOverlay && (
         <div className="container mt-3 col-md-6 px-0">
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <span className="modern-card-title">Camera Editing Controls</span>
-            </div>
+          <div className="modern-card camera-edit-card">
             <CameraDials
               orbit={cameraData.orbit}
               target={cameraData.target}

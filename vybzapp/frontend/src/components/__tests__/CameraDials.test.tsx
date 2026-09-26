@@ -105,6 +105,14 @@ describe('CameraDials', () => {
     expect(screen.getByText('0.5m 1.5m -0.2m')).toBeInTheDocument();
   });
 
+  it('explains that the values under the slider are last saved', () => {
+    renderDials();
+
+    fireEvent.click(screen.getByRole('button', { name: /about saved camera values/i }));
+    expect(screen.getByText(/last saved camera/i)).toBeInTheDocument();
+    expect(screen.getByText(/live preview until you save/i)).toBeInTheDocument();
+  });
+
   it('parses and formats camera strings', () => {
     expect(parseCameraOrbit('45deg 60deg 3.5m')).toEqual({
       azimuth: 45,

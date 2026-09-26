@@ -712,51 +712,54 @@ body.comic3d-fullscreen-active {
   }
 }
 
+.camera-edit-card {
+  margin-bottom: 0.5rem;
+}
+
 .camera-dials {
-  padding: 0.75rem 1rem 1rem;
+  padding: 0.35rem 0.5rem 0.4rem;
 }
 
-.camera-dials__groups {
+.camera-dials__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem 1.25rem;
-  margin-bottom: 0.75rem;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
 }
 
-.camera-dials__group {
-  min-width: 0;
-}
-
-.camera-dials__group--wide {
-  flex: 1 1 100%;
-}
-
-.camera-dials .section-header {
-  margin-top: 0;
-  margin-bottom: 0.25rem;
-  font-size: 0.8rem;
+.camera-dials__actions .btn {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 6px;
 }
 
 .camera-dials__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+  margin-bottom: 0.15rem;
 }
 
 .camera-dials__chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.15rem;
   min-width: 0;
-  padding: 0.3rem 0.5rem;
+  padding: 0.12rem 0.3rem;
   border: 1px solid #d0d0d0;
-  border-radius: 8px;
+  border-radius: 5px;
   background: #fff;
   color: #222;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
   cursor: pointer;
+}
+
+.camera-dials__chip .material-symbols-outlined {
+  display: none;
 }
 
 .camera-dials__chip.is-active {
@@ -774,11 +777,54 @@ body.comic3d-fullscreen-active {
   opacity: 0.85;
 }
 
-.camera-dials__sliderLabel {
-  display: block;
-  margin-bottom: 0.15rem;
-  font-weight: 600;
+.camera-dials .slider-row {
+  gap: 0.3rem;
+}
+
+.camera-dials input[type="range"].modern-slider {
+  height: 1.15em;
+  margin: 0;
+}
+
+.camera-dials .current-values-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.2rem;
+  margin-top: 0.15rem;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 0.65rem;
+  color: #666;
+}
+
+.camera-dials__info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #111e7f;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.camera-dials__hint {
+  flex-basis: 100%;
+  color: #111e7f;
+  font-size: 0.65rem;
+  line-height: 1.3;
+}
+
+.current-values-box__message {
+  flex-basis: 100%;
+  margin-top: 0.1rem;
+  font-size: 0.65rem;
 }
 
 /* Modern Slider Styles */
@@ -959,29 +1005,24 @@ input[type="range"].modern-slider:focus {
 
 /* Responsive Design */
 @media (max-width: 600px) {
-  .camera-dials {
-    padding: 0.5rem 0.65rem 0.75rem;
+  .camera-dials__actions {
+    width: 100%;
+    gap: 0.75rem;
   }
 
-  .camera-dials__groups {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-
-  .camera-dials__group--wide {
-    grid-column: 1 / -1;
+  .camera-dials__actions .btn {
+    flex: 1 1 0;
   }
 
   .camera-dials__chips {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
   }
 
   .camera-dials__chip {
     width: 100%;
-    justify-content: flex-start;
-    padding: 0.28rem 0.4rem;
-    font-size: 0.7rem;
+    justify-content: center;
   }
 
   .modern-card {
