@@ -44,8 +44,10 @@ FRONTEND_BUILD_DIR = os.path.join(settings.BASE_DIR, 'frontend', 'build')
 # CRA copies public/ into frontend/build/ at build time (not collectstatic / S3).
 FRONTEND_PUBLIC_ASSETS = frozenset({
     'jv_header.svg',
+    'logo180x660v3.svg',
     'logo-80x80.svg',
     'logo 80x80.svg',
+    'logo_w-200x200.v3.svg',
     'logo192.png',
     'logo512.png',
     'powered-by-logo.png',

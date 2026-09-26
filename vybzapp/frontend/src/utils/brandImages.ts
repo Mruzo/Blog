@@ -12,7 +12,7 @@ export function brandImageUrl(djangoFileName: string, devPublicPath: string): st
   return devPublicPath;
 }
 
-export const headerLogoUrl = brandImageUrl('jv_header.svg', '/jv_header.svg');
-export const footerLogoUrl = brandImageUrl('logo 80x80.svg', '/logo-80x80.svg');
+export const headerLogoUrl = brandImageUrl('logo180x660v3.svg', '/logo180x660v3.svg');
+export const footerLogoUrl = brandImageUrl('logo_w 200x200.v3.svg', '/logo_w-200x200.v3.svg');
 export const poweredByLogoUrl = brandImageUrl('powered-by-logo.png', '/powered-by-logo.png');
 export const aboutImageUrl = brandImageUrl('about.png', '/static/snmov/img/about.png');
