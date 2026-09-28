@@ -86,6 +86,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
     path.includes('/ads/');
   const myOrdersActive = path.includes('my-orders');
   const canAccessAds = Boolean(user?.is_staff || user?.is_superuser);
+  const showAdsNav = false;
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -190,7 +191,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
         <div className="container-fluid px-0">
           <div
             id="profile-navbar"
-            className={`navbar-state-profile navbar-buttons-container app-site-header__navTray ${showProfileNavbar ? 'show' : 'hidden'}${canAccessAds ? ' navbar-buttons-container--four-up' : ''}`}
+            className={`navbar-state-profile navbar-buttons-container app-site-header__navTray ${showProfileNavbar ? 'show' : 'hidden'}${showAdsNav && canAccessAds ? ' navbar-buttons-container--four-up' : ''}`}
           >
             <Link
               to="/immersivecomics/"
@@ -214,7 +215,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               <i className="fas fa-receipt" aria-hidden />
               <span>My Orders</span>
             </Link>
-            {canAccessAds && (
+            {showAdsNav && canAccessAds && (
               <Link
                 to="/immersivecomics/ads/"
                 className={`app-site-header__link${path.includes('/ads') ? ' active' : ''}`}

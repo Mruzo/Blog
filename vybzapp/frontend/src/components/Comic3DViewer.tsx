@@ -864,6 +864,10 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }, 100); // 100ms debounce
   }, [onDialogueUpdate, isModelReady]);
 
+  const getActiveDialogue = useCallback((): DialogueData | null => {
+    return dialogueData[currentDialogueIndex] || currentEditingDialogue;
+  }, [dialogueData, currentDialogueIndex, currentEditingDialogue]);
+
   // Load current dialogue values into edit controls
   const loadCurrentDialogueValues = useCallback(() => {
     if (!isEditMode) return;
@@ -939,20 +943,26 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   };
 
   // Update dialogue text with current dial values (real-time)
-  const updateDialogueTextWithCurrentValues = (orbit = dialOrbit, target = dialTarget) => {
-    if (!isEditMode || !currentEditingDialogue) return;
+  const updateDialogueTextWithCurrentValues = (
+    orbit = dialOrbit,
+    target = dialTarget,
+    dialogue = getActiveDialogue()
+  ) => {
+    if (!isEditMode || !dialogue) return;
     
-    const fieldOfView = currentEditingDialogue.field_of_view || 45;
-    const zoomSpeed = currentEditingDialogue.zoom_speed || 1.0;
+    const fieldOfView = dialogue.field_of_view || 45;
+    const zoomSpeed = dialogue.zoom_speed || 1.0;
     
     // Create updated dialogue with current dial values
     const updatedDialogue = {
-      ...currentEditingDialogue,
+      ...dialogue,
       camera_orbit: formatCameraOrbit(orbit),
       camera_target: formatCameraTarget(target),
       field_of_view: fieldOfView,
       zoom_speed: zoomSpeed
     };
+
+    setCurrentEditingDialogue(updatedDialogue);
     
     // Update dialogue text in speech bubble with current dial values
     const dialogueText = `
@@ -974,13 +984,13 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   const handleOrbitDialChange = (orbit: CameraOrbit) => {
     setDialOrbit(orbit);
-    const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
+    const current = getActiveDialogue();
     if (!current || !current.dialogue_id || !current.camera_orbit) {
       logger.error('Comic3DViewer: Invalid dialogue data for orbit update:', current);
       return;
     }
     const newOrbit = formatCameraOrbit(orbit);
-    updateDialogueTextWithCurrentValues(orbit, dialTarget);
+    updateDialogueTextWithCurrentValues(orbit, dialTarget, current);
     updateCameraDebounced(current.dialogue_id, { camera_orbit: newOrbit });
     if (modelViewerRef.current && isModelReady) {
       modelViewerRef.current.cameraOrbit = newOrbit;
@@ -991,12 +1001,12 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
   const handleTargetDialChange = (target: CameraTarget) => {
     setDialTarget(target);
-    const current = currentEditingDialogue || dialogueData[currentDialogueIndex];
+    const current = getActiveDialogue();
     if (!current) return;
     const newTarget = formatCameraTarget(target);
     const orbitToKeep = formatCameraOrbit(dialOrbit);
     applyCameraTargetKeepingOrbit(newTarget, orbitToKeep);
-    updateDialogueTextWithCurrentValues(dialOrbit, target);
+    updateDialogueTextWithCurrentValues(dialOrbit, target, current);
     updateCameraDebounced(current.dialogue_id, { camera_target: newTarget, camera_orbit: orbitToKeep });
     logger.camera('Comic3DViewer: Real-time camera target update:', newTarget);
   };
@@ -1099,13 +1109,13 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     setTimeout(() => setSaveMessage(null), 3000);
   };
 
-  // Load dialogue values when edit mode is activated
+  // Load dialogue values when edit mode is activated or the scene changes
   useEffect(() => {
     if (isEditMode) {
       loadCurrentDialogueValues();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode]);
+  }, [isEditMode, currentDialogueIndex]);
 
   // Get 3D model from season (Django pattern) - memoize to prevent unnecessary recalculations
   const getModelFromSeason = useCallback((episode: Episode): string | null => {
@@ -1145,9 +1155,16 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     if (!isEditMode) return;
     
     logger.log('Comic3DViewer: Updating dials from dialogue:', dialogue);
-    
+
+    setCurrentEditingDialogue(dialogue);
     setDialOrbit(parseCameraOrbit(dialogue.camera_orbit));
     setDialTarget(parseCameraTarget(dialogue.camera_target));
+    setOriginalValues({
+      camera_orbit: dialogue.camera_orbit,
+      camera_target: dialogue.camera_target,
+      field_of_view: dialogue.field_of_view,
+      zoom_speed: dialogue.zoom_speed
+    });
     
     logger.log('Comic3DViewer: Dials updated to match dialogue values');
   };

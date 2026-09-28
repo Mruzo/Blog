@@ -194,6 +194,27 @@ describe('StoryPreviewEditor camera dials', () => {
     expectDialValue('targetX', '0.5');
   });
 
+  it('keeps the current line when camera dials change after leaving the first line', () => {
+    render(
+      <StoryPreviewEditor
+        data={buildData()}
+        onDataUpdate={jest.fn()}
+        onNext={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    enterEditMode();
+    fireEvent.click(screen.getByTitle(/next dialogue/i));
+    expect(screen.getByText(/line two/i)).toBeInTheDocument();
+
+    setDial('orbitAzimuth', '90');
+
+    expect(screen.getByText(/line two/i)).toBeInTheDocument();
+    expect(screen.queryByText(/line one/i)).not.toBeInTheDocument();
+    expectDialValue('orbitAzimuth', '90');
+  });
+
   it('hides field of view and zoom speed dials', () => {
     render(
       <StoryPreviewEditor

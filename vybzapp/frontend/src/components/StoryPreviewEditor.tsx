@@ -229,7 +229,8 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
     modelViewer.fieldOfView = `${fields.field_of_view}deg`;
   }, []);
 
-  // Load this dialogue's saved camera when navigating lines
+  // Load this dialogue's saved camera when navigating lines (not when the
+  // dialogue object is rebuilt with the same identity).
   useEffect(() => {
     if (!currentDialogue) {
       return;
@@ -243,7 +244,19 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
     setCameraData(cloneCameraData(parsedCamera));
     setCurrentValues(cloneCameraData(parsedCamera));
     applyCameraToViewer(parsedCamera);
-  }, [currentDialogueIndex, currentDialogue, applyCameraToViewer]);
+    // currentDialogue object identity changes when the parent rebuilds the
+    // dialogues array; only the fields below should reload the saved camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    currentDialogueIndex,
+    currentDialogue?.id,
+    currentDialogue?.order,
+    currentDialogue?.camera_orbit,
+    currentDialogue?.camera_target,
+    currentDialogue?.field_of_view,
+    currentDialogue?.zoom_speed,
+    applyCameraToViewer,
+  ]);
 
   // Update progress
   useEffect(() => {

@@ -203,6 +203,43 @@ describe('Comic3DViewer immersive fullscreen', () => {
     expect(screen.getByRole('button', { name: /E2: The Next Beat/i })).toBeInTheDocument();
   });
 
+  it('keeps the current scene when camera dials change after leaving the first line', () => {
+    renderViewer({
+      readOnly: false,
+      episodes: [buildEpisode()],
+      dialogues: [
+        buildDialogue({
+          id: 100,
+          character_name: 'Hero',
+          text: 'First line',
+          order: 1,
+          camera_orbit: '0deg 75deg 3m',
+        }),
+        buildDialogue({
+          id: 101,
+          character_name: 'Villain',
+          text: 'Second line',
+          order: 2,
+          camera_orbit: '45deg 60deg 4m',
+        }),
+      ],
+    });
+
+    startPlayback();
+    fireEvent.click(screen.getByRole('button', { name: 'Next dialogue' }));
+    fireEvent.click(screen.getByRole('button', { name: /edit mode/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next dialogue' }));
+
+    expect(document.getElementById('top-dialogue')?.textContent).toContain('Second line');
+
+    const slider = document.getElementById('cameraDial') as HTMLInputElement;
+    expect(slider).toBeInTheDocument();
+    fireEvent.change(slider, { target: { value: '90' } });
+
+    expect(document.getElementById('top-dialogue')?.textContent).toContain('Second line');
+    expect(document.getElementById('top-dialogue')?.textContent).not.toContain('First line');
+  });
+
   it('uses the same horizontally scrollable episode container in immersive mode', () => {
     renderViewer();
 
