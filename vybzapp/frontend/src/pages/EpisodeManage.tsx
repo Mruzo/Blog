@@ -179,12 +179,17 @@ const EpisodeManage: React.FC = () => {
   const castCharacters = storyCastLoaded ? storyCharacters : characters;
   const seasonsRef = useRef(seasons);
   seasonsRef.current = seasons;
+  const lastSpeakerIdRef = useRef(0);
 
   const emptyDialogueForm = (
     cast: Character[] = castCharacters,
     order = 1,
   ): DialogueFormData => {
-    const first = cast[0];
+    const lastId = lastSpeakerIdRef.current;
+    const preferred = lastId
+      ? cast.find((character) => resolveCharacterId(character.id) === lastId)
+      : undefined;
+    const first = preferred || cast[0];
     return {
       character: resolveCharacterId(first?.id) || 0,
       pov: first?.pov_data?.id ?? null,
@@ -391,6 +396,16 @@ const EpisodeManage: React.FC = () => {
     });
   };
 
+  const selectDialogueCharacter = (charId: number) => {
+    const selectedChar = characterOptions.find((character) => character.id === charId);
+    lastSpeakerIdRef.current = charId;
+    setDialogueFormData((prev) => ({
+      ...prev,
+      character: charId,
+      pov: selectedChar?.pov_data?.id ?? null,
+    }));
+  };
+
   const handleEpisodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -435,6 +450,10 @@ const EpisodeManage: React.FC = () => {
 
     try {
       const payload = { ...dialogueFormData, pov: dialogueFormData.pov ?? undefined };
+      const speakerId = resolveCharacterId(dialogueFormData.character);
+      if (speakerId) {
+        lastSpeakerIdRef.current = speakerId;
+      }
       if (editingDialogue) {
         await updateDialogue(editingDialogue.id, payload);
         setMessage('Dialogue updated successfully!');
@@ -1053,24 +1072,30 @@ const EpisodeManage: React.FC = () => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="dialogueCharacter" className="form-label subtext-btn-sm">Character &nbsp;</label>
-                    <select
-                      className="form-select form-select-sm font-quicksand"
-                      id="dialogueCharacter"
-                      name="character"
-                      value={
-                        resolveCharacterId(dialogueFormData.character)
-                          ? String(resolveCharacterId(dialogueFormData.character))
-                          : ''
-                      }
-                      onChange={handleDialogueInputChange}
-                      required
+                    <div id="dialogueCharacterLabel" className="form-label subtext-btn-sm">
+                      Character
+                    </div>
+                    <div
+                      className="episode-manage__castPicks font-quicksand"
+                      role="radiogroup"
+                      aria-labelledby="dialogueCharacterLabel"
                     >
-                      <option value="">Select a character</option>
-                      {characterOptions.map((char) => (
-                        <option key={char.id} value={String(char.id)}>{char.name}</option>
-                      ))}
-                    </select>
+                      {characterOptions.map((char) => {
+                        const selected = resolveCharacterId(dialogueFormData.character) === char.id;
+                        return (
+                          <button
+                            key={char.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            className={`episode-manage__castPick${selected ? ' is-selected' : ''}`}
+                            onClick={() => selectDialogueCharacter(char.id)}
+                          >
+                            {char.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                     {characterOptions.length === 0 && (
                       <small className="text-muted d-block mt-1">
                         No characters on this story yet.

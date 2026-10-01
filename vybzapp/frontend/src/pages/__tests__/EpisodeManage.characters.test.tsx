@@ -104,8 +104,7 @@ describe('EpisodeManage dialogue character selector', () => {
     fireEvent.click(screen.getByRole('button', { name: /Pilot/i }));
     fireEvent.click(await screen.findByRole('button', { name: /add first dialogue/i }));
 
-    const characterSelect = await screen.findByLabelText(/^Character$/i);
-    expect(characterSelect).toHaveTextContent('Maya');
+    expect(await screen.findByRole('radio', { name: 'Maya' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('keeps the saved character in the dropdown after it is cleared', async () => {
@@ -143,15 +142,12 @@ describe('EpisodeManage dialogue character selector', () => {
     fireEvent.click(screen.getByRole('button', { name: /Pilot/i }));
     fireEvent.click(await screen.findByTitle('Edit line'));
 
-    const characterSelect = await screen.findByLabelText(/^Character$/i);
-    expect(characterSelect).toHaveTextContent('Maya');
-    expect(characterSelect).toHaveTextContent('Jordan');
-
-    fireEvent.change(characterSelect, { target: { value: '' } });
-
-    expect(characterSelect).toHaveValue('');
-    expect(characterSelect).toHaveTextContent('Maya');
-    expect(characterSelect).toHaveTextContent('Jordan');
+    const maya = await screen.findByRole('radio', { name: 'Maya' });
+    const jordan = screen.getByRole('radio', { name: 'Jordan' });
+    expect(maya).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(jordan);
+    expect(jordan).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Maya' })).toBeInTheDocument();
   });
 
   it('orders Edit Dialogue fields as order, scene, character, pov, then text', async () => {
@@ -164,7 +160,7 @@ describe('EpisodeManage dialogue character selector', () => {
     const order = await screen.findByLabelText(/^Order$/i);
     const sceneTitle = screen.getByLabelText(/^Scene Title$/i);
     const sceneDescription = screen.getByLabelText(/^Scene Description$/i);
-    const character = screen.getByLabelText(/^Character$/i);
+    const character = screen.getByRole('radiogroup', { name: /^Character$/i });
     const pov = screen.getByLabelText(/^POV/i);
     const dialogueText = screen.getByLabelText(/^Dialogue Text$/i);
 
@@ -205,7 +201,7 @@ describe('EpisodeManage dialogue character selector', () => {
     fireEvent.click(screen.getByRole('button', { name: /Pilot/i }));
     fireEvent.click(await screen.findByRole('button', { name: /add first dialogue/i }));
 
-    expect(await screen.findByLabelText(/^Character$/i)).toHaveTextContent('Maya');
+    expect(await screen.findByRole('radio', { name: 'Maya' })).toBeInTheDocument();
   });
 
   it('preselects the saved character when editing a dialogue', async () => {
@@ -248,9 +244,7 @@ describe('EpisodeManage dialogue character selector', () => {
     fireEvent.click(screen.getByRole('button', { name: /Pilot/i }));
     fireEvent.click(await screen.findByTitle('Edit line'));
 
-    const characterSelect = await screen.findByLabelText(/^Character$/i);
-    expect(characterSelect).toHaveValue('7');
-    expect(characterSelect).toHaveTextContent('Maya');
+    expect(await screen.findByRole('radio', { name: 'Maya' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('defaults a new dialogue order to one after the last line', async () => {

@@ -3147,6 +3147,37 @@ a.my-studio__teamMemberHandle--link:focus {
   }
 }
 
+.episode-manage__castPicks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.episode-manage__castPick {
+  appearance: none;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.04);
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 0.38rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.episode-manage__castPick:hover,
+.episode-manage__castPick:focus-visible {
+  border-color: rgba(15, 23, 42, 0.28);
+  background: #ffffff;
+}
+
+.episode-manage__castPick.is-selected {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
 .episode-manage__dialogueCard {
   border-radius: 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
