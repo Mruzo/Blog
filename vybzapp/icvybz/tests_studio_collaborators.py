@@ -225,6 +225,51 @@ class StudioCollaboratorRoleSelectionTestCase(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_invite_same_user_with_second_role(self):
+        """A teammate can be invited again for a different role."""
+        url = reverse('icvybz-api:invite-studio-user', kwargs={'studio_id': self.studio.id})
+        first = self.client.post(url, {'user_id': self.user1.id, 'role': 'writer'}, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+
+        second = self.client.post(url, {'user_id': self.user1.id, 'role': 'director'}, format='json')
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        roles = set(
+            StudioCollaborator.objects.filter(
+                studio=self.studio, user=self.user1, is_active=True
+            ).values_list('role', flat=True)
+        )
+        self.assertEqual(roles, {'writer', 'director'})
+
+    def test_invite_reactivates_removed_role(self):
+        """Removed roles are inactive, so inviting that role again should restore it."""
+        existing = StudioCollaborator.objects.create(
+            studio=self.studio,
+            user=self.user1,
+            role='sound_engineer',
+            is_active=False,
+        )
+        url = reverse('icvybz-api:invite-studio-user', kwargs={'studio_id': self.studio.id})
+        response = self.client.post(
+            url, {'user_id': self.user1.id, 'role': 'sound_engineer'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        existing.refresh_from_db()
+        self.assertTrue(existing.is_active)
+
+    def test_invite_rejects_duplicate_active_role(self):
+        StudioCollaborator.objects.create(
+            studio=self.studio,
+            user=self.user1,
+            role='writer',
+            is_active=True,
+        )
+        url = reverse('icvybz-api:invite-studio-user', kwargs={'studio_id': self.studio.id})
+        response = self.client.post(
+            url, {'user_id': self.user1.id, 'role': 'writer'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['detail'], 'User already has this role')
+
 
 class RemoveStudioCollaboratorTestCase(APITestCase):
     """Test removing studio collaborators"""

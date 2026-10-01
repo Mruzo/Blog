@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter, Route, Routes } from 'react-router-dom';
 
 export type MockApiContext = ReturnType<typeof createMockApiContext>;
 
@@ -91,6 +91,18 @@ export const renderWithRouter = (
   ui: React.ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>,
 ) => render(ui, { wrapper: BrowserRouter, ...options });
+
+export const renderWithRoute = (
+  ui: React.ReactElement,
+  { path, url }: { path: string; url: string },
+) =>
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route path={path} element={ui} />
+      </Routes>
+    </MemoryRouter>,
+  );
 
 /** Register a jest mock for ApiContext.useApi that reads from this ref. */
 export const installMockUseApi = () => {

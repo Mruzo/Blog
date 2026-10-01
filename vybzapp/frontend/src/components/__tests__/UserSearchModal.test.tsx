@@ -8,221 +8,90 @@ jest.mock('../../services/collaborationService');
 const mockCollaborationService = collaborationService as jest.Mocked<typeof collaborationService>;
 
 const mockUsers = [
-  {
-    id: 1,
-    username: 'user1',
-    email: 'user1@example.com',
-    first_name: 'User',
-    last_name: 'One'
-  },
-  {
-    id: 2,
-    username: 'user2',
-    email: 'user2@example.com',
-    first_name: 'User',
-    last_name: 'Two'
-  }
+  { id: 1, username: 'user1', email: 'user1@example.com', first_name: 'User', last_name: 'One' },
+  { id: 2, username: 'user2', email: 'user2@example.com', first_name: 'User', last_name: 'Two' },
 ];
 
-describe('UserSearchModal Role Selection', () => {
-  const mockOnSelectUser = jest.fn();
-  const mockOnInviteByEmail = jest.fn();
-  const mockOnClose = jest.fn();
+const ROLE_VALUES = [
+  'writer',
+  'screenwriter',
+  'director',
+  '3d_artist',
+  'voice_actor',
+  'sound_engineer',
+  'cinematographer',
+];
+
+describe('UserSearchModal', () => {
+  const onSelectUser = jest.fn();
+  const onInviteByEmail = jest.fn();
+  const onClose = jest.fn();
+
+  const openModal = () =>
+    render(
+      <UserSearchModal
+        isOpen
+        onClose={onClose}
+        onSelectUser={onSelectUser}
+        onInviteByEmail={onInviteByEmail}
+      />,
+    );
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockCollaborationService.searchUsers = jest.fn().mockResolvedValue(mockUsers);
   });
 
-  it('should display role selector', () => {
-    render(
-      <UserSearchModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSelectUser={mockOnSelectUser}
-        onInviteByEmail={mockOnInviteByEmail}
-      />
-    );
-
-    expect(screen.getByLabelText('Select Role')).toBeInTheDocument();
-  });
-
-  it('should default to writer role', () => {
-    render(
-      <UserSearchModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSelectUser={mockOnSelectUser}
-        onInviteByEmail={mockOnInviteByEmail}
-      />
-    );
-
+  it('lists studio roles and defaults to writer', () => {
+    openModal();
     const roleSelect = screen.getByLabelText('Select Role') as HTMLSelectElement;
     expect(roleSelect.value).toBe('writer');
-  });
-
-  it('should allow changing role', () => {
-    render(
-      <UserSearchModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSelectUser={mockOnSelectUser}
-        onInviteByEmail={mockOnInviteByEmail}
-      />
-    );
-
-    const roleSelect = screen.getByLabelText('Select Role') as HTMLSelectElement;
+    expect(Array.from(roleSelect.options).map((option) => option.value)).toEqual(ROLE_VALUES);
     fireEvent.change(roleSelect, { target: { value: '3d_artist' } });
     expect(roleSelect.value).toBe('3d_artist');
   });
 
-  it('should pass selected role when selecting user', async () => {
-    render(
-      <UserSearchModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSelectUser={mockOnSelectUser}
-        onInviteByEmail={mockOnInviteByEmail}
-      />
-    );
+  it('passes the selected role when inviting a user', async () => {
+    openModal();
+    fireEvent.change(screen.getByLabelText('Select Role'), { target: { value: 'voice_actor' } });
+    fireEvent.change(screen.getByPlaceholderText(/Search by username/i), { target: { value: 'user' } });
 
-    // Change role
-    const roleSelect = screen.getByLabelText('Select Role');
-    fireEvent.change(roleSelect, { target: { value: 'voice_actor' } });
-
-    // Search for user
-    const searchInput = screen.getByPlaceholderText(/Search by username/i);
-    fireEvent.change(searchInput, { target: { value: 'user' } });
-
-    await waitFor(() => {
-      expect(mockCollaborationService.searchUsers).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('User One')).toBeInTheDocument();
-    });
-
-    // Click invite
+    expect(await screen.findByText('User One')).toBeInTheDocument();
     const inviteButton = screen.getByRole('button', { name: /Invite User One as voice_actor/i });
     expect(inviteButton).toHaveClass('stories-landing__btnPrimary');
     fireEvent.click(inviteButton);
-
-    expect(mockOnSelectUser).toHaveBeenCalledWith(mockUsers[0], 'voice_actor');
+    expect(onSelectUser).toHaveBeenCalledWith(mockUsers[0], 'voice_actor');
   });
 
-  it('should pass selected role when inviting by email', async () => {
-    render(
-      <UserSearchModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSelectUser={mockOnSelectUser}
-        onInviteByEmail={mockOnInviteByEmail}
-      />
-    );
-
-    // Change role
-    const roleSelect = screen.getByLabelText('Select Role');
-    fireEvent.change(roleSelect, { target: { value: 'sound_engineer' } });
-
-    // Enter email
-    const searchInput = screen.getByPlaceholderText(/Search by username/i);
-    fireEvent.change(searchInput, { target: { value: 'new@example.com' } });
-
-    // Wait for "Invite by email instead" button
-    await waitFor(() => {
-      const emailButton = screen.getByText('Invite by email instead');
-      fireEvent.click(emailButton);
+  it('keeps the selected role for email invite', async () => {
+    openModal();
+    fireEvent.change(screen.getByLabelText('Select Role'), { target: { value: 'sound_engineer' } });
+    fireEvent.change(screen.getByPlaceholderText(/Search by username/i), {
+      target: { value: 'new@example.com' },
     });
+    fireEvent.click(await screen.findByText('Invite by email instead'));
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('Email Address')).toBeInTheDocument();
-    });
-
-    // Check role is preserved in email form
-    const emailRoleSelect = screen.getByLabelText('Role') as HTMLSelectElement;
+    const emailRoleSelect = (await screen.findByLabelText('Role')) as HTMLSelectElement;
     expect(emailRoleSelect.value).toBe('sound_engineer');
-
-    // Enter email and send
-    const emailInput = screen.getByPlaceholderText('user@example.com');
-    fireEvent.change(emailInput, { target: { value: 'new@example.com' } });
-
+    fireEvent.change(screen.getByPlaceholderText('user@example.com'), {
+      target: { value: 'new@example.com' },
+    });
     const sendButton = screen.getByRole('button', { name: /Send Email Invitation/i });
     expect(sendButton).toHaveClass('stories-landing__btnPrimary');
     fireEvent.click(sendButton);
-
-    expect(mockOnInviteByEmail).toHaveBeenCalledWith('new@example.com', 'sound_engineer');
+    expect(onInviteByEmail).toHaveBeenCalledWith('new@example.com', 'sound_engineer');
   });
 
-  it('should have all role options', () => {
-    render(
-      <UserSearchModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSelectUser={mockOnSelectUser}
-        onInviteByEmail={mockOnInviteByEmail}
-      />
-    );
+  it('preserves role when switching between search and email', async () => {
+    openModal();
+    fireEvent.change(screen.getByLabelText('Select Role'), { target: { value: 'cinematographer' } });
+    fireEvent.change(screen.getByPlaceholderText(/Search by username/i), { target: { value: 'test' } });
+    fireEvent.click(await screen.findByText('Invite by email instead'));
+    expect((await screen.findByLabelText('Role') as HTMLSelectElement).value).toBe('cinematographer');
 
-    const roleSelect = screen.getByLabelText('Select Role') as HTMLSelectElement;
-    const options = Array.from(roleSelect.options).map(opt => opt.value);
-    
-    expect(options).toContain('writer');
-    expect(options).toContain('screenwriter');
-    expect(options).toContain('director');
-    expect(options).toContain('3d_artist');
-    expect(options).toContain('voice_actor');
-    expect(options).toContain('sound_engineer');
-    expect(options).toContain('cinematographer');
-  });
-
-  it('should maintain role selection when switching between search and email', async () => {
-    render(
-      <UserSearchModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSelectUser={mockOnSelectUser}
-        onInviteByEmail={mockOnInviteByEmail}
-      />
-    );
-
-    // Change role
-    const roleSelect = screen.getByLabelText('Select Role');
-    fireEvent.change(roleSelect, { target: { value: 'cinematographer' } });
-
-    // Switch to email form
-    const searchInput = screen.getByPlaceholderText(/Search by username/i);
-    fireEvent.change(searchInput, { target: { value: 'test' } });
-
+    fireEvent.click(screen.getByText('Back to Search'));
     await waitFor(() => {
-      const emailButton = screen.getByText('Invite by email instead');
-      fireEvent.click(emailButton);
-    });
-
-    await waitFor(() => {
-      const emailRoleSelect = screen.getByLabelText('Role') as HTMLSelectElement;
-      expect(emailRoleSelect.value).toBe('cinematographer');
-    });
-
-    // Switch back
-    const backButton = screen.getByText('Back to Search');
-    fireEvent.click(backButton);
-
-    await waitFor(() => {
-      const mainRoleSelect = screen.getByLabelText('Select Role') as HTMLSelectElement;
-      expect(mainRoleSelect.value).toBe('cinematographer');
+      expect((screen.getByLabelText('Select Role') as HTMLSelectElement).value).toBe('cinematographer');
     });
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-

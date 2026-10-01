@@ -259,13 +259,14 @@ const StoryCollaborators: React.FC = () => {
             <i className="fas fa-users" aria-hidden />
             <span className="my-studio__panelTitleText">Story collaborators</span>
           </h2>
-          {isOwner && !loading && (
+          {isOwner && !loading && studioCollaborators.length > 0 && (
             <div className="my-studio__panelHeadActions">
               <button
                 type="button"
                 className="product-landing__ctaPrimary story-manage__btnCompact"
                 onClick={handleSave}
                 disabled={saving}
+                title="Save which studio teammates work on this story, and which roles they hold"
               >
                 {saving ? (
                   <>
@@ -279,7 +280,7 @@ const StoryCollaborators: React.FC = () => {
                 ) : (
                   <>
                     <i className="fas fa-save me-1" aria-hidden />
-                    Save
+                    Save story team
                   </>
                 )}
               </button>

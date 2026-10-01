@@ -38,6 +38,106 @@ function TeamMemberHandle({
   );
 }
 
+type TeamCredit = {
+  key: string;
+  role: string;
+  assignmentId: number;
+  removable: boolean;
+  username: string;
+  label: string;
+  studioId: number | null;
+  handleTitle: string;
+  isStudioOwner: boolean;
+};
+
+const isActiveCollaborator = (collab: { is_active?: boolean }) =>
+  collab.is_active === true || collab.is_active === undefined;
+
+const roleLabel = (role: string) => role.replace(/_/g, ' ');
+
+const registeredDisplayName = (user: {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+}) => {
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+  return fullName || user.username || 'Unknown';
+};
+
+const CREDIT_ROLE_ORDER = [
+  'owner',
+  'director',
+  'screenwriter',
+  'writer',
+  'cinematographer',
+  '3d_artist',
+  'voice_actor',
+  'sound_engineer',
+];
+
+const creditRoleRank = (role: string) => {
+  const index = CREDIT_ROLE_ORDER.indexOf(role);
+  return index === -1 ? CREDIT_ROLE_ORDER.length : index;
+};
+
+function buildTeamCredits(
+  collaborators: any[],
+  myStudio: any,
+  currentUser: { id?: number; username?: string } | null,
+): TeamCredit[] {
+  if (!myStudio) return [];
+
+  const ownerId =
+    (typeof myStudio.owner === 'object' ? myStudio.owner?.id : myStudio.owner) ?? currentUser?.id;
+  const ownerUsername =
+    (typeof myStudio.owner === 'object' ? myStudio.owner?.username : undefined) ||
+    currentUser?.username;
+  const viewerIsOwner = Boolean(currentUser && Number(currentUser.id) === Number(ownerId));
+
+  const ownerCredit: TeamCredit = {
+    key: 'role-owner',
+    role: 'owner',
+    assignmentId: 0,
+    removable: false,
+    username: ownerUsername || 'user',
+    label: viewerIsOwner ? 'Me' : `@${ownerUsername || 'user'}`,
+    studioId: myStudio.id,
+    handleTitle: 'View public studio page',
+    isStudioOwner: true,
+  };
+
+  const credits = collaborators.filter(isActiveCollaborator).map((collab: any) => {
+    const user = collab.user || collab;
+    const userId = user?.id;
+    const username = user?.username || 'unknown';
+    const displayName = registeredDisplayName(user);
+    const isCollaboratorOwner = Boolean(userId && Number(userId) === Number(ownerId));
+    return {
+      key: `role-${collab.id}-${collab.role || 'writer'}`,
+      role: collab.role || 'writer',
+      assignmentId: collab.id,
+      removable: true,
+      username,
+      label: isCollaboratorOwner
+        ? viewerIsOwner
+          ? 'Me'
+          : `@${username}`
+        : displayName,
+      studioId: isCollaboratorOwner ? myStudio.id : collab.owned_studio_id || null,
+      handleTitle: isCollaboratorOwner
+        ? 'View public studio page'
+        : `View ${displayName}'s studio`,
+      isStudioOwner: isCollaboratorOwner,
+    };
+  });
+
+  return [ownerCredit, ...credits].sort((left, right) => {
+    const roleDelta = creditRoleRank(left.role) - creditRoleRank(right.role);
+    if (roleDelta !== 0) return roleDelta;
+    return left.username.localeCompare(right.username);
+  });
+}
+
 function formatStoryDate(createdAt: string, updatedAt: string): string {
   const createdDate = new Date(createdAt);
   const updatedDate = new Date(updatedAt);
@@ -436,19 +536,58 @@ const MyStudio: React.FC = () => {
     }
   }, [myStudio?.id, loadCollaborators, loadCollaborationRequests]);
 
-  // Calculate unique team members count (not total role assignments)
   const uniqueTeamMembersCount = useMemo(() => {
-    const activeCollaborators = collaborators.filter((collab: any) => 
-      collab.is_active === true || collab.is_active === undefined
-    );
     const uniqueUserIds = new Set(
-      activeCollaborators.map((collab: any) => {
+      collaborators.filter(isActiveCollaborator).map((collab: any) => {
         const user = collab.user || collab;
         return user?.id;
       }).filter((id: any) => id !== undefined)
     );
     return uniqueUserIds.size;
   }, [collaborators]);
+
+  const teamCredits = useMemo(
+    () => buildTeamCredits(collaborators, myStudio, currentUser),
+    [collaborators, myStudio, currentUser],
+  );
+
+  const viewerIsOwner = Boolean(
+    currentUser &&
+      myStudio &&
+      Number(currentUser.id) ===
+        Number(
+          (typeof myStudio.owner === 'object' ? myStudio.owner?.id : myStudio.owner) ??
+            currentUser.id,
+        ),
+  );
+
+  const removeTeamRole = async (
+    assignmentId: number,
+    role: string,
+    userName: string,
+    isCollaboratorOwner: boolean,
+  ) => {
+    if (!myStudio) return;
+    const confirmMessage = isCollaboratorOwner
+      ? `Remove this ${roleLabel(role)} role from your studio team?`
+      : `Are you sure you want to remove ${userName} from your studio team?`;
+    if (!window.confirm(confirmMessage)) return;
+    try {
+      await collaborationService.removeStudioCollaborator(myStudio.id, assignmentId);
+      setMessage(
+        isCollaboratorOwner
+          ? `Removed the ${roleLabel(role)} role from your studio team.`
+          : `${userName} has been removed from your studio team.`,
+      );
+      setMessageType('success');
+      setShowMessage(true);
+      await loadCollaborators();
+    } catch (error: any) {
+      setMessage(error?.response?.data?.detail || error?.message || 'Failed to remove collaborator');
+      setMessageType('danger');
+      setShowMessage(true);
+    }
+  };
 
   // Poll for new collaboration requests periodically (every 10 seconds)
   // This ensures the desktop user sees new requests without needing to refresh
@@ -836,140 +975,56 @@ const MyStudio: React.FC = () => {
                   <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 </div>
               ) : (
-                <div className="my-studio__teamGrid">
-                  <div className="my-studio__teamMember">
-                    <div className="my-studio__teamMemberRole">
-                      <span className="my-studio__teamPillOwner">
-                        <i className="fas fa-crown text-warning" aria-hidden />
-                        Owner
+                <div className="my-studio__teamList">
+                  {teamCredits.map((credit) => (
+                    <div
+                      key={credit.key}
+                      className={`my-studio__teamRow${credit.role === 'owner' ? ' my-studio__teamRow--owner' : ''}`}
+                    >
+                      <span className="my-studio__teamCreditRole">
+                        {credit.role === 'owner' ? (
+                          <span className="my-studio__teamPillOwner">
+                            <i className="fas fa-crown text-warning" aria-hidden />
+                            Owner
+                          </span>
+                        ) : (
+                          <span className={`badge bg-${getRoleColor(credit.role)}`}>
+                            {roleLabel(credit.role).toUpperCase()}
+                          </span>
+                        )}
                       </span>
+                      <span className="my-studio__teamCreditLeader" aria-hidden />
+                      <TeamMemberHandle
+                        label={credit.label}
+                        studioId={credit.studioId}
+                        title={credit.handleTitle}
+                      />
+                      {viewerIsOwner && credit.removable && (
+                        <button
+                          type="button"
+                          className="my-studio__teamMemberAction"
+                          onClick={() =>
+                            removeTeamRole(
+                              credit.assignmentId,
+                              credit.role,
+                              credit.isStudioOwner ? credit.username : credit.label,
+                              credit.isStudioOwner,
+                            )
+                          }
+                          title={
+                            credit.isStudioOwner
+                              ? `Remove this ${roleLabel(credit.role)} role`
+                              : `Remove ${credit.label} from studio`
+                          }
+                        >
+                          <i className="fas fa-times-circle" aria-hidden />
+                        </button>
+                      )}
                     </div>
-                    <TeamMemberHandle
-                      label={(() => {
-                        if (!currentUser || !myStudio) {
-                          return 'You';
-                        }
-                        const ownerId = typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner;
-                        const ownerUsername =
-                          typeof myStudio.owner === 'object'
-                            ? myStudio.owner.username
-                            : currentUser.username;
-                        const isOwner = Number(currentUser.id) === Number(ownerId);
-                        return isOwner ? 'Me' : `@${ownerUsername || 'user'}`;
-                      })()}
-                      studioId={myStudio?.id}
-                      title="View public studio page"
-                    />
-                  </div>
-
-                  {(() => {
-                    const activeCollaborators = collaborators.filter(
-                      (collab: any) => collab.is_active === true || collab.is_active === undefined
-                    );
-
-                    return activeCollaborators.length > 0
-                      ? activeCollaborators.map((collaborator: any) => {
-                          const user = collaborator.user || collaborator;
-                          const userName = user?.username || 'Unknown';
-                          const userUsername = user?.username || 'unknown';
-                          const role = collaborator.role || 'writer';
-                          const ownerId =
-                            myStudio && (typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner);
-                          const isOwner =
-                            myStudio && currentUser && Number(currentUser.id) === Number(ownerId);
-                          const isCollaboratorOwner = myStudio && Number(user?.id) === Number(ownerId);
-
-                          return (
-                            <div
-                              key={collaborator.id || collaborator.user?.id || userUsername}
-                              className="my-studio__teamMember position-relative"
-                            >
-                              <div className="my-studio__teamMemberRole">
-                                <span className={`badge bg-${getRoleColor(role)}`}>
-                                  {role.replace(/_/g, ' ').toUpperCase()}
-                                </span>
-                              </div>
-                              <TeamMemberHandle
-                                label={isOwner && isCollaboratorOwner ? 'Me' : `@${userUsername}`}
-                                studioId={
-                                  isCollaboratorOwner
-                                    ? myStudio?.id
-                                    : collaborator.owned_studio_id || null
-                                }
-                                title={
-                                  isCollaboratorOwner
-                                    ? 'View public studio page'
-                                    : `View @${userUsername}'s studio`
-                                }
-                              />
-                            {isOwner && myStudio && (
-                              <button
-                                className="btn btn-link text-muted p-0 border-0 my-studio__teamMemberAction"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  const confirmMessage = isCollaboratorOwner
-                                    ? `Remove this ${role.replace(/_/g, ' ')} role from your studio team?`
-                                    : `Are you sure you want to remove ${userName} from your studio team?`;
-                                  if (window.confirm(confirmMessage)) {
-                                    try {
-                                      await collaborationService.removeStudioCollaborator(myStudio.id, collaborator.id);
-                                      setMessage(
-                                        isCollaboratorOwner
-                                          ? `Removed the ${role.replace(/_/g, ' ')} role from your studio team.`
-                                          : `${userName} has been removed from your studio team.`
-                                      );
-                                      setMessageType('success');
-                                      setShowMessage(true);
-                                      await loadCollaborators();
-                                    } catch (error: any) {
-                                      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to remove collaborator';
-                                      setMessage(errorMessage);
-                                      setMessageType('danger');
-                                      setShowMessage(true);
-                                    }
-                                  }
-                                }}
-                                title={
-                                  isCollaboratorOwner
-                                    ? `Remove this ${role.replace(/_/g, ' ')} role`
-                                    : `Remove ${userName} from studio`
-                                }
-                                style={{ 
-                                  fontSize: '0.7rem',
-                                  opacity: 0.6,
-                                  transition: 'opacity 0.2s ease, color 0.2s ease',
-                                  lineHeight: 1,
-                                  minWidth: 'auto',
-                                  padding: '2px 4px'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.opacity = '1';
-                                  e.currentTarget.style.color = '#dc3545';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.opacity = '0.6';
-                                  e.currentTarget.style.color = '';
-                                }}
-                              >
-                                <i className="fas fa-times-circle" aria-hidden />
-                              </button>
-                            )}
-                            </div>
-                          );
-                        })
-                      : null;
-                  })()}
-
-                  {(() => {
-                    const activeCollaborators = collaborators.filter(
-                      (collab: any) => collab.is_active === true || collab.is_active === undefined
-                    );
-                    return (
-                      activeCollaborators.length === 0 && (
-                        <p className="my-studio__teamEmpty">No collaborators yet.</p>
-                      )
-                    );
-                  })()}
+                  ))}
+                  {collaborators.filter(isActiveCollaborator).length === 0 && (
+                    <p className="my-studio__teamEmpty">No collaborators yet.</p>
+                  )}
                 </div>
               )}
             </div>

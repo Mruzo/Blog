@@ -1,4 +1,6 @@
-import { createMockApiContext, createMockStudio } from './testHelpers';
+import React from 'react';
+import { createMockApiContext, createMockStudio, renderWithRouter } from './testHelpers';
+import MyStudio from '../pages/MyStudio';
 
 /** Shared ApiContext mock for MyStudio-related component tests. */
 export const createMyStudioMockContext = (overrides: Record<string, unknown> = {}) =>
@@ -21,3 +23,5 @@ export const createMyStudioMockContext = (overrides: Record<string, unknown> = {
     loadMyStudio: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   });
+
+export const renderMyStudioPage = () => renderWithRouter(<MyStudio />);

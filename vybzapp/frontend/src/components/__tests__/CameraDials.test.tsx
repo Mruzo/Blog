@@ -73,6 +73,16 @@ describe('CameraDials', () => {
     expect(screen.queryByText(/zoom speed/i)).toBeNull();
   });
 
+  it('nudges the active camera value with plus and minus', () => {
+    const { onOrbitChange } = renderDials();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Azimuth' }));
+    expect(onOrbitChange).toHaveBeenCalledWith({ ...DEFAULT_CAMERA_ORBIT, azimuth: 1 });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Azimuth' }));
+    expect(onOrbitChange).toHaveBeenCalledWith({ ...DEFAULT_CAMERA_ORBIT, azimuth: -1 });
+  });
+
   it('emits orbit and target changes from the shared slider', () => {
     const { onOrbitChange, onTargetChange } = renderDials();
 

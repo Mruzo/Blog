@@ -541,40 +541,25 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
       )}
 
 
-      {/* Edit Mode Toggle */}
-      <div className="row mt-2">
-        <div className="col-12">
-          <div className="card bg-transparent">
-            <div className="card-body p-0">
-              <div className="btn-group w-100 mode-toggle-btn" role="group">
-                <button
-                  type="button"
-                  className={`btn ${isPreviewMode ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => handleModeToggle('preview')}
-                  style={{
-                    borderColor: '#111e7f',
-                    color: isPreviewMode ? '#fff' : '#111e7f',
-                    backgroundColor: isPreviewMode ? '#111e7f' : 'transparent'
-                  }}
-                >
-                  <i className="fas fa-eye me-1"></i>Preview Mode
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${!isPreviewMode ? 'btn-warning' : 'btn-outline-warning'}`}
-                  onClick={() => handleModeToggle('edit')}
-                  style={{
-                    borderColor: '#f9a602',
-                    color: '#111e7f',
-                    backgroundColor: !isPreviewMode ? '#f9a602' : 'transparent'
-                  }}
-                >
-                  <i className="fas fa-edit me-1"></i>Edit Mode
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="comic3d-mode-toggle" role="group" aria-label="Viewer mode">
+        <button
+          type="button"
+          className={`comic3d-mode-toggle__btn comic3d-mode-toggle__btn--preview${isPreviewMode ? ' is-active' : ''}`}
+          aria-pressed={isPreviewMode}
+          onClick={() => handleModeToggle('preview')}
+        >
+          <i className="fas fa-eye" aria-hidden />
+          Preview Mode
+        </button>
+        <button
+          type="button"
+          className={`comic3d-mode-toggle__btn comic3d-mode-toggle__btn--edit${!isPreviewMode ? ' is-active' : ''}`}
+          aria-pressed={!isPreviewMode}
+          onClick={() => handleModeToggle('edit')}
+        >
+          <i className="fas fa-edit" aria-hidden />
+          Edit Mode
+        </button>
       </div>
 
       {/* Editing Controls Overlay */}
@@ -595,7 +580,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                   <>
                     <button
                       type="button"
-                      className="btn btn-success btn-sm"
+                      className="stories-landing__btnPrimary story-manage__btnCompact"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -603,11 +588,11 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
                       }}
                       disabled={!currentDialogue}
                     >
-                      Save
+                      Save camera
                     </button>
                     <button
                       type="button"
-                      className="btn btn-secondary btn-sm"
+                      className="product-landing__ctaGhost story-manage__btnCompact"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();

@@ -117,6 +117,16 @@ function formatBadge(value: number, unit: DialSpec['unit']): string {
   return `${value.toFixed(1)}${unit}`;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function stepValue(value: number, step: number, direction: -1 | 1, min: number, max: number): number {
+  const decimals = String(step).includes('.') ? (String(step).split('.')[1]?.length ?? 0) : 0;
+  const next = parseFloat((value + direction * step).toFixed(decimals));
+  return clamp(next, min, max);
+}
+
 export interface CameraDialsProps {
   orbit: CameraOrbit;
   target: CameraTarget;
@@ -172,23 +182,46 @@ const CameraDials: React.FC<CameraDialsProps> = ({
     onZoomSpeedChange?.(value);
   };
 
+  const orbitDials = dials.filter((dial) => dial.group === 'orbit');
+  const targetDials = dials.filter((dial) => dial.group === 'target');
+  const advancedDials = dials.filter((dial) => dial.group === 'advanced');
+
   return (
     <div className="camera-dials">
       {actions && <div className="camera-dials__actions">{actions}</div>}
-      <div className="camera-dials__chips" role="radiogroup" aria-label="Camera parameter">
-        {dials.filter((dial) => dial.group !== 'advanced').map((dial) => (
-          <DialChip
-            key={dial.key}
-            spec={dial}
-            value={readDialValue(dial, orbit, target, fieldOfView, zoomSpeed)}
-            selected={dial.key === active.key}
-            onSelect={() => setActiveKey(dial.key)}
-          />
-        ))}
+      <div className="camera-dials__groups" role="radiogroup" aria-label="Camera parameter">
+        <div className="camera-dials__group">
+          <p className="camera-dials__groupLabel">Orbit</p>
+          <div className="camera-dials__chips">
+            {orbitDials.map((dial) => (
+              <DialChip
+                key={dial.key}
+                spec={dial}
+                value={readDialValue(dial, orbit, target, fieldOfView, zoomSpeed)}
+                selected={dial.key === active.key}
+                onSelect={() => setActiveKey(dial.key)}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="camera-dials__group">
+          <p className="camera-dials__groupLabel">Target</p>
+          <div className="camera-dials__chips">
+            {targetDials.map((dial) => (
+              <DialChip
+                key={dial.key}
+                spec={dial}
+                value={readDialValue(dial, orbit, target, fieldOfView, zoomSpeed)}
+                selected={dial.key === active.key}
+                onSelect={() => setActiveKey(dial.key)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-      {showAdvanced && (
+      {showAdvanced && advancedDials.length > 0 && (
         <div className="camera-dials__chips">
-          {dials.filter((dial) => dial.group === 'advanced').map((dial) => (
+          {advancedDials.map((dial) => (
             <DialChip
               key={dial.key}
               spec={dial}
@@ -201,6 +234,15 @@ const CameraDials: React.FC<CameraDialsProps> = ({
       )}
 
       <div className="slider-row">
+        <button
+          type="button"
+          className="camera-dials__nudge"
+          aria-label={`Decrease ${active.label}`}
+          onClick={() => applyValue(stepValue(activeValue, active.step, -1, active.min, active.max))}
+          disabled={activeValue <= active.min}
+        >
+          −
+        </button>
         <input
           key={active.key}
           type="range"
@@ -214,6 +256,15 @@ const CameraDials: React.FC<CameraDialsProps> = ({
           aria-label={active.label}
           onChange={(e) => applyValue(parseFloat(e.target.value))}
         />
+        <button
+          type="button"
+          className="camera-dials__nudge"
+          aria-label={`Increase ${active.label}`}
+          onClick={() => applyValue(stepValue(activeValue, active.step, 1, active.min, active.max))}
+          disabled={activeValue >= active.max}
+        >
+          +
+        </button>
       </div>
 
       <div className="current-values-box">

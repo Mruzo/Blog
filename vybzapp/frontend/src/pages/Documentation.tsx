@@ -144,12 +144,14 @@ const Documentation: React.FC = () => {
             <p>
               Roles are writer, screenwriter, director, 3D artist, voice actor, sound engineer,
               and cinematographer. You can hold extra roles yourself and remove those extra
-              roles later. Your own extra roles show as Me. Other teammates still appear as
-              their username.
+              roles later. Your own extra roles show as Me. Other teammates appear as the
+              first and last name they used when they registered.
             </p>
             <p>
-              In the team panel, tap a name (or Me) to open that person&apos;s public studio
-              page.
+              In the team panel, each role is its own credit line with the person&apos;s name,
+              like movie credits. The same person can appear more than once if they hold more
+              than one role. Scroll the list to see more. Tap a name (or Me) to open that
+              person&apos;s public studio page.
             </p>
             <h3 className="h5 mt-4 mb-2 font-quicksand">Assign teammates to a story</h3>
             <p>

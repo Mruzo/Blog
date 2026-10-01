@@ -1916,46 +1916,30 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
 
       {/* Edit Mode Toggle - Hidden in read-only mode */}
       {!readOnly && selectedEpisode && (
-        <div className="row mt-2">
-          <div className="col-12">
-            <div className="card  bg-transparent">
-              <div className="card-body p-0">
-                <div className="btn-group w-100" role="group">
-                  <button
-                    type="button"
-                    className={`btn ${!isEditMode ? 'btn-outline-primary active' : 'btn-outline-primary'} mode-toggle-btn`}
-                    onClick={() => setIsEditMode(false)}
-                    style={{
-                      borderColor: '#111e7f',
-                      color: !isEditMode ? '#fff' : '#111e7f',
-                      backgroundColor: !isEditMode ? '#111e7f' : 'transparent'
-                    }}
-                  >
-                    <i className="fas fa-eye"></i>
-                    <span>Preview Mode</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn ${isEditMode ? 'btn-outline-warning active' : 'btn-outline-warning'} mode-toggle-btn`}
-                    onClick={() => {
-                      logger.log('Edit Mode button clicked, current isEditMode:', isEditMode);
-                      logger.log('Current isStarted:', isStarted);
-                      logger.log('Current isModelReady:', isModelReady);
-                      setIsEditMode(true);
-                    }}
-                    style={{
-                      borderColor: '#f9a602',
-                      color: isEditMode ? '#fff' : '#f9a602',
-                      backgroundColor: isEditMode ? '#f9a602' : 'transparent'
-                    }}
-                  >
-                    <i className="fas fa-edit"></i>
-                    <span>Edit Mode</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="comic3d-mode-toggle" role="group" aria-label="Viewer mode">
+          <button
+            type="button"
+            className={`comic3d-mode-toggle__btn comic3d-mode-toggle__btn--preview${!isEditMode ? ' is-active' : ''}`}
+            aria-pressed={!isEditMode}
+            onClick={() => setIsEditMode(false)}
+          >
+            <i className="fas fa-eye" aria-hidden />
+            Preview Mode
+          </button>
+          <button
+            type="button"
+            className={`comic3d-mode-toggle__btn comic3d-mode-toggle__btn--edit${isEditMode ? ' is-active' : ''}`}
+            aria-pressed={isEditMode}
+            onClick={() => {
+              logger.log('Edit Mode button clicked, current isEditMode:', isEditMode);
+              logger.log('Current isStarted:', isStarted);
+              logger.log('Current isModelReady:', isModelReady);
+              setIsEditMode(true);
+            }}
+          >
+            <i className="fas fa-edit" aria-hidden />
+            Edit Mode
+          </button>
         </div>
       )}
 
@@ -1992,15 +1976,15 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   <>
                     <button
                       type="button"
-                      className="btn btn-success btn-sm"
+                      className="stories-landing__btnPrimary story-manage__btnCompact"
                       onClick={saveCameraChanges}
                       disabled={isSaving}
                     >
-                      {isSaving ? 'Saving...' : 'Save'}
+                      {isSaving ? 'Saving…' : 'Save camera'}
                     </button>
                     <button
                       type="button"
-                      className="btn btn-secondary btn-sm"
+                      className="product-landing__ctaGhost story-manage__btnCompact"
                       onClick={resetCameraChanges}
                     >
                       Reset

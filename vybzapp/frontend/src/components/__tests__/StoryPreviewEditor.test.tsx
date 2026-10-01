@@ -128,7 +128,7 @@ describe('StoryPreviewEditor camera dials', () => {
     setDial('targetY', '2.0');
     setDial('targetZ', '-0.4');
 
-    fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /save camera/i }));
 
     await waitFor(() => {
       expect(onDataUpdate).toHaveBeenCalled();

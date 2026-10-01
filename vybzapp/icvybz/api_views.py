@@ -1751,7 +1751,9 @@ def invite_studio_user(request, studio_id):
             # (The model supports multiple roles per user via unique_together on studio, user, role)
             
             # Check if user already has this specific role
-            if StudioCollaborator.objects.filter(studio=studio, user=invitee_user, role=role).exists():
+            if StudioCollaborator.objects.filter(
+                studio=studio, user=invitee_user, role=role, is_active=True
+            ).exists():
                 return Response(
                     {'detail': 'User already has this role'}, 
                     status=status.HTTP_400_BAD_REQUEST
@@ -1863,7 +1865,7 @@ def invite_studio_by_email(request, studio_id):
             invitee_user = User.objects.filter(email__iexact=email).first()
             if invitee_user:
                 if StudioCollaborator.objects.filter(
-                    studio=studio, user=invitee_user, role=role
+                    studio=studio, user=invitee_user, role=role, is_active=True
                 ).exists():
                     return Response(
                         {'detail': 'User already has this role'},

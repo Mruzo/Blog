@@ -1,17 +1,11 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import StaffInPersonSale from '../StaffInPersonSale';
+import { renderWithRouter } from '../../testing/testHelpers';
 
 global.fetch = jest.fn();
 
-function renderPage() {
-  return render(
-    <BrowserRouter>
-      <StaffInPersonSale />
-    </BrowserRouter>
-  );
-}
+const renderPage = () => renderWithRouter(<StaffInPersonSale />);
 
 describe('StaffInPersonSale', () => {
   beforeEach(() => {
