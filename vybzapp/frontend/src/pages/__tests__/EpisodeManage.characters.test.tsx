@@ -252,4 +252,53 @@ describe('EpisodeManage dialogue character selector', () => {
     expect(characterSelect).toHaveValue('7');
     expect(characterSelect).toHaveTextContent('Maya');
   });
+
+  it('defaults a new dialogue order to one after the last line', async () => {
+    mockedApi.getDialogues.mockResolvedValue([
+      {
+        id: 51,
+        character: 7,
+        character_name: 'Maya',
+        text: 'First',
+        order: 190,
+        episode: 9,
+        scene_title: '',
+        scene_description: '',
+        shot_type: 'mediumShot',
+        camera_orbit: '0deg 75deg 3m',
+        camera_target: '0m 1.6m 0m',
+        field_of_view: 45,
+        zoom_speed: 1,
+        rotation: '0deg 0deg 0deg',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 52,
+        character: 7,
+        character_name: 'Maya',
+        text: 'Second',
+        order: 192,
+        episode: 9,
+        scene_title: '',
+        scene_description: '',
+        shot_type: 'mediumShot',
+        camera_orbit: '0deg 75deg 3m',
+        camera_target: '0m 1.6m 0m',
+        field_of_view: 45,
+        zoom_speed: 1,
+        rotation: '0deg 0deg 0deg',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+    ] as never);
+
+    renderWithRouter(<EpisodeManage />);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Episodes' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Pilot/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Add$/i }));
+
+    expect(await screen.findByLabelText(/^Order$/i)).toHaveValue(193);
+  });
 });

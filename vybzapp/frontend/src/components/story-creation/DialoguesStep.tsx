@@ -47,6 +47,12 @@ function defaultCharacterId(characters: StoryCreationData['characters']): number
   return 0;
 }
 
+const nextDialogueOrder = (dialogues: { order?: number }[]): number =>
+  dialogues.reduce((max, dialogue) => {
+    const order = Number(dialogue.order);
+    return Number.isFinite(order) ? Math.max(max, order) : max;
+  }, 0) + 1;
+
 function createEmptyDialogue(order: number, characters: StoryCreationData['characters']): Dialogue {
   return {
     character: defaultCharacterId(characters),
@@ -101,10 +107,7 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
     }))
   );
   const [currentDialogue, setCurrentDialogue] = useState<Dialogue>(() =>
-    createEmptyDialogue(
-      data.dialogues.length > 0 ? data.dialogues.length + 1 : 1,
-      data.characters
-    )
+    createEmptyDialogue(nextDialogueOrder(data.dialogues), data.characters)
   );
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -171,7 +174,7 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
 
     setDialogues(updatedDialogues);
     onDataUpdate({ dialogues: updatedDialogues });
-    resetForm(updatedDialogues.length + 1);
+    resetForm(nextDialogueOrder(updatedDialogues));
   };
 
   const handleEditDialogue = (index: number) => {
@@ -190,7 +193,7 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
     setDialogues(updatedDialogues);
     onDataUpdate({ dialogues: updatedDialogues });
     if (editingIndex === index) {
-      resetForm(updatedDialogues.length + 1);
+      resetForm(nextDialogueOrder(updatedDialogues));
     }
   };
 
@@ -517,7 +520,7 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
           {editingIndex !== null && (
             <SmallButton
               variant="outline-secondary"
-              onClick={() => resetForm(dialogues.length + 1)}
+              onClick={() => resetForm(nextDialogueOrder(dialogues))}
             >
               <i className="fas fa-times me-1" aria-hidden />
               Cancel

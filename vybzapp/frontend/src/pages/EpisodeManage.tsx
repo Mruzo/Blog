@@ -109,6 +109,12 @@ interface DialogueFormData {
   rotation: string;
 }
 
+const nextDialogueOrder = (dialogues: { order?: number }[]): number =>
+  dialogues.reduce((max, dialogue) => {
+    const order = Number(dialogue.order);
+    return Number.isFinite(order) ? Math.max(max, order) : max;
+  }, 0) + 1;
+
 const EpisodeManage: React.FC = () => {
   const { seasonId } = useParams<{ seasonId: string }>();
   const { 
@@ -174,13 +180,16 @@ const EpisodeManage: React.FC = () => {
   const seasonsRef = useRef(seasons);
   seasonsRef.current = seasons;
 
-  const emptyDialogueForm = (cast: Character[] = castCharacters): DialogueFormData => {
+  const emptyDialogueForm = (
+    cast: Character[] = castCharacters,
+    order = 1,
+  ): DialogueFormData => {
     const first = cast[0];
     return {
       character: resolveCharacterId(first?.id) || 0,
       pov: first?.pov_data?.id ?? null,
       text: '',
-      order: 1,
+      order,
       scene_title: '',
       scene_description: '',
       shot_type: 'mediumShot',
@@ -563,7 +572,7 @@ const EpisodeManage: React.FC = () => {
 
   const openNewDialogueForm = () => {
     setEditingDialogue(null);
-    setDialogueFormData(emptyDialogueForm());
+    setDialogueFormData(emptyDialogueForm(castCharacters, nextDialogueOrder(episodeDialogues)));
     setShowDialogueForm(true);
   };
 
@@ -707,7 +716,7 @@ const EpisodeManage: React.FC = () => {
 
       <section className="product-landing__section">
         <div className="product-landing__container px-2 px-md-3 pb-4" style={{ maxWidth: '1200px' }}>
-          <div className="story-manage__layout">
+          <div className="story-manage__layout episode-manage__layout">
             <div className="my-studio__panel">
               <div className="my-studio__panelHead">
                 <h2 className="my-studio__panelTitle">

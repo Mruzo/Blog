@@ -2884,6 +2884,12 @@ a.my-studio__teamMemberHandle--link:focus {
 }
 
 /* Episode manage (/immersivecomics/season/:seasonId/episodes/) */
+@media (min-width: 992px) {
+  .episode-manage__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
 .episode-manage__heroActions {
   display: flex;
   flex-wrap: wrap;
