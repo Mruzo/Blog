@@ -107,7 +107,7 @@ class POVAdmin(admin.ModelAdmin):
 
 @admin.register(Dialogue)
 class DialogueAdmin(admin.ModelAdmin):
-    list_display = ('comic', 'episode_display', 'character', 'order', 'text', 'camera_target', 'camera_orbit', 'shot_type')
+    list_display = ('comic', 'episode_display', 'character', 'order', 'text', 'camera_target', 'camera_orbit', 'camera_transition', 'shot_type')
     list_filter = ('episode__season__comic', 'character', 'shot_type', 'episode')
     search_fields = ('text', 'character__name', 'episode__season__comic__title')
     ordering = ('episode__season__comic__title', 'episode__season__season_number', 'episode__episode_number', 'order')

@@ -84,4 +84,30 @@ describe('DialoguePlaybackBar', () => {
     expect(onToggleFullscreen).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
   });
+
+  it('toggles camera animation and reports pressed state', () => {
+    const onToggleCameraAnimate = jest.fn();
+    renderBar({
+      animateCamera: true,
+      onToggleCameraAnimate,
+    });
+
+    const toggle = screen.getByRole('button', { name: 'Animate camera' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(toggle).toHaveTextContent('Move');
+
+    fireEvent.click(toggle);
+    expect(onToggleCameraAnimate).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows Snap when camera animation is off', () => {
+    renderBar({
+      animateCamera: false,
+      onToggleCameraAnimate: jest.fn(),
+    });
+
+    const toggle = screen.getByRole('button', { name: 'Animate camera' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(toggle).toHaveTextContent('Snap');
+  });
 });

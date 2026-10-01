@@ -150,14 +150,15 @@ describe('EpisodeManage dialogue character selector', () => {
     expect(screen.getByRole('radio', { name: 'Maya' })).toBeInTheDocument();
   });
 
-  it('orders Edit Dialogue fields as order, scene, character, pov, then text', async () => {
+  it('orders Edit Dialogue fields as camera, order, scene, character, pov, then text', async () => {
     renderWithRouter(<EpisodeManage />);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Episodes' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Pilot/i }));
     fireEvent.click(await screen.findByRole('button', { name: /add first dialogue/i }));
 
-    const order = await screen.findByLabelText(/^Order$/i);
+    const camera = await screen.findByRole('radiogroup', { name: /Camera into this line/i });
+    const order = screen.getByLabelText(/^Order$/i);
     const sceneTitle = screen.getByLabelText(/^Scene Title$/i);
     const sceneDescription = screen.getByLabelText(/^Scene Description$/i);
     const character = screen.getByRole('radiogroup', { name: /^Character$/i });
@@ -165,6 +166,7 @@ describe('EpisodeManage dialogue character selector', () => {
     const dialogueText = screen.getByLabelText(/^Dialogue Text$/i);
 
     const following = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(camera.compareDocumentPosition(order) & following).toBeTruthy();
     expect(order.compareDocumentPosition(sceneTitle) & following).toBeTruthy();
     expect(sceneTitle.compareDocumentPosition(sceneDescription) & following).toBeTruthy();
     expect(sceneDescription.compareDocumentPosition(character) & following).toBeTruthy();

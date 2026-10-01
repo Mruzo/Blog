@@ -72,6 +72,7 @@ export interface StoryCreationData {
     camera_target: string;
     field_of_view: number;
     zoom_speed: number;
+    camera_transition?: 'move' | 'snap';
     rotation: string;
   }>;
   
@@ -340,6 +341,7 @@ const StoryCreationWizard: React.FC = () => {
             camera_target: dialogue.camera_target,
             field_of_view: dialogue.field_of_view,
             zoom_speed: dialogue.zoom_speed,
+            camera_transition: dialogue.camera_transition === 'snap' ? 'snap' : 'move',
           });
         } catch (error) {
           console.error('Failed to persist dialogue camera on draft save:', dialogue.id, error);

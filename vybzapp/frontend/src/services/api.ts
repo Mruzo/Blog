@@ -367,6 +367,7 @@ export interface Dialogue {
   camera_target: string;
   field_of_view: number;
   zoom_speed: number;
+  camera_transition?: 'move' | 'snap';
   rotation: string;
   episode: number;
   created_at: string;
@@ -634,6 +635,30 @@ export interface AdInvoiceResult {
     start_date: string;
     end_date: string;
   };
+}
+
+/** Follow DRF `next` links so list endpoints are not silently capped at PAGE_SIZE. */
+async function collectAllPages<T>(firstUrl: string): Promise<T[]> {
+  const collected: T[] = [];
+  const seen = new Set<string>();
+  let url: string | null = firstUrl;
+
+  while (url && !seen.has(url)) {
+    seen.add(url);
+    const response: AxiosResponse<T[] | { results?: T[]; next?: string | null }> = await api.get(url);
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (data && Array.isArray(data.results)) {
+      collected.push(...data.results);
+      url = data.next || null;
+      continue;
+    }
+    break;
+  }
+
+  return collected;
 }
 
 // API Service Class
@@ -979,8 +1004,7 @@ class ApiService {
 
   // Dialogues
   async getDialogues(episodeId: number): Promise<Dialogue[]> {
-    const response = await api.get(`/episodes/${episodeId}/dialogues/`);
-    return response.data.results || response.data;
+    return collectAllPages<Dialogue>(`/episodes/${episodeId}/dialogues/`);
   }
 
   async createDialogue(episodeId: number, dialogueData: Partial<Dialogue>): Promise<Dialogue> {

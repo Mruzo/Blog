@@ -89,6 +89,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
           camera_target: dialogue.camera_target,
           field_of_view: dialogue.field_of_view,
           zoom_speed: dialogue.zoom_speed,
+          camera_transition: dialogue.camera_transition === 'snap' ? 'snap' : 'move',
         });
       } catch (error) {
         console.error('Failed to persist dialogue camera:', dialogue.id, error);

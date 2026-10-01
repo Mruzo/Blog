@@ -236,6 +236,16 @@ class Dialogue(models.Model):
     camera_target = models.CharField(max_length=50, blank=True, null=True, help_text="Optional override for the camera target point (e.g., '0m 1.6m 0m'). If empty, uses POV's default target.")
     field_of_view = models.FloatField(default=45.0, help_text="Camera field of view in degrees")
     zoom_speed = models.FloatField(default=1.0, help_text="Speed of camera transitions")
+    CAMERA_TRANSITIONS = [
+        ('move', 'Move'),
+        ('snap', 'Snap'),
+    ]
+    camera_transition = models.CharField(
+        max_length=8,
+        choices=CAMERA_TRANSITIONS,
+        default='move',
+        help_text="How the camera arrives at this line: ease from the previous shot, or cut.",
+    )
     rotation = models.CharField(max_length=50, default="0deg 0deg 0deg", help_text="Model rotation in degrees (e.g., '0deg 0deg 0deg')")
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="Timestamp when record was created. Nullable for imports from other Django apps.")
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True, help_text="Timestamp when record was last updated. Nullable for imports from other Django apps.")

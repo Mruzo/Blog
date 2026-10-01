@@ -268,6 +268,92 @@ class StoryCreationAPITestCase(APITestCase):
         dialogue = Dialogue.objects.first()
         self.assertEqual(dialogue.pov, pov)
         self.assertEqual(dialogue.episode, episode)
+        self.assertEqual(dialogue.camera_transition, 'move')
+
+    def test_create_dialogue_can_snap_camera(self):
+        """A line can cut to its camera instead of easing from the previous shot."""
+        story = Comic.objects.create(
+            title='Test Story',
+            description='A test story',
+            user=self.user
+        )
+        season = Season.objects.create(
+            title='Season 1',
+            season_number=1,
+            comic=story,
+            release_date='2024-01-01'
+        )
+        episode = Episode.objects.create(
+            title='Episode 1',
+            episode_number=1,
+            season=season
+        )
+        character = Character.objects.create(
+            name='Test Character',
+            bio='Test character bio',
+            personality='Protagonist',
+            love_interest='Test appearance',
+            user=self.user
+        )
+        pov = POV.objects.create(
+            title='Test POV',
+            character=character
+        )
+
+        url = reverse('icvybz-api:dialogue-list-create', kwargs={'episode_id': episode.id})
+        data = {**self.dialogue_data, 'pov': pov.id, 'camera_transition': 'snap'}
+        response = self.client.post(url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['camera_transition'], 'snap')
+        self.assertEqual(Dialogue.objects.first().camera_transition, 'snap')
+
+    def test_list_dialogues_returns_all_lines_beyond_default_page_size(self):
+        """Script lists are not paginated; 21 lines must all come back in one response."""
+        story = Comic.objects.create(
+            title='Test Story',
+            description='A test story',
+            user=self.user
+        )
+        season = Season.objects.create(
+            title='Season 1',
+            season_number=1,
+            comic=story,
+            release_date='2024-01-01'
+        )
+        episode = Episode.objects.create(
+            title='Episode 1',
+            episode_number=1,
+            season=season
+        )
+        character = Character.objects.create(
+            name='Test Character',
+            bio='Test character bio',
+            personality='Protagonist',
+            love_interest='Test appearance',
+            user=self.user
+        )
+        pov = POV.objects.create(
+            title='Test POV',
+            character=character
+        )
+        for index in range(1, 22):
+            Dialogue.objects.create(
+                episode=episode,
+                pov=pov,
+                character=character,
+                text=f'Line {index}',
+                order=index,
+            )
+
+        url = reverse('icvybz-api:dialogue-list-create', kwargs={'episode_id': episode.id})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+        self.assertEqual(len(response.data), 21)
+        self.assertEqual(response.data[-1]['order'], 21)
+        self.assertEqual(response.data[-1]['text'], 'Line 21')
 
     def test_create_complete_story_success(self):
         """Test creating a complete story with all related objects"""

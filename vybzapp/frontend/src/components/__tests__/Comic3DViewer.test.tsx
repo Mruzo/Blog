@@ -76,6 +76,7 @@ function renderViewer(overrides: {
   episodes?: Episode[];
   dialogues?: Dialogue[];
   readOnly?: boolean;
+  onDialogueUpdate?: (dialogueId: number, data: Partial<Dialogue>) => void;
 } = {}) {
   return render(
     <Comic3DViewer
@@ -84,6 +85,7 @@ function renderViewer(overrides: {
       dialogues={overrides.dialogues ?? []}
       storyId={1}
       readOnly={overrides.readOnly ?? true}
+      onDialogueUpdate={overrides.onDialogueUpdate}
     />,
   );
 }
@@ -103,6 +105,7 @@ function enterFullscreen() {
 describe('Comic3DViewer immersive fullscreen', () => {
   beforeEach(() => {
     document.body.classList.remove('comic3d-fullscreen-active');
+    window.localStorage.removeItem('vybzDialogueCameraAnimate');
     mockApiService.getAdPlacements.mockResolvedValue([]);
     mockApiService.incrementEpisodeView.mockResolvedValue({ story_total_views: 1 });
     mockApiService.trackAdEvent.mockResolvedValue(undefined);
@@ -255,5 +258,58 @@ describe('Comic3DViewer immersive fullscreen', () => {
     expect(scrollContainer).toBeInTheDocument();
     expect(scrollContainer).toHaveClass('episode-select-container');
     expect(scrollContainer).toHaveClass('comic3d-stage-episode-select');
+  });
+
+  it('snaps the camera when the next line is a cut', () => {
+    renderViewer({
+      dialogues: [
+        buildDialogue({ id: 100, text: 'First line', order: 1 }),
+        buildDialogue({
+          id: 101,
+          text: 'Second line',
+          order: 2,
+          camera_orbit: '45deg 60deg 4m',
+          camera_target: '-1m 1.8m 0.5m',
+          camera_transition: 'snap',
+        }),
+      ],
+    });
+
+    startPlayback();
+
+    const modelViewer = document.querySelector('model-viewer') as HTMLElement & {
+      jumpCameraToGoal?: jest.Mock;
+    };
+    const jumpCameraToGoal = jest.fn();
+    modelViewer.jumpCameraToGoal = jumpCameraToGoal;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next dialogue' }));
+    expect(jumpCameraToGoal).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Animate camera' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next dialogue' }));
+    expect(document.getElementById('top-dialogue')?.textContent).toContain('Second line');
+    expect(jumpCameraToGoal).toHaveBeenCalled();
+  });
+
+  it('saves move/snap on the current line in edit playback', () => {
+    const onDialogueUpdate = jest.fn();
+    renderViewer({
+      readOnly: false,
+      onDialogueUpdate,
+      dialogues: [
+        buildDialogue({ id: 100, text: 'First line', order: 1 }),
+        buildDialogue({ id: 101, text: 'Second line', order: 2 }),
+      ],
+    });
+
+    startPlayback();
+    fireEvent.click(screen.getByRole('button', { name: 'Next dialogue' }));
+
+    const toggle = screen.getByRole('button', { name: 'Animate camera' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(toggle);
+    expect(onDialogueUpdate).toHaveBeenCalledWith(100, { camera_transition: 'snap' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
 });

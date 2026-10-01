@@ -84,6 +84,10 @@ function expectDialValue(id: string, value: string) {
 }
 
 describe('StoryPreviewEditor camera dials', () => {
+  beforeEach(() => {
+    window.localStorage.removeItem('vybzDialogueCameraAnimate');
+  });
+
   it('shows CameraDials icons in edit mode', () => {
     render(
       <StoryPreviewEditor
@@ -255,5 +259,49 @@ describe('StoryPreviewEditor camera dials', () => {
       expectDialValue('orbitAzimuth', '10');
     });
     expect(screen.getByText(/reset to last saved values/i)).toBeInTheDocument();
+  });
+
+  it('saves snap on the current line and cuts when that line plays', () => {
+    const onDataUpdate = jest.fn();
+    const data = buildData();
+    const { rerender } = render(
+      <StoryPreviewEditor
+        data={data}
+        onDataUpdate={onDataUpdate}
+        onNext={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Animate camera' }));
+    expect(onDataUpdate).toHaveBeenCalledWith({
+      dialogues: [
+        expect.objectContaining({ id: 10, camera_transition: 'snap' }),
+        expect.objectContaining({ id: 11 }),
+      ],
+    });
+
+    const withSnapOnSecond = buildData({
+      dialogues: data.dialogues.map((dialogue, index) =>
+        index === 1 ? { ...dialogue, camera_transition: 'snap' } : dialogue
+      ),
+    });
+    rerender(
+      <StoryPreviewEditor
+        data={withSnapOnSecond}
+        onDataUpdate={onDataUpdate}
+        onNext={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    const modelViewer = document.querySelector('model-viewer') as HTMLElement & {
+      jumpCameraToGoal?: jest.Mock;
+    };
+    const jumpCameraToGoal = jest.fn();
+    modelViewer.jumpCameraToGoal = jumpCameraToGoal;
+
+    fireEvent.click(screen.getByTitle(/next dialogue/i));
+    expect(jumpCameraToGoal).toHaveBeenCalled();
   });
 });

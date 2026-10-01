@@ -6,6 +6,12 @@ import { useApi } from '../../contexts/ApiContext';
 import SimpleRichTextEditor from '../SimpleRichTextEditor';
 import NumberStepper from '../NumberStepper';
 import { resolveCharacterId } from '../../utils/characterId';
+import {
+  CAMERA_TRANSITION_MOVE,
+  CameraTransition,
+  normalizeCameraTransition,
+} from '../../utils/cameraTransition';
+import CameraTransitionPicks from '../CameraTransitionPicks';
 
 interface DialoguesStepProps {
   data: StoryCreationData;
@@ -29,6 +35,7 @@ interface Dialogue {
   camera_target: string;
   field_of_view: number;
   zoom_speed: number;
+  camera_transition?: CameraTransition;
   rotation: string;
 }
 
@@ -37,6 +44,7 @@ const DEFAULT_CAMERA = {
   camera_target: '0m 1.6m 0m',
   field_of_view: 45.0,
   zoom_speed: 1.0,
+  camera_transition: CAMERA_TRANSITION_MOVE as CameraTransition,
   rotation: '0deg 0deg 0deg',
 };
 
@@ -84,6 +92,7 @@ function buildDialogueApiPayload(dialogue: Dialogue): Partial<Dialogue> {
     camera_target: dialogue.camera_target,
     field_of_view: dialogue.field_of_view,
     zoom_speed: dialogue.zoom_speed,
+    camera_transition: normalizeCameraTransition(dialogue.camera_transition),
     rotation: dialogue.rotation,
   };
   if (dialogue.shot_type) {
@@ -432,6 +441,21 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
           />
         </div>
 
+        <div className="mb-3">
+          <p className="form-label subtext-btn-sm mb-1" id="cameraTransitionLabel">
+            Camera into this line
+          </p>
+          <CameraTransitionPicks
+            value={currentDialogue.camera_transition}
+            onChange={(camera_transition) =>
+              setCurrentDialogue((prev) => ({ ...prev, camera_transition }))
+            }
+          />
+          <small className="text-muted d-block mt-1">
+            Move eases from the previous shot. Snap cuts instantly.
+          </small>
+        </div>
+
         <details className="dialogues-step__camera">
           <summary>Camera settings (optional)</summary>
           <div className="dialogues-step__cameraGrid">
@@ -557,6 +581,8 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
                       <summary>Camera</summary>
                       <p className="subtext-btn-sm text-muted mb-0 mt-1 font-monospace">
                         Orbit: {dialogue.camera_orbit} · Target: {dialogue.camera_target}
+                        <br />
+                        Camera: {normalizeCameraTransition(dialogue.camera_transition) === 'snap' ? 'Snap' : 'Move'}
                         <br />
                         FOV: {dialogue.field_of_view}° · Zoom: {dialogue.zoom_speed} · Rot:{' '}
                         {dialogue.rotation}

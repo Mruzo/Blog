@@ -17,6 +17,12 @@ import DialoguePlaybackBar, {
 } from './DialoguePlaybackBar';
 import logger from '../utils/logger';
 import { applyHotspotOcclusion, HotspotOcclusionTarget } from '../utils/hotspotOcclusion';
+import {
+  CAMERA_TRANSITION_MOVE,
+  CAMERA_TRANSITION_SNAP,
+  normalizeCameraTransition,
+  shouldSnapCamera,
+} from '../utils/cameraTransition';
 import './Comic3DViewer.css';
 
 // Extend JSX.IntrinsicElements for model-viewer
@@ -49,6 +55,7 @@ interface DialogueData {
   camera_target: string;
   field_of_view: number;
   zoom_speed: number;
+  camera_transition: string;
   head_x: number;
   head_y: number;
   head_z: number;
@@ -458,6 +465,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         camera_target: d.camera_target,
         field_of_view: d.field_of_view,
         zoom_speed: d.zoom_speed,
+        camera_transition: normalizeCameraTransition(d.camera_transition),
         head_x,
         head_y,
         head_z
@@ -880,7 +888,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       camera_orbit: '0deg 75deg 3m',
       camera_target: '0m 1.6m 0m',
       field_of_view: 45,
-      zoom_speed: 1.0
+      zoom_speed: 1.0,
+      camera_transition: CAMERA_TRANSITION_MOVE,
     };
     
     setCurrentEditingDialogue(dialogue);
@@ -907,6 +916,49 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     if (mv && typeof mv.jumpCameraToGoal === 'function') {
       mv.jumpCameraToGoal();
     }
+  };
+
+  const toggleCurrentLineCameraTransition = () => {
+    const current = dialogueData[currentDialogueIndex];
+    if (!current || playbackPhase !== 'dialogue') {
+      return;
+    }
+    const next = shouldSnapCamera(current.camera_transition)
+      ? CAMERA_TRANSITION_MOVE
+      : CAMERA_TRANSITION_SNAP;
+    setDialogueData((prev) =>
+      prev.map((dialogue) =>
+        dialogue.dialogue_id === current.dialogue_id
+          ? { ...dialogue, camera_transition: next }
+          : dialogue
+      )
+    );
+    onDialogueUpdate?.(current.dialogue_id, { camera_transition: next });
+  };
+
+  const applyDialogueCamera = (currentDialogue: DialogueData) => {
+    if (!modelViewerRef.current) {
+      logger.camera('Comic3DViewer: Cannot update camera - modelViewerRef is null');
+      return;
+    }
+
+    logger.camera('Comic3DViewer: Camera target before:', modelViewerRef.current.cameraTarget);
+    logger.camera('Comic3DViewer: Camera orbit before:', modelViewerRef.current.cameraOrbit);
+    logger.camera('Comic3DViewer: New camera target:', currentDialogue.camera_target);
+    logger.camera('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
+    logger.camera('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
+
+    modelViewerRef.current.cameraTarget = currentDialogue.camera_target;
+    modelViewerRef.current.fieldOfView = `${currentDialogue.field_of_view}deg`;
+    modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
+
+    if (shouldSnapCamera(currentDialogue.camera_transition)) {
+      jumpModelViewerCameraToGoal();
+    }
+
+    logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
+    logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
+    logger.camera('Comic3DViewer: Camera orbit after setting:', modelViewerRef.current.cameraOrbit);
   };
 
   /**
@@ -1144,6 +1196,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       camera_target: dialogue.camera_target,
       field_of_view: dialogue.field_of_view || '45.0',
       zoom_speed: dialogue.zoom_speed || 1.0,
+      camera_transition: normalizeCameraTransition(dialogue.camera_transition),
       head_x: 0,
       head_y: 0,
       head_z: 0
@@ -1198,35 +1251,14 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     logger.log('Comic3DViewer: Setting dialogue text:', dialogueText);
     setCurrentDialogueText(dialogueText);
     
-    // Animate camera position (Django pattern - exact implementation)
+    // Animate camera to this line, or snap if the viewer turned animation off.
     logger.camera('Comic3DViewer: === CAMERA UPDATE DEBUG ===');
     logger.log('Comic3DViewer: Dialogue index:', index);
     logger.log('Comic3DViewer: modelViewerRef.current:', !!modelViewerRef.current);
     logger.log('Comic3DViewer: isModelReady:', isModelReady);
     logger.log('Comic3DViewer: currentDialogue:', currentDialogue);
-    
-    if (modelViewerRef.current) {
-      logger.camera('Comic3DViewer: Camera target before:', modelViewerRef.current.cameraTarget);
-      logger.camera('Comic3DViewer: Camera orbit before:', modelViewerRef.current.cameraOrbit);
-      logger.camera('Comic3DViewer: New camera target:', currentDialogue.camera_target);
-      logger.camera('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
-      logger.camera('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
-
-      // Same path as StoryPreviewEditor: set goals and let model-viewer interpolation
-      // ease between dialogue lines. Do not jumpCameraToGoal() here — that snaps instantly.
-      modelViewerRef.current.cameraTarget = currentDialogue.camera_target;
-      modelViewerRef.current.fieldOfView = `${currentDialogue.field_of_view}deg`;
-      modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
-
-      logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
-      logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
-      logger.camera('Comic3DViewer: Camera orbit after setting:', modelViewerRef.current.cameraOrbit);
-
-      updateDialsFromDialogue(currentDialogue);
-    } else {
-      logger.camera('Comic3DViewer: Cannot update camera - modelViewerRef is null');
-      updateDialsFromDialogue(currentDialogue);
-    }
+    applyDialogueCamera(currentDialogue);
+    updateDialsFromDialogue(currentDialogue);
   };
 
   // Show dialogue with camera animation (Django pattern)
@@ -1258,35 +1290,14 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     logger.log('Comic3DViewer: Setting dialogue text:', dialogueText);
     setCurrentDialogueText(dialogueText);
     
-    // Animate camera position (Django pattern - exact implementation)
+    // Animate camera to this line, or snap if the viewer turned animation off.
     logger.camera('Comic3DViewer: === CAMERA UPDATE DEBUG ===');
     logger.log('Comic3DViewer: Dialogue index:', index);
     logger.log('Comic3DViewer: modelViewerRef.current:', !!modelViewerRef.current);
     logger.log('Comic3DViewer: isModelReady:', isModelReady);
     logger.log('Comic3DViewer: currentDialogue:', currentDialogue);
-    
-    if (modelViewerRef.current) {
-      logger.camera('Comic3DViewer: Camera target before:', modelViewerRef.current.cameraTarget);
-      logger.camera('Comic3DViewer: Camera orbit before:', modelViewerRef.current.cameraOrbit);
-      logger.camera('Comic3DViewer: New camera target:', currentDialogue.camera_target);
-      logger.camera('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
-      logger.camera('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
-
-      // Same path as StoryPreviewEditor: set goals and let model-viewer interpolation
-      // ease between dialogue lines. Do not jumpCameraToGoal() here — that snaps instantly.
-      modelViewerRef.current.cameraTarget = currentDialogue.camera_target;
-      modelViewerRef.current.fieldOfView = `${currentDialogue.field_of_view}deg`;
-      modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
-
-      logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
-      logger.camera('Comic3DViewer: Field of view after setting:', modelViewerRef.current.fieldOfView);
-      logger.camera('Comic3DViewer: Camera orbit after setting:', modelViewerRef.current.cameraOrbit);
-
-      updateDialsFromDialogue(currentDialogue);
-    } else {
-      logger.camera('Comic3DViewer: Cannot update camera - modelViewerRef is null');
-      updateDialsFromDialogue(currentDialogue);
-    }
+    applyDialogueCamera(currentDialogue);
+    updateDialsFromDialogue(currentDialogue);
   };
 
   // Navigation functions (Django pattern)
@@ -1860,6 +1871,16 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 onNext={goToNextDialogue}
                 onTogglePlay={togglePlay}
                 onSpeedChange={setPlaySpeed}
+                animateCamera={
+                  playbackPhase === 'dialogue'
+                    ? !shouldSnapCamera(dialogueData[currentDialogueIndex]?.camera_transition)
+                    : true
+                }
+                onToggleCameraAnimate={
+                  !readOnly && playbackPhase === 'dialogue'
+                    ? toggleCurrentLineCameraTransition
+                    : undefined
+                }
                 previousDisabled={
                   episodeDialogues.length === 0 ||
                   playbackPhase === 'intro' ||
@@ -1903,6 +1924,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 camera_target: dialogue.camera_target,
                 field_of_view: dialogue.field_of_view,
                 zoom_speed: dialogue.zoom_speed,
+                camera_transition: normalizeCameraTransition(dialogue.camera_transition),
                 rotation: dialogue.rotation || '0deg 0deg 0deg',
                 head_x: dialogue.pov_data?.head_x ?? 0,
                 head_y: dialogue.pov_data?.head_y ?? 1.6,

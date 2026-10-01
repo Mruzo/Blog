@@ -212,7 +212,7 @@ class DialogueSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'pov', 'pov_data', 'character', 'character_name', 'text', 'order', 'scene_title', 'scene_description',
             'shot_type', 'camera_orbit', 'camera_target', 'field_of_view', 
-            'zoom_speed', 'rotation', 'episode', 'created_at', 'updated_at'
+            'zoom_speed', 'camera_transition', 'rotation', 'episode', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'episode', 'created_at', 'updated_at']
     

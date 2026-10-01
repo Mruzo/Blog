@@ -119,6 +119,7 @@ class Command(BaseCommand):
                         'camera_target': dialogue.camera_target,
                         'field_of_view': dialogue.field_of_view,
                         'zoom_speed': dialogue.zoom_speed,
+                        'camera_transition': dialogue.camera_transition,
                         'rotation': dialogue.rotation,
                         'character_name': dialogue.pov.character.name,
                         'character_head_x': dialogue.pov.head_x,

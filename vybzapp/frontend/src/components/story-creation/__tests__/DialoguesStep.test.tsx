@@ -140,6 +140,7 @@ const expectedCameraPayload = {
   camera_target: '0m 1.6m 0m',
   field_of_view: 45,
   zoom_speed: 1,
+  camera_transition: 'move',
   rotation: '0deg 0deg 0deg',
 };
 
@@ -481,6 +482,7 @@ describe('DialoguesStep Progressive Saving', () => {
         camera_target: '1m 1.7m 0m',
         field_of_view: 52,
         zoom_speed: 1.4,
+        camera_transition: 'move',
         rotation: '5deg 0deg 0deg',
       });
     });

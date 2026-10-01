@@ -14,6 +14,7 @@ interface Dialogue {
   camera_target: string;
   field_of_view: number;
   zoom_speed: number;
+  camera_transition?: string;
   rotation: string;
   created_at: string;
   updated_at: string;
@@ -80,7 +81,8 @@ const DialogueCard: React.FC<DialogueCardProps> = ({
         {showCameraInfo && (
           <p className="script-block__meta mb-0 mt-1 px-1">
             <i className="fas fa-camera me-1" aria-hidden />
-            Orbit: {dialogue.camera_orbit} · Target: {dialogue.camera_target}
+            {dialogue.camera_transition === 'snap' ? 'Snap' : 'Move'} · Orbit:{' '}
+            {dialogue.camera_orbit} · Target: {dialogue.camera_target}
           </p>
         )}
       </div>

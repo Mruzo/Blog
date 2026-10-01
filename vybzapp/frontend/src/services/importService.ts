@@ -68,6 +68,7 @@ export interface DjangoDialogueData {
   camera_target: string;
   field_of_view: number;
   zoom_speed: number;
+  camera_transition?: 'move' | 'snap';
   rotation: string;
   pov?: {
     id: number;
@@ -412,6 +413,7 @@ export class ImportService {
         camera_target: dialogueData.camera_target,
         field_of_view: dialogueData.field_of_view,
         zoom_speed: dialogueData.zoom_speed,
+        camera_transition: dialogueData.camera_transition === 'snap' ? 'snap' : 'move',
         rotation: dialogueData.rotation
       });
 

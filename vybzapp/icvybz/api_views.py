@@ -773,6 +773,7 @@ def increment_episode_view(request, episode_id):
 class DialogueListCreateView(generics.ListCreateAPIView):
     serializer_class = DialogueSerializer
     permission_classes = [AllowAny]  # Allow public access for public stories
+    pagination_class = None  # Script lines must all load; default PAGE_SIZE is 20
     
     def get_permissions(self):
         # Require authentication for POST/PUT/DELETE, allow public for GET
@@ -1592,6 +1593,7 @@ def create_complete_story(request):
                     camera_target=dialogue_data.get('camera_target', '0m 1.6m 0m'),
                     field_of_view=dialogue_data.get('field_of_view', 45.0),
                     zoom_speed=dialogue_data.get('zoom_speed', 1.0),
+                    camera_transition=dialogue_data.get('camera_transition', 'move'),
                     rotation=dialogue_data.get('rotation', '0deg 0deg 0deg'),
                     episode=episode
                 )

@@ -252,6 +252,8 @@ def update_camera_data(request, dialogue_id):
             dialogue.field_of_view = float(data['field_of_view'])
         if 'zoom_speed' in data:
             dialogue.zoom_speed = float(data['zoom_speed'])
+        if 'camera_transition' in data:
+            dialogue.camera_transition = data['camera_transition']
         if 'rotation' in data:
             dialogue.rotation = data['rotation']
         

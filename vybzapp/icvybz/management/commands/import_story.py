@@ -251,6 +251,7 @@ class Command(BaseCommand):
             camera_target=dialogue_data.get('camera_target', ''),
             field_of_view=dialogue_data.get('field_of_view', 45.0),
             zoom_speed=dialogue_data.get('zoom_speed', 1.0),
+            camera_transition=dialogue_data.get('camera_transition', 'move'),
             rotation=dialogue_data.get('rotation', '0deg 0deg 0deg')
         )
 

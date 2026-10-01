@@ -23,6 +23,8 @@ export interface DialoguePlaybackBarProps {
   nextDisabled?: boolean;
   previousTitle?: string;
   nextTitle?: string;
+  animateCamera?: boolean;
+  onToggleCameraAnimate?: () => void;
   showFullscreen?: boolean;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
@@ -44,6 +46,8 @@ const DialoguePlaybackBar: React.FC<DialoguePlaybackBarProps> = ({
   nextDisabled = false,
   previousTitle,
   nextTitle,
+  animateCamera = true,
+  onToggleCameraAnimate,
   showFullscreen = false,
   isFullscreen = false,
   onToggleFullscreen,
@@ -118,6 +122,29 @@ const DialoguePlaybackBar: React.FC<DialoguePlaybackBarProps> = ({
                       </button>
                     ))}
                   </div>
+
+                  {onToggleCameraAnimate && (
+                    <button
+                      type="button"
+                      className={`btn btn-sm comic3d-camera-animate-toggle ${
+                        animateCamera ? 'btn-primary' : 'btn-outline-secondary'
+                      }`}
+                      onClick={onToggleCameraAnimate}
+                      aria-pressed={animateCamera}
+                      aria-label="Animate camera"
+                      title={
+                        animateCamera
+                          ? 'This line eases from the previous shot. Click to cut.'
+                          : 'This line cuts from the previous shot. Click to ease.'
+                      }
+                    >
+                      <i
+                        className={`fas ${animateCamera ? 'fa-film' : 'fa-bolt'}`}
+                        aria-hidden="true"
+                      />
+                      <span>{animateCamera ? 'Move' : 'Snap'}</span>
+                    </button>
+                  )}
 
                   {showFullscreen && (
                     <button

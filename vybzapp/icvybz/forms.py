@@ -227,7 +227,7 @@ class DialogueForm(forms.ModelForm):
     
     class Meta:
         model = Dialogue
-        fields = ['text', 'order', 'camera_orbit', 'camera_target', 'field_of_view', 'zoom_speed', 'rotation']
+        fields = ['text', 'order', 'camera_orbit', 'camera_target', 'field_of_view', 'zoom_speed', 'camera_transition', 'rotation']
         widgets = {
             'text': forms.Textarea(attrs={
                 'class': 'form-control',

@@ -225,18 +225,28 @@ body.comic3d-fullscreen-active {
   padding-inline: 0.65rem;
 }
 
+.comic3d-camera-animate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 2.5rem;
+}
+
 .comic3d-fullscreen .comic3d-fullscreen-toggle {
   display: inline-flex;
 }
 
-.comic3d-fullscreen .comic3d-fullscreen-toggle.btn-outline-secondary {
+.comic3d-fullscreen .comic3d-fullscreen-toggle.btn-outline-secondary,
+.comic3d-fullscreen .comic3d-camera-animate-toggle.btn-outline-secondary {
   color: rgba(255, 255, 255, 0.92);
   border-color: rgba(255, 255, 255, 0.45);
   background: transparent;
 }
 
 .comic3d-fullscreen .comic3d-fullscreen-toggle.btn-outline-secondary:hover,
-.comic3d-fullscreen .comic3d-fullscreen-toggle.btn-outline-secondary:focus-visible {
+.comic3d-fullscreen .comic3d-fullscreen-toggle.btn-outline-secondary:focus-visible,
+.comic3d-fullscreen .comic3d-camera-animate-toggle.btn-outline-secondary:hover,
+.comic3d-fullscreen .comic3d-camera-animate-toggle.btn-outline-secondary:focus-visible {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.75);
   background: rgba(255, 255, 255, 0.08);
@@ -580,7 +590,8 @@ body.comic3d-fullscreen-active {
     gap: 0.35rem !important;
   }
 
-  .comic3d-fullscreen-toggle {
+  .comic3d-fullscreen-toggle,
+  .comic3d-camera-animate-toggle {
     padding: 0.5rem 0.55rem;
     min-width: 2.35rem;
   }

@@ -4,6 +4,12 @@ import { coordsForSceneSlot } from '../utils/sceneSlots';
 import { applyHotspotOcclusion, Vec3 } from '../utils/hotspotOcclusion';
 import CameraDials from './CameraDials';
 import DialoguePlaybackBar, { PLAYBACK_SPEED_1X_MS } from './DialoguePlaybackBar';
+import {
+  CAMERA_TRANSITION_MOVE,
+  CAMERA_TRANSITION_SNAP,
+  normalizeCameraTransition,
+  shouldSnapCamera,
+} from '../utils/cameraTransition';
 import './Comic3DViewer.css';
 
 interface StoryPreviewEditorProps {
@@ -23,6 +29,7 @@ interface Dialogue {
   camera_target: string;
   field_of_view: number;
   zoom_speed: number;
+  camera_transition?: string;
   rotation: string;
 }
 
@@ -159,6 +166,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
           field_of_view:
             typeof dialogue.field_of_view === 'number' ? dialogue.field_of_view : 45,
           zoom_speed: typeof dialogue.zoom_speed === 'number' ? dialogue.zoom_speed : 1,
+          camera_transition: normalizeCameraTransition(dialogue.camera_transition),
           rotation: dialogue.rotation || '0deg 0deg 0deg',
         })),
     [data.dialogues]
@@ -218,7 +226,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
     applyHotspotOcclusion(modelViewerRef.current, characterHotspots);
   }, [characterHotspots]);
 
-  const applyCameraToViewer = useCallback((camera: CameraData) => {
+  const applyCameraToViewer = useCallback((camera: CameraData, immediate = false) => {
     const modelViewer = modelViewerRef.current;
     if (!modelViewer) {
       return;
@@ -227,6 +235,9 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
     modelViewer.cameraOrbit = fields.camera_orbit;
     modelViewer.cameraTarget = fields.camera_target;
     modelViewer.fieldOfView = `${fields.field_of_view}deg`;
+    if (immediate && typeof modelViewer.jumpCameraToGoal === 'function') {
+      modelViewer.jumpCameraToGoal();
+    }
   }, []);
 
   // Load this dialogue's saved camera when navigating lines (not when the
@@ -243,7 +254,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
     );
     setCameraData(cloneCameraData(parsedCamera));
     setCurrentValues(cloneCameraData(parsedCamera));
-    applyCameraToViewer(parsedCamera);
+    applyCameraToViewer(parsedCamera, shouldSnapCamera(currentDialogue.camera_transition));
     // currentDialogue object identity changes when the parent rebuilds the
     // dialogues array; only the fields below should reload the saved camera.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,6 +266,7 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
     currentDialogue?.camera_target,
     currentDialogue?.field_of_view,
     currentDialogue?.zoom_speed,
+    currentDialogue?.camera_transition,
     applyCameraToViewer,
   ]);
 
@@ -317,6 +329,26 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
       stopPlayback();
       startPlayback();
     }
+  };
+
+  const toggleCameraAnimate = () => {
+    if (!currentDialogue) {
+      return;
+    }
+    const next = shouldSnapCamera(currentDialogue.camera_transition)
+      ? CAMERA_TRANSITION_MOVE
+      : CAMERA_TRANSITION_SNAP;
+    const updatedDialogues = data.dialogues.map((dialogue) => {
+      const sameById =
+        typeof currentDialogue.id === 'number' && dialogue.id === currentDialogue.id;
+      const sameByOrder =
+        currentDialogue.id == null && dialogue.order === currentDialogue.order;
+      if (sameById || sameByOrder) {
+        return { ...dialogue, camera_transition: next };
+      }
+      return dialogue;
+    });
+    onDataUpdate({ dialogues: updatedDialogues });
   };
 
   const handleModeToggle = (mode: 'preview' | 'edit') => {
@@ -533,6 +565,8 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
           onNext={nextDialogue}
           onTogglePlay={isPlaying ? pausePlayback : startPlayback}
           onSpeedChange={handleSpeedChange}
+          animateCamera={!shouldSnapCamera(currentDialogue?.camera_transition)}
+          onToggleCameraAnimate={toggleCameraAnimate}
           previousDisabled={currentDialogueIndex === 0}
           nextDisabled={currentDialogueIndex >= totalDialogues - 1}
           previousTitle={`Previous dialogue (${currentDialogueIndex}/${totalDialogues})`}

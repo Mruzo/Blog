@@ -11,6 +11,8 @@ import { Character, Episode as ApiEpisode, apiService, Season, Story } from '../
 import { useDialogA11y } from '../hooks/useDialogA11y';
 import NumberStepper from '../components/NumberStepper';
 import { resolveCharacterId } from '../utils/characterId';
+import { CAMERA_TRANSITION_MOVE, CameraTransition, normalizeCameraTransition } from '../utils/cameraTransition';
+import CameraTransitionPicks from '../components/CameraTransitionPicks';
 
 function asCharacterList(payload: unknown): Character[] {
   if (Array.isArray(payload)) {
@@ -80,6 +82,7 @@ interface Dialogue {
   camera_target: string;
   field_of_view: number;
   zoom_speed: number;
+  camera_transition?: string;
   rotation: string;
   created_at: string;
   updated_at: string;
@@ -106,6 +109,7 @@ interface DialogueFormData {
   camera_target: string;
   field_of_view: number;
   zoom_speed: number;
+  camera_transition: CameraTransition;
   rotation: string;
 }
 
@@ -163,6 +167,7 @@ const EpisodeManage: React.FC = () => {
     camera_target: '0m 1.6m 0m',
     field_of_view: 45.0,
     zoom_speed: 1.0,
+    camera_transition: CAMERA_TRANSITION_MOVE,
     rotation: '0deg 0deg 0deg'
   });
   
@@ -202,6 +207,7 @@ const EpisodeManage: React.FC = () => {
       camera_target: '0m 1.6m 0m',
       field_of_view: 45.0,
       zoom_speed: 1.0,
+      camera_transition: CAMERA_TRANSITION_MOVE,
       rotation: '0deg 0deg 0deg'
     };
   };
@@ -522,6 +528,7 @@ const EpisodeManage: React.FC = () => {
       camera_target: dialogue.camera_target,
       field_of_view: dialogue.field_of_view,
       zoom_speed: dialogue.zoom_speed,
+      camera_transition: normalizeCameraTransition(dialogue.camera_transition),
       rotation: dialogue.rotation
     });
     setShowDialogueForm(true);
@@ -1034,6 +1041,20 @@ const EpisodeManage: React.FC = () => {
               </div>
               <form onSubmit={handleDialogueSubmit}>
                 <div className="modal-body">
+                  <div className="mb-3">
+                    <p className="form-label subtext-btn-sm mb-1" id="cameraTransitionLabel">
+                      Camera into this line
+                    </p>
+                    <CameraTransitionPicks
+                      value={dialogueFormData.camera_transition}
+                      onChange={(camera_transition) =>
+                        setDialogueFormData((prev) => ({ ...prev, camera_transition }))
+                      }
+                    />
+                    <small className="text-muted d-block mt-1">
+                      Move eases from the previous shot. Snap cuts instantly.
+                    </small>
+                  </div>
                   <div className="mb-3">
                     <label htmlFor="dialogueOrder" className="form-label subtext-btn-sm">Order</label>
                     <NumberStepper
