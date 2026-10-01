@@ -106,6 +106,29 @@ class OrderConfirmationEmailContentTestCase(TestCase):
         
         # Check for order URL
         self.assertIn('order', html_content.lower())
+
+    def test_in_person_confirmation_attaches_invoice_pdf(self):
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+        from snmov.models import Invoice
+
+        self.order.customer = None
+        self.order.guest_email = 'walkin@example.com'
+        self.order.fulfillment_method = Order.FULFILLMENT_PICKUP
+        self.order.save()
+        default_storage.save('invoices/walkin.pdf', ContentFile(b'%PDF-1.4 walkin invoice'))
+        invoice = Invoice.objects.create(order=self.order, pdf_path='invoices/walkin.pdf')
+
+        mail.outbox.clear()
+        send_order_confirmation(self.order)
+
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ['walkin@example.com'])
+        self.assertEqual(len(email.attachments), 1)
+        self.assertEqual(email.attachments[0][0], f'invoice_{invoice.invoice_number}.pdf')
+        self.assertEqual(email.attachments[0][1], b'%PDF-1.4 walkin invoice')
+        self.assertIn('invoice is attached', email.body.lower())
     
     def test_order_confirmation_email_amounts_formatted(self):
         """Test that amounts in order confirmation are formatted to 2 decimal places"""

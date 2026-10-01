@@ -95,6 +95,7 @@ describe('StoryPreviewEditor camera dials', () => {
     );
 
     enterEditMode();
+    expect(document.querySelector('.comic-3d-viewer')).toHaveClass('is-editing');
 
     const icons = Array.from(document.querySelectorAll('.material-symbols-outlined')).map(
       (el) => el.textContent?.trim()

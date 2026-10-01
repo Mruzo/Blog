@@ -32,7 +32,7 @@ jest.mock('axios', () => {
 // Add custom matchers manually to avoid nullish coalescing operator issues
 expect.extend({
   toBeInTheDocument(received) {
-    const pass = received && received.ownerDocument && received.ownerDocument.body.contains(received);
+      const pass = Boolean(received && received.ownerDocument && received.ownerDocument.body.contains(received));
     return {
       pass,
       message: () => pass 
@@ -72,8 +72,17 @@ expect.extend({
         ? `Expected element not to have attribute "${attribute}"${value ? ` with value "${value}"` : ''}`
         : `Expected element to have attribute "${attribute}"${value ? ` with value "${value}"` : ''}`
     };
-  }
-  ,
+  },
+  toHaveValue(received, expected) {
+    const value = received && 'value' in received ? received.value : undefined;
+    const pass = String(value ?? '') === String(expected);
+    return {
+      pass,
+      message: () => pass
+        ? `Expected element not to have value "${expected}"`
+        : `Expected element to have value "${expected}" but got "${value}"`,
+    };
+  },
   toHaveStyle(received, expected) {
     if (!received || !expected || typeof expected !== 'object') {
       return {

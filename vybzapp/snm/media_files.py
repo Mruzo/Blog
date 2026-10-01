@@ -12,6 +12,14 @@ def media_exists(relative_path):
     return bool(relative_path) and default_storage.exists(relative_path.lstrip('/'))
 
 
+def read_media_bytes(relative_path):
+    """Return file bytes from media storage, or None if missing."""
+    if not media_exists(relative_path):
+        return None
+    with default_storage.open(relative_path.lstrip('/'), 'rb') as handle:
+        return handle.read()
+
+
 def save_media_bytes(relative_path, data):
     """Save bytes at a path relative to media root; overwrite if present."""
     relative_path = relative_path.lstrip('/')

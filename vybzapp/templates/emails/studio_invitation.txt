@@ -6,11 +6,15 @@ Hello {% if invitee_user %}{{ invitee_user.first_name|default:invitee_user.usern
 
 Role: {{ role_display }}
 
+{% if is_registration %}
+Create an account with this email address to join the studio:
+{{ register_url }}
+{% else %}
 View studio: {{ studio_url }}
 
-You now have access to collaborate on all stories in this studio.
+You now have access to collaborate on stories in this studio.
+{% endif %}
 
 If you have any questions, please contact our support team.
 
 © {% now "Y" %} Justvybz Inc. All rights reserved.
-

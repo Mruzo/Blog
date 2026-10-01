@@ -440,11 +440,11 @@ const StoryPreviewEditor: React.FC<StoryPreviewEditorProps> = ({
   }, [data.model.previewUrl, syncCharacterHotspots, updateHotspotOcclusion]);
 
   return (
-    <div className={`comic-3d-viewer story-preview-editor ${className}`}>
+    <div className={`comic-3d-viewer story-preview-editor ${className}${showEditingOverlay ? ' is-editing' : ''}`}>
       {/* 3D Model Container */}
       <div className="row">
         <div className="col-12">
-          <div className="card model-container position-relative" style={{ height: '400px', display: 'block' }}>
+          <div className="card model-container position-relative">
             {data.model.previewUrl ? (
               <div style={{ width: '100%', height: '100%', position: 'relative', zIndex: 0, isolation: 'isolate' }}>
                 {/* Direct model-viewer element */}

@@ -657,13 +657,21 @@ class UpdateRoleSerializer(serializers.Serializer):
 class StudioCollaboratorSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     studio = StudioSerializer(read_only=True)
-    
+    owned_studio_id = serializers.SerializerMethodField()
+
     class Meta:
         model = StudioCollaborator
         fields = [
-            'id', 'studio', 'user', 'role', 'joined_at', 'is_active'
+            'id', 'studio', 'user', 'role', 'joined_at', 'is_active', 'owned_studio_id'
         ]
-        read_only_fields = ['id', 'studio', 'user', 'joined_at']
+        read_only_fields = ['id', 'studio', 'user', 'joined_at', 'owned_studio_id']
+
+    def get_owned_studio_id(self, obj):
+        mapping = self.context.get('owned_studio_ids')
+        if mapping is not None:
+            return mapping.get(obj.user_id)
+        owned = Studio.objects.filter(owner=obj.user).order_by('created_at', 'id').first()
+        return owned.id if owned else None
 
 
 class InviteStudioUserSerializer(serializers.Serializer):

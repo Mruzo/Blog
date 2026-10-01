@@ -217,6 +217,7 @@ def _delete_user_content(user, summary):
     from icvybz.models import (
         Comic, Character, Studio, AudioTrack, Intersection,
         CollaborationInvite, StoryCollaborator, StudioCollaborator,
+        StudioCollaborationInvite,
         ComicComment,
     )
 
@@ -245,6 +246,12 @@ def _delete_user_content(user, summary):
     )
     summary['collaboration_invites_deleted'] = invites.count()
     invites.delete()
+
+    studio_invites = StudioCollaborationInvite.objects.filter(
+        Q(inviter=user) | Q(invitee_email__iexact=user.email)
+    )
+    summary['studio_email_invites_deleted'] = studio_invites.count()
+    studio_invites.delete()
 
     story_collabs = StoryCollaborator.objects.filter(user=user)
     summary['collaborations_removed'] = story_collabs.count()

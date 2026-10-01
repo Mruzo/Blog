@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useApi } from '../contexts/ApiContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 import { snmovApiUrl } from '../utils/snmovApi';
@@ -141,6 +143,8 @@ const ProductList: React.FC<ProductListProps> = () => {
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
   const { addToCart, cartItems } = useCart();
+  const { currentUser } = useApi();
+  const canInPersonSale = Boolean(currentUser?.is_staff || currentUser?.is_superuser);
   const buySectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -489,6 +493,14 @@ const ProductList: React.FC<ProductListProps> = () => {
                   >
                     See more
                   </button>
+                  {canInPersonSale && (
+                    <Link
+                      to="/product/staff/sale/"
+                      className="product-landing__ctaGhost store-page__linkBtn text-decoration-none d-inline-flex align-items-center"
+                    >
+                      In-person sale
+                    </Link>
+                  )}
                 </div>
               </div>
               <div className="product-landing__heroVisual" aria-label="Hero image">

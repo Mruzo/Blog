@@ -7,10 +7,12 @@ import { CartProvider } from '../../contexts/CartContext';
 
 // Mock useNavigate
 const mockNavigate = jest.fn();
+const mockSearchParamsHolder = { current: new URLSearchParams() };
+
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
-  useSearchParams: () => [new URLSearchParams(), jest.fn()],
+  useSearchParams: () => [mockSearchParamsHolder.current, jest.fn()],
 }));
 
 // Mock useApi
@@ -41,6 +43,7 @@ describe('Register', () => {
   beforeEach(() => {
     mockNavigate.mockClear();
     mockRegister.mockClear();
+    mockSearchParamsHolder.current = new URLSearchParams();
   });
 
   it('renders registration form', () => {
@@ -330,6 +333,12 @@ describe('Register', () => {
     
     expect((firstNameInput as HTMLInputElement).required).toBe(false);
     expect((lastNameInput as HTMLInputElement).required).toBe(false);
+  });
+
+  it('prefills email from the invite query string', () => {
+    mockSearchParamsHolder.current = new URLSearchParams('email=invited@example.com');
+    renderWithProviders(<Register />);
+    expect(screen.getByLabelText(/email/i)).toHaveValue('invited@example.com');
   });
 });
 

@@ -420,6 +420,14 @@ class Order(models.Model):
         ('CANCELLED', 'Cancelled'),
         ('FAILED', 'Failed'),
     ]
+    FULFILLMENT_SHIP = 'ship'
+    FULFILLMENT_PICKUP = 'pickup'
+    FULFILLMENT_CHOICES = [
+        (FULFILLMENT_SHIP, 'Ship'),
+        (FULFILLMENT_PICKUP, 'In-person pickup'),
+    ]
+    PAYMENT_CARD = 'card'
+    PAYMENT_CASH = 'cash'
 
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -436,6 +444,31 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     shipping_address = models.ForeignKey(ShippingAddress, on_delete=models.SET_NULL, null=True, blank=True)
+    fulfillment_method = models.CharField(
+        max_length=16,
+        choices=FULFILLMENT_CHOICES,
+        default=FULFILLMENT_SHIP,
+        help_text='Ship via Canada Post, or a staff-only in-person sale with no shipping.',
+    )
+    payment_method = models.CharField(
+        max_length=16,
+        choices=[
+            ('', 'Not set'),
+            ('card', 'Card'),
+            ('cash', 'Cash'),
+        ],
+        blank=True,
+        default='',
+        help_text='How this order was paid. Cash is staff in-person sales only.',
+    )
+    sold_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='in_person_sales',
+        help_text='Staff member who completed an in-person sale.',
+    )
     shipping_rate_id = models.CharField(max_length=100, blank=True, null=True)
     shipping_provider = models.CharField(max_length=50, blank=True, null=True)
     shipping_service = models.CharField(max_length=100, blank=True, null=True)
@@ -464,6 +497,10 @@ class Order(models.Model):
     @property
     def is_guest_order(self):
         return self.customer_id is None
+
+    @property
+    def is_in_person_pickup(self):
+        return self.fulfillment_method == self.FULFILLMENT_PICKUP
 
     def get_contact_email(self):
         if self.customer_id:

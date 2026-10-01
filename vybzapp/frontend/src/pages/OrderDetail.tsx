@@ -51,6 +51,7 @@ interface Order {
   items: OrderItem[];
   tracking_number?: string;
   estimated_delivery?: string;
+  fulfillment_method?: string;
 }
 
 function mapOrderApiResponse(data: any): Order {
@@ -132,6 +133,7 @@ function mapOrderApiResponse(data: any): Order {
     updated_at: data.updated_at || new Date().toISOString(),
     tracking_number: data.tracking_number || undefined,
     estimated_delivery: undefined,
+    fulfillment_method: data.fulfillment_method || undefined,
     shipping_address: {
       first_name,
       last_name,
@@ -268,7 +270,11 @@ const OrderDetail: React.FC = () => {
   };
 
   const getStatusLabel = (status: string) => {
-    switch (status.toLowerCase()) {
+    const s = status.toLowerCase();
+    if ((order?.fulfillment_method || '') === 'pickup' && s === 'processing') {
+      return 'Ready for pickup';
+    }
+    switch (s) {
       case 'pending':
         return 'Pending';
       case 'ordered':
@@ -293,8 +299,8 @@ const OrderDetail: React.FC = () => {
   const canDownloadInvoice = (o: Order) => {
     if (!o.payment_completed_at) return false;
     const s = o.status.toLowerCase();
-    if (s === 'pending' || s === 'failed') return false;
-    // Only show once the order is in a "completed fulfillment" state
+    if (s === 'pending' || s === 'failed' || s === 'cancelled') return false;
+    if (o.fulfillment_method === 'pickup') return true;
     return ['shipped', 'delivered'].includes(s);
   };
 
@@ -534,9 +540,20 @@ const OrderDetail: React.FC = () => {
 
               <div className="store-page__panel" style={{ marginTop: '1rem' }}>
                 <div className="store-page__panelHead">
-                  <h2 className="store-page__panelTitle">Shipping address</h2>
+                  <h2 className="store-page__panelTitle">
+                    {order.fulfillment_method === 'pickup' ? 'Pickup' : 'Shipping address'}
+                  </h2>
                 </div>
                 <div className="store-page__panelBody store-page__panelBody--padded product-landing__body">
+                  {order.fulfillment_method === 'pickup' ? (
+                    <div>
+                      Paid as an in-person sale — this order is not shipped.
+                      <div style={{ marginTop: '0.5rem' }}>
+                        {order.shipping_address.first_name} {order.shipping_address.last_name}
+                      </div>
+                    </div>
+                  ) : (
+                  <>
                   <div>
                     {order.shipping_address.first_name} {order.shipping_address.last_name}
                   </div>
@@ -552,6 +569,8 @@ const OrderDetail: React.FC = () => {
                       <i className="fas fa-phone me-1" aria-hidden />
                       {order.shipping_address.phone}
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
               </div>

@@ -5,7 +5,7 @@ from .models import Product, Comment
 
 class StaticViewSitemap(Sitemap):
     def items(self):
-        return ['about', 'privacy', 'terms', 'cookie', 'contact', ]
+        return ['about', 'privacy', 'terms', 'cookie', 'contact', 'docs', ]
 
     def location(self, item):
         return reverse(item)

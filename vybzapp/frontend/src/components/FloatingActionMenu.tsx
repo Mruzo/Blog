@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MessagePopup from './MessagePopup';
 import { apiService } from '../services/api';
 import { DRAFT_STORY_LIMIT_MESSAGE, isAtDraftStoryLimit } from '../utils/draftStoryLimit';
-import './FloatingCreateStory.css';
 
 /**
  * Standalone create-story (+) control on the Stories page.

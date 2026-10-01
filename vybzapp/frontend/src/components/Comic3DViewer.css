@@ -40,6 +40,12 @@
   position: relative;
 }
 
+.story-preview-editor .model-container {
+  height: 400px;
+  aspect-ratio: unset;
+  display: block;
+}
+
 .model-3d-preview {
   position: relative;
 }
@@ -599,6 +605,22 @@ body.comic3d-fullscreen-active {
     font-size: 0.8rem;
     padding: 0.4rem 0.8rem;
   }
+}
+
+/* Edit mode: shrink the canvas so camera dials have more room. */
+.comic-3d-viewer.is-editing .model-container {
+  width: 70%;
+  max-width: 350px;
+}
+
+.story-preview-editor.is-editing .model-container {
+  height: 280px;
+}
+
+.comic-3d-viewer.is-editing .comic3d-fullscreen .model-container {
+  width: 100%;
+  max-width: none;
+  height: 100%;
 }
 
 /* Animation for smooth transitions — exclude dialogue overlay and fullscreen stage */

@@ -900,6 +900,12 @@ def register(request):
             user.email_verification_token = token
             user.email_verification_sent_at = timezone.now()
             user.save()
+
+            try:
+                from icvybz.studio_invites import apply_pending_studio_invites
+                apply_pending_studio_invites(user)
+            except Exception:
+                pass
             
             # Build verification URL
             current_site = get_current_site(request)

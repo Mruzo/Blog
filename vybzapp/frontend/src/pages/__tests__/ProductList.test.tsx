@@ -2,8 +2,18 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
-import ProductList from '../ProductList';
 import { CartProvider } from '../../contexts/CartContext';
+
+const mockCurrentUserRef: { current: { is_staff?: boolean; is_superuser?: boolean } | null } = {
+  current: null,
+};
+
+jest.mock('../../contexts/ApiContext', () => ({
+  useApi: () => ({ currentUser: mockCurrentUserRef.current }),
+}));
+
+// eslint-disable-next-line import/first -- ProductList imports ApiContext; load after jest mocks
+import ProductList from '../ProductList';
 
 global.fetch = jest.fn();
 
@@ -217,6 +227,7 @@ const renderWithProviders = (component: React.ReactElement) =>
 
 describe('ProductList', () => {
   beforeEach(() => {
+    mockCurrentUserRef.current = null;
     (global.fetch as jest.Mock).mockReset();
   });
 
@@ -315,6 +326,21 @@ describe('ProductList', () => {
     });
 
     expect(screen.getByText('Add to cart')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /In-person sale/i })).not.toBeInTheDocument();
+  });
+
+  it('shows a staff-only in-person sale link in the store header', async () => {
+    mockCurrentUserRef.current = { is_staff: true };
+    installFetchRouter();
+
+    renderWithProviders(<ProductList />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /In-person sale/i })).toHaveAttribute(
+        'href',
+        '/product/staff/sale/'
+      );
+    });
   });
 
   it('displays error message on fetch failure', async () => {
@@ -370,6 +396,7 @@ describe('ProductList — storefront featured coupon (API + Cart integration)', 
   const PROMO_DESCRIPTION = 'STOREFRONT_COUPON_TEST_LINE';
 
   beforeEach(() => {
+    mockCurrentUserRef.current = null;
     (global.fetch as jest.Mock).mockReset();
   });
 

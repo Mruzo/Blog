@@ -2023,7 +2023,9 @@ def preview_all_emails(request):
             'studio': studio_invite_context_obj.studio,
             'role_display': 'Writer',  # Template uses role_display, not get_role_display
             'site_url': studio_invite_context_obj.site_url,
-            'studio_url': studio_invite_context_obj.studio_url
+            'studio_url': studio_invite_context_obj.studio_url,
+            'register_url': f"{frontend_url}/register/",
+            'is_registration': False,
         }
         studio_invite_html = render_to_string('emails/studio_invitation.html', studio_invite_context)
         email_previews.append({

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import './PasswordField.css';
 
 export interface PasswordFieldProps {
   id: string;

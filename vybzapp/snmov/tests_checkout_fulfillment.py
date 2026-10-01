@@ -75,6 +75,20 @@ class BuildCheckoutLineItemsTestCase(TestCase):
         self.assertIn(self.product.title, names)
         self.assertNotIn('Merchandise', names)
 
+    def test_pickup_omits_shipping_line(self):
+        order = Order.objects.create(
+            customer=self.user,
+            status='PENDING',
+            fulfillment_method=Order.FULFILLMENT_PICKUP,
+            shipping_cost=Decimal('0.00'),
+        )
+        OrderItem.objects.create(order=order, product=self.product, quantity=1)
+
+        line_items = build_checkout_line_items(order)
+        names = [li['price_data']['product_data']['name'] for li in line_items]
+        self.assertIn(self.product.title, names)
+        self.assertNotIn('Shipping', names)
+
     def test_no_negative_coupon_line_item(self):
         order = self._order_with_coupon()
         line_items = build_checkout_line_items(order)

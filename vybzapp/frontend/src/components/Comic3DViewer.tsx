@@ -1620,7 +1620,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   };
 
   return (
-    <div className="comic-3d-viewer">
+    <div className={`comic-3d-viewer${isEditMode && !readOnly ? ' is-editing' : ''}`}>
       {/* Episode Selection — inline only; duplicated in fullscreen stage */}
       {!isImmersiveFullscreen && (
         <div className="row mb-2 comic3d-episode-row">

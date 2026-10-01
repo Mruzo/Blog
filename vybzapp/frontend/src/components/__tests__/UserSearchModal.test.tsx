@@ -104,6 +104,7 @@ describe('UserSearchModal Role Selection', () => {
 
     // Click invite
     const inviteButton = screen.getByRole('button', { name: /Invite User One as voice_actor/i });
+    expect(inviteButton).toHaveClass('stories-landing__btnPrimary');
     fireEvent.click(inviteButton);
 
     expect(mockOnSelectUser).toHaveBeenCalledWith(mockUsers[0], 'voice_actor');
@@ -146,6 +147,7 @@ describe('UserSearchModal Role Selection', () => {
     fireEvent.change(emailInput, { target: { value: 'new@example.com' } });
 
     const sendButton = screen.getByRole('button', { name: /Send Email Invitation/i });
+    expect(sendButton).toHaveClass('stories-landing__btnPrimary');
     fireEvent.click(sendButton);
 
     expect(mockOnInviteByEmail).toHaveBeenCalledWith('new@example.com', 'sound_engineer');
@@ -165,6 +167,8 @@ describe('UserSearchModal Role Selection', () => {
     const options = Array.from(roleSelect.options).map(opt => opt.value);
     
     expect(options).toContain('writer');
+    expect(options).toContain('screenwriter');
+    expect(options).toContain('director');
     expect(options).toContain('3d_artist');
     expect(options).toContain('voice_actor');
     expect(options).toContain('sound_engineer');

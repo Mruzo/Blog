@@ -228,6 +228,7 @@ describe('Comic3DViewer immersive fullscreen', () => {
     startPlayback();
     fireEvent.click(screen.getByRole('button', { name: 'Next dialogue' }));
     fireEvent.click(screen.getByRole('button', { name: /edit mode/i }));
+    expect(document.querySelector('.comic-3d-viewer')).toHaveClass('is-editing');
     fireEvent.click(screen.getByRole('button', { name: 'Next dialogue' }));
 
     expect(document.getElementById('top-dialogue')?.textContent).toContain('Second line');

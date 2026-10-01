@@ -149,6 +149,20 @@ def _register_pdf_fonts():
         return 'Helvetica', 'Helvetica-Bold'
 
 
+def invoice_party_details(order):
+    """Name and email for the invoice To: block. Guest/in-person sales have no customer user."""
+    if order is None:
+        return 'Customer', ''
+    customer = getattr(order, 'customer', None)
+    if customer is not None:
+        name = f'{customer.first_name} {customer.last_name}'.strip() or customer.username
+        return name, customer.email or ''
+    addr = getattr(order, 'shipping_address', None)
+    name = (getattr(addr, 'full_name', None) or '').strip() or 'Customer'
+    email = order.get_contact_email() if hasattr(order, 'get_contact_email') else (getattr(order, 'guest_email', None) or '')
+    return name, email or ''
+
+
 def generate_pdf(template_name, context, filename, pdf_type='invoice'):
     """
     Generate PDF document for invoice or credit note.
@@ -387,13 +401,7 @@ def generate_pdf(template_name, context, filename, pdf_type='invoice'):
             customer_email = ""
     elif pdf_type == 'invoice':
         order = context.get('order')
-        if order and hasattr(order, 'customer'):
-            customer = order.customer
-            customer_name = f"{customer.first_name} {customer.last_name}".strip() or customer.username
-            customer_email = customer.email
-        else:
-            customer_name = "Customer"
-            customer_email = ""
+        customer_name, customer_email = invoice_party_details(order)
     else:
         return_request = context.get('return_request')
         if return_request and hasattr(return_request, 'customer'):

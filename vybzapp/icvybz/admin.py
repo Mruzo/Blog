@@ -3,6 +3,7 @@ from django.contrib.contenttypes.admin import GenericTabularInline
 from .models import (
     Comic, Season, Episode, Character, POV, Dialogue, ComicComment,
     Intersection, Studio, StudioCollaborator, StudioCollaborationRequest,
+    StudioCollaborationInvite,
     AdvertiserProfile, AdCampaign, AdCreative, AdPlacement, AdEvent,
     AdRevenueSplitConfig, AdRevenueShareSnapshot
 )
@@ -197,6 +198,15 @@ class StudioCollaborationRequestAdmin(admin.ModelAdmin):
     fields = ('studio', 'requester', 'role', 'status', 'message', 'created_at', 'updated_at')
     date_hierarchy = 'created_at'
     ordering = ('-created_at',)
+
+
+@admin.register(StudioCollaborationInvite)
+class StudioCollaborationInviteAdmin(admin.ModelAdmin):
+    list_display = ('studio', 'invitee_email', 'role', 'status', 'inviter', 'created_at')
+    list_filter = ('status', 'role', 'created_at')
+    search_fields = ('studio__name', 'invitee_email', 'inviter__username')
+    readonly_fields = ('created_at', 'updated_at')
+    date_hierarchy = 'created_at'
 
 
 @admin.register(AdvertiserProfile)

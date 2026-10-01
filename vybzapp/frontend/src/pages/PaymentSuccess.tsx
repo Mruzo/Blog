@@ -20,13 +20,14 @@ interface Order {
   product_sale_savings?: number;
   tax_amount?: number;
   grand_total?: number;
+  fulfillment_method?: string;
   orderitem_set: Array<{
     product: {
       title: string;
     };
     quantity: number;
   }>;
-  shipping_address: {
+  shipping_address?: {
     full_name: string;
     address_line_1: string;
     address_line_2?: string;
@@ -99,8 +100,12 @@ const PaymentSuccess: React.FC = () => {
       const data = await response.json();
       setOrder(data.order);
       setShippingSuccess(data.shipping_success || false);
+      const pickup = data.order?.fulfillment_method === 'pickup';
 
-      if (data.shipping_success) {
+      if (pickup) {
+        setMessage('Payment received. This was an in-person sale — it will not be shipped.');
+        setMessageType('success');
+      } else if (data.shipping_success) {
         setMessage('Order placed successfully! Shipping label has been created.');
         setMessageType('success');
       } else {
@@ -151,6 +156,8 @@ const PaymentSuccess: React.FC = () => {
   }
 
   const pricing = buildPricingFromOrder(order);
+  const isPickup = order.fulfillment_method === 'pickup';
+  const addr = order.shipping_address;
 
   return (
     <div className="product-landing payment-success">
@@ -202,29 +209,41 @@ const PaymentSuccess: React.FC = () => {
 
             <div className="store-page__panel">
               <div className="store-page__panelHead">
-                <h2 className="store-page__panelTitle">Ship to</h2>
+                <h2 className="store-page__panelTitle">{isPickup ? 'Pickup' : 'Ship to'}</h2>
               </div>
               <div className="store-page__panelBody store-page__panelBody--padded">
+                {isPickup ? (
+                  <p className="payment-success__address" style={{ margin: 0 }}>
+                    Paid in the app as an in-person sale — it will not be shipped.
+                    {addr?.full_name ? (
+                      <>
+                        <br />
+                        <strong>{addr.full_name}</strong>
+                      </>
+                    ) : null}
+                  </p>
+                ) : addr ? (
                 <address className="payment-success__address">
-                  <strong>{order.shipping_address.full_name}</strong>
+                  <strong>{addr.full_name}</strong>
                   <br />
-                  {order.shipping_address.address_line_1}
+                  {addr.address_line_1}
                   <br />
-                  {order.shipping_address.address_line_2 && (
+                  {addr.address_line_2 && (
                     <>
-                      {order.shipping_address.address_line_2}
+                      {addr.address_line_2}
                       <br />
                     </>
                   )}
-                  {order.shipping_address.city}, {order.shipping_address.state}{' '}
-                  {order.shipping_address.postal_code}
+                  {addr.city}, {addr.state}{' '}
+                  {addr.postal_code}
                   <br />
-                  {order.shipping_address.country_code}
+                  {addr.country_code}
                 </address>
+                ) : null}
               </div>
             </div>
 
-            {shippingSuccess && order.tracking_number && (
+            {!isPickup && shippingSuccess && order.tracking_number && (
               <div className="store-page__infoBanner payment-success__tracking">
                 <p>
                   <strong>Tracking:</strong> {order.tracking_number}

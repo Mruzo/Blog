@@ -1,4 +1,5 @@
-from django.core.mail import send_mail
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.sites.models import Site
@@ -47,8 +48,32 @@ def send_registration_email(user):
         html_message=html_message
     )
 
+def _attach_invoice_pdf(message, order):
+    """Attach the paid invoice PDF for in-person sales."""
+    if not getattr(order, 'is_in_person_pickup', False):
+        return False
+    try:
+        invoice = order.invoice
+    except ObjectDoesNotExist:
+        return False
+    pdf_path = getattr(invoice, 'pdf_path', None)
+    if not pdf_path:
+        return False
+    from snm.media_files import read_media_bytes
+    data = read_media_bytes(pdf_path)
+    if not data:
+        return False
+    filename = f"invoice_{invoice.invoice_number or order.id}.pdf"
+    message.attach(filename, data, 'application/pdf')
+    return True
+
+
 def send_order_confirmation(order):
-    """Send order confirmation email"""
+    """Send order confirmation email, with invoice attached for in-person sales."""
+    recipient = get_order_recipient_email(order)
+    if not recipient:
+        return False
+
     subject = f'Order Confirmation - Order #{order.id}'
     
     base = get_customer_facing_base_url()
@@ -64,14 +89,17 @@ def send_order_confirmation(order):
     
     html_message = render_to_string('emails/order_confirmation.html', context)
     plain_message = render_to_string('emails/order_confirmation.txt', context)
-    
-    send_mail(
+
+    message = EmailMultiAlternatives(
         subject=subject,
-        message=plain_message,
+        body=plain_message,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[get_order_recipient_email(order)],
-        html_message=html_message
+        to=[recipient],
     )
+    message.attach_alternative(html_message, 'text/html')
+    _attach_invoice_pdf(message, order)
+    message.send()
+    return True
 
 def send_order_status_update(order):
     """Send email when order status changes"""

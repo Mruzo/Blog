@@ -86,6 +86,115 @@ class _CheckoutTransactionError(Exception):
         super().__init__(message)
 
 
+def _create_pending_order_from_cart(
+    request,
+    cart_items,
+    *,
+    is_guest,
+    guest_email,
+    coupon_obj,
+    shipping,
+    fulfillment_method,
+    shipping_cost=None,
+    payment_method='',
+    sold_by=None,
+    grant_guest_access=True,
+):
+    """Lock inventory, persist address + order + items. Call inside request handling."""
+    from snmov.utils.checkout_auth import generate_guest_checkout_token, store_guest_order_access
+
+    with transaction.atomic():
+        uuids = [item['uuid'] for item in cart_items]
+        locked = Product.objects.select_for_update().filter(uuid__in=uuids, available=True)
+        by_uuid = {str(p.uuid): p for p in locked}
+        for item in cart_items:
+            uid = str(item['uuid'])
+            p = by_uuid.get(uid)
+            if not p or p.stock < item['quantity']:
+                raise _CheckoutTransactionError(
+                    'Inventory changed while checking out. Refresh your cart and try again.',
+                    status.HTTP_409_CONFLICT,
+                )
+
+        if is_guest:
+            shipping.user = None
+            guest_token = generate_guest_checkout_token()
+            shipping.save()
+            order = Order.objects.create(
+                customer=None,
+                guest_email=guest_email,
+                guest_checkout_token=guest_token,
+                shipping_address=shipping,
+                fulfillment_method=fulfillment_method,
+                payment_method=payment_method or '',
+                sold_by=sold_by,
+            )
+            if grant_guest_access:
+                store_guest_order_access(request, order)
+        else:
+            shipping.user = request.user
+            shipping.save()
+            order = Order.objects.create(
+                customer=request.user,
+                shipping_address=shipping,
+                fulfillment_method=fulfillment_method,
+                payment_method=payment_method or '',
+                sold_by=sold_by,
+            )
+
+        extra_fields = []
+        if shipping_cost is not None:
+            order.shipping_cost = shipping_cost
+            extra_fields.append('shipping_cost')
+        if extra_fields:
+            order.save(update_fields=extra_fields)
+
+        if coupon_obj:
+            merch_total_locked = Decimal('0.00')
+            for item in cart_items:
+                p = by_uuid[str(item['uuid'])]
+                qty = int(item.get('quantity') or 0)
+                merch_total_locked += (p.get_discounted_price() * qty)
+
+            locked_coupon = Coupon.objects.select_for_update().get(pk=coupon_obj.pk)
+            if not locked_coupon.is_valid_now():
+                raise _CheckoutTransactionError(
+                    'This coupon is no longer available. Please try again.',
+                    status.HTTP_409_CONFLICT,
+                )
+
+            discount = locked_coupon.compute_discount(merch_total_locked)
+            if discount <= 0:
+                raise _CheckoutTransactionError(
+                    'This coupon cannot be applied to your cart.',
+                    status.HTTP_400_BAD_REQUEST,
+                )
+
+            order.coupon = locked_coupon
+            order.coupon_code = locked_coupon.code
+            order.coupon_discount = discount
+            order.save(update_fields=['coupon', 'coupon_code', 'coupon_discount'])
+
+            Coupon.objects.filter(pk=locked_coupon.pk).update(times_redeemed=F('times_redeemed') + 1)
+
+        for item in cart_items:
+            p = by_uuid[str(item['uuid'])]
+            OrderItem.objects.create(
+                order=order,
+                product=p,
+                quantity=item['quantity'],
+            )
+            updated = Product.objects.filter(
+                pk=p.pk, stock__gte=item['quantity']
+            ).update(stock=F('stock') - item['quantity'])
+            if updated != 1:
+                raise _CheckoutTransactionError(
+                    'Inventory changed while checking out. Please try again.',
+                    status.HTTP_409_CONFLICT,
+                )
+    return order
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([])
@@ -913,11 +1022,7 @@ def checkout(request):
     from django.contrib.sessions.models import Session
     from django.core.exceptions import ValidationError as DjangoValidationError
     from django.utils import timezone
-    from snmov.utils.checkout_auth import (
-        generate_guest_checkout_token,
-        store_guest_order_access,
-        validate_guest_email,
-    )
+    from snmov.utils.checkout_auth import validate_guest_email
 
     logger = logging.getLogger(__name__)
     is_guest = not request.user.is_authenticated
@@ -1065,98 +1170,46 @@ def checkout(request):
         discount = coupon_obj.compute_discount(merch_total)
         if discount <= 0:
             return Response({'success': False, 'error': 'This coupon cannot be applied to your cart.'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Create shipping address
-    form = ShippingAddressForm(request.data)
-    if form.is_valid():
-        try:
-            with transaction.atomic():
-                uuids = [item['uuid'] for item in cart_items]
-                locked = Product.objects.select_for_update().filter(uuid__in=uuids, available=True)
-                by_uuid = {str(p.uuid): p for p in locked}
-                for item in cart_items:
-                    uid = str(item['uuid'])
-                    p = by_uuid.get(uid)
-                    if not p or p.stock < item['quantity']:
-                        raise _CheckoutTransactionError(
-                            'Inventory changed while checking out. Refresh your cart and try again.',
-                            status.HTTP_409_CONFLICT,
-                        )
 
-                shipping = form.save(commit=False)
-                if is_guest:
-                    shipping.user = None
-                    guest_token = generate_guest_checkout_token()
-                    shipping.save()
-                    order = Order.objects.create(
-                        customer=None,
-                        guest_email=guest_email,
-                        guest_checkout_token=guest_token,
-                        shipping_address=shipping,
-                    )
-                    store_guest_order_access(request, order)
-                else:
-                    shipping.user = request.user
-                    shipping.save()
-                    order = Order.objects.create(
-                        customer=request.user,
-                        shipping_address=shipping,
-                    )
-
-                if coupon_obj:
-                    merch_total_locked = Decimal('0.00')
-                    for item in cart_items:
-                        p = by_uuid[str(item['uuid'])]
-                        qty = int(item.get('quantity') or 0)
-                        merch_total_locked += (p.get_discounted_price() * qty)
-
-                    locked_coupon = Coupon.objects.select_for_update().get(pk=coupon_obj.pk)
-                    if not locked_coupon.is_valid_now():
-                        raise _CheckoutTransactionError('This coupon is no longer available. Please try again.', status.HTTP_409_CONFLICT)
-
-                    discount = locked_coupon.compute_discount(merch_total_locked)
-                    if discount <= 0:
-                        raise _CheckoutTransactionError('This coupon cannot be applied to your cart.', status.HTTP_400_BAD_REQUEST)
-
-                    order.coupon = locked_coupon
-                    order.coupon_code = locked_coupon.code
-                    order.coupon_discount = discount
-                    order.save(update_fields=['coupon', 'coupon_code', 'coupon_discount'])
-
-                    Coupon.objects.filter(pk=locked_coupon.pk).update(times_redeemed=F('times_redeemed') + 1)
-
-                for item in cart_items:
-                    p = by_uuid[str(item['uuid'])]
-                    OrderItem.objects.create(
-                        order=order,
-                        product=p,
-                        quantity=item['quantity'],
-                    )
-                    updated = Product.objects.filter(
-                        pk=p.pk, stock__gte=item['quantity']
-                    ).update(stock=F('stock') - item['quantity'])
-                    if updated != 1:
-                        raise _CheckoutTransactionError(
-                            'Inventory changed while checking out. Please try again.',
-                            status.HTTP_409_CONFLICT,
-                        )
-        except _CheckoutTransactionError as e:
-            return Response({'success': False, 'error': e.message}, status=e.http_status)
-
-        request.session['cart'] = {}
-        request.session.modified = True
-        request.session.save()
-
+    from snmov.utils.checkout_fulfillment import parse_fulfillment_method
+    requested_fulfillment = parse_fulfillment_method(request.data.get('fulfillment_method'))
+    if requested_fulfillment == Order.FULFILLMENT_PICKUP:
         return Response({
-            'success': True,
-            'order_id': order.id,
-            'message': 'Order created successfully'
-        })
-    
+            'success': False,
+            'error': 'In-person sales are completed by staff only.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    form = ShippingAddressForm(request.data)
+    if not form.is_valid():
+        return Response({
+            'success': False,
+            'errors': form.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    shipping = form.save(commit=False)
+
+    try:
+        order = _create_pending_order_from_cart(
+            request,
+            cart_items,
+            is_guest=is_guest,
+            guest_email=guest_email,
+            coupon_obj=coupon_obj,
+            shipping=shipping,
+            fulfillment_method=Order.FULFILLMENT_SHIP,
+        )
+    except _CheckoutTransactionError as e:
+        return Response({'success': False, 'error': e.message}, status=e.http_status)
+
+    request.session['cart'] = {}
+    request.session.modified = True
+    request.session.save()
+
     return Response({
-        'success': False,
-        'errors': form.errors
-    }, status=status.HTTP_400_BAD_REQUEST)
+        'success': True,
+        'order_id': order.id,
+        'fulfillment_method': Order.FULFILLMENT_SHIP,
+        'message': 'Order created successfully'
+    })
 
 
 @api_view(['GET'])
@@ -1172,6 +1225,12 @@ def get_shipping_rates(request, order_id):
             'success': False,
             'error': 'Order not found'
         }, status=status.HTTP_404_NOT_FOUND)
+
+    if getattr(order, 'is_in_person_pickup', False):
+        return Response({
+            'success': False,
+            'error': 'This order is for in-person pickup and does not need shipping rates.',
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     # Get shipping rates
     try:
@@ -1292,6 +1351,12 @@ def select_shipping_rate(request, order_id):
             'success': False,
             'error': 'Order not found'
         }, status=status.HTTP_404_NOT_FOUND)
+
+    if getattr(order, 'is_in_person_pickup', False):
+        return Response({
+            'success': False,
+            'error': 'This order is for in-person pickup and does not use shipping rates.',
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     rate_id = request.data.get('rate_id')
     session_rates = order.shipping_rates_snapshot or request.session.get('shipping_rates', [])
@@ -1330,44 +1395,19 @@ def select_shipping_rate(request, order_id):
     order.shipping_service = selected_rate.get('_canadapost_service_code', rate_id)
     order.save()
 
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-    if order.stripe_checkout_session_id:
-        try:
-            stripe.checkout.Session.expire(order.stripe_checkout_session_id)
-        except Exception as ex:
-            logger.warning('Could not expire prior Stripe session %s: %s', order.stripe_checkout_session_id, ex)
-
-    from snmov.utils.checkout_fulfillment import build_checkout_line_items
-    line_items = build_checkout_line_items(order)
-
-    checkout_email = order.get_contact_email()
-    if not checkout_email:
-        return Response({
-            'success': False,
-            'error': 'A contact email is required to complete payment.',
-        }, status=status.HTTP_400_BAD_REQUEST)
+    from snmov.utils.checkout_fulfillment import create_stripe_checkout_session_for_order
 
     try:
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
-        success_url = f'{frontend_url}/product/payment/success/?session_id={{CHECKOUT_SESSION_ID}}'
-        cancel_url = f'{frontend_url}/product/cart/checkout/'
-
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=line_items,
-            mode='payment',
-            success_url=success_url,
-            cancel_url=cancel_url,
-            customer_email=checkout_email,
-            metadata={'order_id': str(order.id)},
-        )
-        order.stripe_checkout_session_id = checkout_session.id
-        order.save(update_fields=['stripe_checkout_session_id'])
-
+        checkout_session = create_stripe_checkout_session_for_order(order)
         return Response({
             'success': True,
             'checkout_url': checkout_session.url
         })
+    except ValueError as e:
+        return Response({
+            'success': False,
+            'error': str(e),
+        }, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({
             'success': False,
@@ -1414,6 +1454,193 @@ def payment_success(request):
     request.session.modified = True
 
     return Response(payload)
+
+
+def _staff_sale_items_from_request(data):
+    raw_items = data.get('items') or []
+    if not isinstance(raw_items, list) or not raw_items:
+        raise ValueError('Add at least one product.')
+    cart_items = []
+    for row in raw_items:
+        if not isinstance(row, dict):
+            raise ValueError('Each item needs a product and quantity.')
+        uid = row.get('uuid')
+        try:
+            qty = int(row.get('quantity') or 0)
+        except (TypeError, ValueError):
+            qty = 0
+        if not uid or qty < 1:
+            raise ValueError('Each item needs a product and quantity.')
+        cart_items.append({'uuid': str(uid), 'quantity': qty})
+    return cart_items
+
+
+def _in_person_sale_response(order, extra=None):
+    from snmov.utils.checkout_fulfillment import build_payment_success_response_dict
+    payload = build_payment_success_response_dict(order, True)
+    payload['invoice_url'] = f'/api/staff/in-person-sale/{order.id}/invoice/'
+    payload['invoice_emailed'] = bool(order.order_confirmation_sent_at)
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+@api_view(['POST'])
+@permission_classes([IsStaff])
+def create_in_person_sale(request):
+    """Staff-only complete sale: cash or card, no shipping, invoice after payment."""
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from snmov.utils.checkout_auth import validate_guest_email
+    from snmov.utils.checkout_fulfillment import (
+        PICKUP_ADDRESS_LINE,
+        complete_in_person_cash_sale,
+        create_stripe_checkout_session_for_order,
+    )
+
+    try:
+        cart_items = _staff_sale_items_from_request(request.data)
+    except ValueError as e:
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    full_name = (request.data.get('customer_name') or request.data.get('full_name') or '').strip()
+    if not full_name:
+        return Response({
+            'success': False,
+            'error': 'Customer name is required.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    pay_raw = (request.data.get('payment_method') or '').strip().lower()
+    if pay_raw not in (Order.PAYMENT_CASH, Order.PAYMENT_CARD):
+        return Response({
+            'success': False,
+            'error': 'Choose cash or card.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    guest_email = ''
+    email_raw = request.data.get('customer_email') or request.data.get('email') or ''
+    if not email_raw.strip():
+        return Response({
+            'success': False,
+            'error': 'Customer email is required so we can send the invoice.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        guest_email = validate_guest_email(email_raw)
+    except DjangoValidationError as e:
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    shipping = ShippingAddress(
+        full_name=full_name,
+        address_line_1=PICKUP_ADDRESS_LINE,
+        address_line_2='',
+        city='Local',
+        state='',
+        postal_code='',
+        country_code='CA',
+    )
+
+    try:
+        order = _create_pending_order_from_cart(
+            request,
+            cart_items,
+            is_guest=True,
+            guest_email=guest_email,
+            coupon_obj=None,
+            shipping=shipping,
+            fulfillment_method=Order.FULFILLMENT_PICKUP,
+            shipping_cost=Decimal('0.00'),
+            payment_method=pay_raw,
+            sold_by=request.user,
+            grant_guest_access=False,
+        )
+    except _CheckoutTransactionError as e:
+        return Response({'success': False, 'error': e.message}, status=e.http_status)
+
+    if pay_raw == Order.PAYMENT_CASH:
+        complete_in_person_cash_sale(order)
+        return Response(_in_person_sale_response(order))
+
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+    try:
+        checkout_session = create_stripe_checkout_session_for_order(
+            order,
+            success_url=f'{frontend_url}/product/staff/sale/complete/?session_id={{CHECKOUT_SESSION_ID}}',
+            cancel_url=f'{frontend_url}/product/staff/sale/',
+        )
+    except ValueError as e:
+        return Response({
+            'success': False,
+            'error': str(e),
+            'order_id': order.id,
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.exception('Stripe checkout failed for in-person sale %s: %s', order.id, e)
+        return Response({
+            'success': False,
+            'error': f'Stripe error: {str(e)}',
+            'order_id': order.id,
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({
+        'success': True,
+        'order_id': order.id,
+        'fulfillment_method': Order.FULFILLMENT_PICKUP,
+        'payment_method': pay_raw,
+        'checkout_url': checkout_session.url,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsStaff])
+def complete_in_person_card_sale(request):
+    """Staff return from Stripe Checkout for an in-person card sale."""
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        return Response({'success': False, 'error': 'No session ID provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+    from snmov.utils.checkout_fulfillment import complete_order_from_stripe_checkout_session
+
+    try:
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        session = stripe.checkout.Session.retrieve(session_id)
+        order_id = session.metadata.get('order_id')
+        order = Order.objects.get(id=int(order_id), fulfillment_method=Order.FULFILLMENT_PICKUP)
+        payload = complete_order_from_stripe_checkout_session(order, session)
+    except (ValueError, TypeError, Order.DoesNotExist) as e:
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.exception('Staff in-person card complete failed: %s', e)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    payload['invoice_url'] = f'/api/staff/in-person-sale/{order.id}/invoice/'
+    payload['invoice_emailed'] = bool(order.order_confirmation_sent_at)
+    return Response(payload)
+
+
+@api_view(['GET'])
+@permission_classes([IsStaff])
+def download_in_person_sale_invoice(request, order_id):
+    """Invoice PDF for a staff in-person sale."""
+    order = get_object_or_404(
+        Order,
+        id=order_id,
+        fulfillment_method=Order.FULFILLMENT_PICKUP,
+    )
+    if order.payment_completed_at is None:
+        return Response(
+            {'error': 'Invoice is not available until payment is completed.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    from snmov.utils.checkout_fulfillment import ensure_invoice_pdf_for_order
+    from snm.media_files import private_media_pdf_download
+
+    invoice = ensure_invoice_pdf_for_order(order)
+    if not invoice.pdf_path:
+        return Response({'error': 'Invoice PDF is not ready yet.'}, status=status.HTTP_400_BAD_REQUEST)
+    return private_media_pdf_download(
+        invoice.pdf_path,
+        f'invoice_{invoice.invoice_number}.pdf',
+    )
 
 
 @csrf_exempt

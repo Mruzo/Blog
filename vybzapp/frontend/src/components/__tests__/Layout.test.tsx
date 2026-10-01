@@ -134,6 +134,20 @@ describe('Layout', () => {
       expect(screen.getAllByRole('link', { name: /studios/i }).length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByRole('link', { name: /store/i }).length).toBeGreaterThanOrEqual(1);
     });
+
+    it('keeps Documentation in the footer, not the main nav', () => {
+      renderWithProviders(
+        <Layout user={null}>
+          <div>Test Content</div>
+        </Layout>
+      );
+
+      const docsLink = screen.getByRole('link', { name: 'Documentation' });
+      expect(docsLink).toHaveAttribute('href', '/docs/');
+      expect(docsLink.closest('footer')).toBeInTheDocument();
+      expect(docsLink.closest('.app-site-header')).toBeNull();
+      expect(docsLink.closest('#default-navbar')).toBeNull();
+    });
   });
 });
 

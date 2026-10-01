@@ -16,10 +16,16 @@
         <p><strong>Role:</strong> {{ role_display }}</p>
     </div>
 
+    {% if is_registration %}
+    <p>Create a JustVybz account with this email address to join the studio.</p>
+    <div class="button-center">
+        <a href="{{ register_url }}" class="button">Create an account</a>
+    </div>
+    {% else %}
     <div class="button-center">
         <a href="{{ studio_url }}" class="button">View Studio</a>
     </div>
-
-    <p>You now have access to collaborate on all stories in this studio.</p>
+    <p>You now have access to collaborate on stories in this studio.</p>
+    {% endif %}
 </div>
 {% endblock %}

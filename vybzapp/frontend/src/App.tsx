@@ -25,6 +25,7 @@ import EpisodeManage from './pages/EpisodeManage';
 import SeasonCreate from './pages/SeasonCreate';
 import SeasonEdit from './pages/SeasonEdit';
 import StoryImport from './pages/StoryImport';
+import StaffInPersonSale from './pages/StaffInPersonSale';
 import AdvertiserDashboard from './pages/AdvertiserDashboard';
 import StoryCollaborators from './components/StoryCollaborators';
 import NotFound from './pages/NotFound';
@@ -40,6 +41,7 @@ import Privacy from './pages/Privacy';
 import PrivacySettings from './pages/PrivacySettings';
 import Terms from './pages/Terms';
 import CookiePolicy from './pages/CookiePolicy';
+import Documentation from './pages/Documentation';
 import { CartProvider } from './contexts/CartContext';
 import { ApiProvider, useApi } from './contexts/ApiContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
@@ -60,6 +62,25 @@ const StaffOnlyAdsRoute: React.FC = () => {
 
   if (currentUser?.is_staff || currentUser?.is_superuser) {
     return <AdvertiserDashboard />;
+  }
+
+  return <NotFound />;
+};
+
+const StaffOnlyInPersonSaleRoute: React.FC = () => {
+  const { currentUser } = useApi();
+  const token = localStorage.getItem('authToken');
+
+  if (token && !currentUser) {
+    return null;
+  }
+
+  if (!token && !currentUser) {
+    return <Navigate to="/login/?next=/product/staff/sale/" replace />;
+  }
+
+  if (currentUser?.is_staff || currentUser?.is_superuser) {
+    return <StaffInPersonSale />;
   }
 
   return <NotFound />;
@@ -99,6 +120,7 @@ function AppContent() {
           <Route path="/account/privacy/" element={<PrivacySettings />} />
           <Route path="/terms/" element={<Terms />} />
           <Route path="/cookies/" element={<CookiePolicy />} />
+          <Route path="/docs/" element={<Documentation />} />
           
           {/* Product/Store URLs - Matching Django exactly */}
           <Route path="/product/" element={<ProductList />} />
@@ -106,6 +128,8 @@ function AppContent() {
           <Route path="/product/cart/checkout/" element={<Checkout />} />
           <Route path="/product/cart/shipping/:orderId/" element={<SelectShipping />} />
           <Route path="/product/payment/success/" element={<PaymentSuccess />} />
+          <Route path="/product/staff/sale/complete/" element={<StaffOnlyInPersonSaleRoute />} />
+          <Route path="/product/staff/sale/" element={<StaffOnlyInPersonSaleRoute />} />
           <Route path="/product/my-orders/" element={<MyOrders />} />
           <Route path="/product/order/:orderId/" element={<OrderDetail />} />
           

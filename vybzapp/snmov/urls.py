@@ -23,6 +23,8 @@ urlpatterns = [
     path('cart/checkout/', ReactAppView.as_view(), name='checkout'),
     path('cart/shipping/<int:order_id>/', ReactAppView.as_view(), name='select_shipping'),
     path('payment/success/', ReactAppView.as_view(), name='payment_success'),
+    path('staff/sale/complete/', ReactAppView.as_view(), name='staff_in_person_sale_complete'),
+    path('staff/sale/', ReactAppView.as_view(), name='staff_in_person_sale'),
     path('<slug:slug>/', ReactAppView.as_view(), name='product_detail'),
 
     # Keep backend action endpoints (non-/api/) for compatibility.

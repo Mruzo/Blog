@@ -46,13 +46,15 @@ def send_order_status_update_email(sender, instance, created, **kwargs):
         # - ORDERED: Handled by order confirmation
         # - CANCELLED: Handled by cancellation confirmation
         if instance.status in ['PROCESSING', 'SHIPPED', 'DELIVERED', 'LABEL_CREATED']:
-            try:
-                from snmov.utils.email_notifications import send_order_status_update
-                send_order_status_update(instance)
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Failed to send order status update email for order {instance.id}: {e}")
+            # In-person sales already send confirmation with the invoice attached.
+            if not getattr(instance, 'is_in_person_pickup', False):
+                try:
+                    from snmov.utils.email_notifications import send_order_status_update
+                    send_order_status_update(instance)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to send order status update email for order {instance.id}: {e}")
     
     # Clean up stored status
     if instance.pk in _previous_order_status:

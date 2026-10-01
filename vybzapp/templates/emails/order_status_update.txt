@@ -1,6 +1,6 @@
 Order Status Update - Order #{{ order.id }}
 
-Hi {{ order.customer.first_name|default:order.customer.username }},
+Hi {% if order.customer %}{{ order.customer.first_name|default:order.customer.username }}{% else %}there{% endif %},
 
 We wanted to let you know that your order status has been updated.
 

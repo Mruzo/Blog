@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { collaborationService, User } from '../services/collaborationService';
 import { useDialogA11y } from '../hooks/useDialogA11y';
 
+const STUDIO_ROLE_OPTIONS = [
+  { value: 'writer', label: 'Writer' },
+  { value: 'screenwriter', label: 'Screenwriter' },
+  { value: 'director', label: 'Director' },
+  { value: '3d_artist', label: '3D Artist' },
+  { value: 'voice_actor', label: 'Voice Actor' },
+  { value: 'sound_engineer', label: 'Sound Engineer' },
+  { value: 'cinematographer', label: 'Cinematographer' },
+];
+
 interface UserSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -77,7 +87,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
 
   return (
     <div
-      className="modal fade show d-block"
+      className="my-studio__modal invite-collab-modal modal fade show d-block"
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       role="presentation"
       onClick={(e) => {
@@ -125,11 +135,11 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value)}
               >
-                <option value="writer"> Writer</option>
-                <option value="3d_artist"> 3D Artist</option>
-                <option value="voice_actor"> Voice Actor</option>
-                <option value="sound_engineer"> Sound Engineer</option>
-                <option value="cinematographer"> Cinematographer</option>
+                {STUDIO_ROLE_OPTIONS.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -212,7 +222,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          className="btn btn-sm btn-primary font-quicksand"
+                          className="stories-landing__btnPrimary invite-collab-modal__rowInvite"
                           aria-label={`Invite ${user.first_name} ${user.last_name} as ${selectedRole}`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -228,7 +238,8 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                   <div className="text-center py-3 font-quicksand">
                     <p className="text-muted font-quicksand">No users found for "{searchQuery}"</p>
                     <button
-                      className="btn btn-outline-primary font-quicksand"
+                      type="button"
+                      className="product-landing__ctaGhost"
                       onClick={() => {
                         setShowEmailInvite(true);
                         setEmailAddress(searchQuery);
@@ -247,7 +258,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                 <h6>Send Email Invitation</h6>
                 <div className="alert alert-info">
                   <i className="fas fa-info-circle me-2"></i>
-                  This will send an email invitation to join your studio as a collaborator.
+                  We email this address. If they are not registered yet, the message includes a link to create an account.
                 </div>
                 <div className="mb-3">
                   <label htmlFor="emailAddress" className="form-label">Email Address</label>
@@ -268,24 +279,26 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                     value={selectedRole}
                     onChange={(e) => setSelectedRole(e.target.value)}
                   >
-                    <option value="writer"> Writer</option>
-                    <option value="3d_artist"> 3D Artist</option>
-                    <option value="voice_actor"> Voice Actor</option>
-                    <option value="sound_engineer"> Sound Engineer</option>
-                    <option value="cinematographer"> Cinematographer</option>
+                    {STUDIO_ROLE_OPTIONS.map((role) => (
+                      <option key={role.value} value={role.value}>
+                        {role.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
-                <div className="d-flex gap-2">
+                <div className="invite-collab-modal__actions">
                   <button
-                    className="btn btn-primary"
+                    type="button"
+                    className="stories-landing__btnPrimary"
                     onClick={handleEmailInvite}
                     disabled={!emailAddress.trim()}
                   >
-                    <i className="fas fa-envelope me-2"></i>
+                    <i className="fas fa-envelope" aria-hidden />
                     Send Email Invitation
                   </button>
                   <button
-                    className="btn btn-outline-secondary"
+                    type="button"
+                    className="product-landing__ctaGhost"
                     onClick={() => {
                       setShowEmailInvite(false);
                       setEmailAddress('');

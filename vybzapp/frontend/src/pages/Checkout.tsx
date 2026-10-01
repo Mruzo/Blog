@@ -322,7 +322,6 @@ const Checkout: React.FC = () => {
         }
       }
       
-      // Redirect to shipping selection with order ID
       navigate(`/product/cart/shipping/${data.order_id}/`);
       
     } catch (error: any) {

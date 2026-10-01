@@ -35,6 +35,13 @@ const Register: React.FC = () => {
     }
   }, [currentUser, navigate, searchParams]);
 
+  useEffect(() => {
+    const invitedEmail = searchParams.get('email');
+    if (invitedEmail) {
+      setFormData((prev) => (prev.email ? prev : { ...prev, email: invitedEmail }));
+    }
+  }, [searchParams]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({

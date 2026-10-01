@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -7,13 +7,69 @@ import EpisodeCard from '../components/EpisodeCard';
 import DialogueCard from '../components/DialogueCard';
 import MetaTags from '../components/MetaTags';
 import { useApi } from '../contexts/ApiContext';
-import { Episode as ApiEpisode, apiService, Season, Story } from '../services/api';
+import { Character, Episode as ApiEpisode, apiService, Season, Story } from '../services/api';
 import { useDialogA11y } from '../hooks/useDialogA11y';
+import NumberStepper from '../components/NumberStepper';
+import { resolveCharacterId } from '../utils/characterId';
+
+function asCharacterList(payload: unknown): Character[] {
+  if (Array.isArray(payload)) {
+    return payload as Character[];
+  }
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    Array.isArray((payload as { results?: unknown }).results)
+  ) {
+    return (payload as { results: Character[] }).results;
+  }
+  return [];
+}
+
+type CharacterOption = {
+  id: number;
+  name: string;
+  pov_data?: Character['pov_data'];
+};
+
+function toCharacterOption(
+  character: { id?: unknown; name?: string; pov_data?: Character['pov_data'] } | null | undefined
+): CharacterOption | null {
+  if (!character) {
+    return null;
+  }
+  const id = resolveCharacterId(character.id);
+  if (!id) {
+    return null;
+  }
+  return {
+    id,
+    name: character.name?.trim() || `Character ${id}`,
+    pov_data: character.pov_data,
+  };
+}
+
+function mergeCharacterOptions(groups: Array<CharacterOption | null | undefined>): CharacterOption[] {
+  const byId = new Map<number, CharacterOption>();
+  groups.forEach((option) => {
+    if (!option) {
+      return;
+    }
+    const existing = byId.get(option.id);
+    byId.set(option.id, {
+      id: option.id,
+      name: option.name || existing?.name || `Character ${option.id}`,
+      pov_data: option.pov_data ?? existing?.pov_data,
+    });
+  });
+  return Array.from(byId.values());
+}
 
 interface Dialogue {
   id: number;
   pov?: number | null; // POV ID (whose view / camera target)
   character: number; // Character ID (who is speaking)
+  character_name?: string;
   text: string;
   order: number;
   episode: number;
@@ -109,67 +165,136 @@ const EpisodeManage: React.FC = () => {
   const [showMessage, setShowMessage] = useState(false);
   const [currentSeason, setCurrentSeason] = useState<Season | null>(null);
   const [story, setStory] = useState<Story | null>(null);
+  const [storyCharacters, setStoryCharacters] = useState<Character[]>([]);
+  const [storyCastLoaded, setStoryCastLoaded] = useState(false);
 
   // Find the current season to get the story ID
   const season = seasons.find(s => s.id === parseInt(seasonId || '0'));
-  const storyId = season?.comic;
+  const castCharacters = storyCastLoaded ? storyCharacters : characters;
+  const seasonsRef = useRef(seasons);
+  seasonsRef.current = seasons;
 
-  // Load all necessary data when component mounts
+  const emptyDialogueForm = (cast: Character[] = castCharacters): DialogueFormData => {
+    const first = cast[0];
+    return {
+      character: resolveCharacterId(first?.id) || 0,
+      pov: first?.pov_data?.id ?? null,
+      text: '',
+      order: 1,
+      scene_title: '',
+      scene_description: '',
+      shot_type: 'mediumShot',
+      camera_orbit: '0deg 75deg 3m',
+      camera_target: '0m 1.6m 0m',
+      field_of_view: 45.0,
+      zoom_speed: 1.0,
+      rotation: '0deg 0deg 0deg'
+    };
+  };
+
+  const loadStoryCast = useCallback(async (comicId: number) => {
+    try {
+      const payload = await apiService.getCharacters(comicId);
+      setStoryCharacters(asCharacterList(payload));
+      setStoryCastLoaded(true);
+    } catch (error) {
+      console.error('Error loading characters:', error);
+    }
+    try {
+      await loadCharacters(comicId);
+    } catch (error) {
+      console.error('Error syncing characters to context:', error);
+    }
+  }, [loadCharacters]);
+
+  // Load once per season. Do not depend on `season`/`storyId` — loadSeasons
+  // replaces that object and would retrigger this effect (full-page spinner loop).
   useEffect(() => {
+    if (!seasonId) {
+      return;
+    }
+
+    let cancelled = false;
+
     const loadAllData = async () => {
-      if (seasonId) {
-        setIsPageLoading(true);
-        
-        try {
-          // Load episodes first
-          await loadEpisodes(parseInt(seasonId));
-          
-          // If we don't have the current season, load it to get the story ID
-          if (!season) {
-            try {
-              const seasonData = await apiService.getSeason(parseInt(seasonId || '0'));
-              setCurrentSeason(seasonData);
-              // Load seasons for the story that contains this season
-              if (seasonData.comic) {
-                await loadSeasons(seasonData.comic);
-                // Load characters for the story
-                await loadCharacters(seasonData.comic);
-                // Load story data for meta tags
-                try {
-                  const storyData = await apiService.getStory(seasonData.comic);
-                  setStory(storyData);
-                } catch (error) {
-                  console.error('Error loading story data:', error);
-                }
-              }
-            } catch (error) {
-              console.error('Error loading season data:', error);
-            }
-          } else {
-            setCurrentSeason(season);
-            // If we already have the story ID, load characters and story
-            if (storyId) {
-              await loadCharacters(storyId);
-              // Load story data for meta tags
-              try {
-                const storyData = await apiService.getStory(storyId);
-                setStory(storyData);
-              } catch (error) {
-                console.error('Error loading story data:', error);
-              }
-            }
+      setIsPageLoading(true);
+      try {
+        const parsedSeasonId = parseInt(seasonId, 10);
+        await loadEpisodes(parsedSeasonId);
+        if (cancelled) {
+          return;
+        }
+
+        let seasonData = seasonsRef.current.find((s) => s.id === parsedSeasonId) ?? null;
+        if (!seasonData) {
+          try {
+            seasonData = await apiService.getSeason(parsedSeasonId);
+          } catch (error) {
+            console.error('Error loading season data:', error);
           }
-        } catch (error) {
-          console.error('Error loading data:', error);
-        } finally {
-          // Set loading to false after all data is loaded
+        }
+        if (cancelled) {
+          return;
+        }
+
+        if (seasonData) {
+          setCurrentSeason(seasonData);
+        }
+
+        const comicId = seasonData?.comic;
+        if (comicId) {
+          const alreadyHadSeason = seasonsRef.current.some((s) => s.id === parsedSeasonId);
+          await Promise.all([
+            loadStoryCast(comicId),
+            alreadyHadSeason
+              ? Promise.resolve()
+              : loadSeasons(comicId).catch((error) => {
+                  console.error('Error loading seasons:', error);
+                }),
+            apiService.getStory(comicId).then((storyData) => {
+              if (!cancelled) {
+                setStory(storyData);
+              }
+            }).catch((error) => {
+              console.error('Error loading story data:', error);
+            }),
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        if (!cancelled) {
           setIsPageLoading(false);
         }
       }
     };
-    
+
     loadAllData();
-  }, [seasonId, season, storyId, loadEpisodes, loadSeasons, loadCharacters]);
+    return () => {
+      cancelled = true;
+    };
+  }, [seasonId, loadEpisodes, loadSeasons, loadStoryCast]);
+
+  const characterOptionsRef = useRef<CharacterOption[]>([]);
+  const characterOptions = useMemo(() => {
+    const fromCast = castCharacters.map((character) => toCharacterOption(character));
+    const fromSavedLine = editingDialogue
+      ? toCharacterOption({
+          id: editingDialogue.character,
+          name: editingDialogue.character_name,
+        })
+      : null;
+    const merged = mergeCharacterOptions([
+      ...(showDialogueForm ? characterOptionsRef.current : []),
+      ...fromCast,
+      fromSavedLine,
+    ]);
+    return merged;
+  }, [castCharacters, editingDialogue, showDialogueForm]);
+
+  useEffect(() => {
+    characterOptionsRef.current = showDialogueForm ? characterOptions : [];
+  }, [showDialogueForm, characterOptions]);
   
   // Helper function to reload all dialogues for all episodes
   const reloadAllDialogues = useCallback(async () => {
@@ -240,8 +365,10 @@ const EpisodeManage: React.FC = () => {
   const handleDialogueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setDialogueFormData(prev => {
-      const charId = name === 'character' ? parseInt(value) || 0 : prev.character;
-      const selectedChar = name === 'character' ? characters.find(c => c.id === charId) : null;
+      const charId = name === 'character' ? parseInt(value, 10) || 0 : prev.character;
+      const selectedChar = name === 'character'
+        ? characterOptions.find((c) => c.id === charId)
+        : null;
       return {
         ...prev,
         [name]: name === 'order' ? parseInt(value) || 1 :
@@ -349,9 +476,14 @@ const EpisodeManage: React.FC = () => {
   };
 
   const handleEditDialogue = (dialogue: Dialogue) => {
+    let characterId = resolveCharacterId(dialogue.character);
+    if (!characterId && dialogue.character_name) {
+      const match = castCharacters.find((c) => c.name === dialogue.character_name);
+      characterId = resolveCharacterId(match?.id);
+    }
     setEditingDialogue(dialogue);
     setDialogueFormData({
-      character: dialogue.character,
+      character: characterId,
       pov: dialogue.pov ?? null,
       text: stripHtmlForEdit(dialogue.text),
       order: dialogue.order,
@@ -424,22 +556,15 @@ const EpisodeManage: React.FC = () => {
   };
 
   const resetDialogueForm = () => {
-    setDialogueFormData({
-      character: (characters.length > 0 && characters[0].id !== undefined) ? characters[0].id! : 0,
-      pov: (characters.length > 0 && characters[0].pov_data?.id != null) ? characters[0].pov_data!.id : null,
-      text: '',
-      order: 1,
-      scene_title: '',
-      scene_description: '',
-      shot_type: 'mediumShot',
-      camera_orbit: '0deg 75deg 3m',
-      camera_target: '0m 1.6m 0m',
-      field_of_view: 45.0,
-      zoom_speed: 1.0,
-      rotation: '0deg 0deg 0deg'
-    });
+    setDialogueFormData(emptyDialogueForm());
     setEditingDialogue(null);
     setShowDialogueForm(false);
+  };
+
+  const openNewDialogueForm = () => {
+    setEditingDialogue(null);
+    setDialogueFormData(emptyDialogueForm());
+    setShowDialogueForm(true);
   };
 
   const episodeFormDialogRef = useDialogA11y(showEpisodeForm, resetEpisodeForm);
@@ -650,7 +775,7 @@ const EpisodeManage: React.FC = () => {
                     <button
                       type="button"
                       className="stories-landing__btnPrimary"
-                      onClick={() => setShowDialogueForm(true)}
+                      onClick={openNewDialogueForm}
                     >
                       <i className="fas fa-plus me-2" aria-hidden />
                       Add
@@ -680,7 +805,7 @@ const EpisodeManage: React.FC = () => {
                     <p className="product-landing__body mb-2" style={{ fontSize: '0.9rem' }}>
                       No dialogues for this episode yet.
                     </p>
-                    <button type="button" className="stories-landing__btnPrimary" onClick={() => setShowDialogueForm(true)}>
+                    <button type="button" className="stories-landing__btnPrimary" onClick={openNewDialogueForm}>
                       <i className="fas fa-plus me-2" aria-hidden />
                       Add first dialogue
                     </button>
@@ -693,7 +818,7 @@ const EpisodeManage: React.FC = () => {
                         <DialogueCard
                           key={dialogue.id}
                           dialogue={dialogue}
-                          characters={characters}
+                          characters={castCharacters}
                           onEdit={handleEditDialogue}
                           onDelete={handleDeleteDialogue}
                           showActions={true}
@@ -849,7 +974,7 @@ const EpisodeManage: React.FC = () => {
 
       {showDialogueForm && selectedEpisode && (
         <div
-          className="my-studio__modal my-studio__modal--scrollForm modal show d-block"
+          className="my-studio__modal my-studio__modal--scrollForm my-studio__modal--bottom modal show d-block"
           tabIndex={-1}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
           role="presentation"
@@ -882,25 +1007,79 @@ const EpisodeManage: React.FC = () => {
               <form onSubmit={handleDialogueSubmit}>
                 <div className="modal-body">
                   <div className="mb-3">
-                    <label htmlFor="dialogueCharacter" className="form-label subtext-btn-sm">Character</label>&nbsp;
+                    <label htmlFor="dialogueOrder" className="form-label subtext-btn-sm">Order</label>
+                    <NumberStepper
+                      id="dialogueOrder"
+                      name="order"
+                      min={1}
+                      required
+                      value={dialogueFormData.order}
+                      onChange={(order) => {
+                        setDialogueFormData((prev) => ({ ...prev, order }));
+                      }}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="dialogueSceneTitle" className="form-label subtext-btn-sm">Scene Title</label>
+                    <input
+                      type="text"
+                      className="form-control form-control-sm"
+                      id="dialogueSceneTitle"
+                      name="scene_title"
+                      value={dialogueFormData.scene_title}
+                      onChange={handleDialogueInputChange}
+                      placeholder="Enter scene title"
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="dialogueSceneDescription" className="form-label subtext-btn-sm">Scene Description</label>
+                    <textarea
+                      className="form-control form-control-sm"
+                      id="dialogueSceneDescription"
+                      name="scene_description"
+                      rows={2}
+                      value={dialogueFormData.scene_description}
+                      onChange={handleDialogueInputChange}
+                      placeholder="Describe the scene"
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="dialogueCharacter" className="form-label subtext-btn-sm">Character &nbsp;</label>
                     <select
-                      className="form-select form-select-sm"
+                      className="form-select form-select-sm font-quicksand"
                       id="dialogueCharacter"
                       name="character"
-                      value={dialogueFormData.character}
+                      value={
+                        resolveCharacterId(dialogueFormData.character)
+                          ? String(resolveCharacterId(dialogueFormData.character))
+                          : ''
+                      }
                       onChange={handleDialogueInputChange}
                       required
                     >
                       <option value="">Select a character</option>
-                      {characters.map(char => (
-                        <option key={char.id} value={char.id}>{char.name}</option>
+                      {characterOptions.map((char) => (
+                        <option key={char.id} value={String(char.id)}>{char.name}</option>
                       ))}
                     </select>
+                    {characterOptions.length === 0 && (
+                      <small className="text-muted d-block mt-1">
+                        No characters on this story yet.
+                        {resolvedStoryId ? (
+                          <>
+                            {' '}
+                            <Link to={`/immersivecomics/story/${resolvedStoryId}/characters/`}>
+                              Add characters
+                            </Link>
+                          </>
+                        ) : null}
+                      </small>
+                    )}
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="dialoguePov" className="form-label subtext-btn-sm">POV (Target character) </label>&nbsp;
+                    <label htmlFor="dialoguePov" className="form-label subtext-btn-sm">POV (Target character)&nbsp;</label>
                     <select
-                      className="form-select form-select-sm"
+                      className="form-select form-select-sm font-quicksand"
                       id="dialoguePov"
                       name="pov"
                       value={dialogueFormData.pov ?? ''}
@@ -908,21 +1087,23 @@ const EpisodeManage: React.FC = () => {
                     >
                       <option value="">— Select POV —</option>
                       {(() => {
-                        const fromCharacters = characters
-                          .filter(c => c.pov_data?.id != null)
-                          .map(c => ({ value: c.pov_data!.id, label: c.name }));
+                        const fromCharacters = characterOptions
+                          .filter((c) => c.pov_data?.id != null)
+                          .map((c) => ({ value: c.pov_data!.id, label: c.name }));
                         const currentPovId = editingDialogue?.pov ?? dialogueFormData.pov;
-                        const hasCurrent = currentPovId != null && fromCharacters.some(o => o.value === currentPovId);
+                        const hasCurrent = currentPovId != null && fromCharacters.some((o) => o.value === currentPovId);
                         if (currentPovId != null && !hasCurrent) {
-                          const charName = characters.find(c => c.id === (editingDialogue?.character ?? dialogueFormData.character))?.name ?? 'Character';
+                          const charName = characterOptions.find(
+                            (c) => c.id === Number(editingDialogue?.character ?? dialogueFormData.character)
+                          )?.name ?? 'Character';
                           fromCharacters.push({ value: currentPovId, label: `${charName}'s POV` });
                         }
-                        return fromCharacters.map(opt => (
+                        return fromCharacters.map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ));
                       })()}
                     </select>
-                    <small className="text-muted">Whose view the camera targets (character head position)</small>
+                    <small className="text-muted d-block mt-1">Whose view the camera targets (character head position)</small>
                   </div>
                   <div className="mb-3">
                     <label htmlFor="dialogueText" className="form-label subtext-btn-sm">Dialogue Text</label>
@@ -936,48 +1117,6 @@ const EpisodeManage: React.FC = () => {
                       required
                     />
                   </div>
-                  <div className="mb-3">
-                    <label htmlFor="dialogueOrder" className="form-label subtext-btn-sm">Order</label>
-                    <input
-                      type="number"
-                      className="form-control form-control-sm"
-                      id="dialogueOrder"
-                      name="order"
-                      value={dialogueFormData.order}
-                      onChange={handleDialogueInputChange}
-                      min="1"
-                      required
-                    />
-                  </div>
-                  
-                  {/* Scene Information */}
-                  <div className="mb-3">
-                    <label htmlFor="dialogueSceneTitle" className="form-label subtext-btn-sm">Scene Title</label>
-                    <input
-                      type="text"
-                      className="form-control form-control-sm"
-                      id="dialogueSceneTitle"
-                      name="scene_title"
-                      value={dialogueFormData.scene_title}
-                      onChange={handleDialogueInputChange}
-                      placeholder="Enter scene title"
-                    />
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label htmlFor="dialogueSceneDescription" className="form-label subtext-btn-sm">Scene Description</label>
-                    <textarea
-                      className="form-control form-control-sm"
-                      id="dialogueSceneDescription"
-                      name="scene_description"
-                      rows={2}
-                      value={dialogueFormData.scene_description}
-                      onChange={handleDialogueInputChange}
-                      placeholder="Describe the scene"
-                    />
-                  </div>
-              
-                  
                   {/* Camera Controls — collapsed by default to save space on small screens */}
                   <details
                     className="episode-manage__cameraDetails mb-3"

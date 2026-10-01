@@ -58,7 +58,8 @@ const DialogueCard: React.FC<DialogueCardProps> = ({
   showCameraInfo = true,
   variant = 'screenplay',
 }) => {
-  const character = characters.find((char) => char.id === dialogue.character);
+  const character = characters.find((char) => char.id === dialogue.character)
+    || characters.find((char) => Number(char.id) === Number(dialogue.character));
   const characterName = character ? character.name : `Character ${dialogue.character}`;
   const characterIndex = characters.findIndex((char) => char.id === dialogue.character);
   const characterColor = CHARACTER_COLORS[characterIndex >= 0 ? characterIndex % CHARACTER_COLORS.length : 0];

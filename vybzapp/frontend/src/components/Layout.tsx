@@ -51,6 +51,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
       '/immersivecomics/ads', // Full path for advertiser dashboard
       '/immersivecomics/ads/', // Full path for advertiser dashboard
       '/product/my-orders', // Full path for my-orders
+      '/product/staff/sale',
     ];
     
     const isProfilePage = profilePaths.some(path => location.pathname.includes(path));
@@ -254,6 +255,10 @@ const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                   <a href="/privacy" className="text-dark mx-1 text-decoration-none hover-underline">Privacy Policy</a>
                   <span className="text-muted">|</span>
                   <a href="/cookies/" className="text-dark mx-1 text-decoration-none hover-underline">Cookie Policy</a>
+                  <span className="text-muted">|</span>
+                  <Link to="/docs/" className="text-dark mx-1 text-decoration-none hover-underline">
+                    Documentation
+                  </Link>
                   <span className="text-muted">|</span>
                   <Link to="/contact/" className="text-dark mx-1 text-decoration-none hover-underline">
                     Contact us

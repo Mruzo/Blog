@@ -4,6 +4,8 @@ import SmallButton from '../SmallButton';
 import ScriptDialogueBlock from '../ScriptDialogueBlock';
 import { useApi } from '../../contexts/ApiContext';
 import SimpleRichTextEditor from '../SimpleRichTextEditor';
+import NumberStepper from '../NumberStepper';
+import { resolveCharacterId } from '../../utils/characterId';
 
 interface DialoguesStepProps {
   data: StoryCreationData;
@@ -61,7 +63,7 @@ function getCharacterName(
   characterId: number,
   characters: StoryCreationData['characters']
 ): string {
-  const character = characters.find((char) => char.id === characterId);
+  const character = characters.find((char) => Number(char.id) === Number(characterId));
   return character?.name || `Character ${characterId}`;
 }
 
@@ -94,7 +96,7 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
   const [dialogues, setDialogues] = useState<Dialogue[]>(
     data.dialogues.map((d) => ({
       ...d,
-      character: d.character || 0,
+      character: resolveCharacterId(d.character) || 0,
       shot_type: d.shot_type || '',
     }))
   );
@@ -173,7 +175,11 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
   };
 
   const handleEditDialogue = (index: number) => {
-    setCurrentDialogue(dialogues[index]);
+    const dialogue = dialogues[index];
+    setCurrentDialogue({
+      ...dialogue,
+      character: resolveCharacterId(dialogue.character),
+    });
     setEditingIndex(index);
   };
 
@@ -303,19 +309,24 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
         </p>
 
         <div className="row g-2">
-          <div className="col-sm-3 col-md-2">
+          <div className="col-6 col-sm-4 col-md-3">
             <div className="dialogues-step__field">
               <label htmlFor="order" className="form-label subtext-btn-sm mb-1">
                 Order <span className="text-danger">*</span>
               </label>
-              <input
-                type="number"
-                className={`form-control form-control-sm ${errors.order ? 'is-invalid' : ''}`}
+              <NumberStepper
                 id="order"
                 name="order"
-                min="1"
-                value={currentDialogue.order}
-                onChange={handleInputChange}
+                min={1}
+                required
+                isInvalid={Boolean(errors.order)}
+                value={Number(currentDialogue.order) || 1}
+                onChange={(order) => {
+                  setCurrentDialogue((prev) => ({ ...prev, order }));
+                  if (errors.order) {
+                    setErrors((prev) => ({ ...prev, order: '' }));
+                  }
+                }}
               />
               {errors.order && <div className="invalid-feedback d-block">{errors.order}</div>}
             </div>
@@ -330,12 +341,16 @@ const DialoguesStep: React.FC<DialoguesStepProps> = ({
                 className={`form-select form-select-sm ${errors.character ? 'is-invalid' : ''} font-quicksand`}
                 id="character"
                 name="character"
-                value={currentDialogue.character || ''}
+                value={
+                  resolveCharacterId(currentDialogue.character)
+                    ? String(resolveCharacterId(currentDialogue.character))
+                    : ''
+                }
                 onChange={handleInputChange}
               >
                 <option value="">Select character</option>
                 {data.characters.map((character) => (
-                  <option key={character.id} value={character.id}>
+                  <option key={character.id ?? character.name} value={String(character.id)}>
                     {character.name}
                   </option>
                 ))}

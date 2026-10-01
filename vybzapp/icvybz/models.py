@@ -710,14 +710,19 @@ class Studio(models.Model):
         return self.stories.filter(is_public=True, moderation_status='approved').count()
 
 
+STUDIO_ROLE_CHOICES = [
+    ('writer', 'Writer'),
+    ('screenwriter', 'Screenwriter'),
+    ('director', 'Director'),
+    ('3d_artist', '3D Artist'),
+    ('voice_actor', 'Voice Actor'),
+    ('sound_engineer', 'Sound Engineer'),
+    ('cinematographer', 'Cinematographer'),
+]
+
+
 class StudioCollaborator(models.Model):
-    ROLE_CHOICES = [
-        ('writer', 'Writer'),
-        ('3d_artist', '3D Artist'),
-        ('voice_actor', 'Voice Actor'),
-        ('sound_engineer', 'Sound Engineer'),
-        ('cinematographer', 'Cinematographer'),
-    ]
+    ROLE_CHOICES = STUDIO_ROLE_CHOICES
 
     studio = models.ForeignKey(Studio, on_delete=models.CASCADE, related_name='collaborators')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='studio_collaborations')
@@ -734,6 +739,37 @@ class StudioCollaborator(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.role} in {self.studio.name}"
+
+
+class StudioCollaborationInvite(models.Model):
+    """Pending studio invite for an email that is not a registered user yet."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+    ]
+
+    studio = models.ForeignKey(Studio, on_delete=models.CASCADE, related_name='email_invites')
+    inviter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_studio_invites',
+    )
+    invitee_email = models.EmailField()
+    role = models.CharField(max_length=50, choices=STUDIO_ROLE_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        unique_together = [['studio', 'invitee_email', 'role']]
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['invitee_email', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.invitee_email} -> {self.studio.name} ({self.role})"
 
 
 class StudioCollaborationRequest(models.Model):
@@ -1145,11 +1181,7 @@ class StoryCollaborator(models.Model):
         ('viewer', 'Viewer'),
         ('editor', 'Editor'),
         ('admin', 'Admin'),
-        ('writer', 'Writer'),
-        ('3d_artist', '3D Artist'),
-        ('voice_actor', 'Voice Actor'),
-        ('sound_engineer', 'Sound Engineer'),
-        ('cinematographer', 'Cinematographer'),
+        *STUDIO_ROLE_CHOICES,
     ]
     
     story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='collaborators')

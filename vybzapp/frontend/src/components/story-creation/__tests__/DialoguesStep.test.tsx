@@ -485,6 +485,48 @@ describe('DialoguesStep Progressive Saving', () => {
       });
     });
   });
+
+  test('changes order with plus and minus buttons', () => {
+    renderDialoguesStep();
+
+    const orderInput = document.getElementById('order') as HTMLInputElement;
+    expect(orderInput).toHaveValue(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Increase order' }));
+    expect(orderInput).toHaveValue(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease order' }));
+    expect(orderInput).toHaveValue(1);
+  });
+
+  test('preselects the character when editing a line', async () => {
+    renderDialoguesStep({
+      data: {
+        ...mockStoryData,
+        dialogues: [
+          {
+            id: 10,
+            character: '2' as unknown as number,
+            text: 'Second voice',
+            order: 1,
+            scene_title: '',
+            scene_description: '',
+            shot_type: '',
+            camera_orbit: '0deg 75deg 3m',
+            camera_target: '0m 1.6m 0m',
+            field_of_view: 45,
+            zoom_speed: 1,
+            rotation: '0deg 0deg 0deg',
+          },
+        ],
+      },
+    });
+
+    fireEvent.click(screen.getByTitle('Edit line'));
+
+    await waitFor(() => {
+      expect(document.getElementById('character')).toHaveValue('2');
+    });
+    expect(screen.getByRole('heading', { name: /edit line/i })).toBeInTheDocument();
+  });
 });
 
 

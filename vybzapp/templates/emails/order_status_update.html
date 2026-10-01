@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="content">
-    <p>Hi {{ order.customer.first_name|default:order.customer.username }},</p>
+    <p>Hi {% if order.customer %}{{ order.customer.first_name|default:order.customer.username }}{% else %}there{% endif %},</p>
     
     <p>We wanted to let you know that your order status has been updated.</p>
     

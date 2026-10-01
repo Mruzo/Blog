@@ -15,9 +15,16 @@ Items:
 {% endfor %}
 
 Subtotal: ${{ order.calculate_total_value|floatformat:2 }}
-Shipping: ${{ order.shipping_cost|floatformat:2 }}
-Total: ${{ order.calculate_grand_total|floatformat:2 }}
+{% if order.is_in_person_pickup %}Pickup: in person (no shipping)
+{% else %}Shipping: ${{ order.shipping_cost|floatformat:2 }}
+{% endif %}Total: ${{ order.calculate_grand_total|floatformat:2 }}
 
+{% if order.is_in_person_pickup %}
+Pickup:
+-------
+This order was paid in person. Your invoice is attached to this email.
+Name: {{ order.shipping_address.full_name }}
+{% else %}
 Shipping Address:
 -----------------
 {{ order.shipping_address.full_name }}
@@ -25,6 +32,7 @@ Shipping Address:
 {% if order.shipping_address.address_line_2 %}{{ order.shipping_address.address_line_2 }}
 {% endif %}{{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}
 {{ order.shipping_address.country_code }}
+{% endif %}
 
 {% if order.tracking_number %}
 Tracking Information:

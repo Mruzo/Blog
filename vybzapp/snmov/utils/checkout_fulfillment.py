@@ -8,11 +8,30 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.utils import timezone
+import stripe
 
 from snmov.utils.email_notifications import send_order_confirmation
 from snmov.utils.canadapost import fulfill_order_shipping_label
 
 logger = logging.getLogger(__name__)
+
+PICKUP_ADDRESS_LINE = 'In-person pickup'
+
+
+def parse_fulfillment_method(raw):
+    """Return Order.FULFILLMENT_* or None if the value is not recognized."""
+    from snmov.models import Order
+
+    value = (raw or Order.FULFILLMENT_SHIP).strip().lower().replace('-', '_')
+    if value in ('pickup', 'in_person', 'inperson', 'collect'):
+        return Order.FULFILLMENT_PICKUP
+    if value in ('', Order.FULFILLMENT_SHIP, 'shipping', 'delivery'):
+        return Order.FULFILLMENT_SHIP
+    return None
+
+
+def is_pickup_order(order):
+    return getattr(order, 'fulfillment_method', None) == 'pickup'
 
 
 def _payment_intent_id(session):
@@ -119,14 +138,15 @@ def build_checkout_line_items(order):
     else:
         line_items = _merchandise_product_lines(order_items)
 
-    line_items.append({
-        'price_data': {
-            'currency': 'cad',
-            'product_data': {'name': 'Shipping'},
-            'unit_amount': _price_to_cents(order.shipping_cost or Decimal('0')),
-        },
-        'quantity': 1,
-    })
+    if not is_pickup_order(order):
+        line_items.append({
+            'price_data': {
+                'currency': 'cad',
+                'product_data': {'name': 'Shipping'},
+                'unit_amount': _price_to_cents(order.shipping_cost or Decimal('0')),
+            },
+            'quantity': 1,
+        })
     tax_cents = stripe_tax_line_item_cents(order)
     if tax_cents and tax_cents > 0:
         pct = float(getattr(settings, 'TAX_RATE', 0) or 0) * 100
@@ -139,6 +159,43 @@ def build_checkout_line_items(order):
             'quantity': 1,
         })
     return line_items
+
+
+def create_stripe_checkout_session_for_order(order, success_url=None, cancel_url=None):
+    """Create a Stripe Checkout session for a pending order and persist the session id."""
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    if order.stripe_checkout_session_id:
+        try:
+            stripe.checkout.Session.expire(order.stripe_checkout_session_id)
+        except Exception as ex:
+            logger.warning(
+                'Could not expire prior Stripe session %s: %s',
+                order.stripe_checkout_session_id,
+                ex,
+            )
+
+    checkout_email = order.get_contact_email()
+    if not checkout_email:
+        raise ValueError('A contact email is required to complete payment.')
+
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+    if not success_url:
+        success_url = f'{frontend_url}/product/payment/success/?session_id={{CHECKOUT_SESSION_ID}}'
+    if not cancel_url:
+        cancel_url = f'{frontend_url}/product/cart/checkout/'
+
+    checkout_session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=build_checkout_line_items(order),
+        mode='payment',
+        success_url=success_url,
+        cancel_url=cancel_url,
+        customer_email=checkout_email,
+        metadata={'order_id': str(order.id)},
+    )
+    order.stripe_checkout_session_id = checkout_session.id
+    order.save(update_fields=['stripe_checkout_session_id'])
+    return checkout_session
 
 
 def ensure_invoice_pdf_for_order(order):
@@ -194,6 +251,9 @@ def build_payment_success_response_dict(order, shipping_success):
             'product_sale_savings': float(order.calculate_product_sale_savings() or 0),
             'tax_amount': float(order.calculate_tax_amount() or 0),
             'grand_total': float(order.calculate_grand_total() or 0),
+            'fulfillment_method': order.fulfillment_method,
+            'payment_method': order.payment_method or '',
+            'contact_email': order.get_contact_email() if hasattr(order, 'get_contact_email') else '',
             'orderitem_set': [
                 {
                     'product': {'title': item.product.title},
@@ -238,7 +298,16 @@ def complete_order_from_stripe_checkout_session(order, session):
             order.status = 'ORDERED'
 
     shipping_success = bool(order.label_url and order.tracking_number)
-    if not shipping_success:
+    if is_pickup_order(order):
+        shipping_success = True
+        if not order.shipping_provider:
+            order.shipping_provider = 'in_person'
+        if not order.payment_method:
+            from snmov.models import Order as OrderModel
+            order.payment_method = OrderModel.PAYMENT_CARD
+        if order.status in ('PENDING', 'ORDERED', 'PROCESSING'):
+            order.status = 'DELIVERED'
+    elif not shipping_success:
         try:
             shipping_info = fulfill_order_shipping_label(order)
             order.label_url = shipping_info['label_url']
@@ -264,3 +333,33 @@ def complete_order_from_stripe_checkout_session(order, session):
 
     order.refresh_from_db()
     return build_payment_success_response_dict(order, shipping_success)
+
+
+def complete_in_person_cash_sale(order):
+    """Mark a staff in-person cash sale paid, delivered, and invoiced."""
+    from snmov.models import Order as OrderModel
+
+    if order.payment_completed_at is None:
+        grand = order.calculate_grand_total() or Decimal('0')
+        order.amount_paid_cents = _price_to_cents(grand)
+        order.payment_completed_at = timezone.now()
+        order.payment_method = OrderModel.PAYMENT_CASH
+        order.shipping_provider = 'in_person'
+        order.status = 'DELIVERED'
+
+    order.save()
+    invoice = ensure_invoice_pdf_for_order(order)
+
+    emailed = False
+    if not order.order_confirmation_sent_at and order.get_contact_email():
+        try:
+            emailed = bool(send_order_confirmation(order))
+            order.order_confirmation_sent_at = timezone.now()
+            order.save(update_fields=['order_confirmation_sent_at'])
+        except Exception as e:
+            logger.error('Order confirmation email failed for order %s: %s', order.id, e)
+
+    order.refresh_from_db()
+    payload = build_payment_success_response_dict(order, True)
+    payload['invoice_emailed'] = emailed
+    return invoice, payload

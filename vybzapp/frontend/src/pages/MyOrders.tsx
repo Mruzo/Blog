@@ -32,6 +32,7 @@ interface Order {
     total: number;
     product_image?: string;
   }>;
+  fulfillment_method?: string;
 }
 
 const MyOrders: React.FC = () => {
@@ -137,6 +138,7 @@ const MyOrders: React.FC = () => {
             coupon_code: coupon_code || undefined,
             coupon_discount: hasPromo ? coupon_discount : undefined,
             created_at: o.ordered_date || o.order_date || o.created_at || new Date().toISOString(),
+            fulfillment_method: o.fulfillment_method || undefined,
             shipping_address: {
               first_name: firstName,
               last_name: lastName,
@@ -212,8 +214,12 @@ const MyOrders: React.FC = () => {
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getStatusLabel = (status: string, fulfillmentMethod?: string) => {
+    const s = status.toLowerCase();
+    if (fulfillmentMethod === 'pickup' && s === 'processing') {
+      return 'Ready for pickup';
+    }
+    switch (s) {
       case 'pending':
         return 'Pending';
       case 'ordered':
@@ -331,7 +337,7 @@ const MyOrders: React.FC = () => {
                       className={`store-page__status store-page__status--${getStatusVariant(order.status)}`}
                     >
                       <i className={getStatusIcon(order.status)} aria-hidden />
-                      {getStatusLabel(order.status)}
+                      {getStatusLabel(order.status, order.fulfillment_method)}
                     </span>
                   </div>
 
@@ -383,8 +389,19 @@ const MyOrders: React.FC = () => {
                     </div>
 
                     <div className="store-page__bodyAside">
-                      <h3 className="product-landing__h3 store-page__blockLabel">Ship to</h3>
+                      <h3 className="product-landing__h3 store-page__blockLabel">
+                        {order.fulfillment_method === 'pickup' ? 'Pickup' : 'Ship to'}
+                      </h3>
                       <div className="store-page__address product-landing__body">
+                        {order.fulfillment_method === 'pickup' ? (
+                          <>
+                            <div>Collect in person</div>
+                            <div>
+                              {order.shipping_address.first_name} {order.shipping_address.last_name}
+                            </div>
+                          </>
+                        ) : (
+                          <>
                         <div>
                           {order.shipping_address.first_name} {order.shipping_address.last_name}
                         </div>
@@ -394,6 +411,8 @@ const MyOrders: React.FC = () => {
                           {order.shipping_address.postal_code}
                         </div>
                         <div>{order.shipping_address.country}</div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

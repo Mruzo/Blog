@@ -20,7 +20,7 @@ export function getPageName(pathname: string): string {
   if (pathname === '/product/cart/') return 'Shopping Cart';
   if (pathname.includes('/product/cart/checkout')) return 'Checkout';
   if (pathname.includes('/product/cart/shipping/')) return 'Select Shipping';
-  if (pathname.includes('/product/payment/success')) return 'Payment Success';
+  if (pathname.includes('/product/staff/sale')) return 'In-person sale';
   if (pathname === '/product/my-orders/') return 'My Orders';
   if (pathname.includes('/product/order/')) return 'Order Detail';
 
@@ -31,6 +31,7 @@ export function getPageName(pathname: string): string {
   if (pathname.includes('/password-reset-complete/')) return 'Password Reset Complete';
 
   if (pathname === '/contact/') return 'Contact';
+  if (pathname === '/docs/' || pathname === '/docs') return 'Documentation';
 
   const segments = pathname.split('/').filter((s) => s);
   if (segments.length > 0) {

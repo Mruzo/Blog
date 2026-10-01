@@ -163,6 +163,42 @@ class StoryCreationAPITestCase(APITestCase):
         self.assertEqual(character.name, 'Test Character')
         self.assertEqual(character.user, self.user)
 
+    def test_list_story_characters_returns_full_cast(self):
+        """Owners see every character on the story, not only ones they personally created."""
+        story = Comic.objects.create(
+            title='Cast Story',
+            description='A test story',
+            user=self.user
+        )
+        Character.objects.create(
+            name='Maya',
+            bio='',
+            personality='',
+            love_interest='',
+            user=self.user,
+            story=story,
+        )
+        other = User.objects.create_user(
+            username=f'other_{uuid.uuid4().hex[:8]}',
+            email=f'other_{uuid.uuid4().hex[:8]}@example.com',
+            password='testpass123'
+        )
+        Character.objects.create(
+            name='Jordan',
+            bio='',
+            personality='',
+            love_interest='',
+            user=other,
+            story=story,
+        )
+
+        url = reverse('icvybz-api:character-list-create', kwargs={'story_id': story.id})
+        response = self.client.get(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.data if isinstance(response.data, list) else response.data.get('results', [])
+        self.assertEqual({character['name'] for character in payload}, {'Maya', 'Jordan'})
+
     def test_create_episode_success(self):
         """Test creating an episode successfully"""
         # First create a story and season

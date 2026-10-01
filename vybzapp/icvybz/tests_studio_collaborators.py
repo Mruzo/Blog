@@ -1,15 +1,17 @@
-from django.test import TestCase
+from django.test import override_settings
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
+from django.core import mail
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from .models import Studio, StudioCollaborator
+from .models import Studio, StudioCollaborator, StudioCollaborationInvite
 import uuid
 
 
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class StudioCollaboratorRoleSelectionTestCase(APITestCase):
     """Test role selection when inviting studio collaborators"""
     
@@ -48,6 +50,7 @@ class StudioCollaboratorRoleSelectionTestCase(APITestCase):
         
         self.owner_token = Token.objects.create(user=self.owner)
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.owner_token.key}')
+        mail.outbox.clear()
     
     def test_invite_user_with_writer_role(self):
         """Test inviting a user with writer role"""
@@ -120,6 +123,83 @@ class StudioCollaboratorRoleSelectionTestCase(APITestCase):
         collaborator = StudioCollaborator.objects.get(studio=self.studio, user=self.user1)
         self.assertEqual(collaborator.role, 'cinematographer')
     
+    def test_invite_user_with_director_role(self):
+        url = reverse('icvybz-api:invite-studio-user', kwargs={'studio_id': self.studio.id})
+        data = {
+            'user_id': self.user1.id,
+            'role': 'director'
+        }
+
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        collaborator = StudioCollaborator.objects.get(studio=self.studio, user=self.user1)
+        self.assertEqual(collaborator.role, 'director')
+
+    def test_invite_user_with_screenwriter_role(self):
+        url = reverse('icvybz-api:invite-studio-user', kwargs={'studio_id': self.studio.id})
+        data = {
+            'user_id': self.user1.id,
+            'role': 'screenwriter'
+        }
+
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        collaborator = StudioCollaborator.objects.get(studio=self.studio, user=self.user1)
+        self.assertEqual(collaborator.role, 'screenwriter')
+
+    def test_invite_by_email_unregistered_sends_registration_email(self):
+        url = reverse('icvybz-api:invite-studio-email', kwargs={'studio_id': self.studio.id})
+        data = {
+            'email': 'new.teammate@example.com',
+            'role': 'director'
+        }
+
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data.get('pending'))
+        self.assertFalse(
+            StudioCollaborator.objects.filter(studio=self.studio, role='director').exists()
+        )
+        invite = StudioCollaborationInvite.objects.get(
+            studio=self.studio,
+            invitee_email='new.teammate@example.com',
+            role='director',
+        )
+        self.assertEqual(invite.status, 'pending')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['new.teammate@example.com'])
+        self.assertIn('register', mail.outbox[0].body.lower())
+        self.assertIn('Director', mail.outbox[0].body)
+
+    def test_register_applies_pending_studio_invite(self):
+        from .studio_invites import apply_pending_studio_invites
+
+        StudioCollaborationInvite.objects.create(
+            studio=self.studio,
+            inviter=self.owner,
+            invitee_email='join.me@example.com',
+            role='screenwriter',
+            status='pending',
+        )
+        new_user = User.objects.create_user(
+            username=f'joiner_{str(uuid.uuid4())[:8]}',
+            email='join.me@example.com',
+            password='testpass123',
+        )
+        applied = apply_pending_studio_invites(new_user)
+        self.assertEqual(applied, 1)
+        self.assertTrue(
+            StudioCollaborator.objects.filter(
+                studio=self.studio, user=new_user, role='screenwriter', is_active=True
+            ).exists()
+        )
+        invite = StudioCollaborationInvite.objects.get(
+            studio=self.studio, invitee_email='join.me@example.com', role='screenwriter'
+        )
+        self.assertEqual(invite.status, 'accepted')
+
     def test_invite_by_email_with_role(self):
         """Test inviting by email with specific role"""
         url = reverse('icvybz-api:invite-studio-email', kwargs={'studio_id': self.studio.id})
@@ -239,27 +319,28 @@ class RemoveStudioCollaboratorTestCase(APITestCase):
         self.collaborator.refresh_from_db()
         self.assertTrue(self.collaborator.is_active)
     
-    def test_cannot_remove_owner(self):
-        """Test that owner cannot be removed"""
-        # Create a collaborator entry for the owner (shouldn't happen in practice, but test it)
+    def test_owner_can_remove_own_role(self):
+        """Studio owner can drop an extra role they assigned themselves."""
         owner_collab = StudioCollaborator.objects.create(
             studio=self.studio,
             user=self.owner,
-            role='writer',
+            role='sound_engineer',
             is_active=True
         )
-        
+
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.owner_token.key}')
         url = reverse('icvybz-api:remove-studio-collaborator', kwargs={
             'studio_id': self.studio.id,
             'collaborator_id': owner_collab.id
         })
-        
+
         response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('detail', response.data)
-        self.assertIn('Cannot remove the studio owner', response.data['detail'])
-    
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        owner_collab.refresh_from_db()
+        self.assertFalse(owner_collab.is_active)
+        self.studio.refresh_from_db()
+        self.assertEqual(self.studio.owner, self.owner)
+
     def test_remove_nonexistent_collaborator(self):
         """Test removing a collaborator that doesn't exist"""
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.owner_token.key}')
@@ -303,6 +384,30 @@ class RemoveStudioCollaboratorTestCase(APITestCase):
         response = self.client.get(list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 0)
+
+    def test_collaborators_list_includes_owned_studio_id(self):
+        """Each teammate includes the public studio they own, if any."""
+        collab_studio = Studio.objects.create(
+            name='Collaborator Studio',
+            description='Public studio owned by the collaborator',
+            owner=self.collaborator_user,
+            is_public=True,
+        )
+        StudioCollaborator.objects.create(
+            studio=self.studio,
+            user=self.owner,
+            role='sound_engineer',
+            is_active=True,
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.owner_token.key}')
+        url = reverse('icvybz-api:studio-collaborators', kwargs={'studio_id': self.studio.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        by_user = {item['user']['id']: item['owned_studio_id'] for item in response.data['results']}
+        self.assertEqual(by_user[self.collaborator_user.id], collab_studio.id)
+        self.assertEqual(by_user[self.owner.id], self.studio.id)
     
     def test_unauthenticated_cannot_remove(self):
         """Test that unauthenticated users cannot remove collaborators"""

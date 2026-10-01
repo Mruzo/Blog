@@ -105,8 +105,8 @@ admin.site.register(ModelUsage, ModelUsageUno)
 admin.site.register(ShippingAddress)
 
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'customer', 'status', 'order_date', 'tracking_number', 'shipping_provider')
-    list_filter = ('status', 'order_date', 'shipping_provider')
+    list_display = ('id', 'customer', 'status', 'fulfillment_method', 'payment_method', 'sold_by', 'order_date', 'tracking_number', 'shipping_provider')
+    list_filter = ('status', 'fulfillment_method', 'payment_method', 'order_date', 'shipping_provider')
     search_fields = ('id', 'customer__username', 'customer__email', 'tracking_number')
     readonly_fields = ('order_date', 'created_at', 'updated_at', 'stripe_payment_intent_id')
     date_hierarchy = 'order_date'

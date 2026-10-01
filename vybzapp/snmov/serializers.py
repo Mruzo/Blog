@@ -91,6 +91,8 @@ class OrderSerializer(serializers.ModelSerializer):
             'payment_completed_at',
             'coupon', 'coupon_code', 'coupon_discount',
             'merchandise_subtotal', 'product_sale_savings', 'tax_amount', 'grand_total',
+            'fulfillment_method',
+            'payment_method',
             'order_date', 'created_at', 'updated_at'
         ]
         read_only_fields = ['ref_code', 'order_number', 'ordered_date', 'order_date', 'created_at', 'updated_at']

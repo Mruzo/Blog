@@ -6,6 +6,7 @@ from .api_views import (
     OrderListView, OrderDetailView, user_profile, check_auth,
     checkout, get_shipping_rates, select_shipping_rate, payment_success,
     stripe_checkout_webhook,
+    create_in_person_sale, complete_in_person_card_sale, download_in_person_sale_invoice,
     contact_form, get_saved_addresses, save_address, delete_saved_address,
     set_default_address, subscribe_newsletter, unsubscribe_newsletter,
     get_newsletter_subscription, export_user_data, delete_user_data,
@@ -47,6 +48,13 @@ urlpatterns = [
     path('orders/<int:order_id>/select-shipping/', select_shipping_rate, name='select-shipping'),
     path('payment/success/', payment_success, name='payment-success'),
     path('stripe/webhook/', stripe_checkout_webhook, name='stripe-webhook'),
+    path('staff/in-person-sale/', create_in_person_sale, name='staff-in-person-sale'),
+    path('staff/in-person-sale/complete/', complete_in_person_card_sale, name='staff-in-person-sale-complete'),
+    path(
+        'staff/in-person-sale/<int:order_id>/invoice/',
+        download_in_person_sale_invoice,
+        name='staff-in-person-sale-invoice',
+    ),
     
     # Contact form endpoint
     path('contact/', contact_form, name='contact-form'),

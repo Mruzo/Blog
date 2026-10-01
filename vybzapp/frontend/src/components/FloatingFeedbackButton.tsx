@@ -4,7 +4,6 @@ import FeedbackModal from './FeedbackModal';
 import { FeedbackContext } from '../contexts/FeedbackContext';
 import { useGuide } from '../contexts/GuideContext';
 import { getPageName, isViewerPage } from '../utils/pageNames';
-import './FloatingHelpRail.css';
 
 const FloatingFeedbackButton: React.FC = () => {
   const [showModal, setShowModal] = useState(false);

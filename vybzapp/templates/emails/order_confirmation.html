@@ -22,9 +22,20 @@
         </ul>
 
         <p><strong>Subtotal:</strong> ${{ order.calculate_total_value|floatformat:2 }}</p>
+        {% if order.is_in_person_pickup %}
+        <p><strong>Pickup:</strong> In person (no shipping)</p>
+        {% else %}
         <p><strong>Shipping:</strong> ${{ order.shipping_cost|floatformat:2 }}</p>
+        {% endif %}
         <p><strong>Total:</strong> ${{ order.calculate_grand_total|floatformat:2 }}</p>
 
+        {% if order.is_in_person_pickup %}
+        <h3>In-person pickup</h3>
+        <p>
+            This order was paid in person. Your invoice is attached to this email.<br>
+            Name: {{ order.shipping_address.full_name }}
+        </p>
+        {% else %}
         <h3>Shipping Address:</h3>
         <p>
             {{ order.shipping_address.full_name }}<br>
@@ -35,6 +46,7 @@
             {{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}<br>
             {{ order.shipping_address.country_code }}
         </p>
+        {% endif %}
     </div>
 
     <div class="button-center">

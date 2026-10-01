@@ -58,7 +58,7 @@ const renderWithProviders = (component: React.ReactElement) => {
 /** Mount runs GET /api/addresses/ before any checkout POST; stub by URL. */
 function installCheckoutFetch(options?: {
   checkout?:
-    | { kind: 'success'; orderId: number }
+    | { kind: 'success'; orderId: number; checkoutUrl?: string; fulfillmentMethod?: string }
     | { kind: 'reject'; error: Error };
 }) {
   (global.fetch as jest.Mock).mockImplementation(async (input: RequestInfo | URL) => {
@@ -69,13 +69,23 @@ function installCheckoutFetch(options?: {
         json: async () => ({ success: true, addresses: [] }),
       };
     }
+    if (url.includes('/api/cart/')) {
+      return {
+        ok: true,
+        json: async () => ({ cart_items: [], total_price: 0 }),
+      };
+    }
     if (url.includes('/api/checkout/')) {
       const co = options?.checkout;
       if (co?.kind === 'success') {
         const orderId = co.orderId;
         return {
           ok: true,
-          json: async () => ({ order_id: orderId }),
+          json: async () => ({
+            order_id: orderId,
+            fulfillment_method: co.fulfillmentMethod || 'ship',
+            ...(co.checkoutUrl ? { checkout_url: co.checkoutUrl } : {}),
+          }),
         };
       }
       if (co?.kind === 'reject') {

@@ -49,7 +49,7 @@ import hashlib
 from datetime import timedelta
 from .models import (
     Comic, Season, Episode, Dialogue, Character, POV, Studio, AudioTrack,
-    StudioCollaborator, StudioCollaborationRequest, StoryCollaborator,
+    StudioCollaborator, StudioCollaborationRequest, StudioCollaborationInvite, StoryCollaborator,
     ComicComment, AdvertiserProfile, AdCampaign, AdCreative, AdPlacement,
     AdEvent, AdRevenueSplitConfig, AdRevenueShareSnapshot
 )
@@ -486,11 +486,24 @@ class CharacterListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         story_id = self.kwargs.get('story_id')
-        queryset = Character.objects.filter(user=self.request.user)
-        if story_id:
-            queryset = queryset.filter(story_id=story_id)
-        # Prefetch POV data to avoid N+1 queries
-        return queryset.select_related('user', 'story').prefetch_related('povs')
+        queryset = Character.objects.select_related('user', 'story').prefetch_related('povs')
+        if not story_id:
+            return queryset.filter(user=self.request.user).order_by('name', 'id')
+
+        story = Comic.objects.filter(id=story_id).first()
+        if not story:
+            return queryset.none()
+
+        user = self.request.user
+        can_manage_cast = (
+            story.user_id == user.id
+            or StoryCollaborator.objects.filter(
+                story=story, user=user, is_active=True
+            ).exists()
+        )
+        if can_manage_cast:
+            return queryset.filter(story_id=story_id).order_by('name', 'id')
+        return queryset.filter(user=user, story_id=story_id).order_by('name', 'id')
     
     def perform_create(self, serializer):
         from .scene_slots import apply_scene_slot_to_character
@@ -1686,8 +1699,17 @@ def get_studio_collaborators(request, studio_id):
             studio=studio, 
             is_active=True
         ).select_related('user')
-        
-        serializer = StudioCollaboratorSerializer(collaborators, many=True)
+
+        user_ids = [c.user_id for c in collaborators]
+        owned_studio_ids = {}
+        for owned in Studio.objects.filter(owner_id__in=user_ids).order_by('created_at', 'id'):
+            owned_studio_ids.setdefault(owned.owner_id, owned.id)
+
+        serializer = StudioCollaboratorSerializer(
+            collaborators,
+            many=True,
+            context={'owned_studio_ids': owned_studio_ids},
+        )
         return Response({'results': serializer.data})
     except Studio.DoesNotExist:
         return Response(
@@ -1748,39 +1770,16 @@ def invite_studio_user(request, studio_id):
                 collaborator.is_active = True
                 collaborator.save()
             
-            # Send email notification to invited user
             try:
-                from django.template.loader import render_to_string
-                from django.contrib.sites.models import Site
-                
-                subject = f"Studio Collaboration Invitation: {studio.name}"
-                current_site = Site.objects.get_current()
-                site_url = f"https://{current_site.domain}"
-                frontend_url = getattr(settings, 'FRONTEND_URL', site_url)
-                studio_url = f"{frontend_url}/immersivecomics/studio/{studio.id}/"
-                
-                context = {
-                    'invitee_user': invitee_user,
-                    'inviter': request.user,
-                    'studio': studio,
-                    'role_display': collaborator.get_role_display(),
-                    'studio_url': studio_url,
-                    'site_url': site_url,
-                }
-                
-                html_message = render_to_string('emails/studio_invitation.html', context)
-                plain_message = render_to_string('emails/studio_invitation.txt', context)
-                
-                send_mail(
-                    subject=subject,
-                    message=plain_message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[invitee_user.email],
-                    html_message=html_message,
-                    fail_silently=False,
+                from .studio_invites import send_studio_invitation_email
+                send_studio_invitation_email(
+                    inviter=request.user,
+                    studio=studio,
+                    role_display=collaborator.get_role_display(),
+                    recipient_email=invitee_user.email,
+                    invitee_user=invitee_user,
                 )
             except Exception as e:
-                # Log email error but don't fail the request
                 print(f"Failed to send studio invitation email: {e}")
             
             serializer = StudioCollaboratorSerializer(collaborator)
@@ -1820,14 +1819,8 @@ def remove_studio_collaborator(request, studio_id, collaborator_id):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # Don't allow removing the owner
-        if collaborator.user == studio.owner:
-            return Response(
-                {'detail': 'Cannot remove the studio owner'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         # Deactivate the collaborator instead of deleting (soft delete)
+        # Owner may remove extra roles they assigned themselves; Owner is Studio.owner, not this row.
         from django.utils import timezone
         collaborator.is_active = False
         collaborator.removed_at = timezone.now()
@@ -1861,75 +1854,77 @@ def invite_studio_by_email(request, studio_id):
         
         serializer = InviteStudioEmailSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data['email']
+            from .studio_invites import send_studio_invitation_email
+
+            email = serializer.validated_data['email'].strip().lower()
             role = serializer.validated_data['role']
-            
-            # Check if user with this email exists
-            try:
-                invitee_user = User.objects.get(email=email)
-                
-                # Allow owner to add themselves as collaborator with multiple roles
-                # (The model supports multiple roles per user via unique_together on studio, user, role)
-                
-                # Check if user is already a collaborator
-                if StudioCollaborator.objects.filter(studio=studio, user=invitee_user).exists():
+            role_display = dict(StudioCollaborator.ROLE_CHOICES).get(role, role)
+
+            invitee_user = User.objects.filter(email__iexact=email).first()
+            if invitee_user:
+                if StudioCollaborator.objects.filter(
+                    studio=studio, user=invitee_user, role=role
+                ).exists():
                     return Response(
-                        {'detail': 'User is already a collaborator'}, 
+                        {'detail': 'User already has this role'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-                
-                # Create collaborator
-                collaborator = StudioCollaborator.objects.create(
+
+                collaborator, created = StudioCollaborator.objects.get_or_create(
                     studio=studio,
                     user=invitee_user,
-                    role=role
+                    role=role,
+                    defaults={'is_active': True}
                 )
-                
-                # Send email notification to invited user
+                if not created:
+                    collaborator.is_active = True
+                    collaborator.save()
+
                 try:
-                    from django.template.loader import render_to_string
-                    from django.core.mail import send_mail
-                    from django.contrib.sites.models import Site
-                    
-                    subject = f"Studio Collaboration Invitation: {studio.name}"
-                    current_site = Site.objects.get_current()
-                    site_url = f"https://{current_site.domain}"
-                    frontend_url = getattr(settings, 'FRONTEND_URL', site_url)
-                    studio_url = f"{frontend_url}/immersivecomics/studio/{studio.id}/"
-                    
-                    context = {
-                        'invitee_user': invitee_user,
-                        'inviter': request.user,
-                        'studio': studio,
-                        'role_display': collaborator.get_role_display(),
-                        'studio_url': studio_url,
-                        'site_url': site_url,
-                    }
-                    
-                    html_message = render_to_string('emails/studio_invitation.html', context)
-                    plain_message = render_to_string('emails/studio_invitation.txt', context)
-                    
-                    send_mail(
-                        subject=subject,
-                        message=plain_message,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[invitee_user.email],
-                        html_message=html_message,
-                        fail_silently=False,
+                    send_studio_invitation_email(
+                        inviter=request.user,
+                        studio=studio,
+                        role_display=collaborator.get_role_display(),
+                        recipient_email=invitee_user.email,
+                        invitee_user=invitee_user,
                     )
                 except Exception as e:
-                    # Log email error but don't fail the request
                     print(f"Failed to send studio invitation email: {e}")
-                
+
                 serializer = StudioCollaboratorSerializer(collaborator)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except User.DoesNotExist:
-                # User doesn't exist - for now, return error
-                # In the future, we could create an invitation system similar to story collaboration
-                return Response(
-                    {'detail': 'User with this email not found. Please invite registered users only.'}, 
-                    status=status.HTTP_404_NOT_FOUND
+
+            invite, created = StudioCollaborationInvite.objects.get_or_create(
+                studio=studio,
+                invitee_email=email,
+                role=role,
+                defaults={'inviter': request.user, 'status': 'pending'},
+            )
+            if not created:
+                invite.inviter = request.user
+                invite.status = 'pending'
+                invite.save(update_fields=['inviter', 'status', 'updated_at'])
+
+            try:
+                send_studio_invitation_email(
+                    inviter=request.user,
+                    studio=studio,
+                    role_display=role_display,
+                    recipient_email=email,
+                    is_registration=True,
                 )
+            except Exception as e:
+                print(f"Failed to send studio registration invitation email: {e}")
+
+            return Response(
+                {
+                    'detail': 'Registration invitation sent',
+                    'email': email,
+                    'role': role,
+                    'pending': True,
+                },
+                status=status.HTTP_201_CREATED,
+            )
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Studio.DoesNotExist:
@@ -2472,6 +2467,12 @@ def register_api(request):
                 user.save()
 
             auth_token, _created = Token.objects.get_or_create(user=user)
+
+        try:
+            from .studio_invites import apply_pending_studio_invites
+            apply_pending_studio_invites(user)
+        except Exception as e:
+            logger.error(f"Failed to apply pending studio invites: {e}")
 
         if verification_token:
             try:

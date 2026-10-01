@@ -58,6 +58,7 @@ urlpatterns = [
     path('privacy/', ReactAppView.as_view(), name='privacy'),
     path('terms/', ReactAppView.as_view(), name='terms'),
     path('cookies/', ReactAppView.as_view(), name='cookie_policy'),
+    path('docs/', ReactAppView.as_view(), name='docs'),
     # Commented out: React handles these routes via client-side routing
     # path('contact/', contact_page, name='contact'),
     # path('login/', auth_views.LoginView.as_view(template_name='snmov/login.html'), name='login_req'),

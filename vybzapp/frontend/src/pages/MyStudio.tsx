@@ -11,6 +11,33 @@ import { collaborationService, User } from '../services/collaborationService';
 import { useDialogA11y } from '../hooks/useDialogA11y';
 import { DRAFT_STORY_LIMIT_MESSAGE, isAtDraftStoryLimit } from '../utils/draftStoryLimit';
 
+function publicStudioPath(studioId: number): string {
+  return `/immersivecomics/studio/${studioId}/`;
+}
+
+function TeamMemberHandle({
+  label,
+  studioId,
+  title,
+}: {
+  label: string;
+  studioId?: number | null;
+  title: string;
+}) {
+  if (!studioId) {
+    return <div className="my-studio__teamMemberHandle">{label}</div>;
+  }
+  return (
+    <Link
+      to={publicStudioPath(studioId)}
+      className="my-studio__teamMemberHandle my-studio__teamMemberHandle--link"
+      title={title}
+    >
+      {label}
+    </Link>
+  );
+}
+
 function formatStoryDate(createdAt: string, updatedAt: string): string {
   const createdDate = new Date(createdAt);
   const updatedDate = new Date(updatedAt);
@@ -335,6 +362,8 @@ const MyStudio: React.FC = () => {
   const getRoleIcon = (role: string) => {
     const roleIcons: Record<string, string> = {
       'writer': 'fas fa-pen',
+      'screenwriter': 'fas fa-file-alt',
+      'director': 'fas fa-film',
       '3d_artist': 'fas fa-cube',
       'voice_actor': 'fas fa-microphone',
       'sound_engineer': 'fas fa-volume-up',
@@ -346,6 +375,8 @@ const MyStudio: React.FC = () => {
   const getRoleColor = (role: string) => {
     const roleColors: Record<string, string> = {
       'writer': 'primary',
+      'screenwriter': 'secondary',
+      'director': 'dark',
       '3d_artist': 'success',
       'voice_actor': 'info',
       'sound_engineer': 'warning',
@@ -813,16 +844,22 @@ const MyStudio: React.FC = () => {
                         Owner
                       </span>
                     </div>
-                    <div className="my-studio__teamMemberHandle">
-                      {(() => {
+                    <TeamMemberHandle
+                      label={(() => {
                         if (!currentUser || !myStudio) {
-                          return currentUser?.username || 'You';
+                          return 'You';
                         }
                         const ownerId = typeof myStudio.owner === 'object' ? myStudio.owner.id : myStudio.owner;
+                        const ownerUsername =
+                          typeof myStudio.owner === 'object'
+                            ? myStudio.owner.username
+                            : currentUser.username;
                         const isOwner = Number(currentUser.id) === Number(ownerId);
-                        return isOwner ? 'Me' : `@${currentUser.username || 'user'}`;
+                        return isOwner ? 'Me' : `@${ownerUsername || 'user'}`;
                       })()}
-                    </div>
+                      studioId={myStudio?.id}
+                      title="View public studio page"
+                    />
                   </div>
 
                   {(() => {
@@ -849,19 +886,38 @@ const MyStudio: React.FC = () => {
                             >
                               <div className="my-studio__teamMemberRole">
                                 <span className={`badge bg-${getRoleColor(role)}`}>
-                                  {role.replace('_', ' ').toUpperCase()}
+                                  {role.replace(/_/g, ' ').toUpperCase()}
                                 </span>
                               </div>
-                              <div className="my-studio__teamMemberHandle">@{userUsername}</div>
-                            {isOwner && !isCollaboratorOwner && myStudio && (
+                              <TeamMemberHandle
+                                label={isOwner && isCollaboratorOwner ? 'Me' : `@${userUsername}`}
+                                studioId={
+                                  isCollaboratorOwner
+                                    ? myStudio?.id
+                                    : collaborator.owned_studio_id || null
+                                }
+                                title={
+                                  isCollaboratorOwner
+                                    ? 'View public studio page'
+                                    : `View @${userUsername}'s studio`
+                                }
+                              />
+                            {isOwner && myStudio && (
                               <button
                                 className="btn btn-link text-muted p-0 border-0 my-studio__teamMemberAction"
                                 onClick={async (e) => {
                                   e.stopPropagation();
-                                  if (window.confirm(`Are you sure you want to remove ${userName} from your studio team?`)) {
+                                  const confirmMessage = isCollaboratorOwner
+                                    ? `Remove this ${role.replace(/_/g, ' ')} role from your studio team?`
+                                    : `Are you sure you want to remove ${userName} from your studio team?`;
+                                  if (window.confirm(confirmMessage)) {
                                     try {
                                       await collaborationService.removeStudioCollaborator(myStudio.id, collaborator.id);
-                                      setMessage(`${userName} has been removed from your studio team.`);
+                                      setMessage(
+                                        isCollaboratorOwner
+                                          ? `Removed the ${role.replace(/_/g, ' ')} role from your studio team.`
+                                          : `${userName} has been removed from your studio team.`
+                                      );
                                       setMessageType('success');
                                       setShowMessage(true);
                                       await loadCollaborators();
@@ -873,7 +929,11 @@ const MyStudio: React.FC = () => {
                                     }
                                   }
                                 }}
-                                title={`Remove ${userName} from studio`}
+                                title={
+                                  isCollaboratorOwner
+                                    ? `Remove this ${role.replace(/_/g, ' ')} role`
+                                    : `Remove ${userName} from studio`
+                                }
                                 style={{ 
                                   fontSize: '0.7rem',
                                   opacity: 0.6,
