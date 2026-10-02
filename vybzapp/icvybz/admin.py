@@ -5,7 +5,8 @@ from .models import (
     Intersection, Studio, StudioCollaborator, StudioCollaborationRequest,
     StudioCollaborationInvite,
     AdvertiserProfile, AdCampaign, AdCreative, AdPlacement, AdEvent,
-    AdRevenueSplitConfig, AdRevenueShareSnapshot
+    AdRevenueSplitConfig, AdRevenueShareSnapshot,
+    StoryChange, EpisodeVersion, DialogueEditRequest,
 )
 from django.db import models
 from tinymce.widgets import TinyMCE
@@ -401,3 +402,29 @@ class AdRevenueShareSnapshotAdmin(admin.ModelAdmin):
     list_filter = ('created_at', 'story', 'studio')
     search_fields = ('story__title', 'creator__username', 'campaign__name')
     readonly_fields = ('event', 'campaign', 'placement', 'story', 'creator', 'studio', 'creator_percentage', 'platform_percentage', 'estimated_amount', 'created_at')
+
+
+@admin.register(StoryChange)
+class StoryChangeAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'story', 'episode', 'user', 'action', 'summary')
+    list_filter = ('action', 'created_at')
+    search_fields = ('summary', 'story__title', 'user__username')
+    readonly_fields = ('story', 'episode', 'user', 'action', 'target_type', 'target_id', 'summary', 'created_at')
+
+
+@admin.register(EpisodeVersion)
+class EpisodeVersionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'episode', 'created_by', 'created_at')
+    search_fields = ('name', 'episode__title')
+    readonly_fields = ('episode', 'story', 'created_by', 'name', 'payload', 'created_at')
+
+
+@admin.register(DialogueEditRequest)
+class DialogueEditRequestAdmin(admin.ModelAdmin):
+    list_display = ('summary', 'status', 'requester', 'approver', 'created_at')
+    list_filter = ('status', 'action')
+    search_fields = ('summary', 'requester__username', 'approver__username')
+    readonly_fields = (
+        'story', 'episode', 'dialogue', 'requester', 'approver',
+        'action', 'status', 'payload', 'summary', 'created_at', 'resolved_at',
+    )

@@ -15,7 +15,8 @@ describe('Documentation', () => {
       'Studios and My Studio',
       'Collaborators',
       'Invite to your studio',
-      'Assign teammates to a story',
+      'Story credits',
+      'Approving line changes',
       'Store and orders',
       'Account',
     ].forEach((name) => {
@@ -25,6 +26,8 @@ describe('Documentation', () => {
     expect(screen.getByText(/They get a registration link/i)).toBeInTheDocument();
     expect(screen.getByText(/Your own extra roles show as Me/i)).toBeInTheDocument();
     expect(screen.getByText(/like movie credits/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 to approve/i)).toBeInTheDocument();
+    expect(screen.getByText(/episode History panel/i)).toBeInTheDocument();
     expect(screen.getByText(/tap a name \(or Me\) to open that person/i)).toBeInTheDocument();
 
     expect(screen.getByRole('link', { name: 'Stories' })).toHaveAttribute('href', '/immersivecomics/');

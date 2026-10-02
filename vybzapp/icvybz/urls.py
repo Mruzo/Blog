@@ -53,6 +53,7 @@ urlpatterns = [
     # Studio URLs
     path('studios/', ReactAppView.as_view(), name='studio_list'),
     path('studio/<int:pk>/', ReactAppView.as_view(), name='studio_detail'),
+    path('studio/<int:pk>/workspace/', ReactAppView.as_view(), name='studio_workspace'),
     path('my-studio/', ReactAppView.as_view(), name='my_studio'),
     path('studio/create/', ReactAppView.as_view(), name='studio_create'),
     path('studio/<int:pk>/edit/', ReactAppView.as_view(), name='studio_edit'),

@@ -12,6 +12,9 @@ export function getPageName(pathname: string): string {
   if (pathname.includes('/immersivecomics/season/') && pathname.includes('/episodes')) return 'Episode Management';
   if (pathname === '/immersivecomics/my-studio/') return 'My Studio';
   if (pathname.includes('/immersivecomics/studios/')) return 'Studios';
+  if (pathname.includes('/immersivecomics/studio/') && pathname.includes('/workspace')) {
+    return 'Studio Workspace';
+  }
   if (pathname.includes('/immersivecomics/studio/') && pathname.includes('/edit')) return 'Studio Edit';
   if (pathname.includes('/immersivecomics/import/')) return 'Story Import';
   if (pathname.includes('/studios/') && !pathname.includes('/edit')) return 'Studio Detail';

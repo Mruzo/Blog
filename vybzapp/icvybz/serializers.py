@@ -5,6 +5,7 @@ from .models import (
     CollaborationInvite, StoryCollaborator, StudioCollaborator,
     StudioCollaborationRequest, ComicComment, AdvertiserProfile,
     AdCampaign, AdCreative, AdPlacement, AdEvent, AdRevenueSplitConfig,
+    StoryChange, EpisodeVersion, DialogueEditRequest,
 )
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Exists, OuterRef, Q, Sum
@@ -69,14 +70,75 @@ def get_default_model_urls(request=None):
 class ComicSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source='user.username', read_only=True)
     total_views = serializers.IntegerField(read_only=True)
+    pending_approvals = serializers.SerializerMethodField()
+    pending_edit_requests = serializers.SerializerMethodField()
+    season_count = serializers.SerializerMethodField()
+    episode_count = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Comic
         fields = [
             'id', 'title', 'description', 'comic_image', 'is_public', 'moderation_status',
-            'created_at', 'updated_at', 'user', 'studio', 'user_username', 'total_views'
+            'created_at', 'updated_at', 'user', 'studio', 'user_username', 'total_views',
+            'pending_approvals', 'pending_edit_requests',
+            'season_count', 'episode_count', 'comment_count',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'user', 'studio', 'total_views', 'moderation_status']
+        read_only_fields = [
+            'id', 'created_at', 'updated_at', 'user', 'studio', 'total_views',
+            'moderation_status', 'pending_approvals', 'pending_edit_requests',
+            'season_count', 'episode_count', 'comment_count',
+        ]
+
+    def _annotated_int(self, obj, name):
+        value = getattr(obj, name, 0)
+        return value if isinstance(value, int) else 0
+
+    def get_season_count(self, obj):
+        return self._annotated_int(obj, 'season_count')
+
+    def get_episode_count(self, obj):
+        return self._annotated_int(obj, 'episode_count')
+
+    def get_comment_count(self, obj):
+        return self._annotated_int(obj, 'comment_count')
+
+    def get_pending_approvals(self, obj):
+        annotated = getattr(obj, 'pending_approvals', None)
+        if isinstance(annotated, int):
+            return annotated
+        pending = getattr(obj, 'pending_edits_for_user', None)
+        if pending is not None:
+            return len(pending)
+        return 0
+
+    def get_pending_edit_requests(self, obj):
+        pending = getattr(obj, 'pending_edits_for_user', None)
+        if pending is None:
+            return []
+        rows = []
+        for request in pending:
+            episode = getattr(request, 'episode', None)
+            season = getattr(episode, 'season', None) if episode else None
+            requester = getattr(request, 'requester', None)
+            full_name = ''
+            if requester:
+                full_name = ' '.join(
+                    part for part in (requester.first_name, requester.last_name) if part
+                ).strip()
+            dialogue = getattr(request, 'dialogue', None)
+            rows.append({
+                'id': request.id,
+                'action': request.action,
+                'summary': request.summary,
+                'requester_username': requester.username if requester else '',
+                'requester_name': full_name or (requester.username if requester else 'A teammate'),
+                'line_order': dialogue.order if dialogue else None,
+                'episode_id': request.episode_id,
+                'episode_title': episode.title if episode else '',
+                'season_id': season.id if season else None,
+            })
+        return rows
     
     def validate_title(self, value):
         """Validate title length and presence."""
@@ -206,22 +268,43 @@ class EpisodeSerializer(serializers.ModelSerializer):
 class DialogueSerializer(serializers.ModelSerializer):
     character_name = serializers.CharField(source='character.name', read_only=True)
     pov_data = serializers.SerializerMethodField()
+    last_edited_by_username = serializers.SerializerMethodField()
     
     class Meta:
         model = Dialogue
         fields = [
             'id', 'pov', 'pov_data', 'character', 'character_name', 'text', 'order', 'scene_title', 'scene_description',
             'shot_type', 'camera_orbit', 'camera_target', 'field_of_view', 
-            'zoom_speed', 'camera_transition', 'rotation', 'episode', 'created_at', 'updated_at'
+            'zoom_speed', 'camera_transition', 'rotation', 'episode',
+            'last_edited_by', 'last_edited_by_username',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'episode', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'episode', 'last_edited_by', 'last_edited_by_username', 'created_at', 'updated_at']
+
+    def get_last_edited_by_username(self, obj):
+        return obj.last_edited_by.username if obj.last_edited_by_id else ''
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        from .story_history import dialogue_approver
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) if request else None
+        editor = dialogue_approver(
+            instance,
+            requester=user if user and getattr(user, 'is_authenticated', False) else None,
+        )
+        if editor:
+            data['last_edited_by'] = editor.id
+            data['last_edited_by_username'] = editor.username
+        return data
     
     def get_pov_data(self, obj):
         """Return POV data from dialogue's POV, or fall back to character's first POV for hotspot positioning."""
         pov = obj.pov
         if not pov and obj.character:
-            # Use character's first POV so head position is per-character (avoids all names at 0,0,0)
-            pov = obj.character.povs.first()
+            # Prefetch cache: .all()[0] avoids a per-row query that .first() would issue.
+            povs = list(obj.character.povs.all())
+            pov = povs[0] if povs else None
         if pov:
             return {
                 'id': pov.id,
@@ -700,3 +783,73 @@ class StudioCollaborationRequestSerializer(serializers.ModelSerializer):
 class CreateStudioCollaborationRequestSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=StudioCollaborator.ROLE_CHOICES, required=False)
     message = serializers.CharField(required=False, allow_blank=True)
+
+
+class StoryChangeSerializer(serializers.ModelSerializer):
+    user_username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StoryChange
+        fields = [
+            'id', 'action', 'target_type', 'target_id', 'summary',
+            'user_username', 'created_at', 'episode',
+        ]
+        read_only_fields = fields
+
+    def get_user_username(self, obj):
+        return obj.user.username if obj.user_id else ''
+
+
+class EpisodeVersionSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.SerializerMethodField()
+    line_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EpisodeVersion
+        fields = ['id', 'name', 'created_by_username', 'created_at', 'line_count']
+        read_only_fields = fields
+
+    def get_created_by_username(self, obj):
+        return obj.created_by.username if obj.created_by_id else ''
+
+    def get_line_count(self, obj):
+        payload = obj.payload or {}
+        lines = payload.get('dialogues')
+        return len(lines) if isinstance(lines, list) else 0
+
+
+class DialogueEditRequestSerializer(serializers.ModelSerializer):
+    requester_username = serializers.SerializerMethodField()
+    approver_username = serializers.SerializerMethodField()
+    line_order = serializers.SerializerMethodField()
+    proposed_text = serializers.SerializerMethodField()
+    can_approve = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DialogueEditRequest
+        fields = [
+            'id', 'action', 'status', 'summary', 'requester_username', 'approver_username',
+            'dialogue', 'line_order', 'proposed_text', 'can_approve', 'created_at',
+        ]
+        read_only_fields = fields
+
+    def get_requester_username(self, obj):
+        return obj.requester.username if obj.requester_id else ''
+
+    def get_approver_username(self, obj):
+        return obj.approver.username if obj.approver_id else ''
+
+    def get_line_order(self, obj):
+        return obj.dialogue.order if obj.dialogue_id else None
+
+    def get_proposed_text(self, obj):
+        payload = obj.payload or {}
+        if obj.action == 'delete':
+            return ''
+        return payload.get('text') or ''
+
+    def get_can_approve(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) if request else None
+        from .story_history import user_can_resolve_edit_request
+        return user_can_resolve_edit_request(user, obj)

@@ -7,7 +7,7 @@ import BackButton from '../components/BackButton';
 import MessagePopup from '../components/MessagePopup';
 import { apiService, type Studio } from '../services/api';
 import { collaborationService } from '../services/collaborationService';
-import { filterPublicStoriesForStudio } from '../utils/studioScope';
+import { filterPublicStoriesForStudio, filterWorkspaceStoriesForStudio } from '../utils/studioScope';
 
 interface Character {
   id: number;
@@ -50,11 +50,13 @@ const StudioDetail: React.FC = () => {
 
   const [studio, setStudio] = useState<Studio | null>(null);
   const [stories, setStories] = useState<Comic[]>([]);
+  const [storiesReady, setStoriesReady] = useState(false);
   const [storyData, setStoryData] = useState<Map<number, StudioStoryData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [isLoadingStoryData, setIsLoadingStoryData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userReady, setUserReady] = useState(false);
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
   const [showMessage, setShowMessage] = useState(false);
@@ -92,6 +94,8 @@ const StudioDetail: React.FC = () => {
       } catch (err) {
         // User not authenticated or failed to load
         console.log('StudioDetail: User not authenticated or failed to load user:', err);
+      } finally {
+        setUserReady(true);
       }
     };
 
@@ -118,16 +122,20 @@ const StudioDetail: React.FC = () => {
     loadStudio();
   }, [studioId]);
 
-  // Load published stories for this studio (stories owned by studio owner or with studio collaborators)
+  // Public visitors see published stories. Studio teammates see drafts they can edit.
   useEffect(() => {
     const loadStudioStories = async () => {
-      if (!studio || !studio.owner) return;
+      if (!studio || !studio.owner || !userReady) return;
 
       try {
-        const allStories = await apiService.getPublicStories();
-        
-        // Approved public stories owned by the studio owner or an active studio collaborator
-        const studioStories = filterPublicStoriesForStudio(allStories, studio);
+        setStoriesReady(false);
+        const allStories = isMember
+          ? await apiService.getStories()
+          : await apiService.getPublicStories();
+        const list = Array.isArray(allStories) ? allStories : [];
+        const studioStories = isMember
+          ? filterWorkspaceStoriesForStudio(list, studio)
+          : filterPublicStoriesForStudio(list, studio);
 
         // Convert to Comic format
         const comicsData = await Promise.all(
@@ -171,11 +179,14 @@ const StudioDetail: React.FC = () => {
         setStories(comicsData);
       } catch (err) {
         console.error('Error loading studio stories:', err);
+        setStories([]);
+      } finally {
+        setStoriesReady(true);
       }
     };
 
     loadStudioStories();
-  }, [studio]);
+  }, [studio, isMember, userReady]);
 
   // Load seasons, episodes, and dialogues for each story
   useEffect(() => {
@@ -194,7 +205,10 @@ const StudioDetail: React.FC = () => {
             // Load seasons - may require auth, handle gracefully
             let seasonsData: any[] = [];
             try {
-              seasonsData = await apiService.getSeasons(story.id, { catalogue: true });
+              seasonsData = await apiService.getSeasons(
+                story.id,
+                isMember ? undefined : { catalogue: true },
+              );
             } catch (error: any) {
               // If 403/401, it's expected for public stories when not authenticated
               if (error?.response?.status === 403 || error?.response?.status === 401) {
@@ -221,7 +235,7 @@ const StudioDetail: React.FC = () => {
             let allEpisodes: any[] = [];
             try {
               const episodePromises = seasonsData.map(season =>
-                apiService.getEpisodes(season.id, { catalogue: true })
+                apiService.getEpisodes(season.id, isMember ? undefined : { catalogue: true })
               );
               const episodeResults = await Promise.all(episodePromises);
               allEpisodes = episodeResults.flat();
@@ -351,7 +365,7 @@ const StudioDetail: React.FC = () => {
     };
     
     loadStoryData();
-  }, [stories]);
+  }, [stories, isMember]);
 
   // Get owner info - memoize to prevent dependency issues
   const ownerInfo = useMemo(() => {
@@ -458,14 +472,25 @@ const StudioDetail: React.FC = () => {
 
                 {currentUser ? (
                   <div className="studio-detail__actions">
-                    <Link
-                      to={`/immersivecomics/?studio=${studio.id}`}
-                      className="stories-landing__btnPrimary"
-                      title="View this studio's published stories in the catalog"
-                    >
-                      <i className="fas fa-eye me-2" aria-hidden />
-                      View stories
-                    </Link>
+                    {isMember ? (
+                      <Link
+                        to={`/immersivecomics/studio/${studio.id}/workspace/`}
+                        className="stories-landing__btnPrimary"
+                        title="Open this studio's workspace"
+                      >
+                        <i className="fas fa-sliders-h me-2" aria-hidden />
+                        Open workspace
+                      </Link>
+                    ) : (
+                      <Link
+                        to={`/immersivecomics/?studio=${studio.id}`}
+                        className="stories-landing__btnPrimary"
+                        title="View this studio's published stories in the catalog"
+                      >
+                        <i className="fas fa-eye me-2" aria-hidden />
+                        View stories
+                      </Link>
+                    )}
                     <button
                       type="button"
                       className="product-landing__ctaGhost"
@@ -531,12 +556,16 @@ const StudioDetail: React.FC = () => {
 
       <section className="product-landing__section">
         <div className="product-landing__container">
-          <h2 className="product-landing__h2 studio-detail__storiesHeading">Published stories</h2>
+          <h2 className="product-landing__h2 studio-detail__storiesHeading">
+            {isMember ? 'Studio stories' : 'Published stories'}
+          </h2>
           <p className="product-landing__body studio-detail__storiesLead">
-            Stories published by this studio's owner and collaborators.
+            {isMember
+              ? 'Drafts and published stories you can work on with this team.'
+              : "Stories published by this studio's owner and collaborators."}
           </p>
 
-          {isLoadingStoryData ? (
+          {!storiesReady || isLoadingStoryData ? (
             <div className="store-page__loadingWrap" aria-busy="true">
               <LoadingSpinner />
             </div>
@@ -546,10 +575,12 @@ const StudioDetail: React.FC = () => {
                 <i className="fas fa-book-open" />
               </div>
               <h3 className="product-landing__h2" style={{ fontSize: '1.25rem' }}>
-                No published stories yet
+                {isMember ? 'No stories in this studio yet' : 'No published stories yet'}
               </h3>
               <p className="product-landing__body" style={{ marginTop: '0.5rem' }}>
-                This studio has not published any stories yet.
+                {isMember
+                  ? 'When a teammate creates a story here, it will show up for the whole studio.'
+                  : 'This studio has not published any stories yet.'}
               </p>
             </div>
           ) : (
@@ -610,6 +641,17 @@ const StudioDetail: React.FC = () => {
 
                     {comic.description ? (
                       <p className="studio-detail__storyDesc">{comic.description}</p>
+                    ) : null}
+                    {isMember ? (
+                      <div className="studio-detail__storyActions">
+                        <Link
+                          to={`/immersivecomics/story/${comic.id}/manage/`}
+                          className="stories-landing__btnPrimary text-decoration-none"
+                        >
+                          <i className="fas fa-sliders-h me-2" aria-hidden />
+                          Manage story
+                        </Link>
+                      </div>
                     ) : null}
                   </div>
 

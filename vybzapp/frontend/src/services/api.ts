@@ -281,6 +281,21 @@ export interface Story {
   user_username?: string; // Username of the story owner
   moderation_status: 'pending' | 'approved' | 'rejected';
   total_views?: number; // Total view count across all episodes
+  season_count?: number;
+  episode_count?: number;
+  comment_count?: number;
+  pending_approvals?: number;
+  pending_edit_requests?: Array<{
+    id: number;
+    action?: string;
+    summary: string;
+    requester_username: string;
+    requester_name?: string;
+    line_order?: number | null;
+    episode_id: number;
+    episode_title: string;
+    season_id?: number | null;
+  }>;
 }
 
 export interface Season {
@@ -370,8 +385,58 @@ export interface Dialogue {
   camera_transition?: 'move' | 'snap';
   rotation: string;
   episode: number;
+  last_edited_by?: number | null;
+  last_edited_by_username?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface DialogueEditRequest {
+  id: number;
+  action: 'update' | 'delete' | string;
+  status: 'pending' | 'approved' | 'declined' | string;
+  summary: string;
+  requester_username?: string;
+  approver_username?: string;
+  dialogue: number;
+  line_order?: number;
+  proposed_text?: string;
+  can_approve?: boolean;
+  created_at: string;
+}
+
+export interface EpisodeScriptVersion {
+  id: number;
+  name: string;
+  created_by_username?: string;
+  created_at: string;
+  line_count: number;
+}
+
+export interface EpisodeChangeEvent {
+  id: number;
+  action: string;
+  target_type?: string;
+  target_id?: number | null;
+  summary: string;
+  user_username?: string;
+  created_at: string;
+  episode?: number | null;
+}
+
+export interface EpisodeHistoryPayload {
+  can_edit: boolean;
+  versions: EpisodeScriptVersion[];
+  changes: EpisodeChangeEvent[];
+  edit_requests?: DialogueEditRequest[];
+}
+
+export function getDialogueApprovalRequired(error: unknown): { lastEditorUsername: string } | null {
+  const response = (error as { response?: { status?: number; data?: { needs_approval?: boolean; last_editor_username?: string } } })?.response;
+  if (response?.status === 409 && response.data?.needs_approval) {
+    return { lastEditorUsername: response.data.last_editor_username || 'the last editor' };
+  }
+  return null;
 }
 
 export interface EpisodeComment {
@@ -1033,6 +1098,42 @@ class ApiService {
 
   async deleteDialogue(id: number): Promise<void> {
     await api.delete(`/dialogues/${id}/`);
+  }
+
+  async getEpisodeHistory(episodeId: number): Promise<EpisodeHistoryPayload> {
+    const response = await api.get(`/episodes/${episodeId}/history/`);
+    return response.data;
+  }
+
+  async createEpisodeVersion(episodeId: number, name: string): Promise<EpisodeScriptVersion> {
+    const response = await api.post(`/episodes/${episodeId}/versions/`, { name });
+    return response.data;
+  }
+
+  async restoreEpisodeVersion(
+    episodeId: number,
+    versionId: number
+  ): Promise<{ restored: boolean; version: EpisodeScriptVersion; episode: Episode }> {
+    const response = await api.post(`/episodes/${episodeId}/versions/${versionId}/restore/`, {});
+    return response.data;
+  }
+
+  async requestDialogueEdit(
+    dialogueId: number,
+    data: Partial<Dialogue> & { action?: 'update' | 'delete' }
+  ): Promise<DialogueEditRequest> {
+    const response = await api.post(`/dialogues/${dialogueId}/edit-requests/`, data);
+    return response.data;
+  }
+
+  async approveDialogueEdit(requestId: number): Promise<DialogueEditRequest> {
+    const response = await api.post(`/edit-requests/${requestId}/approve/`, {});
+    return response.data;
+  }
+
+  async declineDialogueEdit(requestId: number): Promise<DialogueEditRequest> {
+    const response = await api.post(`/edit-requests/${requestId}/decline/`, {});
+    return response.data;
   }
 
   // Episode Comments

@@ -20,6 +20,7 @@ jest.mock('../../services/api', () => {
     getCharacters: jest.fn(),
     getStory: jest.fn(),
     getDialogues: jest.fn().mockResolvedValue([]),
+    getEpisodeHistory: jest.fn().mockResolvedValue({ can_edit: true, versions: [], changes: [], edit_requests: [] }),
   };
   return {
     __esModule: true,
@@ -78,6 +79,12 @@ describe('EpisodeManage dialogue character selector', () => {
     mockedApi.getCharacters.mockResolvedValue([storyCharacter] as never);
     mockedApi.getStory.mockResolvedValue({ id: 42, title: 'Cast Story' } as never);
     mockedApi.getDialogues.mockResolvedValue([] as never);
+    mockedApi.getEpisodeHistory.mockResolvedValue({
+      can_edit: true,
+      versions: [],
+      changes: [],
+      edit_requests: [],
+    } as never);
     mockUseApi.mockReturnValue(
       createMockApiContext({
         seasons: [],

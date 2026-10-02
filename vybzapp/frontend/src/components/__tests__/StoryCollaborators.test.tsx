@@ -64,4 +64,41 @@ describe('StoryCollaborators', () => {
       ]);
     });
   });
+
+  it('lets teammates see themselves without managing the team', async () => {
+    mockApi.getCurrentUser.mockResolvedValue({ id: 2 } as never);
+    mockCollaboration.getStudioCollaboratorsForStory.mockResolvedValue([
+      {
+        id: 0,
+        user: { id: 1, username: 'misteruzo', first_name: 'chris', last_name: 'uzo' },
+        role: 'owner',
+        roles: ['owner'],
+        is_story_collaborator: true,
+        is_owner: true,
+        story_roles: ['owner'],
+      },
+      {
+        id: 9,
+        user: { id: 2, username: 'uzouzo' },
+        role: 'writer',
+        roles: ['writer', '3d_artist'],
+        is_story_collaborator: true,
+        is_owner: false,
+        story_roles: ['writer', '3d_artist', 'voice_actor'],
+      },
+    ] as never);
+
+    renderPanel();
+
+    expect(await screen.findByText('Me')).toBeInTheDocument();
+    expect(screen.getByText('chris uzo')).toBeInTheDocument();
+    expect(screen.queryByText('@uzouzo')).not.toBeInTheDocument();
+    expect(screen.getByText('Owner')).toBeInTheDocument();
+    expect(screen.getByText('Writer')).toBeInTheDocument();
+    expect(screen.getByText('3d Artist')).toBeInTheDocument();
+    expect(screen.getByText('Voice Actor')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /save story team/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Writer' })).not.toBeInTheDocument();
+    expect(screen.getByText(/only the story owner can change roles/i)).toBeInTheDocument();
+  });
 });

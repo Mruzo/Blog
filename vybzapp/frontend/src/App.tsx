@@ -155,6 +155,7 @@ function AppContent() {
           <Route path="/immersivecomics/studios/" element={<Studios />} />
           <Route path="/studios/:id/" element={<StudioDetail />} />
           <Route path="/immersivecomics/studio/:id/" element={<StudioDetail />} />
+          <Route path="/immersivecomics/studio/:id/workspace/" element={<MyStudio />} />
           <Route path="/immersivecomics/my-studio/" element={<MyStudio />} />
           <Route path="/immersivecomics/studio/:id/edit/" element={<StudioEdit />} />
           <Route path="/immersivecomics/import/" element={<StoryImport />} />

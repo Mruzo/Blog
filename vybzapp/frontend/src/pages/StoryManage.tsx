@@ -7,11 +7,21 @@ import Comic3DViewer from '../components/Comic3DViewer';
 import StoryCollaborators from '../components/StoryCollaborators';
 import { useApi } from '../contexts/ApiContext';
 import { FeedbackContext } from '../contexts/FeedbackContext';
-import { Story, Episode, Dialogue, Season } from '../services/api';
+import { Story, Episode, Dialogue, Season, getDialogueApprovalRequired } from '../services/api';
 import { apiService } from '../services/api';
-import { collaborationService } from '../services/collaborationService';
 import '../components/Comic3DViewer.css';
 
+function pendingRequestLabel(
+  request: NonNullable<Story['pending_edit_requests']>[number],
+): string {
+  const who = request.requester_name || request.requester_username || 'A teammate';
+  const line = request.line_order != null ? `line ${request.line_order}` : 'a line';
+  const verb = request.action === 'delete' ? 'wants to delete' : 'wants to change';
+  if (request.episode_title) {
+    return `${who} ${verb} ${line} in ${request.episode_title}`;
+  }
+  return `${who} ${verb} ${line}`;
+}
 
 const StoryManage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -125,18 +135,15 @@ const StoryManage: React.FC = () => {
     }
   }, []); // Empty dependency array to prevent infinite loops
 
-  // Check authorization: user must be owner or collaborator
+  // Backend story GET is the access gate: owner, story collaborator, or studio teammate.
   useEffect(() => {
     const checkAuthorization = async () => {
       if (!id || !currentUser) {
-        // Wait for currentUser to load
         const token = localStorage.getItem('authToken');
         if (!token) {
-          // No token, redirect to login
           navigate('/login/?next=' + encodeURIComponent(window.location.pathname));
           return;
         }
-        // Token exists but currentUser not loaded yet, wait a bit
         return;
       }
       
@@ -144,7 +151,6 @@ const StoryManage: React.FC = () => {
       const storyId = Number(id);
       
       try {
-        // Try to load the story - this will fail if user doesn't have access
         const storyData = await loadStory(storyId);
         
         if (!storyData) {
@@ -153,63 +159,9 @@ const StoryManage: React.FC = () => {
           setIsCheckingAuth(false);
           return;
         }
-        
-        // Check if user is the owner
-        // Story.user is a number (user ID), but API might return it as an object in some cases
-        const storyUserId = typeof storyData.user === 'object' && storyData.user !== null 
-          ? (storyData.user as any).id 
-          : Number(storyData.user);
-        const isOwner = storyUserId === Number(currentUser.id);
-        
-        if (isOwner) {
-          setIsAuthorized(true);
-          setStory(storyData);
-          setIsCheckingAuth(false);
-          return;
-        }
-        
-        // Check if user is a collaborator
-        try {
-          const collaborators = await collaborationService.getCollaborators(storyId);
-          const isCollaborator = collaborators.some((collab: any) => {
-            // Check StoryCollaborator (has user field)
-            if (collab.user && (collab.user.id === currentUser.id || collab.user === currentUser.id)) {
-              return true;
-            }
-            // Check CollaborationInvite (has invitee_user field)
-            if (collab.invitee_user && (collab.invitee_user.id === currentUser.id || collab.invitee_user === currentUser.id)) {
-              // Only count accepted invites
-              return collab.status === 'accepted';
-            }
-            return false;
-          });
-          
-          if (isCollaborator) {
-            setIsAuthorized(true);
-            setStory(storyData);
-          } else {
-            // User is neither owner nor collaborator
-            setError('You do not have permission to access this story.');
-            setIsAuthorized(false);
-            setTimeout(() => {
-              navigate('/immersivecomics/my-studio/');
-            }, 2000);
-          }
-        } catch (collabError: any) {
-          // If we can't load collaborators, user probably doesn't have access
-          if (collabError.response?.status === 403 || collabError.response?.status === 401) {
-            setError('You do not have permission to access this story.');
-            setIsAuthorized(false);
-            setTimeout(() => {
-              navigate('/immersivecomics/my-studio/');
-            }, 2000);
-          } else {
-            // Other error, still allow access if story loaded successfully
-            setIsAuthorized(true);
-            setStory(storyData);
-          }
-        }
-        
+
+        setIsAuthorized(true);
+        setStory(storyData);
         setIsCheckingAuth(false);
       } catch (err: any) {
         console.error('StoryManage: Error checking authorization:', err);
@@ -373,6 +325,9 @@ const StoryManage: React.FC = () => {
     }
   };
 
+  const pendingEditRequests = story.pending_edit_requests ?? [];
+  const pendingApprovalCount = story.pending_approvals || pendingEditRequests.length;
+
   return (
     <div className="product-landing">
       <MessagePopup
@@ -409,6 +364,28 @@ const StoryManage: React.FC = () => {
 
       <section className="product-landing__section">
         <div className="product-landing__container px-2 px-md-3 pb-4" style={{ maxWidth: '1200px' }}>
+      {pendingEditRequests.length > 0 ? (
+        <aside className="story-manage__approvals" aria-label="Pending line approvals">
+          <p className="story-manage__approvalsTitle">
+            {pendingApprovalCount === 1
+              ? '1 change is waiting for your approval'
+              : `${pendingApprovalCount} changes are waiting for your approval`}
+          </p>
+          <ul className="story-manage__approvalsList">
+            {pendingEditRequests.map((request) => (
+              <li key={request.id}>
+                {request.season_id ? (
+                  <Link to={`/immersivecomics/season/${request.season_id}/episodes/`}>
+                    {pendingRequestLabel(request)}
+                  </Link>
+                ) : (
+                  <span>{pendingRequestLabel(request)}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </aside>
+      ) : null}
       <div className="story-manage__layout mb-4">
         <div className="my-studio__panel">
             <div className="my-studio__panelHead">
@@ -688,8 +665,23 @@ const StoryManage: React.FC = () => {
                 seasons={seasons}
                 storyId={Number(id)}
                 onEpisodeSelect={handleEpisodeSelect}
-                onDialogueUpdate={(dialogueId, data) => {
-                  updateDialogue(dialogueId, data);
+                onDialogueUpdate={async (dialogueId, data) => {
+                  try {
+                    await updateDialogue(dialogueId, data);
+                  } catch (error: unknown) {
+                    const approval = getDialogueApprovalRequired(error);
+                    if (!approval) {
+                      return;
+                    }
+                    try {
+                      await apiService.requestDialogueEdit(dialogueId, data);
+                      setMessage(`Asked ${approval.lastEditorUsername} to approve that camera change.`);
+                      setMessageType('info');
+                      setShowMessage(true);
+                    } catch (requestError) {
+                      console.error('Could not request dialogue approval:', requestError);
+                    }
+                  }
                 }}
               />
             </div>

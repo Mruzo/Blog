@@ -7,12 +7,13 @@ import EpisodeCard from '../components/EpisodeCard';
 import DialogueCard from '../components/DialogueCard';
 import MetaTags from '../components/MetaTags';
 import { useApi } from '../contexts/ApiContext';
-import { Character, Episode as ApiEpisode, apiService, Season, Story } from '../services/api';
+import { Character, Episode as ApiEpisode, apiService, getDialogueApprovalRequired, Season, Story } from '../services/api';
 import { useDialogA11y } from '../hooks/useDialogA11y';
 import NumberStepper from '../components/NumberStepper';
 import { resolveCharacterId } from '../utils/characterId';
 import { CAMERA_TRANSITION_MOVE, CameraTransition, normalizeCameraTransition } from '../utils/cameraTransition';
 import CameraTransitionPicks from '../components/CameraTransitionPicks';
+import EpisodeHistoryPanel from '../components/EpisodeHistoryPanel';
 
 function asCharacterList(payload: unknown): Character[] {
   if (Array.isArray(payload)) {
@@ -84,6 +85,8 @@ interface Dialogue {
   zoom_speed: number;
   camera_transition?: string;
   rotation: string;
+  last_edited_by?: number | null;
+  last_edited_by_username?: string;
   created_at: string;
   updated_at: string;
 }
@@ -134,7 +137,8 @@ const EpisodeManage: React.FC = () => {
     updateDialogue,
     deleteDialogue,
     characters,
-    loadCharacters
+    loadCharacters,
+    currentUser,
   } = useApi();
   
   const [showEpisodeForm, setShowEpisodeForm] = useState(false);
@@ -178,6 +182,7 @@ const EpisodeManage: React.FC = () => {
   const [story, setStory] = useState<Story | null>(null);
   const [storyCharacters, setStoryCharacters] = useState<Character[]>([]);
   const [storyCastLoaded, setStoryCastLoaded] = useState(false);
+  const [historyTick, setHistoryTick] = useState(0);
 
   // Find the current season to get the story ID
   const season = seasons.find(s => s.id === parseInt(seasonId || '0'));
@@ -437,6 +442,7 @@ const EpisodeManage: React.FC = () => {
       
       // Reload episodes
       await loadEpisodes(parseInt(seasonId));
+      setHistoryTick((tick) => tick + 1);
     } catch (error: any) {
       setMessage(error.message || 'Failed to save episode');
       setMessageType('danger');
@@ -461,8 +467,23 @@ const EpisodeManage: React.FC = () => {
         lastSpeakerIdRef.current = speakerId;
       }
       if (editingDialogue) {
-        await updateDialogue(editingDialogue.id, payload);
-        setMessage('Dialogue updated successfully!');
+        try {
+          await updateDialogue(editingDialogue.id, payload);
+          setMessage('Dialogue updated successfully!');
+        } catch (error: unknown) {
+          const approval = getDialogueApprovalRequired(error);
+          if (!approval) {
+            throw error;
+          }
+          const asked = window.confirm(
+            `${approval.lastEditorUsername} last edited this line. Send this change for their approval?`
+          );
+          if (!asked) {
+            return;
+          }
+          await apiService.requestDialogueEdit(editingDialogue.id, payload);
+          setMessage(`Asked ${approval.lastEditorUsername} to approve this change.`);
+        }
       } else {
         await createDialogue(selectedEpisode.id, payload);
         setMessage('Dialogue created successfully!');
@@ -474,6 +495,7 @@ const EpisodeManage: React.FC = () => {
       
       // Reload all dialogues for all episodes
       await reloadAllDialogues();
+      setHistoryTick((tick) => tick + 1);
     } catch (error: any) {
       setMessage(error.message || 'Failed to save dialogue');
       setMessageType('danger');
@@ -562,13 +584,29 @@ const EpisodeManage: React.FC = () => {
   const handleDeleteDialogue = async (dialogueId: number) => {
     if (window.confirm('Are you sure you want to delete this dialogue?')) {
       try {
-        await deleteDialogue(dialogueId);
-        setMessage('Dialogue deleted successfully!');
+        try {
+          await deleteDialogue(dialogueId);
+          setMessage('Dialogue deleted successfully!');
+        } catch (error: unknown) {
+          const approval = getDialogueApprovalRequired(error);
+          if (!approval) {
+            throw error;
+          }
+          const asked = window.confirm(
+            `${approval.lastEditorUsername} last edited this line. Ask them to approve deleting it?`
+          );
+          if (!asked) {
+            return;
+          }
+          await apiService.requestDialogueEdit(dialogueId, { action: 'delete' });
+          setMessage(`Asked ${approval.lastEditorUsername} to approve deleting this line.`);
+        }
         setMessageType('success');
         setShowMessage(true);
         
         // Reload all dialogues for all episodes
         await reloadAllDialogues();
+        setHistoryTick((tick) => tick + 1);
       } catch (error: any) {
         setMessage(error.message || 'Failed to delete dialogue');
         setMessageType('danger');
@@ -865,6 +903,30 @@ const EpisodeManage: React.FC = () => {
               </div>
             </div>
           </div>
+          {selectedEpisode && (
+            <EpisodeHistoryPanel
+              episodeId={selectedEpisode.id}
+              episodeTitle={selectedEpisode.title}
+              refreshKey={historyTick}
+              onNotice={(notice, type) => {
+                setMessage(notice);
+                setMessageType(type);
+                setShowMessage(true);
+              }}
+              onRestored={async (episode) => {
+                if (episode) {
+                  setSelectedEpisode((current) =>
+                    current && current.id === episode.id ? { ...current, ...episode } : current
+                  );
+                }
+                if (seasonId) {
+                  await loadEpisodes(parseInt(seasonId, 10));
+                }
+                await reloadAllDialogues();
+                setHistoryTick((tick) => tick + 1);
+              }}
+            />
+          )}
         </div>
       </section>
 
@@ -1228,7 +1290,14 @@ const EpisodeManage: React.FC = () => {
                     Cancel
                   </button>
                   <button type="submit" className="stories-landing__btnPrimary">
-                    {editingDialogue ? 'Update dialogue' : 'Create dialogue'}
+                    {editingDialogue &&
+                    editingDialogue.last_edited_by &&
+                    currentUser?.id &&
+                    editingDialogue.last_edited_by !== currentUser.id
+                      ? `Ask ${editingDialogue.last_edited_by_username || 'last editor'} to approve`
+                      : editingDialogue
+                        ? 'Update dialogue'
+                        : 'Create dialogue'}
                   </button>
                 </div>
               </form>

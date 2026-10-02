@@ -106,4 +106,56 @@ describe('StoryManage', () => {
       expect(loadStory).toHaveBeenCalledWith(1);
     });
   });
+
+  it('lets a studio teammate manage a story they can load', async () => {
+    mockUseApi.mockReturnValue(
+      createMockApiContext({
+        seasons: [],
+        loadStory: jest.fn().mockResolvedValue(mockStory),
+        loadSeasons: jest.fn().mockResolvedValue([]),
+        loadCharacters: jest.fn().mockResolvedValue([]),
+        currentUser: { id: 99, username: 'teammate', first_name: 'Team' },
+      }),
+    );
+
+    renderStoryManage();
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Manage story' })).toBeInTheDocument();
+    expect(await screen.findByText(/Epic Adventure/)).toBeInTheDocument();
+  });
+
+  it('shows waiting approvals on the story page', async () => {
+    mockUseApi.mockReturnValue(
+      createMockApiContext({
+        seasons: [],
+        loadStory: jest.fn().mockResolvedValue({
+          ...mockStory,
+          pending_approvals: 1,
+          pending_edit_requests: [
+            {
+              id: 4,
+              action: 'update',
+              summary: 'Uzouzo wants to change line 1',
+              requester_username: 'Uzouzo',
+              requester_name: 'Mike Uzo',
+              line_order: 1,
+              episode_id: 34,
+              episode_title: 'What?!',
+              season_id: 31,
+            },
+          ],
+        }),
+        loadSeasons: jest.fn().mockResolvedValue([]),
+        loadCharacters: jest.fn().mockResolvedValue([]),
+        currentUser: { id: 1, username: 'misteruzo' },
+      }),
+    );
+
+    renderStoryManage();
+
+    expect(await screen.findByText(/1 change is waiting for your approval/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Mike Uzo wants to change line 1 in What\?!/i })
+    ).toHaveAttribute('href', '/immersivecomics/season/31/episodes/');
+  });
 });

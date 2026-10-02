@@ -1,0 +1,21 @@
+{% extends "emails/base_email.html" %}
+
+{% block header %}
+<div class="header">
+    <h1>Approve a line change</h1>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <p>Hello {{ approver_name }},</p>
+    <p><strong>{{ requester_name }}</strong> asked you to approve a change on <strong>"{{ story_title }}"</strong> ({{ episode_title }}).</p>
+    <div class="message-box">
+        <p>{{ summary }}</p>
+    </div>
+    <div class="button-center">
+        <a href="{{ review_url }}" class="button">Review on the episode</a>
+    </div>
+    <p class="text-small">If you approve, their change lands and they become the last editor of that line.</p>
+</div>
+{% endblock %}

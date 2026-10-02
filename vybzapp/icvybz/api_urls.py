@@ -52,6 +52,24 @@ urlpatterns = [
     # Dialogue URLs
     path('episodes/<int:episode_id>/dialogues/', api_views.DialogueListCreateView.as_view(), name='dialogue-list-create'),
     path('dialogues/<int:pk>/', api_views.DialogueDetailView.as_view(), name='dialogue-detail'),
+    path('dialogues/<int:pk>/edit-requests/', api_views.request_dialogue_edit_view, name='dialogue-edit-request'),
+    path(
+        'edit-requests/<int:request_id>/approve/',
+        api_views.approve_dialogue_edit_view,
+        name='dialogue-edit-approve',
+    ),
+    path(
+        'edit-requests/<int:request_id>/decline/',
+        api_views.decline_dialogue_edit_view,
+        name='dialogue-edit-decline',
+    ),
+    path('episodes/<int:episode_id>/history/', api_views.episode_history, name='episode-history'),
+    path('episodes/<int:episode_id>/versions/', api_views.create_episode_version, name='episode-version-create'),
+    path(
+        'episodes/<int:episode_id>/versions/<int:version_id>/restore/',
+        api_views.restore_episode_version,
+        name='episode-version-restore',
+    ),
     
     # Studio URLs
     path('studios/', api_views.StudioListCreateView.as_view(), name='studio-list-create'),

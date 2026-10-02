@@ -50,8 +50,8 @@ def get_collaborators(request, story_id):
     if not story.is_public:
         if not request.user.is_authenticated:
             return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
-        if not (story.user == request.user or 
-                StoryCollaborator.objects.filter(story=story, user=request.user).exists()):
+        from .story_history import user_can_view_story
+        if not user_can_view_story(request.user, story):
             return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     
     # Get all collaboration invites for this story
@@ -351,20 +351,20 @@ def decline_invitation(request, invite_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_studio_collaborators_for_story(request, story_id):
-    """Get studio collaborators for a story (based on story owner's studio)"""
+    """Studio teammates on a story. Owner manages; teammates can view the list."""
     story = get_object_or_404(Comic, id=story_id)
     
-    # Check if user is the story owner
-    if story.user != request.user:
+    from .story_history import user_can_view_story
+    if not user_can_view_story(request.user, story):
         return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     
-    # Get the studio for the story owner
-    try:
-        studio = Studio.objects.get(owner=story.user)
-    except Studio.DoesNotExist:
+    studio = story.studio
+    if studio is None:
+        studio = Studio.objects.filter(owner=story.user).first()
+    if studio is None:
         return Response({'results': []})
     
-    # Get active studio collaborators (excluding the owner)
+    # Studio members besides the owner (owner is added as its own row below)
     studio_collaborators = StudioCollaborator.objects.filter(
         studio=studio,
         is_active=True
@@ -397,16 +397,51 @@ def get_studio_collaborators_for_story(request, story_id):
     
     # Serialize studio collaborators with all their roles
     results = []
+    listed_user_ids = set()
+
+    owner_story_roles = story_collaborators_by_user.get(story.user_id, [])
+    listed_user_ids.add(story.user_id)
+    results.append({
+        'id': 0,
+        'user': UserSerializer(story.user).data,
+        'role': 'owner',
+        'roles': ['owner'],
+        'is_story_collaborator': True,
+        'is_owner': True,
+        'story_roles': list(dict.fromkeys(['owner', *owner_story_roles])),
+    })
+
     for user_id, data in studio_collaborators_by_user.items():
+        if user_id == story.user_id:
+            continue
         user_data = UserSerializer(data['user']).data
         user_story_roles = story_collaborators_by_user.get(user_id, [])
+        listed_user_ids.add(user_id)
+        display_roles = list(dict.fromkeys([*data['roles'], *user_story_roles]))
         results.append({
             'id': data['ids'][0],  # Use first ID for backward compatibility
             'user': user_data,
             'role': data['roles'][0],  # Primary role for backward compatibility
-            'roles': data['roles'],  # All roles this user has
+            'roles': display_roles,
             'is_story_collaborator': len(user_story_roles) > 0,
+            'is_owner': False,
             'story_roles': user_story_roles  # Roles this user has on the story
+        })
+
+    # Story-only teammates still belong on the list so they can see themselves.
+    for sc in story_collaborators:
+        if sc.user_id in listed_user_ids or sc.user_id == story.user_id:
+            continue
+        listed_user_ids.add(sc.user_id)
+        roles = story_collaborators_by_user.get(sc.user_id, [sc.role])
+        results.append({
+            'id': sc.id,
+            'user': UserSerializer(sc.user).data,
+            'role': roles[0],
+            'roles': roles,
+            'is_story_collaborator': True,
+            'is_owner': False,
+            'story_roles': roles,
         })
     
     return Response({'results': results})

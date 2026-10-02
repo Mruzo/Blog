@@ -1410,6 +1410,10 @@ a.product-landing__ctaGhost:active {
   overflow: hidden;
 }
 
+.studio-detail__storyActions {
+  margin-top: 0.85rem;
+}
+
 .studio-detail__storiesHeading {
   margin-bottom: 0.35rem;
 }
@@ -1979,6 +1983,12 @@ a.my-studio__teamMemberHandle--link:focus {
   line-height: 1.2;
 }
 
+.my-studio__storyBadge--shared {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
 .my-studio__storyBadge--draft {
   background: #475569;
   color: #ffffff;
@@ -1999,6 +2009,12 @@ a.my-studio__teamMemberHandle--link:focus {
   background: #fef3c7;
   color: #92400e;
   border: 1px solid #fcd34d;
+}
+
+.my-studio__storyBadge--approval {
+  background: rgba(255, 188, 0, 0.55);
+  color: #0f172a;
+  border: 1px solid rgba(245, 158, 11, 0.55);
 }
 
 .my-studio__storyBadge--rejected {
@@ -2538,6 +2554,36 @@ a.my-studio__teamMemberHandle--link:focus {
 }
 
 /* Story manage (/immersivecomics/story/:id/manage/) */
+.story-manage__approvals {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(255, 188, 0, 0.16);
+}
+
+.story-manage__approvalsTitle {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.story-manage__approvalsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.story-manage__approvalsList a {
+  color: #0f172a;
+  font-weight: 600;
+}
+
 .story-manage__layout {
   display: grid;
   grid-template-columns: 1fr;
@@ -2752,22 +2798,17 @@ a.my-studio__teamMemberHandle--link:focus {
 
 .story-collab__row {
   display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.85rem 0.9rem;
-  border-radius: 14px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 12px;
   border: 1px solid rgba(15, 23, 42, 0.1);
   background: #fff;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-@media (min-width: 576px) {
-  .story-collab__row {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-  }
 }
 
 .story-collab__row--active {
@@ -2778,53 +2819,35 @@ a.my-studio__teamMemberHandle--link:focus {
 .story-collab__member {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
   min-width: 0;
-  flex-shrink: 0;
-}
-
-.story-collab__avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  flex-shrink: 0;
-}
-
-.story-collab__avatar--placeholder {
-  display: grid;
-  place-items: center;
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.14), rgba(15, 23, 42, 0.06));
-  color: rgba(15, 23, 42, 0.55);
-  font-family: var(--font-primary);
-  font-weight: 700;
-  font-size: 1rem;
+  max-width: 42%;
+  flex: 0 1 auto;
 }
 
 .story-collab__handle {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
   font-family: var(--font-primary);
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .story-collab__roles {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
   align-items: center;
-  justify-content: flex-start;
-}
-
-@media (min-width: 576px) {
-  .story-collab__roles {
-    justify-content: flex-end;
-    max-width: 62%;
-  }
+  justify-content: flex-end;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .story-collab__rolePill {
@@ -2848,7 +2871,11 @@ a.my-studio__teamMemberHandle--link:focus {
     box-shadow 0.15s ease;
 }
 
-.story-collab__rolePill:hover {
+span.story-collab__rolePill {
+  cursor: default;
+}
+
+button.story-collab__rolePill:hover {
   border-color: rgba(15, 23, 42, 0.28);
   color: #0f172a;
 }
@@ -2888,6 +2915,86 @@ a.my-studio__teamMemberHandle--link:focus {
   .episode-manage__layout {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
+}
+
+.episode-manage__history {
+  margin-top: 1.15rem;
+}
+
+.episode-manage__historyGrid {
+  display: grid;
+  gap: 1.15rem;
+}
+
+@media (min-width: 768px) {
+  .episode-manage__historyGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  }
+}
+
+.episode-manage__historyHeading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.episode-manage__historyHint,
+.episode-manage__historyEmpty,
+.episode-manage__historyMeta {
+  color: #64748b;
+  font-size: 0.8rem;
+  margin: 0 0 0.75rem;
+}
+
+.episode-manage__historyEmpty {
+  margin-bottom: 0;
+}
+
+.episode-manage__versionForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.episode-manage__versionForm .form-control {
+  flex: 1 1 12rem;
+}
+
+.episode-manage__historyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.episode-manage__historyItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.episode-manage__historyCopy {
+  min-width: 0;
+}
+
+.episode-manage__historyName {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.episode-manage__historyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.episode-manage__historyMeta {
+  margin: 0.2rem 0 0;
 }
 
 .episode-manage__heroActions {

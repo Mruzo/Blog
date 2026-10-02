@@ -247,6 +247,14 @@ class Dialogue(models.Model):
         help_text="How the camera arrives at this line: ease from the previous shot, or cut.",
     )
     rotation = models.CharField(max_length=50, default="0deg 0deg 0deg", help_text="Model rotation in degrees (e.g., '0deg 0deg 0deg')")
+    last_edited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='edited_dialogues',
+        null=True,
+        blank=True,
+        help_text="Team member who last landed an edit. Others need their approval to change this line.",
+    )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="Timestamp when record was created. Nullable for imports from other Django apps.")
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True, help_text="Timestamp when record was last updated. Nullable for imports from other Django apps.")
     
@@ -1209,3 +1217,120 @@ class StoryCollaborator(models.Model):
     
     def __str__(self):
         return f"{self.user.username} on {self.story.title} ({self.role})"
+
+
+class StoryChange(models.Model):
+    """Who changed what on a story — day-to-day change control, not a git branch."""
+
+    ACTION_CHOICES = [
+        ('create', 'Created'),
+        ('update', 'Updated'),
+        ('delete', 'Deleted'),
+        ('snapshot', 'Saved version'),
+        ('restore', 'Restored version'),
+        ('request', 'Asked approval'),
+        ('approve', 'Approved'),
+        ('decline', 'Declined'),
+    ]
+
+    story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='changes')
+    episode = models.ForeignKey(
+        Episode, on_delete=models.CASCADE, related_name='changes', null=True, blank=True
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='story_changes',
+        null=True,
+        blank=True,
+    )
+    action = models.CharField(max_length=16, choices=ACTION_CHOICES)
+    target_type = models.CharField(max_length=32, default='dialogue')
+    target_id = models.PositiveIntegerField(null=True, blank=True)
+    summary = models.CharField(max_length=240)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['episode', '-created_at']),
+            models.Index(fields=['story', '-created_at']),
+        ]
+
+    def __str__(self):
+        return self.summary
+
+
+class EpisodeVersion(models.Model):
+    """Named snapshot of an episode script so a team can restore a cut."""
+
+    episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='versions')
+    story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='episode_versions')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='episode_versions',
+        null=True,
+        blank=True,
+    )
+    name = models.CharField(max_length=80)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['episode', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.episode})"
+
+
+class DialogueEditRequest(models.Model):
+    """A teammate’s proposed change waiting on the last editor’s approval."""
+
+    ACTION_CHOICES = [
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('declined', 'Declined'),
+    ]
+
+    story = models.ForeignKey(Comic, on_delete=models.CASCADE, related_name='dialogue_edit_requests')
+    episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='dialogue_edit_requests')
+    dialogue = models.ForeignKey(
+        Dialogue, on_delete=models.SET_NULL, related_name='edit_requests', null=True, blank=True
+    )
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='requested_dialogue_edits',
+    )
+    approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='dialogue_edits_to_approve',
+    )
+    action = models.CharField(max_length=8, choices=ACTION_CHOICES, default='update')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    payload = models.JSONField(default=dict, blank=True)
+    summary = models.CharField(max_length=240)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['episode', 'status', '-created_at']),
+            models.Index(fields=['approver', 'status']),
+        ]
+
+    def __str__(self):
+        return self.summary

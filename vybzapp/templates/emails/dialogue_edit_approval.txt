@@ -1,0 +1,13 @@
+{{ requester_name }} wants to change a line in "{{ story_title }}"
+
+Hello {{ approver_name }},
+
+{{ requester_name }} asked you to approve a change on "{{ story_title }}" ({{ episode_title }}).
+
+{{ summary }}
+
+Review it here: {{ review_url }}
+
+If you approve, their change lands and they become the last editor of that line.
+
+© {% now "Y" %} Justvybz Inc. All rights reserved.

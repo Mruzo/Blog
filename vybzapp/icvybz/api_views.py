@@ -15,7 +15,8 @@ from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.db import connection, transaction, IntegrityError
-from django.db.models import Q, Sum, Prefetch, Exists, OuterRef, Count
+from django.db.models import Q, Sum, Prefetch, Exists, OuterRef, Count, IntegerField, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.forms import SetPasswordForm
@@ -51,7 +52,8 @@ from .models import (
     Comic, Season, Episode, Dialogue, Character, POV, Studio, AudioTrack,
     StudioCollaborator, StudioCollaborationRequest, StudioCollaborationInvite, StoryCollaborator,
     ComicComment, AdvertiserProfile, AdCampaign, AdCreative, AdPlacement,
-    AdEvent, AdRevenueSplitConfig, AdRevenueShareSnapshot
+    AdEvent, AdRevenueSplitConfig, AdRevenueShareSnapshot,
+    EpisodeVersion, DialogueEditRequest,
 )
 from .serializers import (
     ComicSerializer, SeasonSerializer, EpisodeSerializer,
@@ -61,6 +63,7 @@ from .serializers import (
     StudioCollaborationRequestSerializer, CreateStudioCollaborationRequestSerializer,
     AdvertiserProfileSerializer, AdCampaignSerializer, AdCreativeSerializer,
     AdPlacementSerializer, AdEventSerializer, AdRevenueSplitConfigSerializer,
+    StoryChangeSerializer, EpisodeVersionSerializer, DialogueEditRequestSerializer,
     get_default_model_urls,
 )
 
@@ -249,6 +252,68 @@ def _record_ad_event(request, placement, episode, event_type, session_key, event
     return event, created
 
 
+def _count_subquery(queryset):
+    return Coalesce(
+        Subquery(queryset[:1], output_field=IntegerField()),
+        Value(0, output_field=IntegerField()),
+    )
+
+
+def _stories_with_workspace_counts(queryset, user, include_request_rows=False):
+    queryset = queryset.annotate(
+        season_count=_count_subquery(
+            Season.objects.filter(comic_id=OuterRef('pk'))
+            .order_by()
+            .values('comic_id')
+            .annotate(c=Count('id'))
+            .values('c')
+        ),
+        episode_count=_count_subquery(
+            Episode.objects.filter(season__comic_id=OuterRef('pk'))
+            .order_by()
+            .values('season__comic_id')
+            .annotate(c=Count('id'))
+            .values('c')
+        ),
+        comment_count=_count_subquery(
+            ComicComment.objects.filter(
+                episode__season__comic_id=OuterRef('pk'),
+                approved_comment=True,
+            )
+            .order_by()
+            .values('episode__season__comic_id')
+            .annotate(c=Count('id'))
+            .values('c')
+        ),
+    )
+    if user and getattr(user, 'is_authenticated', False):
+        queryset = queryset.annotate(
+            pending_approvals=_count_subquery(
+                DialogueEditRequest.objects.filter(
+                    story_id=OuterRef('pk'),
+                    status='pending',
+                    approver=user,
+                )
+                .order_by()
+                .values('story_id')
+                .annotate(c=Count('id'))
+                .values('c')
+            )
+        )
+        if include_request_rows:
+            queryset = queryset.prefetch_related(
+                Prefetch(
+                    'dialogue_edit_requests',
+                    queryset=DialogueEditRequest.objects.filter(
+                        status='pending',
+                        approver=user,
+                    ).select_related('requester', 'dialogue', 'episode', 'episode__season'),
+                    to_attr='pending_edits_for_user',
+                )
+            )
+    return queryset
+
+
 # Story/Comic API Views
 class ComicListCreateView(generics.ListCreateAPIView):
     serializer_class = ComicSerializer
@@ -256,13 +321,18 @@ class ComicListCreateView(generics.ListCreateAPIView):
     pagination_class = None  # Disable pagination for stories
     
     def get_queryset(self):
+        from .story_history import stories_visible_to_user
+
         start_time = time.time()
         initial_queries = len(connection.queries)
         
-        # Always apply annotation for total_views (don't cache annotated querysets)
-        # Cache is cleared when stories/episodes are modified, so this is acceptable
-        queryset = Comic.objects.filter(user=self.request.user).select_related('user', 'studio').annotate(
-            total_views=Sum('seasons__episodes__view_count', default=0)
+        # Owner stories plus stories this user can work on (studio team / story collab)
+        queryset = _stories_with_workspace_counts(
+            stories_visible_to_user(self.request.user).select_related('user', 'studio').annotate(
+                total_views=Sum('seasons__episodes__view_count', default=0)
+            ),
+            self.request.user,
+            include_request_rows=False,
         )
         
         end_time = time.time()
@@ -318,14 +388,15 @@ class ComicDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        # Allow access to stories where user is owner OR collaborator
-        from .models import StoryCollaborator
-        return Comic.objects.filter(
-            Q(user=self.request.user) | 
-            Q(collaborators__user=self.request.user, collaborators__is_active=True)
-        ).select_related('user', 'studio').annotate(
-            total_views=Sum('seasons__episodes__view_count', default=0)
-        ).distinct()
+        from .story_history import stories_visible_to_user
+
+        return _stories_with_workspace_counts(
+            stories_visible_to_user(self.request.user).select_related('user', 'studio').annotate(
+                total_views=Sum('seasons__episodes__view_count', default=0)
+            ),
+            self.request.user,
+            include_request_rows=True,
+        )
     
     def get_object(self):
         obj = super().get_object()
@@ -421,34 +492,29 @@ class SeasonListCreateView(generics.ListCreateAPIView):
                 )
             return Season.objects.none()
 
-        # Check if user is authenticated and is the story owner
-        is_owner = self.request.user.is_authenticated and story and story.user == self.request.user
+        from .story_history import user_can_view_story
+
+        can_work_on_story = bool(story and user_can_view_story(self.request.user, story))
         
-        # If story is public AND user is NOT the owner, only show public seasons to unauthenticated users
-        if story and story.is_public and story.moderation_status == 'approved' and not is_owner:
-            # Only return seasons that are both in a public story AND are themselves public
-            # Include total_views annotation (sum of all episode views in this season)
+        # Public readers (and owners browsing the catalogue) only see public seasons.
+        if story and story.is_public and story.moderation_status == 'approved' and not can_work_on_story:
             queryset = Season.objects.filter(
                 comic_id=story_id,
                 is_public=True
             ).select_related('comic', 'comic__user').annotate(
                 total_views=Sum('episodes__view_count', default=0)
             ).order_by('season_number')
-            # Note: Don't cache annotated querysets as annotations may not persist
-            # Cache is cleared when episodes are modified anyway
             return queryset
         
-        # For story owners or authenticated users accessing their own stories, require authentication
         if not self.request.user.is_authenticated:
             return Season.objects.none()
         
-        # Story owners can see ALL seasons in their own stories (regardless of public status)
-        # Include total_views annotation (sum of all episode views in this season)
-        queryset = Season.objects.filter(comic_id=story_id, comic__user=self.request.user).select_related('comic', 'comic__user').annotate(
+        if not can_work_on_story:
+            return Season.objects.none()
+
+        queryset = Season.objects.filter(comic_id=story_id).select_related('comic', 'comic__user').annotate(
             total_views=Sum('episodes__view_count', default=0)
         ).order_by('season_number')
-        # Note: Don't cache annotated querysets as annotations may not persist
-        # Cache is cleared when episodes are modified anyway
         return queryset
     
     def perform_create(self, serializer):
@@ -462,8 +528,11 @@ class SeasonDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        # Include total_views annotation (sum of all episode views in this season)
-        return Season.objects.filter(comic__user=self.request.user).select_related('comic', 'comic__user').annotate(
+        from .story_history import stories_visible_to_user
+
+        return Season.objects.filter(
+            comic__in=stories_visible_to_user(self.request.user)
+        ).select_related('comic', 'comic__user').annotate(
             total_views=Sum('episodes__view_count', default=0)
         )
     
@@ -494,16 +563,11 @@ class CharacterListCreateView(generics.ListCreateAPIView):
         if not story:
             return queryset.none()
 
-        user = self.request.user
-        can_manage_cast = (
-            story.user_id == user.id
-            or StoryCollaborator.objects.filter(
-                story=story, user=user, is_active=True
-            ).exists()
-        )
-        if can_manage_cast:
+        from .story_history import user_can_view_story
+
+        if user_can_view_story(self.request.user, story):
             return queryset.filter(story_id=story_id).order_by('name', 'id')
-        return queryset.filter(user=user, story_id=story_id).order_by('name', 'id')
+        return queryset.filter(user=self.request.user, story_id=story_id).order_by('name', 'id')
     
     def perform_create(self, serializer):
         from .scene_slots import apply_scene_slot_to_character
@@ -613,19 +677,11 @@ class EpisodeListCreateView(generics.ListCreateAPIView):
                 return queryset
             return Episode.objects.none()
 
-        # Owners and active story collaborators must always see all episodes (including drafts)
-        # for manage UIs. Otherwise, when story + season are public, the anonymous-style branch
-        # below would incorrectly hide unpublished episodes from the author.
+        # Owners, story collaborators, and studio teammates see all episodes (including drafts).
         if season and season.comic and self.request.user.is_authenticated:
-            comic = season.comic
-            is_owner = comic.user_id == self.request.user.id
-            is_collaborator = (
-                not is_owner
-                and StoryCollaborator.objects.filter(
-                    story=comic, user=self.request.user, is_active=True
-                ).exists()
-            )
-            if is_owner or is_collaborator:
+            from .story_history import user_can_view_story
+
+            if user_can_view_story(self.request.user, season.comic):
                 cache_key = f"episodes_{season_id}_{self.request.user.id}"
                 cached_queryset = cache.get(cache_key)
                 if cached_queryset:
@@ -680,10 +736,24 @@ class EpisodeDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Episode.objects.filter(season__comic__user=self.request.user).select_related('season', 'season__comic', 'season__comic__user')
+        from .story_history import stories_visible_to_user
+
+        return Episode.objects.filter(
+            season__comic__in=stories_visible_to_user(self.request.user)
+        ).select_related('season', 'season__comic', 'season__comic__user')
     
     def perform_update(self, serializer):
+        from .story_history import log_episode_update
+
+        instance = serializer.instance
+        previous = {
+            'title': instance.title,
+            'description': instance.description,
+            'summary': instance.summary,
+            'is_published': instance.is_published,
+        }
         episode = serializer.save()
+        log_episode_update(self.request.user, episode, previous)
         season_id = episode.season.id
         # Clear cache when episode is updated
         cache.delete(f"episodes_public_{season_id}")
@@ -789,25 +859,248 @@ class DialogueListCreateView(generics.ListCreateAPIView):
         if episode and episode.season and episode.season.comic and \
            episode.season.comic.is_public and episode.season.comic.moderation_status == 'approved' and \
            episode.season.is_public:
-            return Dialogue.objects.filter(episode_id=episode_id).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic').prefetch_related('character__povs')
+            return Dialogue.objects.filter(episode_id=episode_id).select_related(
+                'pov', 'pov__character', 'character', 'last_edited_by',
+                'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user',
+            ).prefetch_related('character__povs')
         
         # For private stories or authenticated users, require authentication
         if not self.request.user.is_authenticated:
             return Dialogue.objects.none()
         
-        return Dialogue.objects.filter(episode_id=episode_id, episode__season__comic__user=self.request.user).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user').prefetch_related('character__povs')
+        from .story_history import stories_visible_to_user
+
+        return Dialogue.objects.filter(
+            episode_id=episode_id,
+            episode__season__comic__in=stories_visible_to_user(self.request.user),
+        ).select_related(
+            'pov', 'pov__character', 'character', 'last_edited_by',
+            'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user',
+        ).prefetch_related('character__povs')
     
     def perform_create(self, serializer):
+        from .story_history import log_dialogue_create, mark_dialogue_editor, user_can_edit_story
+
         episode_id = self.kwargs.get('episode_id')
-        episode = Episode.objects.get(id=episode_id, season__comic__user=self.request.user)
-        serializer.save(episode=episode)
+        episode = Episode.objects.select_related('season__comic').get(id=episode_id)
+        if not user_can_edit_story(self.request.user, episode.season.comic):
+            raise PermissionDenied()
+        dialogue = serializer.save(episode=episode)
+        mark_dialogue_editor(dialogue, self.request.user)
+        log_dialogue_create(self.request.user, dialogue)
 
 class DialogueDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = DialogueSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Dialogue.objects.filter(episode__season__comic__user=self.request.user).select_related('pov', 'pov__character', 'character', 'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user').prefetch_related('character__povs')
+        from .story_history import stories_visible_to_user
+
+        return Dialogue.objects.filter(
+            episode__season__comic__in=stories_visible_to_user(self.request.user),
+        ).select_related(
+            'pov', 'pov__character', 'character', 'last_edited_by',
+            'episode', 'episode__season', 'episode__season__comic', 'episode__season__comic__user',
+        ).prefetch_related('character__povs')
+
+    def update(self, request, *args, **kwargs):
+        from .story_history import (
+            approval_required_payload,
+            can_apply_dialogue_edit,
+            log_dialogue_update,
+            mark_dialogue_editor,
+            user_can_edit_story,
+        )
+
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        story = instance.episode.season.comic
+        if not user_can_edit_story(request.user, story):
+            raise PermissionDenied()
+        if not can_apply_dialogue_edit(request.user, instance):
+            return Response(
+                approval_required_payload(instance, requester=request.user),
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        previous = {
+            'order': instance.order,
+            'text': instance.text,
+            'camera_transition': instance.camera_transition,
+            'character_id': instance.character_id,
+        }
+        dialogue = serializer.save()
+        mark_dialogue_editor(dialogue, request.user)
+        log_dialogue_update(request.user, dialogue, previous)
+        return Response(self.get_serializer(dialogue).data)
+
+    def destroy(self, request, *args, **kwargs):
+        from .story_history import (
+            approval_required_payload,
+            can_apply_dialogue_edit,
+            log_dialogue_delete,
+            user_can_edit_story,
+        )
+
+        instance = self.get_object()
+        story = instance.episode.season.comic
+        if not user_can_edit_story(request.user, story):
+            raise PermissionDenied()
+        if not can_apply_dialogue_edit(request.user, instance):
+            return Response(
+                approval_required_payload(instance, requester=request.user),
+                status=status.HTTP_409_CONFLICT,
+            )
+        log_dialogue_delete(request.user, instance)
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _episode_for_history(request, episode_id):
+    from .story_history import user_can_edit_story, user_can_view_story
+
+    episode = (
+        Episode.objects.filter(id=episode_id)
+        .select_related('season__comic')
+        .first()
+    )
+    if not episode or not episode.season or not episode.season.comic:
+        raise NotFound('Episode not found')
+    story = episode.season.comic
+    if not user_can_view_story(request.user, story):
+        raise PermissionDenied()
+    return episode, story, user_can_edit_story(request.user, story)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def episode_history(request, episode_id):
+    episode, _story, can_edit = _episode_for_history(request, episode_id)
+    versions = EpisodeVersion.objects.filter(episode=episode).select_related('created_by')[:25]
+    changes = episode.changes.select_related('user')[:50]
+    edit_requests = (
+        DialogueEditRequest.objects.filter(episode=episode, status='pending')
+        .select_related('requester', 'approver', 'dialogue')
+    )
+    return Response({
+        'can_edit': can_edit,
+        'versions': EpisodeVersionSerializer(versions, many=True).data,
+        'changes': StoryChangeSerializer(changes, many=True).data,
+        'edit_requests': DialogueEditRequestSerializer(
+            edit_requests, many=True, context={'request': request}
+        ).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_episode_version(request, episode_id):
+    episode, _story, can_edit = _episode_for_history(request, episode_id)
+    if not can_edit:
+        raise PermissionDenied()
+    from .story_history import create_episode_version as save_episode_version
+
+    try:
+        version = save_episode_version(episode, request.user, request.data.get('name'))
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(EpisodeVersionSerializer(version).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def restore_episode_version(request, episode_id, version_id):
+    episode, _story, can_edit = _episode_for_history(request, episode_id)
+    if not can_edit:
+        raise PermissionDenied()
+    version = EpisodeVersion.objects.filter(id=version_id, episode=episode).first()
+    if not version:
+        raise NotFound('Version not found')
+    from .story_history import restore_episode_version as apply_episode_version
+
+    try:
+        apply_episode_version(episode, version, request.user)
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    episode.refresh_from_db()
+    return Response({
+        'restored': True,
+        'version': EpisodeVersionSerializer(version).data,
+        'episode': EpisodeSerializer(episode).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def request_dialogue_edit_view(request, pk):
+    from .story_history import (
+        json_ready_payload,
+        request_dialogue_edit,
+        user_can_edit_story,
+    )
+
+    dialogue = (
+        Dialogue.objects.filter(pk=pk)
+        .select_related('last_edited_by', 'character', 'episode__season__comic', 'episode__season__comic__user')
+        .first()
+    )
+    if not dialogue:
+        raise NotFound('Dialogue not found')
+    story = dialogue.episode.season.comic
+    if not user_can_edit_story(request.user, story):
+        raise PermissionDenied()
+    action = request.data.get('action') or 'update'
+    if action not in ('update', 'delete'):
+        return Response({'error': 'Action must be update or delete.'}, status=status.HTTP_400_BAD_REQUEST)
+    payload = {}
+    if action == 'update':
+        serializer = DialogueSerializer(dialogue, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        payload = json_ready_payload(serializer.validated_data)
+    try:
+        edit_request = request_dialogue_edit(
+            dialogue, request.user, action=action, payload=payload
+        )
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        DialogueEditRequestSerializer(edit_request, context={'request': request}).data,
+        status=status.HTTP_201_CREATED,
+    )
+
+
+def _resolve_edit_request(request, request_id, resolver):
+    edit_request = (
+        DialogueEditRequest.objects.filter(pk=request_id)
+        .select_related('requester', 'approver', 'dialogue', 'story', 'episode')
+        .first()
+    )
+    if not edit_request:
+        raise NotFound('Edit request not found')
+    try:
+        resolver(edit_request, request.user)
+    except PermissionError:
+        raise PermissionDenied()
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    edit_request.refresh_from_db()
+    return Response(DialogueEditRequestSerializer(edit_request, context={'request': request}).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def approve_dialogue_edit_view(request, request_id):
+    from .story_history import approve_dialogue_edit
+    return _resolve_edit_request(request, request_id, approve_dialogue_edit)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def decline_dialogue_edit_view(request, request_id):
+    from .story_history import decline_dialogue_edit
+    return _resolve_edit_request(request, request_id, decline_dialogue_edit)
 
 
 def _is_public_episode(episode):
@@ -925,7 +1218,10 @@ class StudioDetailView(StorefrontReadGetThrottleExemptMixin, generics.RetrieveUp
             q = Q(is_public=True)
             user = self.request.user
             if getattr(user, 'is_authenticated', False):
-                q = q | Q(owner=user)
+                q = q | Q(owner=user) | Q(
+                    collaborators__user=user,
+                    collaborators__is_active=True,
+                )
             return (
                 Studio.objects.filter(q)
                 .select_related('owner')

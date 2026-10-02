@@ -33,6 +33,7 @@ const Documentation: React.FC = () => {
                 <li><a href="#camera">Directing the camera</a></li>
                 <li><a href="#studio">Studios and My Studio</a></li>
                 <li><a href="#collaborators">Collaborators</a></li>
+                <li><a href="#approvals">Approving line changes</a></li>
                 <li><a href="#store">Store and orders</a></li>
                 <li><a href="#account">Account</a></li>
               </ul>
@@ -123,8 +124,10 @@ const Documentation: React.FC = () => {
 
             <h2 id="collaborators" className="h4 mt-5 mb-3 font-quicksand">Collaborators</h2>
             <p>
-              People join your <strong>studio</strong> first. After that, you choose which
-              teammates work on each <strong>story</strong>.
+              People join your <strong>studio</strong> first. Once they are on the team, they
+              can open that studio&apos;s stories — including drafts — and work on them.
+              Teammate line edits wait for approval. See{' '}
+              <a href="#approvals">Approving line changes</a>.
             </p>
             <h3 className="h5 mt-4 mb-2 font-quicksand">Invite to your studio</h3>
             <p>
@@ -153,10 +156,41 @@ const Documentation: React.FC = () => {
               than one role. Scroll the list to see more. Tap a name (or Me) to open that
               person&apos;s public studio page.
             </p>
-            <h3 className="h5 mt-4 mb-2 font-quicksand">Assign teammates to a story</h3>
+            <h3 className="h5 mt-4 mb-2 font-quicksand">Story credits</h3>
             <p>
-              On the story collaborators page, pick which studio teammates work on that story
-              and toggle their roles. If the list is empty, invite them to the studio first.
+              On the story collaborators page you can still add credit roles for a specific
+              story. Only the story owner can change who is credited. Teammates can see the
+              people on that story, including themselves. Studio membership is what opens the
+              workspace. If the list is empty, invite them to the studio first.
+            </p>
+
+            <h2 id="approvals" className="h4 mt-5 mb-3 font-quicksand">Approving line changes</h2>
+            <p>
+              Dialogue on a shared story does not overwrite the last save until the right
+              person agrees. That keeps a teammate from silently rewriting a line someone
+              else just directed.
+            </p>
+            <ul>
+              <li>
+                If you are a teammate, saving a line asks the <strong>story owner</strong> to
+                approve it. The line stays as it was until they accept.
+              </li>
+              <li>
+                If you are the owner and someone else last saved that line, they have to
+                approve your change.
+              </li>
+            </ul>
+            <p>
+              When a change is waiting on you, My Studio marks the story with{' '}
+              <strong>1 to approve</strong> (or more). Open Manage story to see who wants to
+              change which line, then follow the link into the episode. Approvals sit in the
+              episode History panel: Approve applies their edit; Decline leaves the line
+              alone.
+            </p>
+            <p>
+              After you approve, their wording (or camera) lands, and they become the last
+              editor of that line. We also email the person who needs to review, when they
+              have an address on their account.
             </p>
 
             <h2 id="store" className="h4 mt-5 mb-3 font-quicksand">Store and orders</h2>

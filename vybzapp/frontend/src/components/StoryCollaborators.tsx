@@ -10,6 +10,7 @@ interface StudioCollaborator {
   role: string;
   roles?: string[];
   is_story_collaborator: boolean;
+  is_owner?: boolean;
   story_roles?: string[];
 }
 
@@ -17,6 +18,15 @@ const formatRoleLabel = (role: string): string =>
   role
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
+
+const collaboratorDisplayName = (
+  user: User,
+  isYou: boolean,
+): string => {
+  if (isYou) return 'Me';
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+  return fullName || user.username || 'Unknown';
+};
 
 const StoryCollaborators: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,8 +54,9 @@ const StoryCollaborators: React.FC = () => {
 
       const selectedRoles = new Map<number, Set<string>>();
       data.forEach((collab: StudioCollaborator) => {
+        if (collab.is_owner) return;
         if (collab.is_story_collaborator && collab.story_roles) {
-          selectedRoles.set(collab.user.id, new Set(collab.story_roles));
+          selectedRoles.set(collab.user.id, new Set(collab.story_roles.filter((role) => role !== 'owner')));
         } else if (collab.is_story_collaborator) {
           selectedRoles.set(collab.user.id, new Set(collab.roles || [collab.role]));
         }
@@ -159,15 +170,6 @@ const StoryCollaborators: React.FC = () => {
       );
     }
 
-    if (!isOwner) {
-      return (
-        <div className="story-collab__notice" role="status">
-          <i className="fas fa-info-circle" aria-hidden />
-          <p className="mb-0">Only the story owner can manage collaborators.</p>
-        </div>
-      );
-    }
-
     if (error) {
       return (
         <div className="story-collab__notice story-collab__notice--danger" role="alert">
@@ -177,14 +179,25 @@ const StoryCollaborators: React.FC = () => {
       );
     }
 
-    if (studioCollaborators.length === 0) {
+    const visibleCollaborators = isOwner
+      ? studioCollaborators.filter((collab) => !collab.is_owner)
+      : studioCollaborators.filter(
+          (collab) =>
+            collab.is_owner ||
+            collab.is_story_collaborator ||
+            (currentUser != null && collab.user.id === currentUser.id),
+        );
+
+    if (visibleCollaborators.length === 0) {
       return (
         <div className="story-collab__empty">
           <div className="stories-landing__emptyIcon" aria-hidden>
             <i className="fas fa-users" />
           </div>
           <p className="product-landing__body mb-0">
-            No studio collaborators yet. Add teammates from your studio first, then assign story roles here.
+            {isOwner
+              ? 'No studio collaborators yet. Add teammates from your studio first, then assign story roles here.'
+              : 'No collaborators are listed on this story yet.'}
           </p>
         </div>
       );
@@ -193,39 +206,59 @@ const StoryCollaborators: React.FC = () => {
     return (
       <>
         <p className="story-collab__lead">
-          Choose which studio teammates work on this story and which roles they hold. Tap a role to toggle it on or off.
+          {isOwner
+            ? 'Choose which studio teammates work on this story and which roles they hold. Tap a role to toggle it on or off.'
+            : 'People on this story. Only the story owner can change roles.'}
         </p>
         <ul className="story-collab__list">
-          {studioCollaborators.map((collab) => {
-            const userRoles = collab.roles || [collab.role];
-            const active = hasSelectedRoles(collab.user.id);
+          {visibleCollaborators.map((collab) => {
+            const userRoles = Array.from(
+              new Set(
+                isOwner
+                  ? (collab.roles || [collab.role]).filter((role) => role !== 'owner' || collab.is_owner)
+                  : [
+                      ...(collab.is_owner ? ['owner'] : []),
+                      ...((collab.story_roles && collab.story_roles.length > 0
+                        ? collab.story_roles
+                        : collab.roles || [collab.role]
+                      ).filter((role) => role !== 'owner' || collab.is_owner)),
+                    ],
+              ),
+            );
+            const active = collab.is_owner || hasSelectedRoles(collab.user.id);
+            const isYou = Boolean(currentUser && collab.user.id === currentUser.id);
+            const canToggle = Boolean(isOwner && !collab.is_owner);
             return (
               <li
                 key={collab.id}
                 className={`story-collab__row${active ? ' story-collab__row--active' : ''}`}
               >
                 <div className="story-collab__member">
-                  {collab.user.avatar ? (
-                    <img
-                      src={collab.user.avatar}
-                      alt=""
-                      className="story-collab__avatar"
-                    />
-                  ) : (
-                    <div className="story-collab__avatar story-collab__avatar--placeholder" aria-hidden>
-                      {(collab.user.username || 'U').charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span className="story-collab__handle">@{collab.user.username}</span>
+                  <span className="story-collab__handle">
+                    {collaboratorDisplayName(collab.user, isYou)}
+                  </span>
                 </div>
                 <div className="story-collab__roles" role="group" aria-label={`Roles for @${collab.user.username}`}>
                   {userRoles.map((role) => {
-                    const selected = isRoleSelected(collab.user.id, role);
+                    const selected = canToggle ? isRoleSelected(collab.user.id, role) : true;
+                    const pillClass = `story-collab__rolePill${selected ? ' story-collab__rolePill--on' : ''}`;
+                    if (!canToggle) {
+                      return (
+                        <span
+                          key={role}
+                          className={pillClass}
+                          data-role={role}
+                          aria-current={selected ? 'true' : undefined}
+                        >
+                          {formatRoleLabel(role)}
+                        </span>
+                      );
+                    }
                     return (
                       <button
                         key={role}
                         type="button"
-                        className={`story-collab__rolePill${selected ? ' story-collab__rolePill--on' : ''}`}
+                        className={pillClass}
                         data-role={role}
                         aria-pressed={selected}
                         onClick={() => handleToggleRole(collab.user.id, role)}
@@ -259,7 +292,7 @@ const StoryCollaborators: React.FC = () => {
             <i className="fas fa-users" aria-hidden />
             <span className="my-studio__panelTitleText">Story collaborators</span>
           </h2>
-          {isOwner && !loading && studioCollaborators.length > 0 && (
+          {isOwner && !loading && studioCollaborators.some((collab) => !collab.is_owner) && (
             <div className="my-studio__panelHeadActions">
               <button
                 type="button"

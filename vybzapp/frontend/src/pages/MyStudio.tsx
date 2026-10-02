@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
-// import SmallButton from '../components/SmallButton';
+import BackButton from '../components/BackButton';
 import ScrollAwareLink from '../components/ScrollAwareLink';
 import UserSearchModal from '../components/UserSearchModal';
 import { useApi } from '../contexts/ApiContext';
@@ -10,6 +10,7 @@ import { apiService } from '../services/api';
 import { collaborationService, User } from '../services/collaborationService';
 import { useDialogA11y } from '../hooks/useDialogA11y';
 import { DRAFT_STORY_LIMIT_MESSAGE, isAtDraftStoryLimit } from '../utils/draftStoryLimit';
+import { filterWorkspaceStoriesForStudio, isStudioTeamMember } from '../utils/studioScope';
 
 function publicStudioPath(studioId: number): string {
   return `/immersivecomics/studio/${studioId}/`;
@@ -176,6 +177,8 @@ const MyStudio: React.FC = () => {
   const { stories, myStudio, loadStories, loadMyStudio, isLoading, logout: logoutFromContext, currentUser } = useApi();
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: workspaceIdParam } = useParams<{ id?: string }>();
+  const workspaceStudioId = workspaceIdParam ? Number(workspaceIdParam) : null;
   type StoryCounts = { seasons: number; episodes: number; comments: number };
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
@@ -192,8 +195,23 @@ const MyStudio: React.FC = () => {
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [guestStudio, setGuestStudio] = useState<any>(null);
   const closeRequestsModal = useCallback(() => setShowRequestsModal(false), []);
   const requestsDialogRef = useDialogA11y(showRequestsModal, closeRequestsModal);
+
+  const isHomeStudio =
+    workspaceStudioId == null ||
+    (myStudio != null && Number(myStudio.id) === Number(workspaceStudioId));
+  const activeStudio = isHomeStudio ? myStudio : guestStudio;
+  const workspaceStories = useMemo(() => {
+    const list = Array.isArray(stories) ? stories : [];
+    if (workspaceStudioId != null && !isHomeStudio) {
+      if (!activeStudio) return [];
+      return filterWorkspaceStoriesForStudio(list, activeStudio);
+    }
+    return list;
+  }, [stories, workspaceStudioId, isHomeStudio, activeStudio]);
+  const canManageStudio = isHomeStudio;
 
   // Load seasons and episodes counts for each story (optimized with pagination)
   const loadStoryCounts = useCallback(async (stories: any[]) => {
@@ -339,11 +357,40 @@ const MyStudio: React.FC = () => {
     fetchMyStudio();
   }, [loadStories, loadMyStudio]); // Only include load functions to avoid infinite loops
 
+  useEffect(() => {
+    if (workspaceStudioId == null || isHomeStudio) {
+      setGuestStudio(null);
+      return;
+    }
+    if (!currentUser) return;
+
+    let cancelled = false;
+    const loadGuestStudio = async () => {
+      try {
+        const studio = await apiService.getStudio(workspaceStudioId);
+        if (cancelled) return;
+        if (!isStudioTeamMember(studio, currentUser.id)) {
+          navigate(`/immersivecomics/studio/${workspaceStudioId}/`, { replace: true });
+          return;
+        }
+        setGuestStudio(studio);
+      } catch (err) {
+        if (!cancelled) {
+          navigate(`/immersivecomics/studio/${workspaceStudioId}/`, { replace: true });
+        }
+      }
+    };
+    loadGuestStudio();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceStudioId, isHomeStudio, currentUser, navigate]);
+
   // Clear error messages when data becomes available
   useEffect(() => {
     // If we have stories OR studio data, we're good - clear any error messages
-    const hasStories = stories && Array.isArray(stories) && stories.length > 0;
-    const hasStudio = !!myStudio;
+    const hasStories = workspaceStories.length > 0;
+    const hasStudio = !!activeStudio;
     
     if (hasStories || hasStudio) {
       // Data is available - clear any error messages
@@ -363,21 +410,41 @@ const MyStudio: React.FC = () => {
       setShowMessage(true);
     }
     // Note: We don't show error for empty stories array - that's a valid state (user has no stories)
-  }, [stories, myStudio, isInitialLoading, isLoading]);
+  }, [workspaceStories, activeStudio, isInitialLoading, isLoading]);
 
   useEffect(() => {
-    // Load counts asynchronously to not block UI (deferred loading)
-    if (stories && Array.isArray(stories) && stories.length > 0) {
-      // Use setTimeout to defer the counts loading
-      const timeoutId = setTimeout(() => {
-        loadStoryCounts(stories);
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
-    } else {
-      console.warn('MyStudio: Cannot load counts - stories is empty or not an array:', stories);
+    if (workspaceStories.length === 0) {
+      return;
     }
-  }, [stories, loadStoryCounts]); // Include loadStoryCounts in dependencies
+
+    const fromApi: {[key: number]: StoryCounts} = {};
+    const missing: typeof workspaceStories = [];
+    workspaceStories.forEach((story) => {
+      if (
+        story.season_count != null &&
+        story.episode_count != null &&
+        story.comment_count != null
+      ) {
+        fromApi[story.id] = {
+          seasons: story.season_count,
+          episodes: story.episode_count,
+          comments: story.comment_count,
+        };
+      } else {
+        missing.push(story);
+      }
+    });
+    if (Object.keys(fromApi).length > 0) {
+      setStoryCounts((prev) => ({ ...prev, ...fromApi }));
+    }
+    if (missing.length === 0) {
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      loadStoryCounts(missing);
+    }, 100);
+    return () => clearTimeout(timeoutId);
+  }, [workspaceStories, loadStoryCounts]);
 
   // Check authentication on mount and when currentUser changes
   useEffect(() => {
@@ -407,6 +474,7 @@ const MyStudio: React.FC = () => {
   }, [location.pathname, location.state, navigate]);
 
   const handleCreateStory = () => {
+    if (!canManageStudio) return;
     if (isAtDraftStoryLimit(stories)) {
       setMessage(DRAFT_STORY_LIMIT_MESSAGE);
       setMessageType('info');
@@ -417,10 +485,10 @@ const MyStudio: React.FC = () => {
   };
 
   // Calculate pagination
-  const totalPages = Math.ceil((stories?.length || 0) / storiesPerPage);
+  const totalPages = Math.ceil(workspaceStories.length / storiesPerPage);
   const startIndex = (currentPage - 1) * storiesPerPage;
   const endIndex = startIndex + storiesPerPage;
-  const paginatedStories = stories?.slice(startIndex, endIndex) || [];
+  const paginatedStories = workspaceStories.slice(startIndex, endIndex);
 
   // Pagination handlers
   const handlePageChange = (page: number) => {
@@ -530,11 +598,16 @@ const MyStudio: React.FC = () => {
 
   // Load collaborators and requests when studio is available
   useEffect(() => {
-    if (myStudio?.id) {
+    if (isHomeStudio && myStudio?.id) {
       loadCollaborators();
       loadCollaborationRequests();
+      return;
     }
-  }, [myStudio?.id, loadCollaborators, loadCollaborationRequests]);
+    if (!isHomeStudio && guestStudio) {
+      setCollaborators(guestStudio.collaborators || []);
+      setCollaborationRequests([]);
+    }
+  }, [isHomeStudio, myStudio?.id, guestStudio, loadCollaborators, loadCollaborationRequests]);
 
   const uniqueTeamMembersCount = useMemo(() => {
     const uniqueUserIds = new Set(
@@ -547,16 +620,24 @@ const MyStudio: React.FC = () => {
   }, [collaborators]);
 
   const teamCredits = useMemo(
-    () => buildTeamCredits(collaborators, myStudio, currentUser),
-    [collaborators, myStudio, currentUser],
+    () => buildTeamCredits(collaborators, activeStudio, currentUser),
+    [collaborators, activeStudio, currentUser],
   );
 
+  const studioOwnerProfile = useMemo(() => {
+    if (canManageStudio) return currentUser;
+    const owner = activeStudio?.owner;
+    if (owner && typeof owner === 'object') return owner;
+    return currentUser;
+  }, [canManageStudio, activeStudio, currentUser]);
+
   const viewerIsOwner = Boolean(
-    currentUser &&
-      myStudio &&
+    canManageStudio &&
+      currentUser &&
+      activeStudio &&
       Number(currentUser.id) ===
         Number(
-          (typeof myStudio.owner === 'object' ? myStudio.owner?.id : myStudio.owner) ??
+          (typeof activeStudio.owner === 'object' ? activeStudio.owner?.id : activeStudio.owner) ??
             currentUser.id,
         ),
   );
@@ -683,7 +764,12 @@ const MyStudio: React.FC = () => {
 
   // Show loading spinner during initial load or while waiting for user to load
   const token = localStorage.getItem('authToken');
-  if (isInitialLoading || isLoading || (token && !currentUser)) {
+  if (
+    isInitialLoading ||
+    isLoading ||
+    (token && !currentUser) ||
+    (workspaceStudioId != null && !isHomeStudio && !guestStudio)
+  ) {
     return (
       <div className="product-landing">
         <section className="product-landing__section">
@@ -826,10 +912,19 @@ const MyStudio: React.FC = () => {
 
       <section className="product-landing__section product-landing__hero">
         <div className="product-landing__container">
-          <p className="product-landing__eyebrow">Manage</p>
-          <h1 className="product-landing__h1">My Studio</h1>
+          {!canManageStudio && workspaceStudioId ? (
+            <div className="studio-detail__backRow mb-3">
+              <BackButton to={`/immersivecomics/studio/${workspaceStudioId}/`} />
+            </div>
+          ) : null}
+          <p className="product-landing__eyebrow">{canManageStudio ? 'Manage' : 'Workspace'}</p>
+          <h1 className="product-landing__h1">
+            {canManageStudio ? 'My Studio' : activeStudio?.name || 'Studio workspace'}
+          </h1>
           <p className="product-landing__lead">
-            Your profile, team, and immersive stories in one place.
+            {canManageStudio
+              ? 'Your profile, team, and immersive stories in one place.'
+              : `Stories you can edit with ${activeStudio?.name || 'this studio'}.`}
           </p>
         </div>
       </section>
@@ -842,12 +937,12 @@ const MyStudio: React.FC = () => {
             <div className="my-studio__panelHead">
               <h2 className="my-studio__panelTitle">
                 <i className="fas fa-clapperboard" aria-hidden />
-                <span className="my-studio__panelTitleText">{myStudio?.name || 'My Studio'}</span>
+                <span className="my-studio__panelTitleText">{activeStudio?.name || 'My Studio'}</span>
               </h2>
               <div className="my-studio__panelHeadActions">
-                {myStudio && (
+                {canManageStudio && activeStudio && (
                   <Link
-                    to={`/immersivecomics/studio/${myStudio.id}/edit/`}
+                    to={`/immersivecomics/studio/${activeStudio.id}/edit/`}
                     className="stories-landing__btnPrimary text-decoration-none d-inline-flex align-items-center"
                     title="Edit studio"
                   >
@@ -870,25 +965,25 @@ const MyStudio: React.FC = () => {
             </div>
             <div className="my-studio__panelBody">
               <p className="my-studio__studioDesc">
-                {myStudio?.description || 'A collaborative space for immersive 3D storytelling.'}
+                {activeStudio?.description || 'A collaborative space for immersive 3D storytelling.'}
               </p>
 
               <div className="my-studio__ownerRow">
-                {currentUser?.avatar ? (
+                {studioOwnerProfile?.avatar ? (
                   <img
-                    src={currentUser.avatar}
-                    alt={currentUser.username || 'Profile'}
+                    src={studioOwnerProfile.avatar}
+                    alt={studioOwnerProfile.username || 'Profile'}
                     className="my-studio__ownerAvatar"
                   />
                 ) : (
                   <div className="my-studio__ownerAvatarPlaceholder bg-secondary text-white">
-                    {(currentUser?.username || 'U').charAt(0).toUpperCase()}
+                    {(studioOwnerProfile?.username || 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="my-studio__ownerMeta">
-                  <div className="my-studio__ownerHandle">@{currentUser?.username || 'user'}</div>
+                  <div className="my-studio__ownerHandle">@{studioOwnerProfile?.username || 'user'}</div>
                   <div className="my-studio__ownerName">
-                    {[currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(' ') || '—'}
+                    {[studioOwnerProfile?.first_name, studioOwnerProfile?.last_name].filter(Boolean).join(' ') || '—'}
                   </div>
                   <div className="my-studio__ownerLabel">Owner</div>
                 </div>
@@ -896,7 +991,7 @@ const MyStudio: React.FC = () => {
 
               <div className="my-studio__statGrid">
                 <div>
-                  <div className="my-studio__statNum">{stories?.length || 0}</div>
+                  <div className="my-studio__statNum">{workspaceStories.length}</div>
                   <div className="my-studio__statLabel">Stories</div>
                 </div>
                 <div>
@@ -904,7 +999,7 @@ const MyStudio: React.FC = () => {
                     {isLoadingCounts ? (
                       <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
                     ) : (
-                      stories ? stories.reduce((total, story) => total + (storyCounts[story.id]?.seasons || 0), 0) : 0
+                      workspaceStories.reduce((total, story) => total + (storyCounts[story.id]?.seasons || 0), 0)
                     )}
                   </div>
                   <div className="my-studio__statLabel">Seasons</div>
@@ -914,7 +1009,7 @@ const MyStudio: React.FC = () => {
                     {isLoadingCounts ? (
                       <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
                     ) : (
-                      stories ? stories.reduce((total, story) => total + (storyCounts[story.id]?.episodes || 0), 0) : 0
+                      workspaceStories.reduce((total, story) => total + (storyCounts[story.id]?.episodes || 0), 0)
                     )}
                   </div>
                   <div className="my-studio__statLabel">Episodes</div>
@@ -933,8 +1028,9 @@ const MyStudio: React.FC = () => {
             <div className="my-studio__panelHead">
               <h2 className="my-studio__panelTitle">
                 <i className="fas fa-users" aria-hidden />
-                <span className="my-studio__panelTitleText">My team</span>
+                <span className="my-studio__panelTitleText">{canManageStudio ? 'My team' : 'Team'}</span>
               </h2>
+              {canManageStudio ? (
               <div className="my-studio__panelHeadActions">
                 <button
                   type="button"
@@ -968,6 +1064,7 @@ const MyStudio: React.FC = () => {
                   Invite
                 </button>
               </div>
+              ) : null}
             </div>
             <div className="my-studio__panelBody">
               {isLoadingCollaborators ? (
@@ -1037,8 +1134,9 @@ const MyStudio: React.FC = () => {
       <section className="product-landing__section">
         <div className="product-landing__container">
           <div className="my-studio__sectionHead">
-            <h2 className="product-landing__h2 mb-0">My stories</h2>
+            <h2 className="product-landing__h2 mb-0">Stories</h2>
             <div className="my-studio__sectionHeadActions">
+              {canManageStudio ? (
               <button
                 type="button"
                 className="stories-landing__btnPrimary text-decoration-none d-inline-flex align-items-center"
@@ -1047,11 +1145,11 @@ const MyStudio: React.FC = () => {
                 <i className="fas fa-plus me-2" aria-hidden />
                 Create
               </button>
-              {/* Import kept as a direct URL (/immersivecomics/import/) for staff/ops; hidden from profile UI */}
+              ) : null}
             </div>
           </div>
 
-          {stories && Array.isArray(stories) && stories.length > 0 && paginatedStories && paginatedStories.length > 0 ? (
+          {workspaceStories.length > 0 && paginatedStories.length > 0 ? (
             <>
               <div className="my-studio__storyGrid">
                 {paginatedStories.map((story) => (
@@ -1078,20 +1176,20 @@ const MyStudio: React.FC = () => {
                         <div className="my-studio__storyStat">
                           <dt>Seasons</dt>
                           <dd>
-                            {isLoadingCounts ? (
-                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
-                            ) : (
-                              storyCounts[story.id]?.seasons ?? 0
+                            {storyCounts[story.id]?.seasons ?? story.season_count ?? (
+                              isLoadingCounts ? (
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
+                              ) : 0
                             )}
                           </dd>
                         </div>
                         <div className="my-studio__storyStat">
                           <dt>Episodes</dt>
                           <dd>
-                            {isLoadingCounts ? (
-                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
-                            ) : (
-                              storyCounts[story.id]?.episodes ?? 0
+                            {storyCounts[story.id]?.episodes ?? story.episode_count ?? (
+                              isLoadingCounts ? (
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
+                              ) : 0
                             )}
                           </dd>
                         </div>
@@ -1102,16 +1200,28 @@ const MyStudio: React.FC = () => {
                         <div className="my-studio__storyStat">
                           <dt>Comments</dt>
                           <dd>
-                            {isLoadingCounts ? (
-                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
-                            ) : (
-                              storyCounts[story.id]?.comments ?? 0
+                            {storyCounts[story.id]?.comments ?? story.comment_count ?? (
+                              isLoadingCounts ? (
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
+                              ) : 0
                             )}
                           </dd>
                         </div>
                       </dl>
 
                       <div className="my-studio__storyStatus" aria-label="Story status">
+                        {(story.pending_approvals || 0) > 0 ? (
+                          <span className="my-studio__storyBadge my-studio__storyBadge--approval">
+                            {story.pending_approvals === 1
+                              ? '1 to approve'
+                              : `${story.pending_approvals} to approve`}
+                          </span>
+                        ) : null}
+                        {canManageStudio && currentUser && Number(story.user) !== Number(currentUser.id) ? (
+                          <span className="my-studio__storyBadge my-studio__storyBadge--shared">
+                            Shared
+                          </span>
+                        ) : null}
                         <span
                           className={`my-studio__storyBadge ${
                             story.is_public

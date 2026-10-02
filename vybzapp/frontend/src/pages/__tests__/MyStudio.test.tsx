@@ -1,14 +1,17 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter, Route, Routes } from 'react-router-dom';
 import MyStudio from '../MyStudio';
 import { ApiProvider } from '../../contexts/ApiContext';
+import { apiService } from '../../services/api';
 
 jest.mock('../../services/api', () => ({
   apiService: {
     getSeasons: jest.fn().mockResolvedValue([]),
     getEpisodes: jest.fn().mockResolvedValue([]),
+    getSeasonComments: jest.fn().mockResolvedValue([]),
     getStudioCollaborationRequests: jest.fn().mockResolvedValue([]),
+    getStudio: jest.fn(),
   },
 }));
 
@@ -121,10 +124,14 @@ const renderWithRouter = (component: React.ReactElement) => {
 
 describe('MyStudio Component', () => {
   const defaultStories = mockApiContext.stories;
+  const defaultStudio = mockApiContext.myStudio;
+  const defaultUser = mockApiContext.currentUser;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockApiContext.stories = defaultStories;
+    mockApiContext.myStudio = defaultStudio;
+    mockApiContext.currentUser = defaultUser;
     localStorage.setItem('authToken', 'test-token');
     mockApiContext.loadStories.mockResolvedValue(undefined);
     mockApiContext.loadMyStudio.mockResolvedValue(undefined);
@@ -192,6 +199,50 @@ describe('MyStudio Component', () => {
       const manageLinks = screen.getAllByRole('link', { name: /manage story/i });
       expect(manageLinks).toHaveLength(2);
     });
+  });
+
+  test('shows a waiting approval badge on the story card', async () => {
+    mockApiContext.stories = [
+      {
+        id: 43,
+        title: 'Corners of Fate 1',
+        description: 'Needs a review',
+        is_public: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        user: 1,
+        moderation_status: 'approved',
+        pending_approvals: 2,
+      },
+    ];
+
+    renderWithRouter(<MyStudio />);
+
+    expect(await screen.findByText('2 to approve')).toBeInTheDocument();
+  });
+
+  test('marks stories from another teammate as shared', async () => {
+    mockApiContext.stories = [
+      {
+        id: 33,
+        title: 'The Chase',
+        description: 'A shared draft',
+        is_public: false,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        user: 99,
+        moderation_status: 'pending',
+      },
+    ];
+
+    renderWithRouter(<MyStudio />);
+
+    expect(await screen.findByText('The Chase')).toBeInTheDocument();
+    expect(screen.getByText('Shared')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /manage story/i })).toHaveAttribute(
+      'href',
+      '/immersivecomics/story/33/manage/',
+    );
   });
 
   test('calls loadStories and loadMyStudio on mount', async () => {
@@ -272,5 +323,59 @@ describe('MyStudio Component', () => {
       // Verify that loadCharacters is NOT called globally
       expect(mockApiContext.loadCharacters).not.toHaveBeenCalled();
     });
+  });
+
+  test('opens another studio workspace for a teammate', async () => {
+    mockApiContext.currentUser = { id: 99, username: 'teammate', first_name: 'Mike' };
+    mockApiContext.myStudio = {
+      id: 2,
+      name: 'Some dope shit',
+      description: 'Mike studio',
+      owner: { id: 99, username: 'teammate' },
+    };
+    mockApiContext.stories = [
+      {
+        id: 46,
+        title: 'Ethnic Bliss',
+        description: 'A shared draft',
+        is_public: false,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        user: 2,
+        studio: 7,
+        moderation_status: 'pending',
+      },
+    ];
+    (apiService.getStudio as jest.Mock).mockResolvedValue({
+      id: 7,
+      name: 'Vybstream',
+      description: 'Chris studio',
+      owner: { id: 2, username: 'misteruzo', first_name: 'chris', last_name: 'uzo' },
+      collaborators: [
+        {
+          id: 4,
+          role: 'writer',
+          is_active: true,
+          user: { id: 99, username: 'teammate', first_name: 'Mike' },
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/immersivecomics/studio/7/workspace/']}>
+        <ApiProvider>
+          <Routes>
+            <Route path="/immersivecomics/studio/:id/workspace/" element={<MyStudio />} />
+          </Routes>
+        </ApiProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Vybstream' })).toBeInTheDocument();
+    expect(screen.getByText(/Stories you can edit with Vybstream/i)).toBeInTheDocument();
+    expect(screen.getByText('Ethnic Bliss')).toBeInTheDocument();
+    expect(screen.getAllByText('@misteruzo').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /invite/i })).not.toBeInTheDocument();
   });
 });
