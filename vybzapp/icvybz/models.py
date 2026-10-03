@@ -253,7 +253,7 @@ class Dialogue(models.Model):
         related_name='edited_dialogues',
         null=True,
         blank=True,
-        help_text="Team member who last landed an edit. Others need their approval to change this line.",
+        help_text="Team member who last landed an edit. Teammates still need the story owner to approve a change.",
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="Timestamp when record was created. Nullable for imports from other Django apps.")
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True, help_text="Timestamp when record was last updated. Nullable for imports from other Django apps.")
@@ -1290,7 +1290,7 @@ class EpisodeVersion(models.Model):
 
 
 class DialogueEditRequest(models.Model):
-    """A teammate’s proposed change waiting on the last editor’s approval."""
+    """A teammate’s proposed change waiting on the story owner’s approval."""
 
     ACTION_CHOICES = [
         ('update', 'Update'),

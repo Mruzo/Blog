@@ -221,9 +221,11 @@ class StoryHistoryAPITestCase(APITestCase):
         self.assertEqual(self.line.last_edited_by, self.editor)
 
         self.client.force_authenticate(user=self.owner)
-        next_block = self.client.patch(detail_url, {'camera_transition': 'snap'}, format='json')
-        self.assertEqual(next_block.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(next_block.data['last_editor_username'], 'editor')
+        owner_edit = self.client.patch(detail_url, {'camera_transition': 'snap'}, format='json')
+        self.assertEqual(owner_edit.status_code, status.HTTP_200_OK)
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.camera_transition, 'snap')
+        self.assertEqual(self.line.last_edited_by, self.owner)
 
         self.client.force_authenticate(user=self.editor)
         teammate_again = self.client.patch(detail_url, {'text': 'Still changing.'}, format='json')
@@ -231,6 +233,36 @@ class StoryHistoryAPITestCase(APITestCase):
         self.assertEqual(teammate_again.data['last_editor_username'], 'owner')
         self.line.refresh_from_db()
         self.assertEqual(self.line.text, 'Not so fast.')
+
+    def test_owner_can_edit_after_teammate_is_removed(self):
+        self.line.last_edited_by = self.editor
+        self.line.save(update_fields=['last_edited_by'])
+        StoryCollaborator.objects.filter(story=self.story, user=self.editor).update(is_active=False)
+        detail_url = reverse('icvybz-api:dialogue-detail', kwargs={'pk': self.line.id})
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(detail_url, {'text': 'Owner rewrite.'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.text, 'Owner rewrite.')
+        self.assertEqual(self.line.last_edited_by, self.owner)
+
+        leftover = DialogueEditRequest.objects.create(
+            story=self.story,
+            episode=self.episode,
+            dialogue=self.line,
+            requester=self.editor,
+            approver=self.editor,
+            action='update',
+            payload={'text': 'Still waiting.'},
+            summary='editor wants to change line 1',
+        )
+        approved = self.client.post(
+            reverse('icvybz-api:dialogue-edit-approve', kwargs={'request_id': leftover.id}),
+            {},
+            format='json',
+        )
+        self.assertEqual(approved.status_code, status.HTTP_200_OK)
 
     def test_viewer_cannot_request_edit(self):
         self.line.last_edited_by = self.owner

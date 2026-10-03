@@ -183,6 +183,12 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         
         // Add the hotspot to the model-viewer
         modelViewer.appendChild(hotspot);
+        if (typeof modelViewer.updateHotspot === 'function') {
+          modelViewer.updateHotspot({
+            name: `hotspot-${baseCharacterName}`,
+            position: `${dialogue.head_x}m ${dialogue.head_y}m ${dialogue.head_z}m`,
+          });
+        }
         targets.push({
           slot: `hotspot-${baseCharacterName}`,
           head: { x: dialogue.head_x, y: dialogue.head_y, z: dialogue.head_z },
@@ -692,23 +698,47 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   useEffect(() => {
     if (isStarted && selectedEpisode && getModelFromSeason(selectedEpisode)) {
       logger.log('Comic3DViewer: Setting up event listeners, isEditMode:', isEditMode);
-      // Wait for the model-viewer element to be created
-      const timer = setTimeout(() => {
+      let cancelled = false;
+      let attempts = 0;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const attachListeners = () => {
+        if (cancelled) {
+          return;
+        }
         const modelViewer = modelViewerRef.current;
         logger.log('Comic3DViewer: Setting up event listeners, modelViewer:', modelViewer);
-        if (modelViewer) {
-          logger.log('Comic3DViewer: Adding event listeners to model viewer');
-          modelViewer.addEventListener('load', handleModelReady);
-          modelViewer.addEventListener('model-visibility', handleModelVisibility);
-          modelViewer.addEventListener('camera-change', handleCameraChange);
-        } else {
-          logger.log('Comic3DViewer: No model viewer element found');
+        if (!modelViewer) {
+          if (attempts < 10) {
+            attempts += 1;
+            timer = setTimeout(attachListeners, 50);
+          } else {
+            logger.log('Comic3DViewer: No model viewer element found');
+          }
+          return;
         }
-      }, 100);
+
+        logger.log('Comic3DViewer: Adding event listeners to model viewer');
+        modelViewer.addEventListener('load', handleModelReady);
+        modelViewer.addEventListener('model-visibility', handleModelVisibility);
+        modelViewer.addEventListener('camera-change', handleCameraChange);
+
+        // Shared-season GLBs stay in cache. After the next episode remounts
+        // model-viewer, `load` often fires before React attaches listeners.
+        if (modelViewer.loaded) {
+          logger.log('Comic3DViewer: Model already loaded from cache, syncing hotspots');
+          handleModelReady();
+          handleModelVisibility({ detail: { visible: true } });
+        }
+      };
+
+      timer = setTimeout(attachListeners, 0);
 
       return () => {
-        clearTimeout(timer);
-        // Capture the ref value at the time of effect creation
+        cancelled = true;
+        if (timer) {
+          clearTimeout(timer);
+        }
         const currentRef = modelViewerRef.current;
         if (currentRef) {
           logger.log('Comic3DViewer: Removing event listeners');
@@ -719,7 +749,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStarted, selectedEpisode, isEditMode]);
+  }, [isStarted, selectedEpisode, isEditMode, handleModelReady, handleModelVisibility, handleCameraChange]);
 
   // Handle episode selection
   const handleEpisodeSelect = (episode: Episode) => {

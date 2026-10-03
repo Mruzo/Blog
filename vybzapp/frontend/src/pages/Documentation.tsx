@@ -176,8 +176,8 @@ const Documentation: React.FC = () => {
                 approve it. The line stays as it was until they accept.
               </li>
               <li>
-                If you are the owner and someone else last saved that line, they have to
-                approve your change.
+                If you are the owner, you can save any line right away, even if someone else
+                last edited it or they have left the studio.
               </li>
             </ul>
             <p>

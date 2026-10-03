@@ -312,4 +312,59 @@ describe('Comic3DViewer immersive fullscreen', () => {
     expect(onDialogueUpdate).toHaveBeenCalledWith(100, { camera_transition: 'snap' });
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
+
+  it('shows stop-sign names after the next episode starts from a cached model', async () => {
+    renderViewer({
+      dialogues: [
+        buildDialogue({
+          id: 100,
+          character_name: 'Sam',
+          episode: 1,
+          pov_data: {
+            id: 1,
+            head_x: 1,
+            head_y: 1.6,
+            head_z: 0,
+            default_camera_target: '0m 1.6m 0m',
+            character: 1,
+          },
+        }),
+        buildDialogue({
+          id: 200,
+          character_name: 'Will',
+          episode: 2,
+          pov_data: {
+            id: 2,
+            head_x: -1,
+            head_y: 1.6,
+            head_z: 0,
+            default_camera_target: '0m 1.6m 0m',
+            character: 2,
+          },
+        }),
+      ],
+    });
+
+    startPlayback();
+    const firstViewer = document.querySelector('model-viewer') as HTMLElement & { loaded?: boolean };
+    firstViewer.loaded = true;
+    fireEvent(firstViewer, new CustomEvent('load'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(firstViewer.querySelector('[data-character="Sam"]')?.textContent).toBe('Sam');
+
+    fireEvent.click(screen.getByRole('button', { name: /^E2$/i }));
+    startPlayback();
+
+    const secondViewer = document.querySelector('model-viewer') as HTMLElement & { loaded?: boolean };
+    expect(secondViewer).toBeInTheDocument();
+    secondViewer.loaded = true;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(secondViewer.querySelector('[data-character="Will"]')?.textContent).toBe('Will');
+    expect(secondViewer.querySelector('[data-character="Sam"]')).not.toBeInTheDocument();
+  });
 });

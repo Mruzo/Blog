@@ -347,15 +347,13 @@ def _dialogue_update_summary(user, dialogue, previous):
 def dialogue_approver(dialogue, requester=None):
     """Who must approve this save.
 
-    Teammates always wait on the story owner. The owner waits on the last
-    editor when that person is someone else.
+    The story owner can always apply. Teammates always wait on the owner.
     """
     story = _story_for_dialogue(dialogue)
     owner = getattr(story, 'user', None) if story else None
-    last = dialogue.last_edited_by or owner
-    if requester is not None and owner is not None and requester.id != owner.id:
+    if owner is not None:
         return owner
-    return last
+    return dialogue.last_edited_by
 
 
 def can_apply_dialogue_edit(user, dialogue):
@@ -458,11 +456,7 @@ def user_can_resolve_edit_request(user, request):
     if request.approver_id == user.id:
         return True
     story = request.story
-    return bool(story and story.user_id == user.id and not _user_is_active(request.approver))
-
-
-def _user_is_active(user):
-    return bool(user and getattr(user, 'is_active', False))
+    return bool(story and story.user_id == user.id)
 
 
 @transaction.atomic
@@ -470,7 +464,7 @@ def approve_dialogue_edit(request, user):
     if request.status != 'pending':
         raise ValueError('This request is no longer pending.')
     if not user_can_resolve_edit_request(user, request):
-        raise PermissionError('Only the last editor can approve this change.')
+        raise PermissionError('Only the story owner can approve this change.')
 
     dialogue = request.dialogue
     if not dialogue:
@@ -510,7 +504,7 @@ def decline_dialogue_edit(request, user):
     if request.status != 'pending':
         raise ValueError('This request is no longer pending.')
     if not user_can_resolve_edit_request(user, request):
-        raise PermissionError('Only the last editor can decline this change.')
+        raise PermissionError('Only the story owner can decline this change.')
 
     request.status = 'declined'
     request.resolved_at = timezone.now()
