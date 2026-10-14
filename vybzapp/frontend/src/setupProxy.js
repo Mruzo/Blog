@@ -1,5 +1,13 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
+function isCreateReactAppStaticPath(pathname) {
+  return (
+    pathname.startsWith('/static/js/') ||
+    pathname.startsWith('/static/css/') ||
+    pathname.startsWith('/static/media/')
+  );
+}
+
 /**
  * Development-only proxy configuration for webpack-dev-server
  * 
@@ -22,10 +30,12 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:8000',
+      target: 'http://127.0.0.1:8000',
       changeOrigin: true,
       secure: false,
       logLevel: 'debug',
+      timeout: 60000,
+      proxyTimeout: 60000,
       // CRITICAL: When using app.use('/api', ...), Express strips the /api prefix
       // before passing to the proxy middleware. We need to add it back so Django
       // receives the full path: /api/icvybz/stories/public/
@@ -147,22 +157,59 @@ module.exports = function(app) {
   app.use(
     '/media',
     createProxyMiddleware({
-      target: 'http://localhost:8000',
+      target: 'http://127.0.0.1:8000',
       changeOrigin: true,
       secure: false,
       logLevel: 'debug',
+      pathRewrite: function (path) {
+        const rewritten = path.startsWith('/media') ? path : '/media' + path;
+        console.log('[PROXY] Media path rewrite:', path, '->', rewritten);
+        return rewritten;
+      },
       onProxyReq: (proxyReq, req, res) => {
-        console.log('[PROXY] Media request:', req.method, req.url);
-        // Preserve original headers
+        console.log('[PROXY] Media request:', req.method, req.url, '->', proxyReq.path);
         proxyReq.setHeader('X-Forwarded-Host', req.headers.host);
         proxyReq.setHeader('X-Forwarded-Proto', req.protocol || 'http');
       },
       onError: (err, req, res) => {
         console.error('[PROXY ERROR] Media proxy error:', err.message);
+        if (!res.headersSent) {
+          res.status(502).send('Proxy to Django media failed. Is the backend running on http://127.0.0.1:8000?');
+        }
       },
     })
   );
   console.log('[PROXY SETUP] Media proxy registered for /media/*');
+
+  // Django admin CSS/JS live at /static/admin/, /static/icvybz/, etc.
+  // CRA webpack-dev-server owns /static/js, /static/css, and /static/media.
+  const djangoStaticProxy = createProxyMiddleware({
+    target: 'http://127.0.0.1:8000',
+    changeOrigin: true,
+    secure: false,
+    logLevel: 'debug',
+    pathRewrite: (path) => (path.startsWith('/static') ? path : '/static' + path),
+    onProxyReq: (proxyReq, req) => {
+      console.log('[PROXY] Django static:', req.originalUrl, '->', 'http://127.0.0.1:8000' + proxyReq.path);
+      proxyReq.setHeader('X-Forwarded-Host', req.headers.host);
+      proxyReq.setHeader('X-Forwarded-Proto', req.protocol || 'http');
+    },
+    onError: (err, req, res) => {
+      console.error('[PROXY ERROR] Django static:', err.message);
+      if (!res.headersSent) {
+        res.status(502).send('Proxy to Django static files failed. Is the backend running on http://127.0.0.1:8000?');
+      }
+    },
+  });
+
+  app.use('/static', (req, res, next) => {
+    const pathname = String(req.originalUrl || req.url || '').split('?')[0];
+    if (isCreateReactAppStaticPath(pathname)) {
+      return next();
+    }
+    return djangoStaticProxy(req, res, next);
+  });
+  console.log('[PROXY SETUP] Django static proxy registered for /static/* (except CRA js/css/media)');
   
   // Add logging middleware AFTER proxy (for debugging)
   app.use((req, res, next) => {

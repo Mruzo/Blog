@@ -36,15 +36,15 @@ def create_publishable_catalog_story(studio, owner, **comic_overrides):
     comic = Comic.objects.create(**defaults)
     season = Season.objects.create(
         comic=comic,
-        season_number=1,
-        title='Season 1',
+            season_number=1,
+            title='Season 1',
         release_date=date.today(),
-        is_public=True,
+            is_public=True,
     )
     Episode.objects.create(
-        season=season,
-        title='Episode 1',
-        episode_number=1,
+            season=season,
+            title='Episode 1',
+            episode_number=1,
         is_published=True,
     )
     return comic
@@ -52,7 +52,7 @@ def create_publishable_catalog_story(studio, owner, **comic_overrides):
 
 class StudioSPARouteTests(TestCase):
     """Smoke tests: immersive routes serve the React shell."""
-
+    
     def setUp(self):
         self.user = User.objects.create_user(
             username='testuser',
@@ -91,7 +91,7 @@ class StudioSPARouteTests(TestCase):
 
 class StudioAPITests(TestCase):
     """Test studio API endpoints"""
-
+    
     def setUp(self):
         self.user = User.objects.create_user(
             username='testuser',
@@ -113,7 +113,7 @@ class StudioAPITests(TestCase):
             is_active=True,
         )
         create_publishable_catalog_story(self.studio, self.user, title='Test Story')
-
+    
     def test_studio_list_api(self):
         response = self.client.get(reverse('immersivecomics:studio_list_api'))
         self.assertEqual(response.status_code, 200)
@@ -124,7 +124,7 @@ class StudioAPITests(TestCase):
         self.assertEqual(studio_data['name'], 'Test Studio')
         self.assertEqual(studio_data['owner']['username'], 'testuser')
         self.assertTrue(studio_data['is_public'])
-
+    
     def test_studio_list_api_query_efficiency(self):
         for i in range(10):
             user = User.objects.create_user(
@@ -151,7 +151,7 @@ class StudioAPITests(TestCase):
             response = self.client.get(reverse('immersivecomics:studio_list_api'))
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.json()['studios']), 11)
-
+    
     def test_studio_list_api_stories_count(self):
         for i in range(5):
             create_publishable_catalog_story(
@@ -168,12 +168,12 @@ class StudioAPITests(TestCase):
                 is_public=False,
                 moderation_status='approved',
             )
-
+        
         response = self.client.get(reverse('immersivecomics:studio_list_api'))
         self.assertEqual(response.status_code, 200)
         studio_data = response.json()['studios'][0]
         self.assertEqual(studio_data['stories_count'], 6)
-
+    
     def test_studio_list_api_stories_count_not_inflated_by_episodes(self):
         create_publishable_catalog_story(
             self.studio,
@@ -210,13 +210,13 @@ class StudioAPITests(TestCase):
             role='3d_artist',
             is_active=True,
         )
-
+        
         response = self.client.get(reverse('immersivecomics:studio_list_api'))
         self.assertEqual(response.status_code, 200)
         studio_data = response.json()['studios'][0]
         self.assertIn('collaborators', studio_data)
         self.assertEqual(len(studio_data['collaborators']), 2)
-
+    
     def test_my_studio_api_authenticated(self):
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(reverse('immersivecomics:my_studio_api'))
@@ -224,12 +224,12 @@ class StudioAPITests(TestCase):
         studio_data = response.json()['studio']
         self.assertEqual(studio_data['name'], 'Test Studio')
         self.assertEqual(studio_data['owner']['username'], 'testuser')
-
+    
     def test_my_studio_api_unauthenticated(self):
         response = self.client.get(reverse('immersivecomics:my_studio_api'))
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()['error'], 'Authentication required')
-
+    
     def test_my_studio_api_creates_studio_if_nonexistent(self):
         new_user = User.objects.create_user(
             username='newuser',
@@ -240,7 +240,7 @@ class StudioAPITests(TestCase):
         )
         self.client.login(username='newuser', password='newpass123')
         self.assertFalse(Studio.objects.filter(owner=new_user).exists())
-
+        
         response = self.client.get(reverse('immersivecomics:my_studio_api'))
         self.assertEqual(response.status_code, 200)
         self.assertTrue(Studio.objects.filter(owner=new_user).exists())

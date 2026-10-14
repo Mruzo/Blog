@@ -378,4 +378,43 @@ describe('MyStudio Component', () => {
     expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /invite/i })).not.toBeInTheDocument();
   });
+
+  test('hides the ads management button for non-staff accounts', async () => {
+    renderWithRouter(<MyStudio />);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'My Studio' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^ads$/i })).not.toBeInTheDocument();
+  });
+
+  test('shows a staff-only ads button to the left of log out', async () => {
+    mockApiContext.currentUser = { ...defaultUser, is_staff: true };
+
+    renderWithRouter(<MyStudio />);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'My Studio' })).toBeInTheDocument();
+    const adsLink = screen.getByRole('link', { name: /^ads$/i });
+    expect(adsLink).toHaveAttribute('href', '/immersivecomics/ads/');
+    const logoutButton = screen.getByRole('button', { name: /log out/i });
+    const actions = adsLink.closest('.my-studio__panelHeadActions');
+    expect(actions).not.toBeNull();
+    expect(actions?.contains(logoutButton)).toBe(true);
+    expect(
+      Boolean(
+        adsLink.compareDocumentPosition(logoutButton) & Node.DOCUMENT_POSITION_FOLLOWING
+      )
+    ).toBe(true);
+  });
+
+  test('shows the ads button for superuser accounts that are not staff', async () => {
+    mockApiContext.currentUser = { ...defaultUser, is_superuser: true };
+
+    renderWithRouter(<MyStudio />);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'My Studio' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^ads$/i })).toHaveAttribute(
+      'href',
+      '/immersivecomics/ads/'
+    );
+  });
 });

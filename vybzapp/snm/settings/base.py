@@ -305,6 +305,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 # In-scene ads: only on platform standard GLB scenes (see icvybz.ad_services.season_supports_platform_ads)
 AD_ENABLED_MODEL_BASENAMES = [
     'cof_animation_clean.v3.2',
+    'cof_animation_clean.v3.3',
 ]
 AD_PLACEMENT_CACHE_SECONDS = 120
 

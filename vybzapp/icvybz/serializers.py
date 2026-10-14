@@ -510,13 +510,13 @@ class AdPlacementSerializer(serializers.ModelSerializer):
             'id', 'season', 'episode', 'campaign', 'creative', 'creative_title',
             'creative_image_url', 'destination_url', 'alt_text', 'advertiser_name',
             'event_token',
-            'name', 'slot_name', 'position_x', 'position_y', 'position_z', 'normal_x', 'normal_y',
+            'name', 'slot_name', 'board', 'position_x', 'position_y', 'position_z', 'normal_x', 'normal_y',
             'normal_z', 'width', 'height', 'rotation', 'priority', 'is_active',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'season', 'creative_title', 'creative_image_url', 'destination_url', 'event_token',
-            'alt_text', 'advertiser_name', 'created_at', 'updated_at'
+            'alt_text', 'advertiser_name', 'board', 'created_at', 'updated_at'
         ]
 
     def get_creative_image_url(self, obj):

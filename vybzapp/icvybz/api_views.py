@@ -27,6 +27,9 @@ from .auth_utils import (
     schedule_post_password_reset_verification,
 )
 from .ad_services import (
+    ensure_default_ad_boards,
+    first_ad_enabled_season,
+    invalidate_ad_placement_cache,
     live_ad_placements_queryset,
     public_live_ad_placements,
     season_supports_platform_ads,
@@ -51,7 +54,7 @@ from datetime import timedelta
 from .models import (
     Comic, Season, Episode, Dialogue, Character, POV, Studio, AudioTrack,
     StudioCollaborator, StudioCollaborationRequest, StudioCollaborationInvite, StoryCollaborator,
-    ComicComment, AdvertiserProfile, AdCampaign, AdCreative, AdPlacement,
+    ComicComment, AdvertiserProfile, AdCampaign, AdCreative, AdBoard, AdPlacement,
     AdEvent, AdRevenueSplitConfig, AdRevenueShareSnapshot,
     EpisodeVersion, DialogueEditRequest,
 )
@@ -1398,13 +1401,16 @@ def ad_event_api(request):
     session_key = serializer.validated_data['session_key'][:80]
     event_token = serializer.validated_data.get('event_token', '')
 
-    if placement.season_id != episode.season_id:
+    if placement.board_id:
+        if not season_supports_platform_ads(episode.season):
+            return Response({'error': 'Episode season does not use an ad-enabled platform scene.'}, status=status.HTTP_400_BAD_REQUEST)
+    elif placement.season_id != episode.season_id:
         return Response({'error': 'Placement does not belong to this episode season.'}, status=status.HTTP_400_BAD_REQUEST)
     if placement.episode_id and placement.episode_id != episode.id:
         return Response({'error': 'Placement is not active for this episode.'}, status=status.HTTP_400_BAD_REQUEST)
     if not placement.is_live():
         return Response({'error': 'Placement is not active.'}, status=status.HTTP_400_BAD_REQUEST)
-    if not season_supports_platform_ads(placement.season):
+    if not placement.board_id and not season_supports_platform_ads(placement.season):
         return Response({'error': 'Placement season does not use an ad-enabled platform scene.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
@@ -1514,31 +1520,37 @@ def ad_report_api(request):
                 'go_live': checks,
             })
 
+    # Staff advertiser drill-down does not use creator reach; skip the all-stories scan.
+    include_creator_reach = not (is_staff and advertiser_id)
     story_filter = Q(story__user=request.user)
     if is_staff:
         story_filter = Q()
 
-    creator_totals = AdEvent.objects.filter(story_filter).aggregate(
-        impressions=Count('id', filter=Q(event_type='impression', is_suspicious=False)),
-        clicks=Count('id', filter=Q(event_type='click', is_suspicious=False)),
-        suspicious_events=Count('id', filter=Q(is_suspicious=True)),
-    )
-    fraud_breakdown = (
-        AdEvent.objects.filter(story_filter, is_suspicious=True)
-        .values('fraud_reason')
-        .annotate(count=Count('id'))
-        .order_by('-count', 'fraud_reason')
-    )
-    creator_story_queryset = Comic.objects.all() if is_staff else Comic.objects.filter(user=request.user)
-    creator_stories = (
-        creator_story_queryset
-        .annotate(
-            ad_impressions=Count('ad_events', filter=Q(ad_events__event_type='impression', ad_events__is_suspicious=False)),
-            ad_clicks=Count('ad_events', filter=Q(ad_events__event_type='click', ad_events__is_suspicious=False)),
-            suspicious_events=Count('ad_events', filter=Q(ad_events__is_suspicious=True)),
+    creator_totals = {'impressions': 0, 'clicks': 0, 'suspicious_events': 0}
+    fraud_breakdown = []
+    creator_stories = []
+    if include_creator_reach:
+        creator_totals = AdEvent.objects.filter(story_filter).aggregate(
+            impressions=Count('id', filter=Q(event_type='impression', is_suspicious=False)),
+            clicks=Count('id', filter=Q(event_type='click', is_suspicious=False)),
+            suspicious_events=Count('id', filter=Q(is_suspicious=True)),
         )
-        .order_by('-ad_impressions', 'title')
-    )
+        fraud_breakdown = list(
+            AdEvent.objects.filter(story_filter, is_suspicious=True)
+            .values('fraud_reason')
+            .annotate(count=Count('id'))
+            .order_by('-count', 'fraud_reason')
+        )
+        creator_story_queryset = Comic.objects.all() if is_staff else Comic.objects.filter(user=request.user)
+        creator_stories = (
+            creator_story_queryset
+            .annotate(
+                ad_impressions=Count('ad_events', filter=Q(ad_events__event_type='impression', ad_events__is_suspicious=False)),
+                ad_clicks=Count('ad_events', filter=Q(ad_events__event_type='click', ad_events__is_suspicious=False)),
+                suspicious_events=Count('ad_events', filter=Q(ad_events__is_suspicious=True)),
+            )
+            .order_by('-ad_impressions', 'title')
+        )
 
     return Response({
         'active_split': split_data,
@@ -1587,6 +1599,73 @@ def ad_staff_snapshot_api(request):
     if not _user_is_ad_staff(request.user):
         return Response({'error': 'Staff access required.'}, status=status.HTTP_403_FORBIDDEN)
     return Response(build_ad_staff_snapshot())
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def ad_staff_board_booking_api(request, slot_name):
+    if not _user_is_ad_staff(request.user):
+        return Response({'error': 'Staff access required.'}, status=status.HTTP_403_FORBIDDEN)
+
+    ensure_default_ad_boards()
+    board = AdBoard.objects.filter(slot_name=slot_name, is_active=True).first()
+    if not board:
+        return Response({'error': 'Board not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        updated = AdPlacement.objects.filter(
+            Q(board=board) | Q(slot_name=board.slot_name),
+            is_active=True,
+        ).update(is_active=False)
+        invalidate_ad_placement_cache(None, all_seasons=True)
+        return Response({'success': True, 'unbooked': updated, 'snapshot': build_ad_staff_snapshot()})
+
+    try:
+        campaign_id = int(request.data.get('campaign_id'))
+        creative_id = int(request.data.get('creative_id'))
+    except (TypeError, ValueError):
+        return Response({'error': 'campaign_id and creative_id are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    campaign = AdCampaign.objects.select_related('advertiser').filter(pk=campaign_id).first()
+    creative = AdCreative.objects.select_related('advertiser').filter(pk=creative_id).first()
+    if not campaign or not creative:
+        return Response({'error': 'Campaign or creative not found.'}, status=status.HTTP_404_NOT_FOUND)
+    if creative.advertiser_id != campaign.advertiser_id:
+        return Response({'error': 'Creative must belong to the same advertiser as the campaign.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    season = first_ad_enabled_season()
+    if request.data.get('season_id'):
+        try:
+            requested = Season.objects.filter(pk=int(request.data.get('season_id'))).first()
+        except (TypeError, ValueError):
+            requested = None
+        if requested and season_supports_platform_ads(requested):
+            season = requested
+    if not season:
+        return Response(
+            {'error': 'No ad-enabled platform scene is available to attach this booking.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    AdPlacement.objects.filter(
+        Q(board=board) | Q(slot_name=board.slot_name, board__isnull=True),
+        is_active=True,
+    ).update(is_active=False)
+    invalidate_ad_placement_cache(None, all_seasons=True)
+    placement = AdPlacement.objects.create(
+        season=season,
+        campaign=campaign,
+        creative=creative,
+        board=board,
+        name=f'{board.label} — {creative.title}',
+        slot_name=board.slot_name,
+        is_active=True,
+    )
+    return Response({
+        'success': True,
+        'placement_id': placement.id,
+        'snapshot': build_ad_staff_snapshot(),
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])

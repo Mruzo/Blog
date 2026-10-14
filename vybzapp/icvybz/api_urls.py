@@ -98,6 +98,7 @@ urlpatterns = [
     path('ad-reports/', api_views.ad_report_api, name='ad-report'),
     path('ad-reports/invoice/', api_views.ad_invoice_api, name='ad-invoice'),
     path('ad-staff/snapshot/', api_views.ad_staff_snapshot_api, name='ad-staff-snapshot'),
+    path('ad-staff/boards/<slug:slot_name>/booking/', api_views.ad_staff_board_booking_api, name='ad-staff-board-booking'),
     
     # Complete Story Creation
     path('create-complete-story/', api_views.create_complete_story, name='create-complete-story'),

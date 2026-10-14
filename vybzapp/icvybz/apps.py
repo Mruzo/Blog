@@ -12,7 +12,7 @@ class IcvybzConfig(AppConfig):
         from .models import AdPlacement
 
         def clear_placement_cache(sender, instance, **kwargs):
-            invalidate_ad_placement_cache(instance.season_id)
+            invalidate_ad_placement_cache(instance.season_id, all_seasons=bool(instance.board_id))
 
         post_save.connect(clear_placement_cache, sender=AdPlacement)
         post_delete.connect(clear_placement_cache, sender=AdPlacement)

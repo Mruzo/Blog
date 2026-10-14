@@ -4,7 +4,7 @@ from .models import (
     Comic, Season, Episode, Character, POV, Dialogue, ComicComment,
     Intersection, Studio, StudioCollaborator, StudioCollaborationRequest,
     StudioCollaborationInvite,
-    AdvertiserProfile, AdCampaign, AdCreative, AdPlacement, AdEvent,
+    AdvertiserProfile, AdCampaign, AdCreative, AdBoard, AdPlacement, AdEvent,
     AdRevenueSplitConfig, AdRevenueShareSnapshot,
     StoryChange, EpisodeVersion, DialogueEditRequest,
 )
@@ -310,22 +310,33 @@ class AdPlacementAdminForm(forms.ModelForm):
         return f"{story_title} - S{season_number} E{episode.episode_number}: {episode.title}"
 
 
+@admin.register(AdBoard)
+class AdBoardAdmin(admin.ModelAdmin):
+    list_display = ('label', 'slot_name', 'node_name', 'sort_order', 'is_active')
+    list_editable = ('sort_order', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('label', 'slot_name', 'node_name', 'notes')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('sort_order', 'slot_name')
+
+
 @admin.register(AdPlacement)
 class AdPlacementAdmin(admin.ModelAdmin):
     form = AdPlacementAdminForm
     change_form_template = 'admin/icvybz/adplacement/change_form.html'
-    list_display = ('display_name', 'season', 'scope', 'creative', 'is_active', 'priority')
-    list_filter = ('is_active', 'season__comic', 'campaign')
+    list_display = ('display_name', 'board', 'season', 'scope', 'creative', 'is_active', 'priority')
+    list_filter = ('is_active', 'board', 'season__comic', 'campaign')
     list_editable = ('is_active', 'priority')
-    search_fields = ('name', 'creative__title', 'season__title', 'season__comic__title')
+    search_fields = ('name', 'creative__title', 'season__title', 'season__comic__title', 'board__label', 'slot_name')
     readonly_fields = ('created_at', 'updated_at')
     fieldsets = (
-        (None, {'fields': ('season', 'episode', 'campaign', 'creative', 'name', 'is_active', 'priority')}),
+        (None, {'fields': ('season', 'episode', 'campaign', 'creative', 'board', 'name', 'is_active', 'priority')}),
         ('3D Placement', {
             'fields': ('slot_name', 'position_x', 'position_y', 'position_z', 'normal_x', 'normal_y', 'normal_z', 'width', 'height', 'rotation'),
             'description': (
-                'Ads only appear on seasons using the platform standard GLB '
-                '(see AD_ENABLED_MODEL_BASENAMES in settings). Custom uploads are not ad-enabled.'
+                'Board bookings occupy a GLB panel (panel 1–12) on every ad-enabled scene. '
+                'Legacy xyz placements stay season-scoped. Ads only appear on seasons using the '
+                'platform standard GLB (see AD_ENABLED_MODEL_BASENAMES in settings).'
             ),
         }),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),

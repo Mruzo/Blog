@@ -12,6 +12,19 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+const MAX_GET_NETWORK_RETRIES = 2;
+
+function isRetryableNetworkError(error: any): boolean {
+  if (error?.response) return false;
+  const code = error?.code;
+  return (
+    code === 'ECONNABORTED' ||
+    code === 'ERR_NETWORK' ||
+    code === 'ECONNRESET' ||
+    error?.message === 'Network Error'
+  );
+}
+
 /** Pathname for public-endpoint checks (axios may pass full URL in production). */
 function requestPathname(url: string | undefined): string {
   if (!url) return '';
@@ -181,12 +194,20 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
+  async (error) => {
     const status = error.response?.status;
-    const cfg = error.config as InternalAxiosRequestConfig | undefined;
+    const cfg = error.config as (InternalAxiosRequestConfig & { __retryCount?: number }) | undefined;
+    const method = cfg?.method?.toUpperCase();
+    if (cfg && method === 'GET' && isRetryableNetworkError(error)) {
+      const retryCount = (cfg.__retryCount || 0) + 1;
+      if (retryCount <= MAX_GET_NETWORK_RETRIES) {
+        cfg.__retryCount = retryCount;
+        await new Promise((resolve) => setTimeout(resolve, 200 * retryCount));
+        return api.request(cfg);
+      }
+    }
     const urlForMatch = getRequestUrlForMatching(cfg);
     const rel = cfg?.url || '';
-    const method = cfg?.method?.toUpperCase();
 
     // Categorize the error
     const isLogoutEndpoint =
@@ -244,10 +265,13 @@ api.interceptors.response.use(
         message: error.response?.data?.detail || error.message,
         hasToken: !!localStorage.getItem('authToken')
       });
+    } else if (isRetryableNetworkError(error)) {
+      console.warn('[API] Request dropped:', method, url, error.message);
     } else {
       // Other errors - log as error
       console.error('[API] Request failed:', status, method, url, {
         message: error.message,
+        code: error.code,
         data: error.response?.data
       });
     }
@@ -553,6 +577,7 @@ export interface AdPlacement {
   event_token?: string | null;
   name: string;
   slot_name: string;
+  board?: number | null;
   position_x: number;
   position_y: number;
   position_z: number;
@@ -642,39 +667,77 @@ export interface AdReport {
   };
 }
 
+export interface AdStaffPlacementRow {
+  id: number;
+  advertiser_id: number;
+  advertiser_name: string;
+  campaign_id: number;
+  campaign_name: string;
+  creative_id: number;
+  creative_title: string;
+  creative_status: string;
+  advertiser_status: string;
+  season_id: number;
+  season_label: string;
+  episode_scope: string;
+  slot_name: string;
+  board_id: number | null;
+  board_label: string | null;
+  status: string;
+  is_live: boolean;
+  go_live: {
+    advertiser_approved: boolean;
+    creative_approved: boolean;
+    campaign_active: boolean;
+    placement_active: boolean;
+    ad_enabled_season: boolean;
+  };
+  billboard_loads: number;
+  clicks: number;
+  priority: number;
+}
+
+export interface AdStaffBoardRow {
+  id: number;
+  slot_name: string;
+  label: string;
+  node_name: string;
+  sort_order: number;
+  status: string;
+  is_live: boolean;
+  booking: AdStaffPlacementRow | null;
+}
+
+export interface AdStaffCampaignRow {
+  id: number;
+  advertiser_id: number;
+  name: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_active: boolean;
+  budget_label: string;
+}
+
+export interface AdStaffCreativeRow {
+  id: number;
+  advertiser_id: number;
+  campaign?: number | null;
+  title: string;
+  status: string;
+}
+
 export interface AdStaffSnapshot {
   totals: {
     placements: number;
     live: number;
     advertisers: number;
+    boards?: number;
+    vacant_boards?: number;
   };
-  placements: Array<{
-    id: number;
-    advertiser_id: number;
-    advertiser_name: string;
-    campaign_id: number;
-    campaign_name: string;
-    creative_id: number;
-    creative_title: string;
-    creative_status: string;
-    advertiser_status: string;
-    season_id: number;
-    season_label: string;
-    episode_scope: string;
-    slot_name: string;
-    status: string;
-    is_live: boolean;
-    go_live: {
-      advertiser_approved: boolean;
-      creative_approved: boolean;
-      campaign_active: boolean;
-      placement_active: boolean;
-      ad_enabled_season: boolean;
-    };
-    billboard_loads: number;
-    clicks: number;
-    priority: number;
-  }>;
+  boards?: AdStaffBoardRow[];
+  placements: AdStaffPlacementRow[];
+  campaigns?: AdStaffCampaignRow[];
+  creatives?: AdStaffCreativeRow[];
   advertisers: Array<{
     id: number;
     business_name: string;
@@ -1172,8 +1235,8 @@ class ApiService {
 
   async getAdCampaigns(advertiserId?: number): Promise<AdCampaign[]> {
     const params = advertiserId ? { advertiser_id: advertiserId } : undefined;
-    const response = await api.get('/ad-campaigns/', { params });
-    return response.data.results || response.data;
+    const response = await api.get('/ad-campaigns/', { params, timeout: 30000 });
+    return Array.isArray(response.data?.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
   }
 
   async createAdCampaign(campaignData: Partial<AdCampaign> & { advertiser_id?: number }): Promise<AdCampaign> {
@@ -1183,8 +1246,8 @@ class ApiService {
 
   async getAdCreatives(advertiserId?: number): Promise<AdCreative[]> {
     const params = advertiserId ? { advertiser_id: advertiserId } : undefined;
-    const response = await api.get('/ad-creatives/', { params });
-    return response.data.results || response.data;
+    const response = await api.get('/ad-creatives/', { params, timeout: 30000 });
+    return Array.isArray(response.data?.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
   }
 
   async createAdCreative(creativeData: Partial<AdCreative> & { advertiser_id?: number }): Promise<AdCreative> {
@@ -1223,12 +1286,26 @@ class ApiService {
 
   async getAdReport(advertiserId?: number): Promise<AdReport> {
     const params = advertiserId ? { advertiser_id: advertiserId } : undefined;
-    const response = await api.get('/ad-reports/', { params });
+    const response = await api.get('/ad-reports/', { params, timeout: 30000 });
     return response.data;
   }
 
   async getAdStaffSnapshot(): Promise<AdStaffSnapshot> {
     const response = await api.get('/ad-staff/snapshot/');
+    return response.data;
+  }
+
+  async bookAdBoard(slotName: string, payload: {
+    campaign_id: number;
+    creative_id: number;
+    season_id?: number;
+  }): Promise<{ success: boolean; placement_id: number; snapshot: AdStaffSnapshot }> {
+    const response = await api.post(`/ad-staff/boards/${slotName}/booking/`, payload);
+    return response.data;
+  }
+
+  async unbookAdBoard(slotName: string): Promise<{ success: boolean; unbooked: number; snapshot: AdStaffSnapshot }> {
+    const response = await api.delete(`/ad-staff/boards/${slotName}/booking/`);
     return response.data;
   }
 

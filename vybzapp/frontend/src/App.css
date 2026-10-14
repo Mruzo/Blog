@@ -5772,13 +5772,16 @@ h2 {
 /* Dialogue card metadata – indicators only, not buttons */
 .dialogue-card__order {
   font-family: var(--font-primary);
-  font-size: 0.8rem;
-  font-weight: var(--font-weight-semibold);
-  color: #6c757d;
-  background: transparent;
-  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111;
+  background: rgba(17, 17, 17, 0.08);
+  padding: 0.08rem 0.4rem;
   margin-right: 0.5rem;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  border-radius: 0.25rem;
+  line-height: 1.2;
 }
 
 /* Character indicator: left border + light background */
@@ -6461,23 +6464,35 @@ h2 {
   background: #f7f4ee;
   border: 1px solid #e3ddd2;
   border-radius: 0.35rem;
-  padding: 1.35rem 1.5rem 1.15rem;
+  padding: 1.35rem 1.5rem 1.15rem 2.85rem;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
 }
 
 .script-block--compact {
   font-size: 0.85rem;
-  padding: 1rem 1.1rem 0.85rem;
+  padding: 1rem 1.1rem 0.85rem 2.5rem;
 }
 
 .script-block__lineNum {
   position: absolute;
-  top: 0.45rem;
-  left: 0.55rem;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: rgba(26, 26, 26, 0.35);
-  letter-spacing: 0.04em;
+  top: 1.25rem;
+  left: 0.4rem;
+  min-width: 1.85rem;
+  padding: 0.08rem 0.28rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #111;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  background: rgba(17, 17, 17, 0.08);
+  border-radius: 0.25rem;
+}
+
+.script-block--compact .script-block__lineNum {
+  top: 0.9rem;
+  font-size: 0.78rem;
 }
 
 .script-block__actions {
@@ -6677,8 +6692,61 @@ h2 {
 }
 
 /* Staff ad dashboard */
+.ads-dashboard {
+  font-family: var(--font-primary);
+  color: #0f172a;
+}
+
 .ads-dashboard .product-landing__hero {
   padding-bottom: 0.75rem;
+}
+
+.ads-dashboard .form-label,
+.ads-dashboard .form-check-label {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: #0f172a;
+  margin-bottom: 0.35rem;
+}
+
+.ads-dashboard .form-control,
+.ads-dashboard .form-select {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: #0f172a;
+}
+
+.ads-dashboard .form-select {
+  display: block;
+  width: 100%;
+}
+
+.ads-dashboard .btn,
+.ads-dashboard .table,
+.ads-dashboard .list-group-item,
+.ads-dashboard .small,
+.ads-dashboard .text-muted {
+  font-family: var(--font-primary);
+}
+
+.ads-dashboard .btn {
+  font-weight: var(--font-weight-semibold);
+}
+
+.ads-dashboard .table {
+  font-size: var(--font-size-xs);
+  color: #0f172a;
+}
+
+.ads-dashboard .table th {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ads-dashboard .list-group-item {
+  font-size: var(--font-size-xs);
 }
 
 .ads-kpiStrip {
@@ -6705,7 +6773,9 @@ h2 {
 }
 
 .ads-kpi__label {
+  font-family: var(--font-primary);
   font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
   color: rgba(15, 23, 42, 0.55);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -6741,6 +6811,8 @@ h2 {
 
 .ads-toolbar__meta {
   padding: 0.35rem 0 0.15rem;
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-medium);
 }
 
 .ads-tabs {
@@ -6758,8 +6830,10 @@ h2 {
   color: rgba(15, 23, 42, 0.72);
   border-radius: 999px;
   padding: 0.35rem 0.85rem;
+  font-family: var(--font-primary);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .ads-tabs__btn.is-active {
@@ -6787,12 +6861,47 @@ h2 {
   background: rgba(255, 255, 255, 0.55);
 }
 
+.ads-board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.75rem;
+}
+
+.ads-board-card {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.9rem;
+}
+
+.ads-board-card.is-vacant {
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.ads-board-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.ads-board-card__title {
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
 .ads-invoice-form {
   max-width: 36rem;
 }
 
 .ads-advanced summary {
   cursor: pointer;
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 @media (max-width: 767.98px) {
@@ -6803,5 +6912,27 @@ h2 {
 
   .ads-toolbar__actions {
     width: 100%;
+  }
+
+  .ads-kpiStrip {
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: 0.3rem;
+  }
+
+  .ads-kpi {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.4rem 0.15rem;
+  }
+
+  .ads-kpi__value {
+    font-size: 1rem;
+  }
+
+  .ads-kpi__label {
+    font-size: 0.56rem;
+    letter-spacing: 0.01em;
+    line-height: 1.15;
   }
 }

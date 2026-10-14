@@ -18,6 +18,26 @@ import DialoguePlaybackBar, {
 import logger from '../utils/logger';
 import { applyHotspotOcclusion, HotspotOcclusionTarget } from '../utils/hotspotOcclusion';
 import {
+  DEFAULT_AD_SLOT,
+  STATIC_AD_SLOT_TARGETS,
+  applyAdImageToMaterial,
+  applyFullBleedPanelUVs,
+  discoverAdSlotTargets,
+  findPanelMesh,
+  getContainedImageLocalRect,
+  getMeshWorldCenter,
+  getPanelLocalBounds,
+  getPanelVisualAspect,
+  isPointOnAdImage,
+  resolveAdMaterial,
+  restorePanelUVs,
+  slotFromSurface,
+  toViewerTextureUrl,
+  worldToPanelLocal,
+  type AdImageHitRect,
+  type AdSlotTarget,
+} from '../utils/adSlotTargets';
+import {
   CAMERA_TRANSITION_MOVE,
   CAMERA_TRANSITION_SNAP,
   normalizeCameraTransition,
@@ -64,20 +84,7 @@ interface DialogueData {
 /** Episode intro = description before dialogues; outro = summary after last dialogue */
 type EpisodePlaybackPhase = 'intro' | 'dialogue' | 'outro';
 
-/** GLB ad slots: slot_name → material to texture-swap and optional click hit area. */
-const AD_SLOT_TARGETS: Record<string, {
-  materialName: string;
-  clickCenter?: { x: number; y: number; z: number };
-  clickRadius?: number;
-}> = {
-  ed_bb: {
-    materialName: 'Billboard_front',
-    clickCenter: { x: -6.556, y: 1.041, z: -7.314 },
-    clickRadius: 4,
-  },
-};
-
-const DEFAULT_AD_SLOT = 'ed_bb';
+const AD_PANEL_HOTSPOT_CLASS = 'ad-panel-hotspot';
 
 const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   episodes,
@@ -118,7 +125,18 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const activeAdPlacementsRef = useRef<Map<string, AdPlacement>>(new Map());
   const originalSlotTexturesRef = useRef<Map<string, unknown>>(new Map());
   const adSlotSurfacePrefixRef = useRef<Map<string, string>>(new Map());
+  const adImageHitRectsRef = useRef<Map<string, AdImageHitRect>>(new Map());
+  const adSlotTargetsRef = useRef<Record<string, AdSlotTarget>>({ ...STATIC_AD_SLOT_TARGETS });
   const lastAdClickAtRef = useRef<number>(0);
+
+  const refreshAdSlotTargets = useCallback(() => {
+    const modelViewer = modelViewerRef.current;
+    if (!modelViewer) {
+      return adSlotTargetsRef.current;
+    }
+    adSlotTargetsRef.current = discoverAdSlotTargets(modelViewer, STATIC_AD_SLOT_TARGETS);
+    return adSlotTargetsRef.current;
+  }, []);
   
   const modelViewerRef = useRef<any>(null);
   const characterHotspotTargetsRef = useRef<HotspotOcclusionTarget[]>([]);
@@ -256,8 +274,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       return;
     }
 
-    Object.entries(AD_SLOT_TARGETS).forEach(([slotName, target]) => {
-      if (originalSlotTexturesRef.current.has(slotName)) {
+    Object.entries(refreshAdSlotTargets()).forEach(([slotName, target]) => {
+      if (originalSlotTexturesRef.current.has(slotName) || !target.materialName) {
         return;
       }
       try {
@@ -270,7 +288,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         // Ignore cache failures for unknown materials.
       }
     });
-  }, []);
+  }, [refreshAdSlotTargets]);
 
   const calibrateAdSlotClickTargets = useCallback(async () => {
     const modelViewer = modelViewerRef.current;
@@ -278,7 +296,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       return;
     }
 
-    for (const [slotName, target] of Object.entries(AD_SLOT_TARGETS)) {
+    for (const [slotName, target] of Object.entries(refreshAdSlotTargets())) {
       if (adSlotSurfacePrefixRef.current.has(slotName) || !target.clickCenter) {
         continue;
       }
@@ -318,7 +336,52 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         hotspot.remove();
       }
     }
-  }, []);
+  }, [refreshAdSlotTargets]);
+
+  const syncAdPanelHotspot = useCallback((
+    modelViewer: any,
+    slotName: string,
+    placement: AdPlacement | undefined,
+    target: AdSlotTarget,
+    useOverlay = false,
+  ) => {
+    const hotspotSlot = `hotspot-ad-${slotName}`;
+    const existing = modelViewer.querySelector(`[slot="${hotspotSlot}"]`) as HTMLElement | null;
+    if (!useOverlay || !placement || !target.clickCenter) {
+      existing?.remove();
+      return;
+    }
+
+    const hotspot = (existing || document.createElement('button')) as HTMLButtonElement;
+    if (!existing) {
+      hotspot.type = 'button';
+      hotspot.setAttribute('slot', hotspotSlot);
+      hotspot.className = `hotspot ${AD_PANEL_HOTSPOT_CLASS}`;
+      hotspot.setAttribute('data-visibility-attribute', 'visible');
+      modelViewer.appendChild(hotspot);
+    }
+    hotspot.setAttribute('data-position', `${target.clickCenter.x}m ${target.clickCenter.y}m ${target.clickCenter.z}m`);
+    hotspot.setAttribute('data-normal', '0m 1m 0m');
+    hotspot.setAttribute('aria-label', placement.alt_text || placement.creative_title || 'Advertisement');
+    hotspot.style.backgroundImage = `url("${toViewerTextureUrl(placement.creative_image_url)}")`;
+    hotspot.onclick = (event: MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const now = Date.now();
+      if (now - lastAdClickAtRef.current < 300) return;
+      lastAdClickAtRef.current = now;
+      trackAdEvent(placement, 'click');
+      if (placement.destination_url) {
+        window.open(placement.destination_url, '_blank', 'noopener,noreferrer');
+      }
+    };
+    if (typeof modelViewer.updateHotspot === 'function') {
+      modelViewer.updateHotspot({
+        name: hotspotSlot,
+        position: `${target.clickCenter.x}m ${target.clickCenter.y}m ${target.clickCenter.z}m`,
+      });
+    }
+  }, [trackAdEvent]);
 
   const applyAdTexturesToModel = useCallback(async () => {
     const modelViewer = modelViewerRef.current;
@@ -326,46 +389,66 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       return;
     }
 
+    const slotTargets = refreshAdSlotTargets();
     cacheOriginalSlotTextures();
 
     const placementsBySlot = getActiveAdPlacementsBySlot(adPlacements);
     activeAdPlacementsRef.current = placementsBySlot;
 
-    for (const [slotName, target] of Object.entries(AD_SLOT_TARGETS)) {
+    for (const [slotName, target] of Object.entries(slotTargets)) {
       const placement = placementsBySlot.get(slotName);
+      const material = resolveAdMaterial(modelViewer, target);
+      let painted = false;
       try {
-        const material = modelViewer.model.getMaterialByName(target.materialName);
-        if (!material) {
-          if (placement) {
-            logger.warn('Comic3DViewer: Ad material not found for slot', slotName, target.materialName);
+        if (placement && material) {
+          const panelMesh = findPanelMesh(modelViewer, slotName);
+          const paintedAd = await applyAdImageToMaterial(modelViewer, material, placement.creative_image_url, {
+            panelAspect: getPanelVisualAspect(panelMesh),
+          });
+          applyFullBleedPanelUVs(panelMesh);
+          const bounds = getPanelLocalBounds(panelMesh);
+          if (bounds && paintedAd.imageAspect && paintedAd.imageAspect > 0) {
+            adImageHitRectsRef.current.set(
+              slotName,
+              getContainedImageLocalRect(bounds, paintedAd.imageAspect, getPanelVisualAspect(panelMesh)),
+            );
+          } else if (bounds) {
+            adImageHitRectsRef.current.set(slotName, bounds);
           }
-          continue;
-        }
-
-        if (placement) {
-          const texture = await modelViewer.createTexture(placement.creative_image_url);
-          material.pbrMetallicRoughness.baseColorTexture.setTexture(texture);
+          const worldCenter = getMeshWorldCenter(panelMesh);
+          if (worldCenter) {
+            adSlotTargetsRef.current[slotName] = {
+              ...target,
+              clickCenter: worldCenter,
+            };
+          }
+          painted = true;
           logger.log('Comic3DViewer: Applied ad texture to slot', slotName, placement.creative_title);
           trackAdEvent(placement, 'impression');
-          continue;
-        }
-
-        // Only restore the GLB default when this episode truly has no ad for the slot.
-        if (adPlacementsLoading) {
-          continue;
-        }
-
-        const originalTexture = originalSlotTexturesRef.current.get(slotName);
-        if (originalTexture) {
-          material.pbrMetallicRoughness.baseColorTexture.setTexture(originalTexture);
+        } else if (placement && target.materialName && !material) {
+          logger.warn('Comic3DViewer: Ad material not found for slot', slotName, target.materialName);
+        } else if (!placement && !adPlacementsLoading) {
+          adImageHitRectsRef.current.delete(slotName);
+          restorePanelUVs(findPanelMesh(modelViewer, slotName));
+          const textureInfo = material?.pbrMetallicRoughness?.baseColorTexture;
+          if (textureInfo?.setTexture) {
+            const originalTexture = originalSlotTexturesRef.current.get(slotName);
+            textureInfo.setTexture(originalTexture || null);
+          }
         }
       } catch (error) {
         logger.warn('Comic3DViewer: Failed to apply ad texture for slot', slotName, error);
       }
+
+      syncAdPanelHotspot(modelViewer, slotName, placement, target, Boolean(placement && !painted));
+      if (placement && !painted) {
+        logger.log('Comic3DViewer: Applied ad hotspot for slot', slotName, placement.creative_title);
+        trackAdEvent(placement, 'impression');
+      }
     }
 
     await calibrateAdSlotClickTargets();
-  }, [adPlacements, adPlacementsLoading, selectedEpisode, getActiveAdPlacementsBySlot, cacheOriginalSlotTextures, calibrateAdSlotClickTargets, trackAdEvent]);
+  }, [adPlacements, adPlacementsLoading, selectedEpisode, getActiveAdPlacementsBySlot, cacheOriginalSlotTextures, calibrateAdSlotClickTargets, refreshAdSlotTargets, syncAdPanelHotspot, trackAdEvent]);
 
   const handleAdMeshClick = useCallback((event: MouseEvent) => {
     const modelViewer = modelViewerRef.current;
@@ -381,45 +464,56 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     const clientX = event.clientX;
     const clientY = event.clientY;
     let matchedSlot: string | null = null;
+    let hitPosition: { x: number; y: number; z: number } | undefined;
 
-    if (typeof modelViewer.surfaceFromPoint === 'function') {
+    if (typeof modelViewer.positionAndNormalFromPoint === 'function') {
       try {
-        const surface = modelViewer.surfaceFromPoint(clientX, clientY);
-        if (surface) {
-          for (const slotName of Array.from(activeAdPlacementsRef.current.keys())) {
-            const prefix = adSlotSurfacePrefixRef.current.get(slotName);
-            if (prefix && surface.startsWith(prefix)) {
-              matchedSlot = slotName;
-              break;
-            }
-          }
-        }
+        hitPosition = modelViewer.positionAndNormalFromPoint(clientX, clientY)?.position;
       } catch {
-        // Fall through to position-based matching.
+        hitPosition = undefined;
       }
     }
 
-    if (!matchedSlot && typeof modelViewer.positionAndNormalFromPoint === 'function') {
+    if (hitPosition) {
+      for (const slotName of Array.from(activeAdPlacementsRef.current.keys())) {
+        const mesh = findPanelMesh(modelViewer, slotName, hitPosition);
+        if (!mesh) {
+          continue;
+        }
+        const local = worldToPanelLocal(mesh, hitPosition);
+        const rect = adImageHitRectsRef.current.get(slotName);
+        if (local && rect && isPointOnAdImage(local, rect)) {
+          matchedSlot = slotName;
+          break;
+        }
+      }
+    }
+
+    if (!matchedSlot && typeof modelViewer.surfaceFromPoint === 'function') {
       try {
-        const hit = modelViewer.positionAndNormalFromPoint(clientX, clientY);
-        if (hit?.position) {
-          for (const [slotName, target] of Object.entries(AD_SLOT_TARGETS)) {
-            if (!activeAdPlacementsRef.current.has(slotName) || !target.clickCenter) {
-              continue;
-            }
-            const center = target.clickCenter;
-            const radius = target.clickRadius ?? 3;
-            const dx = hit.position.x - center.x;
-            const dy = hit.position.y - center.y;
-            const dz = hit.position.z - center.z;
-            if (Math.sqrt(dx * dx + dy * dy + dz * dz) <= radius) {
-              matchedSlot = slotName;
-              break;
-            }
-          }
+        const surfaceSlot = slotFromSurface(modelViewer.surfaceFromPoint(clientX, clientY));
+        if (surfaceSlot && activeAdPlacementsRef.current.has(surfaceSlot) && !adImageHitRectsRef.current.has(surfaceSlot)) {
+          matchedSlot = surfaceSlot;
         }
       } catch {
-        return;
+        // Fall through to the static billboard radius.
+      }
+    }
+
+    if (!matchedSlot && hitPosition) {
+      for (const [slotName, target] of Object.entries(adSlotTargetsRef.current)) {
+        if (!activeAdPlacementsRef.current.has(slotName) || adImageHitRectsRef.current.has(slotName) || !target.clickCenter) {
+          continue;
+        }
+        const center = target.clickCenter;
+        const radius = target.clickRadius ?? 3;
+        const dx = hitPosition.x - center.x;
+        const dy = hitPosition.y - center.y;
+        const dz = hitPosition.z - center.z;
+        if (Math.sqrt(dx * dx + dy * dy + dz * dz) <= radius) {
+          matchedSlot = slotName;
+          break;
+        }
       }
     }
 
@@ -498,7 +592,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   }, [dialogueData, isModelReady, createHotspots]);
 
   useEffect(() => {
-    if (!selectedSeason || !selectedEpisode || !isStarted) {
+    if (!selectedSeason || !selectedEpisode) {
       setAdPlacements([]);
       setAdPlacementsLoading(false);
       return;
@@ -524,13 +618,13 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [selectedSeason, selectedEpisode, isStarted]);
+  }, [selectedSeason, selectedEpisode]);
 
   useEffect(() => {
     if (isModelReady && modelViewerRef.current) {
       const timer = setTimeout(() => {
         void applyAdTexturesToModel();
-      }, 125);
+      }, 250);
       return () => clearTimeout(timer);
     }
   }, [adPlacements, adPlacementsLoading, isModelReady, selectedEpisode, applyAdTexturesToModel]);
@@ -1557,6 +1651,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         setIsStarted(false);
         originalSlotTexturesRef.current = new Map();
         adSlotSurfacePrefixRef.current = new Map();
+        adImageHitRectsRef.current = new Map();
         animationsStartedRef.current = false; // Reset animations flag
         setPreviousModel(currentModel);
       }

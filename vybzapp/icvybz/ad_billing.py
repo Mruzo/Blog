@@ -7,8 +7,8 @@ from datetime import date, datetime
 from django.conf import settings
 from django.db.models import Count, Q
 
-from .ad_services import season_supports_platform_ads
-from .models import AdCampaign, AdCreative, AdEvent, AdPlacement, AdvertiserProfile
+from .ad_services import ensure_default_ad_boards, season_supports_platform_ads
+from .models import AdBoard, AdCampaign, AdCreative, AdEvent, AdPlacement, AdvertiserProfile
 
 
 def _user_is_ad_staff(user):
@@ -61,7 +61,7 @@ def build_ad_staff_snapshot():
     placements = (
         AdPlacement.objects.select_related(
             'season', 'season__comic', 'episode', 'campaign',
-            'campaign__advertiser', 'creative', 'creative__advertiser',
+            'campaign__advertiser', 'creative', 'creative__advertiser', 'board',
         )
         .annotate(
             billboard_loads=Count(
@@ -93,6 +93,8 @@ def build_ad_staff_snapshot():
             'season_label': _season_label(placement),
             'episode_scope': _episode_scope_label(placement),
             'slot_name': placement.slot_name,
+            'board_id': placement.board_id,
+            'board_label': placement.board.label if placement.board_id else None,
             'status': status,
             'is_live': is_live,
             'go_live': checks,
@@ -114,13 +116,61 @@ def build_ad_staff_snapshot():
     ]
 
     live_count = sum(1 for row in rows if row['is_live'])
+    ensure_default_ad_boards()
+    board_rows = []
+    active_rows = [row for row in rows if row['go_live']['placement_active']]
+    for board in AdBoard.objects.filter(is_active=True).order_by('sort_order', 'slot_name'):
+        booking = next((row for row in active_rows if row['board_id'] == board.id), None)
+        if booking is None:
+            booking = next(
+                (row for row in active_rows if row['slot_name'] == board.slot_name and not row['board_id']),
+                None,
+            )
+        board_rows.append({
+            'id': board.id,
+            'slot_name': board.slot_name,
+            'label': board.label,
+            'node_name': board.node_name,
+            'sort_order': board.sort_order,
+            'status': booking['status'] if booking else 'vacant',
+            'is_live': bool(booking and booking['is_live']),
+            'booking': booking,
+        })
+    vacant_count = sum(1 for row in board_rows if not row['booking'])
+    campaigns = [
+        {
+            'id': campaign.id,
+            'advertiser_id': campaign.advertiser_id,
+            'name': campaign.name,
+            'start_date': campaign.start_date,
+            'end_date': campaign.end_date,
+            'is_active': campaign.is_active,
+            'budget_label': campaign.budget_label,
+        }
+        for campaign in AdCampaign.objects.order_by('advertiser__business_name', '-created_at', 'id')
+    ]
+    creatives = [
+        {
+            'id': creative.id,
+            'advertiser_id': creative.advertiser_id,
+            'campaign': creative.campaign_id,
+            'title': creative.title,
+            'status': creative.status,
+        }
+        for creative in AdCreative.objects.order_by('advertiser__business_name', '-created_at', 'id')
+    ]
     return {
         'totals': {
             'placements': len(rows),
             'live': live_count,
             'advertisers': len(advertisers),
+            'boards': len(board_rows),
+            'vacant_boards': vacant_count,
         },
+        'boards': board_rows,
         'placements': rows,
+        'campaigns': campaigns,
+        'creatives': creatives,
         'advertisers': advertisers,
     }
 

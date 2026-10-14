@@ -11,6 +11,7 @@ from .models import (
     AdvertiserProfile,
     AdCampaign,
     AdCreative,
+    AdBoard,
     AdPlacement,
     AdEvent,
     AdRevenueSplitConfig,
@@ -230,3 +231,196 @@ class AdMachineAPITestCase(APITestCase):
         self.assertEqual(creator_response.data['creator']['totals']['clicks'], 1)
         self.assertEqual(creator_response.data['creator']['totals']['suspicious_events'], 1)
         self.assertEqual(creator_response.data['creator']['totals']['fraud_breakdown'][0]['reason'], 'invalid_token')
+
+
+class AdBoardInventoryAPITestCase(APITestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            username='adstaff',
+            email='staff@example.com',
+            password='pass',
+            is_staff=True,
+        )
+        self.creator = User.objects.create_user(username='creator2', email='creator2@example.com', password='pass')
+        self.ad_user = User.objects.create_user(username='advertiser2', email='ad2@example.com', password='pass')
+        self.story = Comic.objects.create(
+            title='Board Story',
+            description='Story',
+            user=self.creator,
+            is_public=True,
+            moderation_status='approved',
+        )
+        self.season = Season.objects.create(
+            comic=self.story,
+            season_number=1,
+            title='Season 1',
+            description='Season',
+            release_date='2026-01-01',
+            is_public=True,
+        )
+        self.season.model_gltf = SimpleUploadedFile(
+            'cof_animation_clean.v3.2.glb',
+            b'glTF',
+            content_type='model/gltf-binary',
+        )
+        self.season.save()
+        self.other_season = Season.objects.create(
+            comic=self.story,
+            season_number=2,
+            title='Season 2',
+            description='Season',
+            release_date='2026-01-01',
+            is_public=True,
+        )
+        self.other_season.model_gltf = SimpleUploadedFile(
+            'cof_animation_clean.v3.3.glb',
+            b'glTF',
+            content_type='model/gltf-binary',
+        )
+        self.other_season.save()
+        self.custom_season = Season.objects.create(
+            comic=self.story,
+            season_number=3,
+            title='Custom',
+            description='Season',
+            release_date='2026-01-01',
+            is_public=True,
+            model_gltf=SimpleUploadedFile('custom_scene.glb', b'glTF', content_type='model/gltf-binary'),
+        )
+        self.episode = Episode.objects.create(
+            season=self.season,
+            title='Episode 1',
+            description='Episode',
+            episode_number=1,
+            is_published=True,
+        )
+        self.other_episode = Episode.objects.create(
+            season=self.other_season,
+            title='Episode 1',
+            description='Episode',
+            episode_number=1,
+            is_published=True,
+        )
+        self.custom_episode = Episode.objects.create(
+            season=self.custom_season,
+            title='Episode 1',
+            description='Episode',
+            episode_number=1,
+            is_published=True,
+        )
+        self.advertiser = AdvertiserProfile.objects.create(
+            user=self.ad_user,
+            business_name='Panel Brand',
+            contact_email='panel@example.com',
+            status='approved',
+        )
+        self.campaign = AdCampaign.objects.create(advertiser=self.advertiser, name='Panels', is_active=True)
+        image = SimpleUploadedFile(
+            'ad.gif',
+            b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02L\x01\x00;',
+            content_type='image/gif',
+        )
+        self.creative = AdCreative.objects.create(
+            advertiser=self.advertiser,
+            campaign=self.campaign,
+            title='Panel Creative',
+            image=image,
+            destination_url='https://example.com/panel',
+            status='approved',
+        )
+
+    def test_staff_snapshot_lists_default_boards(self):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(reverse('icvybz-api:ad-staff-snapshot'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['totals']['boards'], 12)
+        self.assertEqual(response.data['totals']['vacant_boards'], 12)
+        self.assertEqual(len(response.data['boards']), 12)
+        self.assertEqual(response.data['boards'][0]['slot_name'], 'panel_1')
+        self.assertEqual(response.data['campaigns'][0]['name'], 'Panels')
+        self.assertEqual(response.data['creatives'][0]['title'], 'Panel Creative')
+        self.assertIsNone(response.data['boards'][0]['booking'])
+
+    def test_staff_can_book_and_unbook_a_board(self):
+        self.client.force_authenticate(user=self.staff)
+        book = self.client.post(
+            reverse('icvybz-api:ad-staff-board-booking', kwargs={'slot_name': 'panel_1'}),
+            {'campaign_id': self.campaign.id, 'creative_id': self.creative.id},
+            format='json',
+        )
+        self.assertEqual(book.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(book.data['snapshot']['totals']['vacant_boards'], 11)
+        panel = next(row for row in book.data['snapshot']['boards'] if row['slot_name'] == 'panel_1')
+        self.assertEqual(panel['booking']['creative_title'], 'Panel Creative')
+        self.assertEqual(AdPlacement.objects.filter(board__slot_name='panel_1', is_active=True).count(), 1)
+
+        unbook = self.client.delete(
+            reverse('icvybz-api:ad-staff-board-booking', kwargs={'slot_name': 'panel_1'}),
+        )
+        self.assertEqual(unbook.status_code, status.HTTP_200_OK)
+        self.assertEqual(unbook.data['snapshot']['totals']['vacant_boards'], 12)
+        self.assertFalse(AdPlacement.objects.filter(board__slot_name='panel_1', is_active=True).exists())
+
+    def test_board_booking_serves_all_ad_enabled_seasons(self):
+        from .ad_services import ensure_default_ad_boards
+        ensure_default_ad_boards()
+        board = AdBoard.objects.get(slot_name='panel_4')
+        AdPlacement.objects.create(
+            season=self.season,
+            campaign=self.campaign,
+            creative=self.creative,
+            board=board,
+            slot_name=board.slot_name,
+        )
+
+        other = self.client.get(
+            reverse('icvybz-api:season-ad-placement-list-create', kwargs={'season_id': self.other_season.id}),
+            {'episode': self.other_episode.id},
+        )
+        self.assertEqual(other.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(other.data), 1)
+        self.assertEqual(other.data[0]['slot_name'], 'panel_4')
+        self.assertEqual(other.data[0]['board'], board.id)
+
+        custom = self.client.get(
+            reverse('icvybz-api:season-ad-placement-list-create', kwargs={'season_id': self.custom_season.id}),
+            {'episode': self.custom_episode.id},
+        )
+        self.assertEqual(custom.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(custom.data), 0)
+
+    def test_board_booking_event_is_accepted_on_another_ad_enabled_season(self):
+        from .ad_services import ensure_default_ad_boards
+        ensure_default_ad_boards()
+        board = AdBoard.objects.get(slot_name='panel_5')
+        placement = AdPlacement.objects.create(
+            season=self.season,
+            campaign=self.campaign,
+            creative=self.creative,
+            board=board,
+            slot_name=board.slot_name,
+        )
+        token_response = self.client.get(
+            reverse('icvybz-api:season-ad-placement-list-create', kwargs={'season_id': self.other_season.id}),
+            {'episode': self.other_episode.id},
+        )
+        token = token_response.data[0]['event_token']
+        event = self.client.post(reverse('icvybz-api:ad-event-create'), {
+            'placement': placement.id,
+            'episode': self.other_episode.id,
+            'event_type': 'impression',
+            'session_key': 'board-session',
+            'event_token': token,
+        }, format='json')
+        self.assertEqual(event.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(event.data['created'])
+        self.assertFalse(event.data.get('is_suspicious'))
+
+    def test_non_staff_cannot_book_boards(self):
+        self.client.force_authenticate(user=self.ad_user)
+        response = self.client.post(
+            reverse('icvybz-api:ad-staff-board-booking', kwargs={'slot_name': 'panel_1'}),
+            {'campaign_id': self.campaign.id, 'creative_id': self.creative.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

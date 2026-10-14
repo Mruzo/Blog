@@ -2,19 +2,17 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AdvertiserProfile,
-  AdCampaign,
-  AdCreative,
-  AdReport,
   AdStaffSnapshot,
   apiService
 } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MessagePopup from '../components/MessagePopup';
 
-type AdsTab = 'overview' | 'advertiser' | 'setup' | 'billing';
+type AdsTab = 'overview' | 'boards' | 'advertiser' | 'setup' | 'billing';
 
 const TABS: Array<{ id: AdsTab; label: string; icon: string; needsAdvertiser?: boolean }> = [
   { id: 'overview', label: 'Overview', icon: 'fa-table' },
+  { id: 'boards', label: 'Boards', icon: 'fa-th-large' },
   { id: 'advertiser', label: 'Reporting', icon: 'fa-chart-line', needsAdvertiser: true },
   { id: 'setup', label: 'Setup', icon: 'fa-wrench', needsAdvertiser: true },
   { id: 'billing', label: 'Billing', icon: 'fa-file-invoice-dollar', needsAdvertiser: true },
@@ -116,11 +114,7 @@ const AdvertiserDashboard: React.FC = () => {
     advertiserParam ? Number(advertiserParam) : null
   );
   const [staffProfile, setStaffProfile] = useState<AdvertiserProfile | null>(null);
-  const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
-  const [creatives, setCreatives] = useState<AdCreative[]>([]);
-  const [report, setReport] = useState<AdReport | null>(null);
   const [isLoadingSnapshot, setIsLoadingSnapshot] = useState(true);
-  const [isLoadingAdvertiser, setIsLoadingAdvertiser] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [placementSearch, setPlacementSearch] = useState('');
@@ -160,6 +154,9 @@ const AdvertiserDashboard: React.FC = () => {
     amount: '',
     notes: ''
   });
+  const [boardCampaignId, setBoardCampaignId] = useState('');
+  const [boardCreativeId, setBoardCreativeId] = useState('');
+  const [bookingSlot, setBookingSlot] = useState<string | null>(null);
 
   const selectedAdvertiser = useMemo(
     () => snapshot?.advertisers.find((row) => row.id === selectedAdvertiserId) || null,
@@ -179,15 +176,66 @@ const AdvertiserDashboard: React.FC = () => {
         row.creative_title,
         row.season_label,
         row.episode_scope,
+        row.board_label,
+        row.slot_name,
       ].join(' ').toLowerCase();
       return haystack.includes(query);
     });
   }, [snapshot, placementSearch, statusFilter, liveOnly]);
 
-  const blockedPlacements = useMemo(
-    () => report?.advertiser.go_live_placements?.filter((row) => !row.is_live) || [],
-    [report]
+  const campaigns = useMemo(() => {
+    const rows = snapshot?.campaigns || [];
+    if (!selectedAdvertiserId) return [];
+    return rows.filter((row) => row.advertiser_id === selectedAdvertiserId);
+  }, [snapshot, selectedAdvertiserId]);
+
+  const creatives = useMemo(() => {
+    const rows = snapshot?.creatives || [];
+    if (!selectedAdvertiserId) return [];
+    return rows.filter((row) => row.advertiser_id === selectedAdvertiserId);
+  }, [snapshot, selectedAdvertiserId]);
+
+  const advertiserPlacements = useMemo(
+    () => (snapshot?.placements || []).filter((row) => row.advertiser_id === selectedAdvertiserId),
+    [snapshot, selectedAdvertiserId]
   );
+
+  const blockedPlacements = useMemo(
+    () => advertiserPlacements.filter((row) => !row.is_live),
+    [advertiserPlacements]
+  );
+
+  const reportingCampaigns = useMemo(() => {
+    return campaigns.map((campaign) => {
+      const rows = advertiserPlacements.filter((row) => row.campaign_id === campaign.id);
+      const billboard_loads = rows.reduce((sum, row) => sum + row.billboard_loads, 0);
+      const clicks = rows.reduce((sum, row) => sum + row.clicks, 0);
+      return {
+        id: campaign.id,
+        name: campaign.name,
+        budget_label: campaign.budget_label,
+        billboard_loads,
+        clicks,
+        ctr: billboard_loads ? Math.round((clicks / billboard_loads) * 10000) / 100 : 0,
+      };
+    });
+  }, [campaigns, advertiserPlacements]);
+
+  const advertiserTotals = useMemo(() => {
+    const billboard_loads = reportingCampaigns.reduce((sum, row) => sum + row.billboard_loads, 0);
+    const clicks = reportingCampaigns.reduce((sum, row) => sum + row.clicks, 0);
+    return {
+      billboard_loads,
+      clicks,
+      ctr: billboard_loads ? Math.round((clicks / billboard_loads) * 10000) / 100 : 0,
+    };
+  }, [reportingCampaigns]);
+
+  const boardCreatives = useMemo(() => {
+    if (!boardCampaignId) return creatives;
+    const campaignId = Number(boardCampaignId);
+    return creatives.filter((row) => !row.campaign || row.campaign === campaignId);
+  }, [creatives, boardCampaignId]);
 
   const setTab = useCallback((tab: AdsTab) => {
     setSearchParams((prev) => {
@@ -222,38 +270,12 @@ const AdvertiserDashboard: React.FC = () => {
     }
   }, [selectedAdvertiserId, setSearchParams]);
 
-  const loadAdvertiserData = useCallback(async (advertiserId: number) => {
-    setIsLoadingAdvertiser(true);
-    try {
-      const [reportResult, campaignResult, creativeResult] = await Promise.all([
-        apiService.getAdReport(advertiserId),
-        apiService.getAdCampaigns(advertiserId),
-        apiService.getAdCreatives(advertiserId)
-      ]);
-      setReport(reportResult);
-      setCampaigns(campaignResult);
-      setCreatives(creativeResult);
-      setInvoiceForm((prev) => ({
-        ...prev,
-        campaign_id: prev.campaign_id || (campaignResult[0] ? String(campaignResult[0].id) : '')
-      }));
-    } catch (error) {
-      console.error('Failed to load advertiser data:', error);
-      setMessage('Could not load data for the selected advertiser.');
-    } finally {
-      setIsLoadingAdvertiser(false);
-    }
-  }, []);
-
   const refreshAll = useCallback(async () => {
     await loadSnapshot();
-    if (selectedAdvertiserId) {
-      await loadAdvertiserData(selectedAdvertiserId);
-    }
-  }, [loadSnapshot, loadAdvertiserData, selectedAdvertiserId]);
+  }, [loadSnapshot]);
 
   useEffect(() => {
-    loadSnapshot();
+    void loadSnapshot();
     apiService.getAdvertiserProfile().then((profile) => {
       if (profile) {
         setStaffProfile(profile);
@@ -269,10 +291,26 @@ const AdvertiserDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedAdvertiserId) {
-      loadAdvertiserData(selectedAdvertiserId);
-    }
-  }, [selectedAdvertiserId, loadAdvertiserData]);
+    const firstCampaign = campaigns[0];
+    setBoardCampaignId((prev) => (
+      prev && campaigns.some((row) => String(row.id) === prev) ? prev : (firstCampaign ? String(firstCampaign.id) : '')
+    ));
+    setInvoiceForm((prev) => ({
+      ...prev,
+      campaign_id: prev.campaign_id && campaigns.some((row) => String(row.id) === prev.campaign_id)
+        ? prev.campaign_id
+        : (firstCampaign ? String(firstCampaign.id) : ''),
+    }));
+  }, [campaigns]);
+
+  useEffect(() => {
+    const firstCreative = boardCreatives[0];
+    setBoardCreativeId((prev) => (
+      prev && boardCreatives.some((row) => String(row.id) === prev)
+        ? prev
+        : (firstCreative ? String(firstCreative.id) : '')
+    ));
+  }, [boardCreatives]);
 
   const selectAdvertiser = (advertiserId: number | null, tab?: AdsTab) => {
     setSelectedAdvertiserId(advertiserId);
@@ -410,6 +448,43 @@ const AdvertiserDashboard: React.FC = () => {
     }
   };
 
+  const bookBoard = async (slotName: string) => {
+    if (!boardCampaignId || !boardCreativeId) {
+      setMessage('Select a campaign and creative before booking a board.');
+      return;
+    }
+    setBookingSlot(slotName);
+    setMessage('');
+    try {
+      const result = await apiService.bookAdBoard(slotName, {
+        campaign_id: Number(boardCampaignId),
+        creative_id: Number(boardCreativeId),
+      });
+      setSnapshot(result.snapshot);
+      setMessage(`Booked ${slotName.replace('_', ' ')}.`);
+    } catch (error) {
+      console.error('Failed to book board:', error);
+      setMessage('Could not book that board.');
+    } finally {
+      setBookingSlot(null);
+    }
+  };
+
+  const unbookBoard = async (slotName: string) => {
+    setBookingSlot(slotName);
+    setMessage('');
+    try {
+      const result = await apiService.unbookAdBoard(slotName);
+      setSnapshot(result.snapshot);
+      setMessage(`Unbooked ${slotName.replace('_', ' ')}.`);
+    } catch (error) {
+      console.error('Failed to unbook board:', error);
+      setMessage('Could not unbook that board.');
+    } finally {
+      setBookingSlot(null);
+    }
+  };
+
   if (isLoadingSnapshot && !snapshot) {
     return (
       <div className="product-landing">
@@ -422,7 +497,6 @@ const AdvertiserDashboard: React.FC = () => {
     );
   }
 
-  const advertiserTotals = report?.advertiser.totals;
   const currentTab = TABS.find((tab) => tab.id === activeTab) || TABS[0];
   const tabNeedsAdvertiser = Boolean(currentTab.needsAdvertiser && !selectedAdvertiserId);
 
@@ -459,6 +533,10 @@ const AdvertiserDashboard: React.FC = () => {
                 <div className="ads-kpi">
                   <div className="ads-kpi__value">{snapshot.totals.advertisers}</div>
                   <div className="ads-kpi__label">Advertisers</div>
+                </div>
+                <div className="ads-kpi">
+                  <div className="ads-kpi__value">{snapshot.totals.vacant_boards ?? 0}</div>
+                  <div className="ads-kpi__label">Vacant boards</div>
                 </div>
                 <div className="ads-kpi">
                   <div className="ads-kpi__value">{snapshot.placements.filter((row) => !row.is_live).length}</div>
@@ -504,13 +582,13 @@ const AdvertiserDashboard: React.FC = () => {
                 type="button"
                 className="btn btn-outline-secondary btn-sm"
                 onClick={() => refreshAll()}
-                disabled={isLoadingSnapshot || isLoadingAdvertiser}
+                disabled={isLoadingSnapshot}
                 title="Refresh data"
               >
-                <i className={`fas fa-sync-alt ${isLoadingSnapshot || isLoadingAdvertiser ? 'fa-spin' : ''}`} aria-hidden />
+                <i className={`fas fa-sync-alt ${isLoadingSnapshot ? 'fa-spin' : ''}`} aria-hidden />
               </button>
               <a
-                href="/admin/icvybz/adplacement/"
+                href="/uno/icvybz/adplacement/"
                 target="_blank"
                 rel="noreferrer"
                 className="btn btn-outline-secondary btn-sm"
@@ -533,13 +611,7 @@ const AdvertiserDashboard: React.FC = () => {
 
       <section className="product-landing__section pt-3 pb-5">
         <div className="product-landing__container">
-          {isLoadingAdvertiser && activeTab !== 'overview' ? (
-            <div className="py-4 text-center">
-              <LoadingSpinner message="Loading advertiser data…" />
-            </div>
-          ) : null}
-
-          {!isLoadingAdvertiser && tabNeedsAdvertiser ? (
+          {tabNeedsAdvertiser ? (
             <AdvertiserRequired onGoOverview={() => setTab('overview')} />
           ) : null}
 
@@ -597,6 +669,7 @@ const AdvertiserDashboard: React.FC = () => {
                           <th>Status</th>
                           <th>Advertiser</th>
                           <th>Campaign</th>
+                          <th className="d-none d-lg-table-cell">Board</th>
                           <th className="d-none d-lg-table-cell">Season</th>
                           <th>Loads / clicks</th>
                           <th className="d-none d-md-table-cell">Go-live</th>
@@ -629,7 +702,10 @@ const AdvertiserDashboard: React.FC = () => {
                               <div className="small text-muted">{row.creative_title}</div>
                             </td>
                             <td className="d-none d-lg-table-cell">
-                              <div className="small">{row.season_label}</div>
+                              {row.board_label || row.slot_name}
+                            </td>
+                            <td className="d-none d-lg-table-cell">
+                              <div className="small">{row.board_id ? 'All ad-enabled scenes' : row.season_label}</div>
                               <div className="small text-muted">{row.episode_scope}</div>
                             </td>
                             <td>{row.billboard_loads} / {row.clicks}</td>
@@ -643,6 +719,109 @@ const AdvertiserDashboard: React.FC = () => {
                   </div>
                 ) : (
                   <p className="text-muted mb-0">No placements match your filters.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!tabNeedsAdvertiser && activeTab === 'boards' && (
+            <div className="my-studio__panel">
+              <div className="my-studio__panelHead">
+                <h2 className="my-studio__panelTitle">
+                  <i className="fas fa-th-large" aria-hidden />
+                  <span className="my-studio__panelTitleText">Scene boards</span>
+                </h2>
+              </div>
+              <div className="my-studio__panelBody">
+                <p className="small text-muted mb-3">
+                  Book a campaign onto a GLB panel. Board bookings run on every ad-enabled scene
+                  (v3.2 billboard and v3.3 panels 1–12). Campaign dates are the flight window.
+                </p>
+                <div className="row g-2 mb-3 align-items-end">
+                  <div className="col-md-5">
+                    <label className="form-label" htmlFor="ads-board-campaign">Campaign</label>
+                    <select
+                      id="ads-board-campaign"
+                      className="form-select form-select-sm"
+                      value={boardCampaignId}
+                      onChange={(event) => {
+                        setBoardCampaignId(event.target.value);
+                        setBoardCreativeId('');
+                      }}
+                      disabled={!selectedAdvertiserId}
+                    >
+                      <option value="">{selectedAdvertiserId ? 'Select campaign…' : 'Select an advertiser first…'}</option>
+                      {campaigns.map((campaign) => (
+                        <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-md-5">
+                    <label className="form-label" htmlFor="ads-board-creative">Creative</label>
+                    <select
+                      id="ads-board-creative"
+                      className="form-select form-select-sm"
+                      value={boardCreativeId}
+                      onChange={(event) => setBoardCreativeId(event.target.value)}
+                      disabled={!selectedAdvertiserId}
+                    >
+                      <option value="">Select creative…</option>
+                      {boardCreatives.map((creative) => (
+                        <option key={creative.id} value={creative.id}>
+                          {creative.title} ({creative.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {snapshot?.boards?.length ? (
+                  <div className="ads-board-grid">
+                    {snapshot.boards.map((board) => {
+                      const booking = board.booking;
+                      const isBusy = bookingSlot === board.slot_name;
+                      return (
+                        <article key={board.slot_name} className={`ads-board-card ${booking ? '' : 'is-vacant'}`}>
+                          <div className="ads-board-card__head">
+                            <h3 className="ads-board-card__title">{board.label}</h3>
+                            <span className={`badge ${statusBadgeClass(board.status, board.is_live)} text-uppercase`}>
+                              {booking ? statusLabel(board.status) : 'Vacant'}
+                            </span>
+                          </div>
+                          <p className="small text-muted mb-2">{board.node_name} · {board.slot_name}</p>
+                          {booking ? (
+                            <>
+                              <div className="fw-semibold">{booking.advertiser_name}</div>
+                              <div className="small">{booking.campaign_name}</div>
+                              <div className="small text-muted mb-2">{booking.creative_title}</div>
+                              <div className="small text-muted mb-3">{booking.billboard_loads} loads · {booking.clicks} clicks</div>
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary btn-sm"
+                                onClick={() => unbookBoard(board.slot_name)}
+                                disabled={isBusy}
+                              >
+                                {isBusy ? 'Updating…' : 'Unbook'}
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="small text-muted mb-3">Open inventory. Book with the campaign and creative above.</p>
+                              <button
+                                type="button"
+                                className="btn btn-dark btn-sm"
+                                onClick={() => bookBoard(board.slot_name)}
+                                disabled={isBusy || !selectedAdvertiserId}
+                              >
+                                {isBusy ? 'Booking…' : 'Book board'}
+                              </button>
+                            </>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-muted mb-0">Board inventory is not available yet.</p>
                 )}
               </div>
             </div>
@@ -678,9 +857,9 @@ const AdvertiserDashboard: React.FC = () => {
                     Billboard loads count when a creative is applied to the in-scene billboard mesh.
                   </p>
                   <h3 className="product-landing__h3">Campaigns</h3>
-                  {report?.advertiser.campaigns.length ? (
+                  {reportingCampaigns.length ? (
                     <div className="list-group mb-4">
-                      {report.advertiser.campaigns.map((campaign) => (
+                      {reportingCampaigns.map((campaign) => (
                         <div className="list-group-item" key={campaign.id}>
                           <div className="fw-bold">{campaign.name}</div>
                           <div className="small text-muted">
@@ -691,9 +870,11 @@ const AdvertiserDashboard: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted">No campaign reach yet.</p>
+                    <p className="text-muted">No campaigns yet.</p>
                   )}
-                  {blockedPlacements.length ? (
+                  {advertiserPlacements.length === 0 ? (
+                    <p className="text-muted mb-0">No placements yet.</p>
+                  ) : blockedPlacements.length ? (
                     <>
                       <h3 className="product-landing__h3">Needs attention ({blockedPlacements.length})</h3>
                       <div className="list-group">

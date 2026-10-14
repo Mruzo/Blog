@@ -557,6 +557,29 @@ class AdCreative(models.Model):
         return self.status == 'approved' and self.advertiser.status == 'approved'
 
 
+class AdBoard(models.Model):
+    """A physical ad surface in the shared platform GLB (panel 1–12, plus later boards)."""
+
+    slot_name = models.CharField(max_length=64, unique=True)
+    label = models.CharField(max_length=80)
+    node_name = models.CharField(
+        max_length=80,
+        help_text="Exact or prefix GLB node name, e.g. 'panel 1'.",
+    )
+    sort_order = models.PositiveIntegerField(default=0, db_index=True)
+    is_active = models.BooleanField(default=True)
+    notes = models.CharField(max_length=220, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'icvybz'
+        ordering = ['sort_order', 'slot_name']
+
+    def __str__(self):
+        return self.label
+
+
 class AdPlacement(models.Model):
     season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='ad_placements')
     episode = models.ForeignKey(
@@ -570,6 +593,14 @@ class AdPlacement(models.Model):
     )
     campaign = models.ForeignKey(AdCampaign, on_delete=models.CASCADE, related_name='placements')
     creative = models.ForeignKey(AdCreative, on_delete=models.CASCADE, related_name='placements')
+    board = models.ForeignKey(
+        AdBoard,
+        on_delete=models.SET_NULL,
+        related_name='placements',
+        null=True,
+        blank=True,
+        help_text="When set, this booking occupies that GLB panel on every ad-enabled scene.",
+    )
     name = models.CharField(max_length=160, blank=True)
     slot_name = models.CharField(max_length=64, default='ed_bb', db_index=True)
     position_x = models.FloatField(default=0.0)
@@ -592,10 +623,18 @@ class AdPlacement(models.Model):
         indexes = [
             models.Index(fields=['season', 'episode', 'is_active']),
             models.Index(fields=['campaign', 'is_active']),
+            models.Index(fields=['board', 'is_active']),
         ]
+
+    def save(self, *args, **kwargs):
+        if self.board_id and self.board:
+            self.slot_name = self.board.slot_name
+        super().save(*args, **kwargs)
 
     def __str__(self):
         label = self.name or self.creative.title
+        if self.board_id:
+            return f"{label} on {self.board}"
         return f"{label} on {self.season}"
 
     @property
