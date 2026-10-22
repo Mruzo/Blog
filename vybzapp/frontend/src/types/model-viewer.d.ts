@@ -21,6 +21,8 @@ declare namespace JSX {
       'camera-target'?: string;
       'field-of-view'?: string;
       'camera-controls'?: boolean;
+      'disable-zoom'?: boolean;
+      'disable-pan'?: boolean;
       children?: React.ReactNode;
       onLoad?: () => void;
       onCameraChange?: () => void;
@@ -52,6 +54,8 @@ declare global {
         'camera-target'?: string;
         'field-of-view'?: string;
         'camera-controls'?: boolean;
+        'disable-zoom'?: boolean;
+        'disable-pan'?: boolean;
         children?: React.ReactNode;
         onLoad?: () => void;
         onCameraChange?: () => void;

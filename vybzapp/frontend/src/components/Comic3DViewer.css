@@ -650,8 +650,8 @@ body.comic3d-fullscreen-active {
   height: 100%;
 }
 
-/* Animation for smooth transitions — exclude dialogue overlay and fullscreen stage */
-.comic-3d-viewer *:not(.comic3d-dialogue-overlay):not(.comic3d-dialogue-overlay *):not(.comic3d-fullscreen):not(.comic3d-fullscreen *) {
+/* Animation for smooth transitions — exclude dialogue overlay, ad sheet, and fullscreen stage */
+.comic-3d-viewer *:not(.comic3d-dialogue-overlay):not(.comic3d-dialogue-overlay *):not(.ad-visit-sheet):not(.ad-visit-sheet *):not(.comic3d-fullscreen):not(.comic3d-fullscreen *) {
   transition: all 0.3s ease;
 }
 
@@ -752,7 +752,7 @@ body.comic3d-fullscreen-active {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-  .comic-3d-viewer *:not(.comic3d-dialogue-overlay):not(.comic3d-dialogue-overlay *):not(.comic3d-fullscreen):not(.comic3d-fullscreen *) {
+  .comic-3d-viewer *:not(.comic3d-dialogue-overlay):not(.comic3d-dialogue-overlay *):not(.ad-visit-sheet):not(.ad-visit-sheet *):not(.comic3d-fullscreen):not(.comic3d-fullscreen *) {
     transition: none;
   }
   
@@ -967,7 +967,10 @@ body.comic3d-fullscreen-active {
   .story-preview-editor.is-editing .model-container {
     height: 420px;
   }
+}
 
+/* Tablet and up: same camera controls as desktop. Phone compact stays ≤600px. */
+@media (min-width: 601px) {
   .comic3d-mode-toggle {
     max-width: 56rem;
     margin-left: auto;
@@ -1330,4 +1333,193 @@ input[type="range"].modern-slider:focus {
     width: 16px;
     height: 16px;
   }
+}
+
+/* Ad click interstitial: brief info before leaving the story.
+ * No transform/transition here — those composite over model-viewer and flicker on phones. */
+.comic-3d-viewer .ad-visit-sheet,
+.comic-3d-viewer .ad-visit-sheet * {
+  transition: none;
+}
+
+.ad-visit-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.ad-visit-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  /* Painted layer so Firefox does not let the WebGL canvas steal hits. */
+  background: rgba(8, 10, 18, 0.36);
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.ad-visit-sheet__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-height: min(46%, 18rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.5rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom, 0));
+  border-radius: 16px 16px 0 0;
+  background: #fff;
+  isolation: isolate;
+  box-shadow: 0 -10px 32px rgba(15, 23, 42, 0.18);
+  font-family: var(--font-primary);
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.comic3d-fullscreen .ad-visit-sheet__panel {
+  background: #111318;
+  color: #f8fafc;
+  box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.45);
+}
+
+.ad-visit-sheet__handle {
+  width: 2.25rem;
+  height: 0.28rem;
+  margin: 0 auto 0.7rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.comic3d-fullscreen .ad-visit-sheet__handle {
+  background: rgba(248, 250, 252, 0.28);
+}
+
+.ad-visit-sheet__body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.ad-visit-sheet__thumbWrap {
+  flex: 0 0 4.25rem;
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f3f4f6;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.comic3d-fullscreen .ad-visit-sheet__thumbWrap {
+  background: #1c1f27;
+  border-color: rgba(248, 250, 252, 0.12);
+}
+
+.ad-visit-sheet__thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.ad-visit-sheet__copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ad-visit-sheet__eyebrow {
+  margin: 0 0 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.comic3d-fullscreen .ad-visit-sheet__eyebrow {
+  color: rgba(248, 250, 252, 0.62);
+}
+
+.ad-visit-sheet__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #111827;
+}
+
+.comic3d-fullscreen .ad-visit-sheet__title {
+  color: #f8fafc;
+}
+
+.ad-visit-sheet__advertiser,
+.ad-visit-sheet__desc,
+.ad-visit-sheet__leave {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #4b5563;
+}
+
+.ad-visit-sheet__advertiser {
+  font-weight: 600;
+  color: #374151;
+}
+
+.ad-visit-sheet__leave {
+  color: #6b7280;
+}
+
+.comic3d-fullscreen .ad-visit-sheet__advertiser {
+  color: rgba(248, 250, 252, 0.88);
+}
+
+.comic3d-fullscreen .ad-visit-sheet__desc,
+.comic3d-fullscreen .ad-visit-sheet__leave {
+  color: rgba(248, 250, 252, 0.68);
+}
+
+.ad-visit-sheet__actions {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.95rem;
+}
+
+.ad-visit-sheet__btn {
+  flex: 1 1 0;
+  min-height: 2.5rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.ad-visit-sheet__actions .stories-landing__btnPrimary.ad-visit-sheet__btn,
+.ad-visit-sheet__actions .product-landing__ctaGhost.ad-visit-sheet__btn {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.ad-visit-sheet__actions .stories-landing__btnPrimary.ad-visit-sheet__btn:hover,
+.ad-visit-sheet__actions .stories-landing__btnPrimary.ad-visit-sheet__btn:focus,
+.ad-visit-sheet__actions .stories-landing__btnPrimary.ad-visit-sheet__btn:focus-visible,
+.ad-visit-sheet__actions .stories-landing__btnPrimary.ad-visit-sheet__btn:active,
+.ad-visit-sheet__actions .product-landing__ctaGhost.ad-visit-sheet__btn:hover,
+.ad-visit-sheet__actions .product-landing__ctaGhost.ad-visit-sheet__btn:focus,
+.ad-visit-sheet__actions .product-landing__ctaGhost.ad-visit-sheet__btn:focus-visible,
+.ad-visit-sheet__actions .product-landing__ctaGhost.ad-visit-sheet__btn:active {
+  transform: none;
+}
+
+.comic3d-fullscreen .ad-visit-sheet__actions .product-landing__ctaGhost.ad-visit-sheet__btn {
+  background: transparent !important;
+  color: #f8fafc;
+  border-color: rgba(248, 250, 252, 0.28);
 }

@@ -175,7 +175,8 @@ function moderationLabel(status: string | undefined): string {
 
 const MyStudio: React.FC = () => {
   const { stories, myStudio, loadStories, loadMyStudio, isLoading, logout: logoutFromContext, currentUser } = useApi();
-  const canAccessAds = Boolean(currentUser?.is_staff || currentUser?.is_superuser);
+  // Ads management is parked for now — keep the staff route, hide the entry.
+  // const canAccessAds = Boolean(currentUser?.is_staff || currentUser?.is_superuser);
   const navigate = useNavigate();
   const location = useLocation();
   const { id: workspaceIdParam } = useParams<{ id?: string }>();
@@ -951,6 +952,7 @@ const MyStudio: React.FC = () => {
                     Edit
                   </Link>
                 )}
+                {/* Ads button hidden until the ads workflow is ready.
                 {canAccessAds && (
                   <Link
                     to="/immersivecomics/ads/"
@@ -961,6 +963,7 @@ const MyStudio: React.FC = () => {
                     Ads
                   </Link>
                 )}
+                */}
                 {currentUser && (
                   <button
                     type="button"

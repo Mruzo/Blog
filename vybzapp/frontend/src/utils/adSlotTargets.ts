@@ -213,6 +213,23 @@ export function containDrawRect(
   return { x: (safeFrameWidth - width) / 2, y: 0, width, height };
 }
 
+/** Fill the panel width and vertically center. Tall creatives crop top/bottom. */
+export function widthFitDrawRect(
+  imageWidth: number,
+  imageHeight: number,
+  frameWidth: number,
+  frameHeight: number,
+): { x: number; y: number; width: number; height: number } {
+  const safeImageWidth = imageWidth || 1;
+  const safeImageHeight = imageHeight || 1;
+  const safeFrameWidth = frameWidth || 1;
+  const safeFrameHeight = frameHeight || 1;
+  const imageAspect = safeImageWidth / safeImageHeight;
+  const width = safeFrameWidth;
+  const height = width / imageAspect;
+  return { x: 0, y: (safeFrameHeight - height) / 2, width, height };
+}
+
 export type PanelLocalBounds = {
   minX: number;
   maxX: number;
@@ -310,13 +327,17 @@ export function getContainedImageLocalRect(
 ): AdImageHitRect {
   const visualAspect = panelAspect && panelAspect > 0 ? panelAspect : bounds.width / bounds.height;
   const visualHeight = bounds.width / visualAspect;
-  const draw = containDrawRect(imageAspect, 1, bounds.width, visualHeight);
+  const draw = widthFitDrawRect(imageAspect, 1, bounds.width, visualHeight);
   const yScale = bounds.height / visualHeight;
+  const minX = bounds.minX + draw.x;
+  const maxX = bounds.minX + draw.x + draw.width;
+  const minY = bounds.maxY - (draw.y + draw.height) * yScale;
+  const maxY = bounds.maxY - draw.y * yScale;
   return {
-    minX: bounds.minX + draw.x,
-    maxX: bounds.minX + draw.x + draw.width,
-    minY: bounds.maxY - (draw.y + draw.height) * yScale,
-    maxY: bounds.maxY - draw.y * yScale,
+    minX: Math.max(bounds.minX, Math.min(bounds.maxX, minX)),
+    maxX: Math.max(bounds.minX, Math.min(bounds.maxX, maxX)),
+    minY: Math.max(bounds.minY, Math.min(bounds.maxY, minY)),
+    maxY: Math.max(bounds.minY, Math.min(bounds.maxY, maxY)),
   };
 }
 
@@ -478,7 +499,7 @@ export async function letterboxImageForPanel(
   }
   context.fillStyle = fillColor;
   context.fillRect(0, 0, frameWidth, frameHeight);
-  const rect = containDrawRect(imageWidth, imageHeight, frameWidth, frameHeight);
+  const rect = widthFitDrawRect(imageWidth, imageHeight, frameWidth, frameHeight);
   context.drawImage(bitmap, rect.x, rect.y, rect.width, rect.height);
   bitmap.close();
   const output = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));

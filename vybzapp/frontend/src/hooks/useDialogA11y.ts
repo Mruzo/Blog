@@ -47,7 +47,7 @@ export function useDialogA11y(
       const focusable = getFocusable(dialogRef.current);
       if (focusable.length === 0) {
         event.preventDefault();
-        dialogRef.current.focus();
+        dialogRef.current.focus({ preventScroll: true });
         return;
       }
 
@@ -58,11 +58,11 @@ export function useDialogA11y(
       if (event.shiftKey) {
         if (active === first || !dialogRef.current.contains(active)) {
           event.preventDefault();
-          last.focus();
+          last.focus({ preventScroll: true });
         }
       } else if (active === last) {
         event.preventDefault();
-        first.focus();
+        first.focus({ preventScroll: true });
       }
     },
     [open]
@@ -76,13 +76,12 @@ export function useDialogA11y(
     const focusInitial = () => {
       const preferred = initialFocusRef?.current;
       if (preferred) {
-        preferred.focus();
+        preferred.focus({ preventScroll: true });
         return;
       }
       const panel = dialogRef.current;
       if (!panel) return;
-      const focusable = getFocusable(panel);
-      (focusable[0] || panel).focus();
+      panel.focus({ preventScroll: true });
     };
 
     // Defer so the dialog DOM is mounted
@@ -92,7 +91,7 @@ export function useDialogA11y(
     return () => {
       window.cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleKeyDown, true);
-      previouslyFocused.current?.focus?.();
+      previouslyFocused.current?.focus?.({ preventScroll: true });
     };
   }, [open, handleKeyDown, initialFocusRef]);
 

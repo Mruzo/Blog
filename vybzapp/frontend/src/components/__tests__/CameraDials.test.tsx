@@ -6,6 +6,7 @@ import CameraDials, {
   DEFAULT_CAMERA_TARGET,
   formatCameraOrbit,
   formatCameraTarget,
+  lookAroundOrbitLimits,
   parseCameraOrbit,
   parseCameraTarget,
 } from '../CameraDials';
@@ -132,5 +133,16 @@ describe('CameraDials', () => {
     expect(parseCameraTarget('1.1m 2m -0.4m')).toEqual({ x: 1.1, y: 2, z: -0.4 });
     expect(formatCameraOrbit({ azimuth: 45, polar: 60, radius: 3.5 })).toBe('45deg 60deg 3.5m');
     expect(formatCameraTarget({ x: 1.1, y: 2, z: -0.4 })).toBe('1.1m 2m -0.4m');
+  });
+
+  it('builds a 10 degree look-around window around the current shot', () => {
+    expect(lookAroundOrbitLimits({ azimuth: 20, polar: 75, radius: 4 })).toEqual({
+      min: '10deg 65deg 4m',
+      max: '30deg 85deg 4m',
+    });
+    expect(lookAroundOrbitLimits({ azimuth: 0, polar: 5, radius: 3 })).toEqual({
+      min: '-10deg 0deg 3m',
+      max: '10deg 15deg 3m',
+    });
   });
 });

@@ -33,5 +33,5 @@ jest.mock('./components/Layout', () => ({ children }: { children: React.ReactNod
 test('renders home page headline', () => {
   window.history.pushState({}, '', '/');
   render(<App />);
-  expect(screen.getAllByText(/IMMERSIVE/i).length).toBeGreaterThan(0);
+  expect(screen.getByRole('heading', { level: 1, name: /what do stop signs talk about/i })).toBeInTheDocument();
 });

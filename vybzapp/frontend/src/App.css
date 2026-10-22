@@ -98,7 +98,7 @@ body {
 }
 
 .home-page__heroInner {
-  max-width: 40rem;
+  max-width: 44rem;
   margin: 0 auto;
 }
 
@@ -117,6 +117,13 @@ body {
   margin-top: 0;
   margin-left: 0;
   margin-right: 0;
+}
+
+.home-page__headline.home-page__headline--question {
+  font-size: clamp(2rem, 6.5vw, 3.5rem);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
 }
 
 .home-page__headlineMeet {
@@ -171,6 +178,7 @@ body {
   line-height: 1.6;
   color: rgba(65, 64, 66, 0.88);
   margin: 0;
+  text-align: center;
   white-space: pre-wrap;
 }
 
@@ -5516,6 +5524,10 @@ h2 {
   
   .landtext {
     font-size: 2.5rem;
+  }
+
+  .home-page__headline.home-page__headline--question {
+    font-size: clamp(1.85rem, 8vw, 2.5rem);
   }
   
   .subtext {

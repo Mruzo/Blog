@@ -1,4 +1,4 @@
-import { applyAdImageToMaterial, applyFullBleedPanelUVs, containDrawRect, discoverAdSlotTargets, getContainedImageLocalRect, getPanelVisualAspect, isPointOnAdImage, panelSlotFromName, pickPanelMeshForHit, slotFromSurface, toViewerTextureUrl } from '../adSlotTargets';
+import { applyAdImageToMaterial, applyFullBleedPanelUVs, containDrawRect, discoverAdSlotTargets, getContainedImageLocalRect, getPanelVisualAspect, isPointOnAdImage, panelSlotFromName, pickPanelMeshForHit, slotFromSurface, toViewerTextureUrl, widthFitDrawRect } from '../adSlotTargets';
 
 describe('panelSlotFromName', () => {
   it('maps GLB panel node names to slot ids', () => {
@@ -133,20 +133,49 @@ describe('containDrawRect', () => {
   });
 });
 
+describe('widthFitDrawRect', () => {
+  it('fills the frame width and centers a wide image vertically', () => {
+    expect(widthFitDrawRect(200, 100, 200, 200)).toEqual({
+      x: 0,
+      y: 50,
+      width: 200,
+      height: 100,
+    });
+  });
+
+  it('fills the frame width and crops a tall image top and bottom', () => {
+    expect(widthFitDrawRect(100, 200, 200, 100)).toEqual({
+      x: 0,
+      y: -150,
+      width: 200,
+      height: 400,
+    });
+  });
+
+  it('fills a 2:1 panel with a square creative and centers the crop', () => {
+    expect(widthFitDrawRect(1080, 1080, 2048, 1024)).toEqual({
+      x: 0,
+      y: -512,
+      width: 2048,
+      height: 2048,
+    });
+  });
+});
+
 describe('ad image hit rects', () => {
   const bounds = { minX: -1.9, maxX: 1.9, minY: -0.95, maxY: 0.95, width: 3.8, height: 1.9 };
 
-  it('centers a square creative on a 2:1 panel', () => {
+  it('fills a 2:1 panel with a square creative and crops the height', () => {
     const rect = getContainedImageLocalRect(bounds, 1);
-    expect(rect.minX).toBeCloseTo(-0.95);
-    expect(rect.maxX).toBeCloseTo(0.95);
+    expect(rect.minX).toBeCloseTo(-1.9);
+    expect(rect.maxX).toBeCloseTo(1.9);
     expect(rect.minY).toBeCloseTo(-0.95);
     expect(rect.maxY).toBeCloseTo(0.95);
     expect(isPointOnAdImage({ x: 0, y: 0, z: 0 }, rect)).toBe(true);
-    expect(isPointOnAdImage({ x: -1.6, y: 0, z: 0 }, rect)).toBe(false);
+    expect(isPointOnAdImage({ x: -1.6, y: 0, z: 0 }, rect)).toBe(true);
   });
 
-  it('keeps a wide creative letterboxed so side clicks miss', () => {
+  it('keeps a wide creative letterboxed so top and bottom clicks miss', () => {
     const rect = getContainedImageLocalRect(bounds, 3);
     expect(isPointOnAdImage({ x: 0, y: 0, z: 0 }, rect)).toBe(true);
     expect(isPointOnAdImage({ x: 0, y: 0.9, z: 0 }, rect)).toBe(false);

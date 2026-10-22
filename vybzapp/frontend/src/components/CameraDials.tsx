@@ -21,6 +21,29 @@ export type CameraDialValues = {
 
 export const DEFAULT_CAMERA_ORBIT: CameraOrbit = { azimuth: 0, polar: 75, radius: 3 };
 export const DEFAULT_CAMERA_TARGET: CameraTarget = { x: 0, y: 1.6, z: 0 };
+export const SCENE_LOOK_AROUND_DEGREES = 10;
+export const UNBOUNDED_MIN_CAMERA_ORBIT = 'auto auto 0.1m';
+export const UNBOUNDED_MAX_CAMERA_ORBIT = 'auto auto 30m';
+
+export function lookAroundOrbitLimits(
+  orbit: CameraOrbit,
+  degrees: number = SCENE_LOOK_AROUND_DEGREES,
+): { min: string; max: string } {
+  const span = Math.max(0, degrees);
+  const radius = Math.max(0.1, orbit.radius);
+  return {
+    min: formatCameraOrbit({
+      azimuth: orbit.azimuth - span,
+      polar: Math.max(0, orbit.polar - span),
+      radius,
+    }),
+    max: formatCameraOrbit({
+      azimuth: orbit.azimuth + span,
+      polar: Math.min(180, orbit.polar + span),
+      radius,
+    }),
+  };
+}
 
 export function formatCameraOrbit(orbit: CameraOrbit): string {
   return `${orbit.azimuth}deg ${orbit.polar}deg ${orbit.radius}m`;

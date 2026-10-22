@@ -47,20 +47,10 @@ const Home: React.FC = () => {
 
       <header className="home-page__hero">
         <div className="home-page__heroInner">
-          <p className="home-page__eyebrow">Direct and Share</p>
-          <h1 className="home-page__headline landtext mb-3 land-border">
-            <span className="d-block">IMMERSIVE</span>
-            {/* <span className="home-page__headlineMeet d-block">meets</span> */}
-            <span className="d-block">EXPERIENCES</span>
+          <p className="home-page__eyebrow">Question</p>
+          <h1 className="home-page__headline home-page__headline--question landtext mb-3 land-border">
+            If they could, what would Stop Signs talk about?
           </h1>
-          <p className="home-page__tagline">
-            {/* Build and share immersive 3D comics.
-            
-            <br /> */}
-            Create your own 3D story with our innovative tools.
-            <br />
-            Easily test your story concepts.
-          </p>
         </div>
       </header>
 
@@ -70,9 +60,9 @@ const Home: React.FC = () => {
         </h2>
         <div className="home-page__aboutCard">
           <p>
-            Justvybz is your studio for storytellers. We believe the medium for storytelling must continue to evolve like the stories themselves.
-            <br /> <br />
-            Our platform empowers storytellers to create immersive tales without needing to draw.
+            A storyteller's studio for directing and sharing immersive stories. <br/> The medium of storytelling must continue to evolve. Justvybz gives you the opportunity to experience this evolution hands-on.
+            <br />
+            
           </p>
         </div>
       </section>
@@ -104,7 +94,7 @@ const Home: React.FC = () => {
             <div className="home-page__featureIcon" aria-hidden>
               <i className="fas fa-users" />
             </div>
-            <h3 className="home-page__featureTitle">Share &amp; collaborate</h3>
+            <h3 className="home-page__featureTitle">Share &amp; Collaborate</h3>
             <p className="home-page__featureBody">
               Share your work and invite collaborators to build immersive stories with you.
             </p>

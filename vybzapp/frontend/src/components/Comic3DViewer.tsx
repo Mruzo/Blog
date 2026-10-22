@@ -9,8 +9,11 @@ import CameraDials, {
   DEFAULT_CAMERA_TARGET,
   formatCameraOrbit,
   formatCameraTarget,
+  lookAroundOrbitLimits,
   parseCameraOrbit,
   parseCameraTarget,
+  UNBOUNDED_MAX_CAMERA_ORBIT,
+  UNBOUNDED_MIN_CAMERA_ORBIT,
 } from './CameraDials';
 import DialoguePlaybackBar, {
   PLAYBACK_SPEED_1X_MS,
@@ -43,6 +46,7 @@ import {
   normalizeCameraTransition,
   shouldSnapCamera,
 } from '../utils/cameraTransition';
+import AdVisitSheet from './AdVisitSheet';
 import './Comic3DViewer.css';
 
 // Extend JSX.IntrinsicElements for model-viewer
@@ -120,6 +124,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const [dialTarget, setDialTarget] = useState<CameraTarget>({ ...DEFAULT_CAMERA_TARGET });
   const [isWaitingForDialogues, setIsWaitingForDialogues] = useState(false);
   const [isImmersiveFullscreen, setIsImmersiveFullscreen] = useState(false);
+  const [pendingAdVisit, setPendingAdVisit] = useState<AdPlacement | null>(null);
   const trackedEpisodesRef = useRef<Set<number>>(new Set()); // Track which episodes have had views incremented
   const trackedAdEventsRef = useRef<Set<string>>(new Set());
   const activeAdPlacementsRef = useRef<Map<string, AdPlacement>>(new Map());
@@ -128,6 +133,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
   const adImageHitRectsRef = useRef<Map<string, AdImageHitRect>>(new Map());
   const adSlotTargetsRef = useRef<Record<string, AdSlotTarget>>({ ...STATIC_AD_SLOT_TARGETS });
   const lastAdClickAtRef = useRef<number>(0);
+  const adVisitOpenedAtRef = useRef<number>(0);
+  const openAdVisitSheetRef = useRef<(placement: AdPlacement) => void>(() => {});
 
   const refreshAdSlotTargets = useCallback(() => {
     const modelViewer = modelViewerRef.current;
@@ -151,6 +158,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       return generated;
     })()
   );
+  const lookAroundLimitTimerRef = useRef<number | null>(null);
   
   // Filter dialogues for selected episode - memoize to prevent infinite loops
   const episodeDialogues = useMemo(() => {
@@ -219,6 +227,26 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     applyHotspotOcclusion(modelViewer, targets);
   }, [dialogueData]);
 
+  const openAdVisitSheet = useCallback((placement: AdPlacement) => {
+    adVisitOpenedAtRef.current = Date.now();
+    setPendingAdVisit(placement);
+    setIsPlaying(false);
+    if (playIntervalRef.current) {
+      clearInterval(playIntervalRef.current);
+      playIntervalRef.current = null;
+    }
+  }, []);
+  openAdVisitSheetRef.current = openAdVisitSheet;
+
+  const closeAdVisitSheet = useCallback(() => {
+    // Firefox re-hit-tests the leftover click after pointerup and would
+    // immediately dismiss a newly opened sheet.
+    if (Date.now() - adVisitOpenedAtRef.current < 400) {
+      return;
+    }
+    setPendingAdVisit(null);
+  }, []);
+
   const trackAdEvent = useCallback((placement: AdPlacement, eventType: 'impression' | 'click') => {
     if (!selectedEpisode) return;
     const key = `${eventType}-${selectedEpisode.id}-${placement.id}`;
@@ -236,6 +264,14 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       logger.warn('Comic3DViewer: Failed to track ad event', eventType, placement.id, error);
     });
   }, [selectedEpisode]);
+
+  const confirmAdVisit = useCallback(() => {
+    if (!pendingAdVisit) {
+      return;
+    }
+    trackAdEvent(pendingAdVisit, 'click');
+    setPendingAdVisit(null);
+  }, [pendingAdVisit, trackAdEvent]);
 
   const getActiveAdPlacementsBySlot = useCallback((placements: AdPlacement[]) => {
     const bySlot = new Map<string, AdPlacement>();
@@ -370,10 +406,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       const now = Date.now();
       if (now - lastAdClickAtRef.current < 300) return;
       lastAdClickAtRef.current = now;
-      trackAdEvent(placement, 'click');
-      if (placement.destination_url) {
-        window.open(placement.destination_url, '_blank', 'noopener,noreferrer');
-      }
+      openAdVisitSheetRef.current(placement);
     };
     if (typeof modelViewer.updateHotspot === 'function') {
       modelViewer.updateHotspot({
@@ -381,7 +414,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
         position: `${target.clickCenter.x}m ${target.clickCenter.y}m ${target.clickCenter.z}m`,
       });
     }
-  }, [trackAdEvent]);
+  }, []);
 
   const applyAdTexturesToModel = useCallback(async () => {
     const modelViewer = modelViewerRef.current;
@@ -527,11 +560,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }
 
     lastAdClickAtRef.current = now;
-    trackAdEvent(placement, 'click');
-    if (placement.destination_url) {
-      window.open(placement.destination_url, '_blank', 'noopener,noreferrer');
-    }
-  }, [trackAdEvent]);
+    openAdVisitSheet(placement);
+  }, [openAdVisitSheet]);
 
   // Update dialogueData when episodeDialogues changes
   useEffect(() => {
@@ -635,10 +665,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       return;
     }
 
-    modelViewer.addEventListener('pointerup', handleAdMeshClick);
     modelViewer.addEventListener('click', handleAdMeshClick);
     return () => {
-      modelViewer.removeEventListener('pointerup', handleAdMeshClick);
       modelViewer.removeEventListener('click', handleAdMeshClick);
     };
   }, [isModelReady, handleAdMeshClick, selectedEpisode]);
@@ -812,10 +840,10 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
           return;
         }
 
-        logger.log('Comic3DViewer: Adding event listeners to model viewer');
-        modelViewer.addEventListener('load', handleModelReady);
-        modelViewer.addEventListener('model-visibility', handleModelVisibility);
-        modelViewer.addEventListener('camera-change', handleCameraChange);
+          logger.log('Comic3DViewer: Adding event listeners to model viewer');
+          modelViewer.addEventListener('load', handleModelReady);
+          modelViewer.addEventListener('model-visibility', handleModelVisibility);
+          modelViewer.addEventListener('camera-change', handleCameraChange);
 
         // Shared-season GLBs stay in cache. After the next episode remounts
         // model-viewer, `load` often fires before React attaches listeners.
@@ -831,7 +859,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       return () => {
         cancelled = true;
         if (timer) {
-          clearTimeout(timer);
+        clearTimeout(timer);
         }
         const currentRef = modelViewerRef.current;
         if (currentRef) {
@@ -1060,6 +1088,34 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     onDialogueUpdate?.(current.dialogue_id, { camera_transition: next });
   };
 
+  const applyOrbitLimits = (minOrbit: string, maxOrbit: string) => {
+    const modelViewer = modelViewerRef.current;
+    if (!modelViewer) {
+      return;
+    }
+    modelViewer.minCameraOrbit = minOrbit;
+    modelViewer.maxCameraOrbit = maxOrbit;
+    modelViewer.setAttribute('min-camera-orbit', minOrbit);
+    modelViewer.setAttribute('max-camera-orbit', maxOrbit);
+  };
+
+  const clearLookAroundOrbitLimits = () => {
+    if (lookAroundLimitTimerRef.current !== null) {
+      window.clearTimeout(lookAroundLimitTimerRef.current);
+      lookAroundLimitTimerRef.current = null;
+    }
+    applyOrbitLimits(UNBOUNDED_MIN_CAMERA_ORBIT, UNBOUNDED_MAX_CAMERA_ORBIT);
+  };
+
+  const lockLookAroundOrbitLimits = (orbitString: string | undefined | null) => {
+    if (isEditMode) {
+      clearLookAroundOrbitLimits();
+      return;
+    }
+    const limits = lookAroundOrbitLimits(parseCameraOrbit(orbitString));
+    applyOrbitLimits(limits.min, limits.max);
+  };
+
   const applyDialogueCamera = (currentDialogue: DialogueData) => {
     if (!modelViewerRef.current) {
       logger.camera('Comic3DViewer: Cannot update camera - modelViewerRef is null');
@@ -1072,12 +1128,21 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     logger.camera('Comic3DViewer: New camera orbit:', currentDialogue.camera_orbit);
     logger.camera('Comic3DViewer: Field of view:', currentDialogue.field_of_view);
 
+    // Lift the look-around clamp so next/prev can animate more than 10 degrees.
+    clearLookAroundOrbitLimits();
+
     modelViewerRef.current.cameraTarget = currentDialogue.camera_target;
     modelViewerRef.current.fieldOfView = `${currentDialogue.field_of_view}deg`;
     modelViewerRef.current.cameraOrbit = currentDialogue.camera_orbit;
 
     if (shouldSnapCamera(currentDialogue.camera_transition)) {
       jumpModelViewerCameraToGoal();
+      lockLookAroundOrbitLimits(currentDialogue.camera_orbit);
+    } else {
+      lookAroundLimitTimerRef.current = window.setTimeout(() => {
+        lockLookAroundOrbitLimits(currentDialogue.camera_orbit);
+        lookAroundLimitTimerRef.current = null;
+      }, 700);
     }
 
     logger.camera('Comic3DViewer: Camera target after setting:', modelViewerRef.current.cameraTarget);
@@ -1293,6 +1358,24 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, currentDialogueIndex]);
 
+  useEffect(() => {
+    if (isEditMode) {
+      clearLookAroundOrbitLimits();
+      return;
+    }
+    if (!isStarted || !isModelReady || lookAroundLimitTimerRef.current !== null) {
+      return;
+    }
+    lockLookAroundOrbitLimits(modelViewerRef.current?.cameraOrbit || '0deg 75deg 3m');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, isStarted, isModelReady]);
+
+  useEffect(() => () => {
+    if (lookAroundLimitTimerRef.current !== null) {
+      window.clearTimeout(lookAroundLimitTimerRef.current);
+    }
+  }, []);
+
   // Get 3D model from season (Django pattern) - memoize to prevent unnecessary recalculations
   const getModelFromSeason = useCallback((episode: Episode): string | null => {
     const season = seasons.find(s => s.id === episode.season);
@@ -1332,7 +1415,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     if (!isEditMode) return;
     
     logger.log('Comic3DViewer: Updating dials from dialogue:', dialogue);
-
+    
     setCurrentEditingDialogue(dialogue);
     setDialOrbit(parseCameraOrbit(dialogue.camera_orbit));
     setDialTarget(parseCameraTarget(dialogue.camera_target));
@@ -1382,7 +1465,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     logger.log('Comic3DViewer: isModelReady:', isModelReady);
     logger.log('Comic3DViewer: currentDialogue:', currentDialogue);
     applyDialogueCamera(currentDialogue);
-    updateDialsFromDialogue(currentDialogue);
+        updateDialsFromDialogue(currentDialogue);
   };
 
   // Show dialogue with camera animation (Django pattern)
@@ -1421,7 +1504,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     logger.log('Comic3DViewer: isModelReady:', isModelReady);
     logger.log('Comic3DViewer: currentDialogue:', currentDialogue);
     applyDialogueCamera(currentDialogue);
-    updateDialsFromDialogue(currentDialogue);
+        updateDialsFromDialogue(currentDialogue);
   };
 
   // Navigation functions (Django pattern)
@@ -1625,17 +1708,18 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       return;
     }
 
-    setCurrentDialogueIndex(0);
-    setIsPlaying(false);
+      setCurrentDialogueIndex(0);
+      setIsPlaying(false);
+    setPendingAdVisit(null);
     setIsStarted(false);
     setIsModelReady(false);
     setPlaybackPhase('intro');
-    setCurrentDialogueText('');
+      setCurrentDialogueText('');
     animationsStartedRef.current = false;
-
-    if (playIntervalRef.current) {
-      clearInterval(playIntervalRef.current);
-      playIntervalRef.current = null;
+      
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+        playIntervalRef.current = null;
     }
   }, [selectedEpisode]);
 
@@ -1688,12 +1772,17 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (pendingAdVisit) {
+          event.preventDefault();
+          closeAdVisitSheet();
+          return;
+        }
         exitImmersiveFullscreen();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isImmersiveFullscreen, exitImmersiveFullscreen]);
+  }, [isImmersiveFullscreen, exitImmersiveFullscreen, pendingAdVisit, closeAdVisitSheet]);
 
   useEffect(() => {
     if (!isStarted) {
@@ -1726,31 +1815,31 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       return <p className="text-muted mb-0">No episodes available for this story.</p>;
     }
 
-    return (
+  return (
       <div
         className={`episode-select-container${
           variant === 'fullscreen' ? ' comic3d-stage-episode-select' : ''
         }`}
       >
         {sortedEpisodes.map((episode) => {
-          const isActive = selectedEpisode?.id === episode.id;
-          return (
-            <button
-              key={episode.id}
+                    const isActive = selectedEpisode?.id === episode.id;
+                    return (
+                      <button
+                        key={episode.id}
               type="button"
-              className={`btn ${isActive ? 'btn-primary' : 'btn-outline-primary'} episode-select-btn`}
-              onClick={() => handleEpisodeSelect(episode)}
-            >
-              {isActive ? (
-                <>
-                  E{episode.episode_number}: {episode.title}
-                </>
-              ) : (
-                <>E{episode.episode_number}</>
-              )}
-            </button>
-          );
-        })}
+                        className={`btn ${isActive ? 'btn-primary' : 'btn-outline-primary'} episode-select-btn`}
+                        onClick={() => handleEpisodeSelect(episode)}
+                      >
+                        {isActive ? (
+                          <>
+                            E{episode.episode_number}: {episode.title}
+                          </>
+                        ) : (
+                          <>E{episode.episode_number}</>
+                        )}
+                      </button>
+                    );
+                  })}
       </div>
     );
   };
@@ -1793,8 +1882,8 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
               </div>
             )}
             <div className="row comic3d-stage-canvas-row">
-              <div className="col-12">
-                <div className="card model-container position-relative">
+          <div className="col-12">
+            <div className="card model-container position-relative">
               {/* Overlay with Start Button */}
               {!isStarted && (
                 <div className="overlay-container position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 2, background: 'rgba(0,0,0,0.5)' }}>
@@ -1848,12 +1937,16 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     interaction-prompt="none"
                     interpolation-decay="200"
                     interpolation="cubic-bezier(0.82,-0.03,0.11,1)"
-                    min-camera-orbit="auto auto 0.1m"
-                    max-camera-orbit="auto auto 30m"
+                    min-camera-orbit={UNBOUNDED_MIN_CAMERA_ORBIT}
+                    max-camera-orbit={UNBOUNDED_MAX_CAMERA_ORBIT}
                     min-field-of-view="10deg"
                     max-field-of-view="90deg"
                     camera-orbit="0deg 75deg 3m"
-                    // camera-controls
+                    {...(!isEditMode ? {
+                      'camera-controls': true,
+                      'disable-zoom': true,
+                      'disable-pan': true,
+                    } : {})}
                     style={{ 
                       width: '100%', 
                       height: '100%',
@@ -1939,6 +2032,14 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                     <div>Model URL: {getModelFromSeason(selectedEpisode)}</div>
                     <div>Model Viewer Element: {modelViewerRef.current ? 'Found' : 'Not Found'}</div>
                   </div>
+
+                  {pendingAdVisit ? (
+                    <AdVisitSheet
+                      placement={pendingAdVisit}
+                      onClose={closeAdVisitSheet}
+                      onVisit={confirmAdVisit}
+                    />
+                  ) : null}
                 </div>
                 ) : (
                   <div className="d-flex align-items-center justify-content-center h-100 bg-light">
@@ -1964,7 +2065,7 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                   )}
                 </div>
               )}
-                </div>
+            </div>
               </div>
             </div>
 
@@ -2064,29 +2165,29 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
       {/* Edit Mode Toggle - Hidden in read-only mode */}
       {!readOnly && selectedEpisode && (
         <div className="comic3d-mode-toggle" role="group" aria-label="Viewer mode">
-          <button
-            type="button"
+                  <button
+                    type="button"
             className={`comic3d-mode-toggle__btn comic3d-mode-toggle__btn--preview${!isEditMode ? ' is-active' : ''}`}
             aria-pressed={!isEditMode}
-            onClick={() => setIsEditMode(false)}
-          >
+                    onClick={() => setIsEditMode(false)}
+                  >
             <i className="fas fa-eye" aria-hidden />
             Preview Mode
-          </button>
-          <button
-            type="button"
+                  </button>
+                  <button
+                    type="button"
             className={`comic3d-mode-toggle__btn comic3d-mode-toggle__btn--edit${isEditMode ? ' is-active' : ''}`}
             aria-pressed={isEditMode}
-            onClick={() => {
-              logger.log('Edit Mode button clicked, current isEditMode:', isEditMode);
-              logger.log('Current isStarted:', isStarted);
-              logger.log('Current isModelReady:', isModelReady);
-              setIsEditMode(true);
-            }}
-          >
+                    onClick={() => {
+                      logger.log('Edit Mode button clicked, current isEditMode:', isEditMode);
+                      logger.log('Current isStarted:', isStarted);
+                      logger.log('Current isModelReady:', isModelReady);
+                      setIsEditMode(true);
+                    }}
+                  >
             <i className="fas fa-edit" aria-hidden />
             Edit Mode
-          </button>
+                  </button>
         </div>
       )}
 
@@ -2121,21 +2222,21 @@ const Comic3DViewer: React.FC<Comic3DViewerProps> = ({
                 saveMessage={saveMessage}
                 actions={
                   <>
-                    <button
+                  <button 
                       type="button"
                       className="stories-landing__btnPrimary story-manage__btnCompact"
-                      onClick={saveCameraChanges}
-                      disabled={isSaving}
+                    onClick={saveCameraChanges}
+                    disabled={isSaving}
                     >
                       {isSaving ? 'Saving…' : 'Save camera'}
-                    </button>
-                    <button
+                  </button>
+                  <button 
                       type="button"
                       className="product-landing__ctaGhost story-manage__btnCompact"
-                      onClick={resetCameraChanges}
+                    onClick={resetCameraChanges}
                     >
                       Reset
-                    </button>
+                  </button>
                   </>
                 }
               />
